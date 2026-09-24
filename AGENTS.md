@@ -23,7 +23,8 @@ Phase 1 (installed today):
 - Frontend: Next.js (App Router) + TypeScript strict, Tailwind CSS v4 + shadcn/ui,
   TanStack Query, orval-generated `@workpulse/api-client`, react-hook-form + zod,
   Zustand, dayjs — `apps/web/` (ADR 0005)
-- Backend: FastAPI + Python, managed by uv — `apps/api/`
+- Backend: FastAPI + SQLAlchemy 2.0 (async) + Alembic, managed by uv —
+  `apps/api/` (ADR 0006)
 - Datastore: PostgreSQL (docker compose) — `database/postgres/`
 
 Requires Python 3.12+, Node >= 20, pnpm, Docker, and uv.

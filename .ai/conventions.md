@@ -9,6 +9,10 @@
 
 - Environment and dependencies: **uv** (`uv sync`, `uv add`, `uv run`).
 - Python 3.12+ (pinned in `.python-version`).
+- Stack (ADR 0006): SQLAlchemy 2.0 async + `asyncpg` · Alembic · Pydantic v2 ·
+  structlog · `uuid-utils` (UUIDv7 ids) · Ruff · Pyright · pytest +
+  pytest-asyncio + httpx (`ASGITransport`) · plain `Depends` DI · stdlib
+  `datetime`/`zoneinfo` (UTC, `timestamptz`).
 - Commands: `uv run uvicorn app.main:app --reload` · `uv run pytest`.
 - Domain module pattern — every domain package contains:
 
@@ -23,7 +27,15 @@
   | `exceptions.py` | domain-specific errors (`WorkPulseError` subclasses) |
 
 - Routers translate HTTP → service calls. No business logic, no SQL, no Kafka in
-  a router.
+  a router. Routers accept/return Pydantic schemas only — ORM models never cross
+  the router boundary; repositories are the only code touching SQLAlchemy.
+- Full async: `async def` from router → service → repository; sync-only
+  libraries go through `anyio.to_thread` with a justification.
+- Ids are UUIDv7 (`uuid-utils`) in PostgreSQL `uuid` columns; timestamps are
+  timezone-aware UTC (`timestamptz`).
+- Migrations (Alembic) are append-only: never edit a committed revision;
+  autogenerate → review → meaningful revision message.
+- Logging is structlog with `request_id` and `tenant_id` bound; never PII.
 - A domain never imports another domain's internals directly; go through its
   service or a shared interface.
 - **Time is a parameter, not a global.** Services that judge lateness, workdays
