@@ -1,0 +1,1 @@
+"""I/O adapters: databases, caches, brokers, storage, email."""

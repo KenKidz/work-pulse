@@ -1,0 +1,26 @@
+# Local development infrastructure (Phase 1: PostgreSQL only).
+# The apps run natively via `make dev-api` / `make dev-web` — see the Makefile.
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-workpulse}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-workpulse}
+      POSTGRES_DB: ${POSTGRES_DB:-workpulse}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-workpulse} -d ${POSTGRES_DB:-workpulse}",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  postgres-data:

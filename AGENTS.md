@@ -1,0 +1,115 @@
+# WorkPulse — Agent & Contributor Guide
+
+Single source of truth for humans and coding agents. Read this before making
+changes; update it when conventions change.
+
+> Detailed context lives in `.ai/` — this file stays short on purpose.
+> `.ai/product.md` (what we build) · `.ai/domain.md` (contexts, language, events,
+> state machines) · `.ai/architecture.md` (how it fits together + phase roadmap) ·
+> `.ai/conventions.md` (code conventions) · `.ai/security.md` (roles, tenancy,
+> PII, audit) · `.ai/testing.md` (gates + test rules) · `.ai/decisions/` (ADRs) ·
+> `.ai/features/<feature>.md` (one spec per feature) · `tasks/doc.md` (original brief)
+
+## Product
+
+WorkPulse — **real-time workforce operations & intelligence platform**: every
+workforce fact is an event that is visible live, auditable and analysable.
+Phase 1 slice: **Organizations → Employees → Attendance**.
+
+## Stack
+
+Phase 1 (installed today):
+
+- Frontend: Next.js (App Router) + TypeScript — `apps/web/`
+- Backend: FastAPI + Python, managed by uv — `apps/api/`
+- Datastore: PostgreSQL (docker compose) — `database/postgres/`
+
+Requires Python 3.12+, Node >= 20, Docker, and uv.
+
+Later phases — **do not add these without a spec + ADR**: Redis + WebSocket +
+authN/RBAC (2), Kafka + outbox + workers (3), ClickHouse + payroll (4),
+CDC (5), observability (6), load/reliability (7), Kubernetes + CI/CD (8).
+Roadmap: `.ai/architecture.md`.
+
+## Quickstart
+
+| Command | Purpose |
+| --- | --- |
+| `make install` | install API (uv) + web (npm) dependencies |
+| `make db-up` / `make db-down` | start / stop PostgreSQL |
+| `make dev-api` | FastAPI dev server on :8000 |
+| `make dev-web` | Next.js dev server on :3000 |
+| `make check` | all gates — run before claiming done |
+
+## Repo map
+
+```
+AGENTS.md             this file
+Makefile              single entry point (install / dev / db / check)
+docker-compose.yml    PostgreSQL for local dev
+.ai/                  product, domain, architecture, conventions, security,
+                      testing, decisions/, features/ (specs + backlog index)
+apps/web/             Next.js app (routes in app/, feature logic in features/)
+apps/api/             FastAPI app (routers in app/api/v1/, logic in app/domains/)
+workers/              background consumers (Phase 3)
+packages/api-client/  shared typed client (placeholder until generated)
+contracts/            versioned event schemas (OpenAPI later)
+database/postgres/    seeds and scripts
+tests/e2e/            cross-surface tests
+tasks/                TODO.md (backlog) · doc.md (original brief)
+.kilo/                agent config (/spec, /plan, /check commands; planner, verifier agents)
+```
+
+## Architecture rules
+
+1. Business logic lives in `apps/api/app/domains/<domain>/`.
+2. API routers translate HTTP ↔ application operations; they stay thin.
+3. Domain code must not import infrastructure clients (Postgres/Kafka/Redis/
+   ClickHouse) directly — repositories wrap I/O.
+4. Events have versioned contracts under `contracts/events/`; write the contract
+   before the producer or the consumer.
+5. Every business feature needs tests: happy path + at least one failure case,
+   on every surface it touches (`.ai/testing.md`).
+6. Tenant isolation is mandatory (`tenant_id` on every row and event), enforced
+   in repositories and proven by a test per domain.
+7. Never log sensitive employee data (`.ai/security.md`).
+8. Frontend: `app/` holds routes only; feature logic lives in `features/<name>/`.
+9. Prefer existing abstractions over new ones; do not create a domain, route,
+   or component "for later".
+10. Do not introduce a dependency without justifying it in the feature spec.
+11. Do not add Phase 2+ technology ahead of its phase.
+12. Access checks live in `domains/<name>/policies.py` — never in routers, never
+    only in the UI. Cross-tenant reads return 404, not 403.
+13. Sensitive mutations write an audit entry (append-only, no PII values).
+14. A spec is not `approved` while its `## Decisions needed` section is open —
+    ask, do not guess.
+
+## Vibe-coding workflow
+
+ONE FEATURE → ONE SPEC → ONE DOMAIN → ONE API FLOW → ONE EVENT FLOW → ONE TEST FLOW
+
+1. **Spec** — `/spec <feature>` creates `.ai/features/<feature>.md` from the
+   template. No code without a spec. If the spec is silent on a behavior, ask;
+   never invent product scope.
+2. **Plan** — `/plan .ai/features/<feature>.md` produces an ordered, file-level
+   plan inside the spec (only once decisions are answered).
+3. **Build** — smallest possible diff, one concern per change, follow the plan.
+4. **Verify** — `/check` (runs `make check`); for risky changes use the
+   `verifier` subagent. Fix failures before reporting done.
+5. **Record** — update the feature spec status, tick `tasks/TODO.md`, and add an
+   ADR under `.ai/decisions/` for any decision that is expensive to reverse.
+
+Full-stack changes pin the API contract in the spec first; the plan lands the
+backend first and the frontend against it. The surfaces must never drift.
+
+## Definition of done
+
+- Acceptance criteria in the feature spec are met and ticked.
+- `make check` passes.
+- Tests cover the new behavior on every surface it touches, including tenant
+  isolation and a denied-role case for anything mutating.
+- Sensitive mutations are audited; no PII in logs, errors or event payloads.
+- Docs updated in the same change: feature spec status, `tasks/TODO.md`, and
+  this file / `.ai/` when conventions changed.
+- A reviewer (human or `verifier` subagent) could understand the change from
+  the diff alone.

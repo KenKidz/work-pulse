@@ -1,0 +1,26 @@
+[project]
+name = "workpulse-api"
+version = "0.1.0"
+description = "WorkPulse API — FastAPI modular monolith"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115.0",
+    "pydantic-settings>=2.6.0",
+    "uvicorn[standard]>=0.32.0",
+]
+
+[dependency-groups]
+dev = [
+    "httpx2>=2.13.1",
+    "pytest>=8.3.0",
+]
+
+[tool.uv]
+# The API is an application, not a distributable package: uv manages the venv
+# and dependencies without installing the project itself.
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q"

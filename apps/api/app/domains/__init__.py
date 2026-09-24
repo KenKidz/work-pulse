@@ -1,0 +1,1 @@
+"""Business domains — one package per domain, created from a feature spec."""

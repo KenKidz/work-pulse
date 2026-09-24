@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workpulse.dev/contracts/events/common/event-envelope.v1.json",
+  "title": "WorkPulse event envelope v1",
+  "description": "Envelope every WorkPulse event must use. Kafka arrives in Phase 3; the contract starts now.",
+  "type": "object",
+  "required": [
+    "event_id",
+    "event_type",
+    "version",
+    "tenant_id",
+    "occurred_at",
+    "actor_id",
+    "data"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "description": "Globally unique event id (e.g. evt_123). Consumers deduplicate on this — idempotency key."
+    },
+    "event_type": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]+\\.[a-z0-9_]+$",
+      "description": "Domain-qualified type, e.g. attendance.checked_in"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Payload version; matches the .v<N> suffix of the schema file"
+    },
+    "tenant_id": {
+      "type": "string",
+      "description": "Tenant isolation is mandatory — every event carries it"
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the fact happened in the domain (not when it was published)"
+    },
+    "actor_id": {
+      "type": "string",
+      "description": "Who caused the event (employee, system job, integration)"
+    },
+    "data": {
+      "type": "object",
+      "description": "Domain payload, validated by the matching <domain>-<event>.v<N>.json schema"
+    }
+  }
+}

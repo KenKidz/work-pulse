@@ -1,0 +1,6 @@
+{
+  "name": "@workpulse/api-client",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Typed HTTP client for the WorkPulse API (placeholder — no code yet)"
+}
