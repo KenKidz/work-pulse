@@ -8,7 +8,7 @@
 | --- | --- | --- |
 | all | `make check` | both gates below — run before claiming done |
 | API | `make check-api` | `uv run pytest` in `apps/api` |
-| Web | `make check-web` | `tsc --noEmit` in `apps/web` |
+| Web | `make check-web` | `tsc --noEmit` + ESLint + Vitest in `apps/web` |
 | E2E | lands with the first full-stack feature | Playwright against web + api + db |
 | Load | Phase 7 | throughput/latency under realistic check-in load |
 

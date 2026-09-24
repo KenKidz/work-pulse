@@ -10,13 +10,14 @@ live, auditable and analysable.
 
 ## Quickstart
 
-Prerequisites: Node >= 20, [uv](https://docs.astral.sh/uv/), Docker.
+Prerequisites: Node >= 20, [pnpm](https://pnpm.io/), [uv](https://docs.astral.sh/uv/), Docker.
 
 ```sh
-make install     # API (uv) + web (npm) dependencies
+make install     # API (uv) + web (pnpm workspaces) dependencies
 make db-up       # PostgreSQL on :5432
 make dev-api     # FastAPI on http://localhost:8000   (separate terminal)
 make dev-web     # Next.js on http://localhost:3000   (separate terminal)
+make gen-api     # regenerate OpenAPI + typed API client
 make check       # all verification gates
 ```
 
@@ -27,8 +28,8 @@ make check       # all verification gates
                       testing · decisions/ (ADRs) · features/ (specs + backlog)
 apps/web/             Next.js app (routes in app/, feature logic in features/)
 apps/api/             FastAPI app (routers in app/api/v1/, logic in app/domains/)
-packages/api-client/  shared typed API client (placeholder until generated)
-contracts/            versioned event schemas (OpenAPI later)
+packages/api-client/  orval-generated typed client (`make gen-api`)
+contracts/            versioned event schemas + generated OpenAPI
 database/postgres/    seeds and scripts
 tests/e2e/            cross-surface tests
 tasks/                TODO.md (backlog) · doc.md (original brief)
@@ -41,7 +42,7 @@ docs/                 appears when human-facing docs outgrow .ai/
 | --- | --- | --- |
 | all | `make check` | both gates below |
 | API | `make check-api` | pytest (`apps/api/tests/`) |
-| Web | `make check-web` | `tsc --noEmit` (`apps/web/`) |
+| Web | `make check-web` | `tsc --noEmit` + ESLint + Vitest (`apps/web/`) |
 
 Test levels, mandatory rules and future gates: `.ai/testing.md`.
 

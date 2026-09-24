@@ -20,11 +20,13 @@ Phase 1 slice: **Organizations → Employees → Attendance**.
 
 Phase 1 (installed today):
 
-- Frontend: Next.js (App Router) + TypeScript — `apps/web/`
+- Frontend: Next.js (App Router) + TypeScript strict, Tailwind CSS v4 + shadcn/ui,
+  TanStack Query, orval-generated `@workpulse/api-client`, react-hook-form + zod,
+  Zustand, dayjs — `apps/web/` (ADR 0005)
 - Backend: FastAPI + Python, managed by uv — `apps/api/`
 - Datastore: PostgreSQL (docker compose) — `database/postgres/`
 
-Requires Python 3.12+, Node >= 20, Docker, and uv.
+Requires Python 3.12+, Node >= 20, pnpm, Docker, and uv.
 
 Later phases — **do not add these without a spec + ADR**: Redis + WebSocket +
 authN/RBAC (2), Kafka + outbox + workers (3), ClickHouse + payroll (4),
@@ -35,10 +37,11 @@ Roadmap: `.ai/architecture.md`.
 
 | Command | Purpose |
 | --- | --- |
-| `make install` | install API (uv) + web (npm) dependencies |
+| `make install` | install API (uv) + web (pnpm workspaces) dependencies |
 | `make db-up` / `make db-down` | start / stop PostgreSQL |
 | `make dev-api` | FastAPI dev server on :8000 |
 | `make dev-web` | Next.js dev server on :3000 |
+| `make gen-api` | regenerate OpenAPI + typed `@workpulse/api-client` |
 | `make check` | all gates — run before claiming done |
 
 ## Repo map
@@ -52,8 +55,8 @@ docker-compose.yml    PostgreSQL for local dev
 apps/web/             Next.js app (routes in app/, feature logic in features/)
 apps/api/             FastAPI app (routers in app/api/v1/, logic in app/domains/)
 workers/              background consumers (Phase 3)
-packages/api-client/  shared typed client (placeholder until generated)
-contracts/            versioned event schemas (OpenAPI later)
+packages/api-client/  orval-generated typed client (`make gen-api`)
+contracts/            versioned event schemas + generated OpenAPI
 database/postgres/    seeds and scripts
 tests/e2e/            cross-surface tests
 tasks/                TODO.md (backlog) · doc.md (original brief)

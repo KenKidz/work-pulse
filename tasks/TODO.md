@@ -17,8 +17,8 @@ does the work.
 - [ ] Dev-identity dependency (`X-Tenant-Id`, `X-Actor-Id`, `X-Role`) in `app/dependencies.py` — ADR 0004
 - [ ] Audit log: append-only table + writer in `apps/api/app/shared/` (required by Employees)
 - [ ] Seed data in `database/postgres/seeds/` (one dev tenant, synthetic people only)
-- [ ] Test tooling: Vitest + Testing Library in `apps/web`, Playwright in `tests/e2e/`, wired as `make check-web` / `make check-e2e`
-- [ ] Generate `contracts/openapi/openapi.json` once the first endpoints land
+- [ ] Playwright in `tests/e2e/`, wired as `make check-e2e` (Vitest landed with ADR 0005)
+- [ ] Re-run `make gen-api` when the first endpoint group lands (pipeline + spec exist)
 - [ ] Commit the scaffold — the repo has no commits yet
 
 ## Later
@@ -38,3 +38,4 @@ does the work.
 - [x] Product definition from the brief (`tasks/doc.md`): `product.md`, `domain.md`, `security.md`, `testing.md`, 8-phase roadmap, ADR 0003
 - [x] Draft specs for the Phase 1 slice: organizations, employees, attendance
 - [x] Product decisions resolved with the owner: tenancy + Phase 1 identity (ADR 0004), attendance scope, test tooling
+- [x] Frontend stack defined and configured (ADR 0005): Tailwind v4 + shadcn/ui, TanStack Query, orval-generated `@workpulse/api-client`, RHF + zod, Zustand, dayjs, ESLint + Prettier; Vitest wired into `make check-web`; pnpm workspaces at the repo root

@@ -1,0 +1,10 @@
+{
+  "name": "workpulse",
+  "version": "0.1.0",
+  "private": true,
+  "description": "WorkPulse monorepo root (pnpm workspaces: apps/web, packages/*). The API app uses uv, not pnpm.",
+  "packageManager": "pnpm@11.13.1",
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,8 +1,11 @@
 /**
- * Typed fetch wrapper for the WorkPulse API.
+ * Fetch transport for the orval-generated client — the single HTTP entry point
+ * for the web app (ADR 0005).
  *
- * Every HTTP call in the app goes through here (directly or via a feature's
- * `api.ts`), so base URL, headers, and error shapes stay consistent.
+ * Owns the base URL and the error contract: non-2xx responses become ApiError
+ * carrying the API's stable `error.code`, so UI layers can map codes to
+ * user-visible messages. Generated code calls `customFetch`; never import
+ * fetch directly in app code.
  */
 
 const DEFAULT_BASE_URL = "http://localhost:8000";
@@ -23,7 +26,7 @@ export function apiBaseUrl(): string {
   return process.env.NEXT_PUBLIC_API_URL ?? DEFAULT_BASE_URL;
 }
 
-export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+export async function customFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${apiBaseUrl()}${path}`, {
     ...init,
     headers: {
@@ -47,6 +50,10 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
     }
 
     throw new ApiError(response.status, code, message);
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
   }
 
   return (await response.json()) as T;

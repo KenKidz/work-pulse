@@ -35,20 +35,39 @@
 
 ## TypeScript — `apps/web`
 
-- Next.js App Router, TypeScript strict.
+- Next.js App Router, TypeScript strict (`+ noUncheckedIndexedAccess`).
+- Stack (ADR 0005): Tailwind CSS v4 · shadcn/ui (Radix + `lucide-react` +
+  `sonner`) · TanStack Query v5 · orval-generated `@workpulse/api-client` ·
+  react-hook-form + zod · Zustand · dayjs (`utc` + `timezone`) · ESLint +
+  Prettier · Vitest + Testing Library.
 - `app/` contains **routes only** — pages compose features, no business logic.
+- RSC-first: components are Server Components by default; `"use client"` only on
+  interactive leaves, never at page/route level.
 - One folder per feature under `features/<name>/`, mirroring
   `apps/api/app/domains/<name>/`:
-  `components/`, `hooks/`, `api.ts`, `types.ts`, `utils.ts`.
-- `components/ui/` = shared primitives; `lib/api/` = API glue; `hooks/` =
-  cross-feature hooks.
-- All HTTP calls go through `lib/api` — never `fetch` ad hoc in components.
+  `components/`, `hooks/`, `api.ts`, `types.ts`, `utils.ts` (+ `schema.ts` for
+  zod form schemas).
+- `components/ui/` = shared shadcn primitives (generated into the repo, then
+  owned); `hooks/` = cross-feature hooks; `lib/` = app utilities
+  (`lib/datetime.ts` for dayjs).
+- All HTTP goes through the generated `@workpulse/api-client` — its mutator
+  owns the base URL and `ApiError`; never ad-hoc `fetch`/axios in components.
+- Server data lives only in the TanStack Query cache, keyed
+  `[feature, ...scope, params]`; mutations invalidate by key. No shadow copies
+  in component state or stores.
+- Zustand stores are UI-only (filters, modals, selection), one per feature.
+- Forms: react-hook-form + zod, schema colocated in the feature; the server
+  stays the authority — map `ApiError.code` back to field errors.
+- Time: the API contract is UTC ISO 8601 strings; convert only at render via
+  dayjs (`lib/datetime.ts`); never raw `new Date(string)` arithmetic.
 - Every data-fetching surface has loading, empty and error states; an
-  `ApiError.code` maps to a user-visible message.
+  `ApiError.code` maps to a user-visible message; mutation failures surface via
+  toast (sonner).
 - Route groups: `app/(dashboard)/` for the authenticated area, `app/(auth)/` for
   login/register.
 - Naming: files `kebab-case.ts(x)` for non-component modules, `PascalCase.tsx`
   for components.
+- Gates in `make check-web`: `tsc --noEmit` + ESLint + Vitest.
 
 ## API
 
@@ -89,7 +108,7 @@ Authoritative rules: `.ai/testing.md`. The conventions that affect file layout:
 - `apps/api/tests/unit` — no I/O, no DB, no network.
 - `apps/api/tests/integration` — real PostgreSQL, repositories + routers.
 - `apps/api/tests/contract` — API shape and event payloads vs `contracts/`.
-- `apps/web/tests` — feature tests (runner TBD, see `.ai/testing.md`).
+- `apps/web/tests` — feature tests (Vitest + Testing Library).
 - `tests/e2e/` — cross-surface flows.
 - Fixtures and seeds are deterministic and synthetic; never real people.
 

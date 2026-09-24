@@ -1,0 +1,25 @@
+packages:
+  - "apps/web"
+  - "packages/*"
+
+# Native postinstall builds required by the toolchain (vite/vitest, eslint resolver).
+allowBuilds:
+  esbuild: true
+  unrs-resolver: true
+
+minimumReleaseAgeExclude:
+  - '@orval/angular@8.37.0'
+  - '@orval/axios@8.37.0'
+  - '@orval/core@8.37.0'
+  - '@orval/effect@8.37.0'
+  - '@orval/fetch@8.37.0'
+  - '@orval/hono@8.37.0'
+  - '@orval/mcp@8.37.0'
+  - '@orval/mock@8.37.0'
+  - '@orval/pinia-colada@8.37.0'
+  - '@orval/query@8.37.0'
+  - '@orval/solid-start@8.37.0'
+  - '@orval/swr@8.37.0'
+  - '@orval/zod@8.37.0'
+  - lucide-react@1.48.0
+  - orval@8.37.0
