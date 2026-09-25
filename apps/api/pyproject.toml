@@ -4,15 +4,23 @@ version = "0.1.0"
 description = "WorkPulse API — FastAPI modular monolith"
 requires-python = ">=3.12"
 dependencies = [
+    "alembic>=1.20.0",
+    "asyncpg>=0.31.0",
     "fastapi>=0.115.0",
     "pydantic-settings>=2.6.0",
+    "sqlalchemy[asyncio]>=2.0",
+    "structlog>=26.1.0",
+    "uuid-utils>=1.0.0",
     "uvicorn[standard]>=0.32.0",
 ]
 
 [dependency-groups]
 dev = [
     "httpx>=0.27.0",
+    "pyright>=1.1.414",
     "pytest>=8.3.0",
+    "pytest-asyncio>=1.4.0",
+    "ruff>=0.16.8",
 ]
 
 [tool.uv]
@@ -24,3 +32,20 @@ package = false
 testpaths = ["tests"]
 pythonpath = ["."]
 addopts = "-q"
+asyncio_mode = "auto"
+# One session-wide event loop: the global async engine/pool must live in the
+# same loop as every test that uses it.
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+
+[tool.ruff]
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.pyright]
+typeCheckingMode = "standard"
+include = ["app", "tests", "alembic", "scripts"]
+venvPath = "."
+venv = ".venv"

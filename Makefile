@@ -3,7 +3,7 @@
 API_DIR := apps/api
 WEB_DIR := apps/web
 
-.PHONY: help install db-up db-down dev-api dev-web check check-api check-web gen-api format-web
+.PHONY: help install db-up db-down db-test-up db-seed dev-api dev-web check check-api check-web gen-api format-web
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -14,6 +14,15 @@ install: ## Install API (uv) and web (pnpm workspaces) dependencies
 
 db-up: ## Start PostgreSQL (detached)
 	docker compose up -d
+
+db-test-up: ## Start the throwaway test PostgreSQL on :5433 (detached)
+	docker compose up -d --wait postgres-test
+
+db-seed: ## Seed the dev database — idempotent, safe to re-run
+	@for f in database/postgres/seeds/*.sql; do \
+		echo "seeding $$f"; \
+		docker compose exec -T postgres psql -U $${POSTGRES_USER:-workpulse} -d $${POSTGRES_DB:-workpulse} -v ON_ERROR_STOP=1 < $$f; \
+	done
 
 db-down: ## Stop docker compose services (data volume is kept)
 	docker compose down
@@ -26,7 +35,10 @@ dev-web: ## Run the Next.js dev server on :3000
 
 check: check-api check-web ## Run every gate — run before claiming done
 
-check-api: ## API gate: pytest
+check-api: db-test-up ## API gate: ruff + pyright + pytest (ADR 0006)
+	cd $(API_DIR) && uv run ruff check .
+	cd $(API_DIR) && uv run ruff format --check .
+	cd $(API_DIR) && uv run pyright
 	cd $(API_DIR) && uv run pytest
 
 check-web: ## Web gate: typecheck + ESLint + Vitest

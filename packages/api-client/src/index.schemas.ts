@@ -4,5 +4,152 @@
  * WorkPulse API
  * OpenAPI spec version: 0.1.0
  */
+/**
+ * Archive body — the reason is stored on the audit entry only.
+ */
+export interface ArchiveRequest {
+  reason?: string | null;
+}
+
+export interface Department {
+  id: string;
+  tenant_id: string;
+  name: string;
+  parent_department_id?: string | null;
+  archived_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DepartmentCreate {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  name: string;
+  parent_department_id?: string | null;
+}
+
+/**
+ * Pagination metadata returned with every list response.
+ */
+export interface Page {
+  page: number;
+  page_size: number;
+  total_items: number;
+  total_pages: number;
+}
+
+export interface DepartmentListPage {
+  items: Department[];
+  page: Page;
+}
+
+export interface DepartmentUpdate {
+  name?: string | null;
+  parent_department_id?: string | null;
+}
+
+export type ValidationErrorCtx = { [key: string]: unknown };
+
+export interface ValidationError {
+  loc: (string | number)[];
+  msg: string;
+  type: string;
+  input?: unknown;
+  ctx?: ValidationErrorCtx;
+}
+
+export interface HTTPValidationError {
+  detail?: ValidationError[];
+}
+
+export interface Location {
+  id: string;
+  tenant_id: string;
+  name: string;
+  address?: string | null;
+  timezone: string;
+  archived_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LocationCreate {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  name: string;
+  address?: string | null;
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  timezone: string;
+}
+
+export interface LocationListPage {
+  items: Location[];
+  page: Page;
+}
+
+export interface LocationUpdate {
+  name?: string | null;
+  address?: string | null;
+  timezone?: string | null;
+}
+
+export interface Position {
+  id: string;
+  tenant_id: string;
+  title: string;
+  description?: string | null;
+  archived_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PositionCreate {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  title: string;
+  description?: string | null;
+}
+
+export interface PositionListPage {
+  items: Position[];
+  page: Page;
+}
+
+export interface PositionUpdate {
+  title?: string | null;
+  description?: string | null;
+}
+
 export type HealthzHealthzGet200 = {[key: string]: string};
+
+export type ListDepartmentsParams = {
+q?: string | null;
+parent_id?: string | null;
+include_archived?: boolean;
+page?: number;
+page_size?: number;
+};
+
+export type ListPositionsParams = {
+q?: string | null;
+include_archived?: boolean;
+page?: number;
+page_size?: number;
+};
+
+export type ListLocationsParams = {
+q?: string | null;
+include_archived?: boolean;
+page?: number;
+page_size?: number;
+};
 

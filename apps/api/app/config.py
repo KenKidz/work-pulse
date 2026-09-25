@@ -18,9 +18,13 @@ class Settings(BaseSettings):
     # CORS_ORIGINS='["https://app.workpulse.dev"]'
     cors_origins: list[str] = ["http://localhost:3000"]
 
-    # Unused until the first persistence feature lands (Phase 1, feature #1).
     database_url: str = (
         "postgresql+asyncpg://workpulse:workpulse@localhost:5432/workpulse"
+    )
+    # Throwaway database used by integration tests (`make check-api` brings up
+    # the `postgres-test` compose service on :5433).
+    database_test_url: str = (
+        "postgresql+asyncpg://workpulse:workpulse@localhost:5433/workpulse_test"
     )
 
 

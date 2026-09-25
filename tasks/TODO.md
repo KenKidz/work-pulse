@@ -6,20 +6,14 @@ does the work.
 
 ## Now
 
-- [ ] `/plan .ai/features/organizations.md` → build → `make check`
-- [ ] Then `employees.md`: plan → build
+- [ ] `employees.md`: plan → build
 - [ ] Then `attendance.md`: plan → build
 - [ ] Phase 1 exit criteria (`.ai/product.md`): all three features green end-to-end
 
 ## Next
 
-- [ ] Persistence foundation (lands with Organizations — tooling per ADR 0006: SQLAlchemy 2.0 async + asyncpg, Alembic, Ruff, Pyright, structlog, uuid-utils, pytest-asyncio, httpx): engine/session in `apps/api/app/infrastructure/postgres/`, Alembic under `apps/api/alembic/`, plus a `postgres-test` service in `docker-compose.yml`
-- [ ] Dev-identity dependency (`X-Tenant-Id`, `X-Actor-Id`, `X-Role`) in `app/dependencies.py` — ADR 0004
-- [ ] Audit log: append-only table + writer in `apps/api/app/shared/` (required by Employees)
-- [ ] Seed data in `database/postgres/seeds/` (one dev tenant, synthetic people only)
-- [ ] Playwright in `tests/e2e/`, wired as `make check-e2e` (Vitest landed with ADR 0005)
-- [ ] Re-run `make gen-api` when the first endpoint group lands (pipeline + spec exist)
-- [ ] Commit the scaffold — the repo has no commits yet
+- [ ] Employees: replace `NullDepartmentUsage` with the real usage check and add the integration test for `department_archived_in_use` (organizations spec Risk 1, ADR 0007)
+- [ ] Playwright in `tests/e2e/`, wired as `make check-e2e` — lands with Employees (Vitest landed with ADR 0005)
 
 ## Later
 
@@ -33,6 +27,13 @@ does the work.
 
 ## Done
 
+- [x] Organizations built end-to-end (spec T1–T9): pinned API contract (18 routes, uniform errors), domain + Postgres repositories + audit writer, migration `0001`, seeds, regenerated `@workpulse/api-client`, web settings pages (departments/positions/locations); soft-delete semantics recorded in ADR 0007
+- [x] Persistence foundation (landed with Organizations — tooling per ADR 0006: SQLAlchemy 2.0 async + asyncpg, Alembic, Ruff, Pyright, structlog, uuid-utils, pytest-asyncio, httpx): engine/session in `apps/api/app/infrastructure/postgres/`, Alembic under `apps/api/alembic/`, plus a `postgres-test` service in `docker-compose.yml`
+- [x] Dev-identity dependency (`X-Tenant-Id`, `X-Actor-Id`, `X-Role`) in `app/shared/identity.py` — ADR 0004
+- [x] Audit log: append-only `audit_entries` table + writer (port in `app/shared/audit.py`, Postgres writer in `app/infrastructure/postgres/audit.py`)
+- [x] Seed data in `database/postgres/seeds/` (one dev tenant, organizations only — synthetic)
+- [x] Re-run `make gen-api` — pipeline proven by the OpenAPI-drift contract test
+- [x] Commit the scaffold
 - [x] Bootstrap repo: AGENTS.md, docs/, specs/, tasks/, .kilo/ config, runnable placeholder
 - [x] Adopt the real stack: monorepo (`apps/web`, `apps/api`), `.ai/` context, contracts, database, e2e (ADR 0002)
 - [x] Product definition from the brief (`tasks/doc.md`): `product.md`, `domain.md`, `security.md`, `testing.md`, 8-phase roadmap, ADR 0003

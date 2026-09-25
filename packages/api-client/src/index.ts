@@ -5,22 +5,43 @@
  * OpenAPI spec version: 0.1.0
  */
 import {
+  useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
   DefinedUseQueryResult,
+  MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
 
 import type {
-  HealthzHealthzGet200
+  ArchiveRequest,
+  Department,
+  DepartmentCreate,
+  DepartmentListPage,
+  DepartmentUpdate,
+  HTTPValidationError,
+  HealthzHealthzGet200,
+  ListDepartmentsParams,
+  ListLocationsParams,
+  ListPositionsParams,
+  Location,
+  LocationCreate,
+  LocationListPage,
+  LocationUpdate,
+  Position,
+  PositionCreate,
+  PositionListPage,
+  PositionUpdate
 } from './index.schemas';
 
 import { customFetch } from './mutator/custom-fetch';
@@ -158,4 +179,1993 @@ export function useHealthzHealthzGet<TData = Awaited<ReturnType<typeof healthzHe
 
 
 
+
+export type listDepartmentsResponse200 = {
+  data: DepartmentListPage
+  status: 200
+}
+
+export type listDepartmentsResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type listDepartmentsResponseSuccess = (listDepartmentsResponse200) & {
+  headers: Headers;
+};
+export type listDepartmentsResponseError = (listDepartmentsResponse422) & {
+  headers: Headers;
+};
+
+export type listDepartmentsResponse = (listDepartmentsResponseSuccess | listDepartmentsResponseError)
+
+export const getListDepartmentsUrl = (params?: ListDepartmentsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/departments?${stringifiedParams}` : `/api/v1/departments`
+}
+
+/**
+ * @summary List Departments
+ */
+export const listDepartments = async (params?: ListDepartmentsParams, options?: Parameters<typeof customFetch>[1]): Promise<listDepartmentsResponse> => {
+
+  return customFetch<listDepartmentsResponse>(getListDepartmentsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListDepartmentsQueryKey = (params?: ListDepartmentsParams,) => {
+    return [
+    `/api/v1/departments`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListDepartmentsQueryOptions = <TData = Awaited<ReturnType<typeof listDepartments>>, TError = HTTPValidationError>(params?: ListDepartmentsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listDepartments>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListDepartmentsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listDepartments>>> = ({ signal }) => listDepartments(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listDepartments>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListDepartmentsQueryResult = NonNullable<Awaited<ReturnType<typeof listDepartments>>>
+export type ListDepartmentsQueryError = HTTPValidationError
+
+
+export function useListDepartments<TData = Awaited<ReturnType<typeof listDepartments>>, TError = HTTPValidationError>(
+ params: undefined |  ListDepartmentsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listDepartments>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listDepartments>>,
+          TError,
+          Awaited<ReturnType<typeof listDepartments>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListDepartments<TData = Awaited<ReturnType<typeof listDepartments>>, TError = HTTPValidationError>(
+ params?: ListDepartmentsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listDepartments>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listDepartments>>,
+          TError,
+          Awaited<ReturnType<typeof listDepartments>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListDepartments<TData = Awaited<ReturnType<typeof listDepartments>>, TError = HTTPValidationError>(
+ params?: ListDepartmentsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listDepartments>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List Departments
+ */
+
+export function useListDepartments<TData = Awaited<ReturnType<typeof listDepartments>>, TError = HTTPValidationError>(
+ params?: ListDepartmentsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listDepartments>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListDepartmentsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type createDepartmentResponse201 = {
+  data: Department
+  status: 201
+}
+
+export type createDepartmentResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type createDepartmentResponseSuccess = (createDepartmentResponse201) & {
+  headers: Headers;
+};
+export type createDepartmentResponseError = (createDepartmentResponse422) & {
+  headers: Headers;
+};
+
+export type createDepartmentResponse = (createDepartmentResponseSuccess | createDepartmentResponseError)
+
+export const getCreateDepartmentUrl = () => {
+
+
+
+
+  return `/api/v1/departments`
+}
+
+/**
+ * @summary Create Department
+ */
+export const createDepartment = async (departmentCreate: DepartmentCreate, options?: Parameters<typeof customFetch>[1]): Promise<createDepartmentResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<createDepartmentResponse>(getCreateDepartmentUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(departmentCreate)
+  }
+);}
+
+
+
+
+
+export const getCreateDepartmentMutationKey = () => ['createDepartment'] as const;
+
+export const getCreateDepartmentMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createDepartment>>, TError,CreateDepartmentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createDepartment>>, TError,CreateDepartmentMutationVariables, TContext> => {
+
+const mutationKey = getCreateDepartmentMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createDepartment>>, CreateDepartmentMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createDepartment(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateDepartmentMutationResult = NonNullable<Awaited<ReturnType<typeof createDepartment>>>
+    export type CreateDepartmentMutationBody = DepartmentCreate
+    export type CreateDepartmentMutationError = HTTPValidationError
+    export type CreateDepartmentMutationVariables = {data: DepartmentCreate}
+
+    /**
+ * @summary Create Department
+ */
+export const useCreateDepartment = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createDepartment>>, TError,CreateDepartmentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createDepartment>>,
+        TError,
+        CreateDepartmentMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateDepartmentMutationOptions(options), queryClient);
+    }
+
+export type getDepartmentResponse200 = {
+  data: Department
+  status: 200
+}
+
+export type getDepartmentResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type getDepartmentResponseSuccess = (getDepartmentResponse200) & {
+  headers: Headers;
+};
+export type getDepartmentResponseError = (getDepartmentResponse422) & {
+  headers: Headers;
+};
+
+export type getDepartmentResponse = (getDepartmentResponseSuccess | getDepartmentResponseError)
+
+export const getGetDepartmentUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/departments/${id}`
+}
+
+/**
+ * @summary Get Department
+ */
+export const getDepartment = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<getDepartmentResponse> => {
+
+  return customFetch<getDepartmentResponse>(getGetDepartmentUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetDepartmentQueryKey = (id: string,) => {
+    return [
+    `/api/v1/departments/${id}`
+    ] as const;
+    }
+
+
+export const getGetDepartmentQueryOptions = <TData = Awaited<ReturnType<typeof getDepartment>>, TError = HTTPValidationError>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDepartment>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetDepartmentQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDepartment>>> = ({ signal }) => getDepartment(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDepartment>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetDepartmentQueryResult = NonNullable<Awaited<ReturnType<typeof getDepartment>>>
+export type GetDepartmentQueryError = HTTPValidationError
+
+
+export function useGetDepartment<TData = Awaited<ReturnType<typeof getDepartment>>, TError = HTTPValidationError>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDepartment>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getDepartment>>,
+          TError,
+          Awaited<ReturnType<typeof getDepartment>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetDepartment<TData = Awaited<ReturnType<typeof getDepartment>>, TError = HTTPValidationError>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDepartment>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getDepartment>>,
+          TError,
+          Awaited<ReturnType<typeof getDepartment>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetDepartment<TData = Awaited<ReturnType<typeof getDepartment>>, TError = HTTPValidationError>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDepartment>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get Department
+ */
+
+export function useGetDepartment<TData = Awaited<ReturnType<typeof getDepartment>>, TError = HTTPValidationError>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDepartment>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetDepartmentQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type updateDepartmentResponse200 = {
+  data: Department
+  status: 200
+}
+
+export type updateDepartmentResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type updateDepartmentResponseSuccess = (updateDepartmentResponse200) & {
+  headers: Headers;
+};
+export type updateDepartmentResponseError = (updateDepartmentResponse422) & {
+  headers: Headers;
+};
+
+export type updateDepartmentResponse = (updateDepartmentResponseSuccess | updateDepartmentResponseError)
+
+export const getUpdateDepartmentUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/departments/${id}`
+}
+
+/**
+ * @summary Update Department
+ */
+export const updateDepartment = async (id: string,
+    departmentUpdate: DepartmentUpdate, options?: Parameters<typeof customFetch>[1]): Promise<updateDepartmentResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<updateDepartmentResponse>(getUpdateDepartmentUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(departmentUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateDepartmentMutationKey = () => ['updateDepartment'] as const;
+
+export const getUpdateDepartmentMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateDepartment>>, TError,UpdateDepartmentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateDepartment>>, TError,UpdateDepartmentMutationVariables, TContext> => {
+
+const mutationKey = getUpdateDepartmentMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateDepartment>>, UpdateDepartmentMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateDepartment(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateDepartmentMutationResult = NonNullable<Awaited<ReturnType<typeof updateDepartment>>>
+    export type UpdateDepartmentMutationBody = DepartmentUpdate
+    export type UpdateDepartmentMutationError = HTTPValidationError
+    export type UpdateDepartmentMutationVariables = {id: string;data: DepartmentUpdate}
+
+    /**
+ * @summary Update Department
+ */
+export const useUpdateDepartment = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateDepartment>>, TError,UpdateDepartmentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof updateDepartment>>,
+        TError,
+        UpdateDepartmentMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateDepartmentMutationOptions(options), queryClient);
+    }
+
+export type archiveDepartmentResponse200 = {
+  data: Department
+  status: 200
+}
+
+export type archiveDepartmentResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type archiveDepartmentResponseSuccess = (archiveDepartmentResponse200) & {
+  headers: Headers;
+};
+export type archiveDepartmentResponseError = (archiveDepartmentResponse422) & {
+  headers: Headers;
+};
+
+export type archiveDepartmentResponse = (archiveDepartmentResponseSuccess | archiveDepartmentResponseError)
+
+export const getArchiveDepartmentUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/departments/${id}/archive`
+}
+
+/**
+ * @summary Archive Department
+ */
+export const archiveDepartment = async (id: string,
+    archiveRequestNull?: ArchiveRequest | null, options?: Parameters<typeof customFetch>[1]): Promise<archiveDepartmentResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<archiveDepartmentResponse>(getArchiveDepartmentUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(archiveRequestNull)
+  }
+);}
+
+
+
+
+
+export const getArchiveDepartmentMutationKey = () => ['archiveDepartment'] as const;
+
+export const getArchiveDepartmentMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof archiveDepartment>>, TError,ArchiveDepartmentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof archiveDepartment>>, TError,ArchiveDepartmentMutationVariables, TContext> => {
+
+const mutationKey = getArchiveDepartmentMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof archiveDepartment>>, ArchiveDepartmentMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  archiveDepartment(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ArchiveDepartmentMutationResult = NonNullable<Awaited<ReturnType<typeof archiveDepartment>>>
+    export type ArchiveDepartmentMutationBody = ArchiveRequest | null | undefined
+    export type ArchiveDepartmentMutationError = HTTPValidationError
+    export type ArchiveDepartmentMutationVariables = {id: string;data?: ArchiveRequest | null}
+
+    /**
+ * @summary Archive Department
+ */
+export const useArchiveDepartment = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof archiveDepartment>>, TError,ArchiveDepartmentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof archiveDepartment>>,
+        TError,
+        ArchiveDepartmentMutationVariables,
+        TContext
+      > => {
+      return useMutation(getArchiveDepartmentMutationOptions(options), queryClient);
+    }
+
+export type restoreDepartmentResponse200 = {
+  data: Department
+  status: 200
+}
+
+export type restoreDepartmentResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type restoreDepartmentResponseSuccess = (restoreDepartmentResponse200) & {
+  headers: Headers;
+};
+export type restoreDepartmentResponseError = (restoreDepartmentResponse422) & {
+  headers: Headers;
+};
+
+export type restoreDepartmentResponse = (restoreDepartmentResponseSuccess | restoreDepartmentResponseError)
+
+export const getRestoreDepartmentUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/departments/${id}/restore`
+}
+
+/**
+ * @summary Restore Department
+ */
+export const restoreDepartment = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<restoreDepartmentResponse> => {
+
+  return customFetch<restoreDepartmentResponse>(getRestoreDepartmentUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRestoreDepartmentMutationKey = () => ['restoreDepartment'] as const;
+
+export const getRestoreDepartmentMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreDepartment>>, TError,RestoreDepartmentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof restoreDepartment>>, TError,RestoreDepartmentMutationVariables, TContext> => {
+
+const mutationKey = getRestoreDepartmentMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof restoreDepartment>>, RestoreDepartmentMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  restoreDepartment(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RestoreDepartmentMutationResult = NonNullable<Awaited<ReturnType<typeof restoreDepartment>>>
+
+    export type RestoreDepartmentMutationError = HTTPValidationError
+    export type RestoreDepartmentMutationVariables = {id: string}
+
+    /**
+ * @summary Restore Department
+ */
+export const useRestoreDepartment = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreDepartment>>, TError,RestoreDepartmentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof restoreDepartment>>,
+        TError,
+        RestoreDepartmentMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRestoreDepartmentMutationOptions(options), queryClient);
+    }
+
+export type listPositionsResponse200 = {
+  data: PositionListPage
+  status: 200
+}
+
+export type listPositionsResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type listPositionsResponseSuccess = (listPositionsResponse200) & {
+  headers: Headers;
+};
+export type listPositionsResponseError = (listPositionsResponse422) & {
+  headers: Headers;
+};
+
+export type listPositionsResponse = (listPositionsResponseSuccess | listPositionsResponseError)
+
+export const getListPositionsUrl = (params?: ListPositionsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/positions?${stringifiedParams}` : `/api/v1/positions`
+}
+
+/**
+ * @summary List Positions
+ */
+export const listPositions = async (params?: ListPositionsParams, options?: Parameters<typeof customFetch>[1]): Promise<listPositionsResponse> => {
+
+  return customFetch<listPositionsResponse>(getListPositionsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPositionsQueryKey = (params?: ListPositionsParams,) => {
+    return [
+    `/api/v1/positions`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListPositionsQueryOptions = <TData = Awaited<ReturnType<typeof listPositions>>, TError = HTTPValidationError>(params?: ListPositionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPositions>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPositionsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPositions>>> = ({ signal }) => listPositions(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPositions>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListPositionsQueryResult = NonNullable<Awaited<ReturnType<typeof listPositions>>>
+export type ListPositionsQueryError = HTTPValidationError
+
+
+export function useListPositions<TData = Awaited<ReturnType<typeof listPositions>>, TError = HTTPValidationError>(
+ params: undefined |  ListPositionsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPositions>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listPositions>>,
+          TError,
+          Awaited<ReturnType<typeof listPositions>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListPositions<TData = Awaited<ReturnType<typeof listPositions>>, TError = HTTPValidationError>(
+ params?: ListPositionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPositions>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listPositions>>,
+          TError,
+          Awaited<ReturnType<typeof listPositions>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListPositions<TData = Awaited<ReturnType<typeof listPositions>>, TError = HTTPValidationError>(
+ params?: ListPositionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPositions>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List Positions
+ */
+
+export function useListPositions<TData = Awaited<ReturnType<typeof listPositions>>, TError = HTTPValidationError>(
+ params?: ListPositionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPositions>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListPositionsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type createPositionResponse201 = {
+  data: Position
+  status: 201
+}
+
+export type createPositionResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type createPositionResponseSuccess = (createPositionResponse201) & {
+  headers: Headers;
+};
+export type createPositionResponseError = (createPositionResponse422) & {
+  headers: Headers;
+};
+
+export type createPositionResponse = (createPositionResponseSuccess | createPositionResponseError)
+
+export const getCreatePositionUrl = () => {
+
+
+
+
+  return `/api/v1/positions`
+}
+
+/**
+ * @summary Create Position
+ */
+export const createPosition = async (positionCreate: PositionCreate, options?: Parameters<typeof customFetch>[1]): Promise<createPositionResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<createPositionResponse>(getCreatePositionUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(positionCreate)
+  }
+);}
+
+
+
+
+
+export const getCreatePositionMutationKey = () => ['createPosition'] as const;
+
+export const getCreatePositionMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPosition>>, TError,CreatePositionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createPosition>>, TError,CreatePositionMutationVariables, TContext> => {
+
+const mutationKey = getCreatePositionMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createPosition>>, CreatePositionMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createPosition(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreatePositionMutationResult = NonNullable<Awaited<ReturnType<typeof createPosition>>>
+    export type CreatePositionMutationBody = PositionCreate
+    export type CreatePositionMutationError = HTTPValidationError
+    export type CreatePositionMutationVariables = {data: PositionCreate}
+
+    /**
+ * @summary Create Position
+ */
+export const useCreatePosition = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPosition>>, TError,CreatePositionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createPosition>>,
+        TError,
+        CreatePositionMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreatePositionMutationOptions(options), queryClient);
+    }
+
+export type getPositionResponse200 = {
+  data: Position
+  status: 200
+}
+
+export type getPositionResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type getPositionResponseSuccess = (getPositionResponse200) & {
+  headers: Headers;
+};
+export type getPositionResponseError = (getPositionResponse422) & {
+  headers: Headers;
+};
+
+export type getPositionResponse = (getPositionResponseSuccess | getPositionResponseError)
+
+export const getGetPositionUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/positions/${id}`
+}
+
+/**
+ * @summary Get Position
+ */
+export const getPosition = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<getPositionResponse> => {
+
+  return customFetch<getPositionResponse>(getGetPositionUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPositionQueryKey = (id: string,) => {
+    return [
+    `/api/v1/positions/${id}`
+    ] as const;
+    }
+
+
+export const getGetPositionQueryOptions = <TData = Awaited<ReturnType<typeof getPosition>>, TError = HTTPValidationError>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPosition>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPositionQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPosition>>> = ({ signal }) => getPosition(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPosition>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetPositionQueryResult = NonNullable<Awaited<ReturnType<typeof getPosition>>>
+export type GetPositionQueryError = HTTPValidationError
+
+
+export function useGetPosition<TData = Awaited<ReturnType<typeof getPosition>>, TError = HTTPValidationError>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPosition>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getPosition>>,
+          TError,
+          Awaited<ReturnType<typeof getPosition>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetPosition<TData = Awaited<ReturnType<typeof getPosition>>, TError = HTTPValidationError>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPosition>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getPosition>>,
+          TError,
+          Awaited<ReturnType<typeof getPosition>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetPosition<TData = Awaited<ReturnType<typeof getPosition>>, TError = HTTPValidationError>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPosition>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get Position
+ */
+
+export function useGetPosition<TData = Awaited<ReturnType<typeof getPosition>>, TError = HTTPValidationError>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPosition>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetPositionQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type updatePositionResponse200 = {
+  data: Position
+  status: 200
+}
+
+export type updatePositionResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type updatePositionResponseSuccess = (updatePositionResponse200) & {
+  headers: Headers;
+};
+export type updatePositionResponseError = (updatePositionResponse422) & {
+  headers: Headers;
+};
+
+export type updatePositionResponse = (updatePositionResponseSuccess | updatePositionResponseError)
+
+export const getUpdatePositionUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/positions/${id}`
+}
+
+/**
+ * @summary Update Position
+ */
+export const updatePosition = async (id: string,
+    positionUpdate: PositionUpdate, options?: Parameters<typeof customFetch>[1]): Promise<updatePositionResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<updatePositionResponse>(getUpdatePositionUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(positionUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdatePositionMutationKey = () => ['updatePosition'] as const;
+
+export const getUpdatePositionMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePosition>>, TError,UpdatePositionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updatePosition>>, TError,UpdatePositionMutationVariables, TContext> => {
+
+const mutationKey = getUpdatePositionMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updatePosition>>, UpdatePositionMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updatePosition(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdatePositionMutationResult = NonNullable<Awaited<ReturnType<typeof updatePosition>>>
+    export type UpdatePositionMutationBody = PositionUpdate
+    export type UpdatePositionMutationError = HTTPValidationError
+    export type UpdatePositionMutationVariables = {id: string;data: PositionUpdate}
+
+    /**
+ * @summary Update Position
+ */
+export const useUpdatePosition = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePosition>>, TError,UpdatePositionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof updatePosition>>,
+        TError,
+        UpdatePositionMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdatePositionMutationOptions(options), queryClient);
+    }
+
+export type archivePositionResponse200 = {
+  data: Position
+  status: 200
+}
+
+export type archivePositionResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type archivePositionResponseSuccess = (archivePositionResponse200) & {
+  headers: Headers;
+};
+export type archivePositionResponseError = (archivePositionResponse422) & {
+  headers: Headers;
+};
+
+export type archivePositionResponse = (archivePositionResponseSuccess | archivePositionResponseError)
+
+export const getArchivePositionUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/positions/${id}/archive`
+}
+
+/**
+ * @summary Archive Position
+ */
+export const archivePosition = async (id: string,
+    archiveRequestNull?: ArchiveRequest | null, options?: Parameters<typeof customFetch>[1]): Promise<archivePositionResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<archivePositionResponse>(getArchivePositionUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(archiveRequestNull)
+  }
+);}
+
+
+
+
+
+export const getArchivePositionMutationKey = () => ['archivePosition'] as const;
+
+export const getArchivePositionMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof archivePosition>>, TError,ArchivePositionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof archivePosition>>, TError,ArchivePositionMutationVariables, TContext> => {
+
+const mutationKey = getArchivePositionMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof archivePosition>>, ArchivePositionMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  archivePosition(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ArchivePositionMutationResult = NonNullable<Awaited<ReturnType<typeof archivePosition>>>
+    export type ArchivePositionMutationBody = ArchiveRequest | null | undefined
+    export type ArchivePositionMutationError = HTTPValidationError
+    export type ArchivePositionMutationVariables = {id: string;data?: ArchiveRequest | null}
+
+    /**
+ * @summary Archive Position
+ */
+export const useArchivePosition = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof archivePosition>>, TError,ArchivePositionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof archivePosition>>,
+        TError,
+        ArchivePositionMutationVariables,
+        TContext
+      > => {
+      return useMutation(getArchivePositionMutationOptions(options), queryClient);
+    }
+
+export type restorePositionResponse200 = {
+  data: Position
+  status: 200
+}
+
+export type restorePositionResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type restorePositionResponseSuccess = (restorePositionResponse200) & {
+  headers: Headers;
+};
+export type restorePositionResponseError = (restorePositionResponse422) & {
+  headers: Headers;
+};
+
+export type restorePositionResponse = (restorePositionResponseSuccess | restorePositionResponseError)
+
+export const getRestorePositionUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/positions/${id}/restore`
+}
+
+/**
+ * @summary Restore Position
+ */
+export const restorePosition = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<restorePositionResponse> => {
+
+  return customFetch<restorePositionResponse>(getRestorePositionUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRestorePositionMutationKey = () => ['restorePosition'] as const;
+
+export const getRestorePositionMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restorePosition>>, TError,RestorePositionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof restorePosition>>, TError,RestorePositionMutationVariables, TContext> => {
+
+const mutationKey = getRestorePositionMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof restorePosition>>, RestorePositionMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  restorePosition(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RestorePositionMutationResult = NonNullable<Awaited<ReturnType<typeof restorePosition>>>
+
+    export type RestorePositionMutationError = HTTPValidationError
+    export type RestorePositionMutationVariables = {id: string}
+
+    /**
+ * @summary Restore Position
+ */
+export const useRestorePosition = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restorePosition>>, TError,RestorePositionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof restorePosition>>,
+        TError,
+        RestorePositionMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRestorePositionMutationOptions(options), queryClient);
+    }
+
+export type listLocationsResponse200 = {
+  data: LocationListPage
+  status: 200
+}
+
+export type listLocationsResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type listLocationsResponseSuccess = (listLocationsResponse200) & {
+  headers: Headers;
+};
+export type listLocationsResponseError = (listLocationsResponse422) & {
+  headers: Headers;
+};
+
+export type listLocationsResponse = (listLocationsResponseSuccess | listLocationsResponseError)
+
+export const getListLocationsUrl = (params?: ListLocationsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/locations?${stringifiedParams}` : `/api/v1/locations`
+}
+
+/**
+ * @summary List Locations
+ */
+export const listLocations = async (params?: ListLocationsParams, options?: Parameters<typeof customFetch>[1]): Promise<listLocationsResponse> => {
+
+  return customFetch<listLocationsResponse>(getListLocationsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListLocationsQueryKey = (params?: ListLocationsParams,) => {
+    return [
+    `/api/v1/locations`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListLocationsQueryOptions = <TData = Awaited<ReturnType<typeof listLocations>>, TError = HTTPValidationError>(params?: ListLocationsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listLocations>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListLocationsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listLocations>>> = ({ signal }) => listLocations(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listLocations>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListLocationsQueryResult = NonNullable<Awaited<ReturnType<typeof listLocations>>>
+export type ListLocationsQueryError = HTTPValidationError
+
+
+export function useListLocations<TData = Awaited<ReturnType<typeof listLocations>>, TError = HTTPValidationError>(
+ params: undefined |  ListLocationsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listLocations>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listLocations>>,
+          TError,
+          Awaited<ReturnType<typeof listLocations>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListLocations<TData = Awaited<ReturnType<typeof listLocations>>, TError = HTTPValidationError>(
+ params?: ListLocationsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listLocations>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listLocations>>,
+          TError,
+          Awaited<ReturnType<typeof listLocations>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListLocations<TData = Awaited<ReturnType<typeof listLocations>>, TError = HTTPValidationError>(
+ params?: ListLocationsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listLocations>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List Locations
+ */
+
+export function useListLocations<TData = Awaited<ReturnType<typeof listLocations>>, TError = HTTPValidationError>(
+ params?: ListLocationsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listLocations>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListLocationsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type createLocationResponse201 = {
+  data: Location
+  status: 201
+}
+
+export type createLocationResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type createLocationResponseSuccess = (createLocationResponse201) & {
+  headers: Headers;
+};
+export type createLocationResponseError = (createLocationResponse422) & {
+  headers: Headers;
+};
+
+export type createLocationResponse = (createLocationResponseSuccess | createLocationResponseError)
+
+export const getCreateLocationUrl = () => {
+
+
+
+
+  return `/api/v1/locations`
+}
+
+/**
+ * @summary Create Location
+ */
+export const createLocation = async (locationCreate: LocationCreate, options?: Parameters<typeof customFetch>[1]): Promise<createLocationResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<createLocationResponse>(getCreateLocationUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(locationCreate)
+  }
+);}
+
+
+
+
+
+export const getCreateLocationMutationKey = () => ['createLocation'] as const;
+
+export const getCreateLocationMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createLocation>>, TError,CreateLocationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createLocation>>, TError,CreateLocationMutationVariables, TContext> => {
+
+const mutationKey = getCreateLocationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createLocation>>, CreateLocationMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createLocation(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateLocationMutationResult = NonNullable<Awaited<ReturnType<typeof createLocation>>>
+    export type CreateLocationMutationBody = LocationCreate
+    export type CreateLocationMutationError = HTTPValidationError
+    export type CreateLocationMutationVariables = {data: LocationCreate}
+
+    /**
+ * @summary Create Location
+ */
+export const useCreateLocation = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createLocation>>, TError,CreateLocationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createLocation>>,
+        TError,
+        CreateLocationMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateLocationMutationOptions(options), queryClient);
+    }
+
+export type getLocationResponse200 = {
+  data: Location
+  status: 200
+}
+
+export type getLocationResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type getLocationResponseSuccess = (getLocationResponse200) & {
+  headers: Headers;
+};
+export type getLocationResponseError = (getLocationResponse422) & {
+  headers: Headers;
+};
+
+export type getLocationResponse = (getLocationResponseSuccess | getLocationResponseError)
+
+export const getGetLocationUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/locations/${id}`
+}
+
+/**
+ * @summary Get Location
+ */
+export const getLocation = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<getLocationResponse> => {
+
+  return customFetch<getLocationResponse>(getGetLocationUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetLocationQueryKey = (id: string,) => {
+    return [
+    `/api/v1/locations/${id}`
+    ] as const;
+    }
+
+
+export const getGetLocationQueryOptions = <TData = Awaited<ReturnType<typeof getLocation>>, TError = HTTPValidationError>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getLocation>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetLocationQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getLocation>>> = ({ signal }) => getLocation(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getLocation>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetLocationQueryResult = NonNullable<Awaited<ReturnType<typeof getLocation>>>
+export type GetLocationQueryError = HTTPValidationError
+
+
+export function useGetLocation<TData = Awaited<ReturnType<typeof getLocation>>, TError = HTTPValidationError>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getLocation>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getLocation>>,
+          TError,
+          Awaited<ReturnType<typeof getLocation>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetLocation<TData = Awaited<ReturnType<typeof getLocation>>, TError = HTTPValidationError>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getLocation>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getLocation>>,
+          TError,
+          Awaited<ReturnType<typeof getLocation>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetLocation<TData = Awaited<ReturnType<typeof getLocation>>, TError = HTTPValidationError>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getLocation>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get Location
+ */
+
+export function useGetLocation<TData = Awaited<ReturnType<typeof getLocation>>, TError = HTTPValidationError>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getLocation>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetLocationQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type updateLocationResponse200 = {
+  data: Location
+  status: 200
+}
+
+export type updateLocationResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type updateLocationResponseSuccess = (updateLocationResponse200) & {
+  headers: Headers;
+};
+export type updateLocationResponseError = (updateLocationResponse422) & {
+  headers: Headers;
+};
+
+export type updateLocationResponse = (updateLocationResponseSuccess | updateLocationResponseError)
+
+export const getUpdateLocationUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/locations/${id}`
+}
+
+/**
+ * @summary Update Location
+ */
+export const updateLocation = async (id: string,
+    locationUpdate: LocationUpdate, options?: Parameters<typeof customFetch>[1]): Promise<updateLocationResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<updateLocationResponse>(getUpdateLocationUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(locationUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateLocationMutationKey = () => ['updateLocation'] as const;
+
+export const getUpdateLocationMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateLocation>>, TError,UpdateLocationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateLocation>>, TError,UpdateLocationMutationVariables, TContext> => {
+
+const mutationKey = getUpdateLocationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateLocation>>, UpdateLocationMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateLocation(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateLocationMutationResult = NonNullable<Awaited<ReturnType<typeof updateLocation>>>
+    export type UpdateLocationMutationBody = LocationUpdate
+    export type UpdateLocationMutationError = HTTPValidationError
+    export type UpdateLocationMutationVariables = {id: string;data: LocationUpdate}
+
+    /**
+ * @summary Update Location
+ */
+export const useUpdateLocation = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateLocation>>, TError,UpdateLocationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof updateLocation>>,
+        TError,
+        UpdateLocationMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateLocationMutationOptions(options), queryClient);
+    }
+
+export type archiveLocationResponse200 = {
+  data: Location
+  status: 200
+}
+
+export type archiveLocationResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type archiveLocationResponseSuccess = (archiveLocationResponse200) & {
+  headers: Headers;
+};
+export type archiveLocationResponseError = (archiveLocationResponse422) & {
+  headers: Headers;
+};
+
+export type archiveLocationResponse = (archiveLocationResponseSuccess | archiveLocationResponseError)
+
+export const getArchiveLocationUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/locations/${id}/archive`
+}
+
+/**
+ * @summary Archive Location
+ */
+export const archiveLocation = async (id: string,
+    archiveRequestNull?: ArchiveRequest | null, options?: Parameters<typeof customFetch>[1]): Promise<archiveLocationResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<archiveLocationResponse>(getArchiveLocationUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(archiveRequestNull)
+  }
+);}
+
+
+
+
+
+export const getArchiveLocationMutationKey = () => ['archiveLocation'] as const;
+
+export const getArchiveLocationMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof archiveLocation>>, TError,ArchiveLocationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof archiveLocation>>, TError,ArchiveLocationMutationVariables, TContext> => {
+
+const mutationKey = getArchiveLocationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof archiveLocation>>, ArchiveLocationMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  archiveLocation(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ArchiveLocationMutationResult = NonNullable<Awaited<ReturnType<typeof archiveLocation>>>
+    export type ArchiveLocationMutationBody = ArchiveRequest | null | undefined
+    export type ArchiveLocationMutationError = HTTPValidationError
+    export type ArchiveLocationMutationVariables = {id: string;data?: ArchiveRequest | null}
+
+    /**
+ * @summary Archive Location
+ */
+export const useArchiveLocation = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof archiveLocation>>, TError,ArchiveLocationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof archiveLocation>>,
+        TError,
+        ArchiveLocationMutationVariables,
+        TContext
+      > => {
+      return useMutation(getArchiveLocationMutationOptions(options), queryClient);
+    }
+
+export type restoreLocationResponse200 = {
+  data: Location
+  status: 200
+}
+
+export type restoreLocationResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type restoreLocationResponseSuccess = (restoreLocationResponse200) & {
+  headers: Headers;
+};
+export type restoreLocationResponseError = (restoreLocationResponse422) & {
+  headers: Headers;
+};
+
+export type restoreLocationResponse = (restoreLocationResponseSuccess | restoreLocationResponseError)
+
+export const getRestoreLocationUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/locations/${id}/restore`
+}
+
+/**
+ * @summary Restore Location
+ */
+export const restoreLocation = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<restoreLocationResponse> => {
+
+  return customFetch<restoreLocationResponse>(getRestoreLocationUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRestoreLocationMutationKey = () => ['restoreLocation'] as const;
+
+export const getRestoreLocationMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreLocation>>, TError,RestoreLocationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof restoreLocation>>, TError,RestoreLocationMutationVariables, TContext> => {
+
+const mutationKey = getRestoreLocationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof restoreLocation>>, RestoreLocationMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  restoreLocation(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RestoreLocationMutationResult = NonNullable<Awaited<ReturnType<typeof restoreLocation>>>
+
+    export type RestoreLocationMutationError = HTTPValidationError
+    export type RestoreLocationMutationVariables = {id: string}
+
+    /**
+ * @summary Restore Location
+ */
+export const useRestoreLocation = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreLocation>>, TError,RestoreLocationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof restoreLocation>>,
+        TError,
+        RestoreLocationMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRestoreLocationMutationOptions(options), queryClient);
+    }
 

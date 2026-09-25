@@ -1,6 +1,6 @@
 # Feature: Organizations
 
-- **Status:** approved
+- **Status:** done
 - **Phase:** 1
 - **Size:** S
 - **Surfaces:** api+web
@@ -20,9 +20,8 @@ that unblocks Employees.
   across tenants (`.ai/security.md`).
 - Departments may be nested (a department can have a parent). Cycles are
   rejected.
-- All three collections are **soft-deleted** via `archived_at` (proposed):
-  employees and attendance records keep referencing them, so history must
-  survive deletion.
+- All three collections are **soft-deleted** via `archived_at`: employees and
+  attendance records keep referencing them, so history must survive deletion.
 - A location has an IANA `timezone` — attendance lateness is evaluated in it.
 - Names are unique per tenant within each collection.
 - Archived items are hidden from create/update pickers but remain readable and
@@ -55,7 +54,7 @@ that unblocks Employees.
 | Web feature | `apps/web/features/organizations/` |
 | Web routes | `apps/web/app/(dashboard)/settings/organization/` |
 | API tests | `apps/api/tests/unit` · `tests/integration` |
-| E2E | `tests/e2e/` |
+| E2E | `tests/e2e/` — **deferred to Employees** (Playwright lands with the first feature needing cross-surface automation, per `tests/e2e/README.md`) |
 
 ## Roles & access
 
@@ -64,7 +63,7 @@ that unblocks Employees.
 | Read departments/positions/locations | Y | Y | Y | Y |
 | Create / update / archive | — | — | Y | Y |
 
-## API contract (proposed)
+## API contract (final — pinned by T1, 2026-09-24)
 
 Routes (mirrored for `positions` and `locations`):
 
@@ -93,6 +92,55 @@ Error codes: `department_not_found` · `department_name_taken` ·
 `position_title_taken` · `location_not_found` · `location_name_taken` ·
 `invalid_timezone`.
 
+### Pinned details
+
+- **Pagination**: `?page=` default 1 (clamp ≥ 1); `?page_size=` default 20,
+  max 100 (clamped, never an error). Response `page` object:
+  `{"page", "page_size", "total_items", "total_pages"}`. Default order:
+  `name`/`title` ascending.
+- **Filters**: `q` = case-insensitive substring of `name`/`title`; `parent_id`
+  (departments only, exact UUID); `include_archived` (bool, default `false`).
+  `GET /{id}` returns archived resources (they stay readable); `PATCH /{id}`
+  on an archived resource is allowed.
+- **PATCH semantics**: absent field = unchanged; explicit `null` for
+  `parent_department_id` moves the department to the root.
+- **Archive/restore**: archive body `{"reason"?}` — the reason is stored on the
+  audit entry only, not the resource. Archive-of-archived and
+  restore-of-active are `200` no-ops (no audit entry); real transitions audit.
+  No DELETE routes exist.
+- **Uniqueness**: DB unique constraints `(tenant_id, name)` / `(tenant_id, title)`
+  across **all** rows, archived included — an archived row keeps its name and
+  restore can never conflict (Risk 2, ADR candidate).
+- **Parent rules**: parent must exist in the tenant (else `404
+  department_not_found`); self or descendant → `400 department_cycle`; the
+  archived state of a parent is **not** checked (Risk 3).
+- **Timezone**: validated in the service via `zoneinfo.ZoneInfo` →
+  `422 invalid_timezone` in the uniform error shape (never FastAPI's `detail`
+  shape). Required on location create, optional on patch.
+- **Identity** (ADR 0004): `X-Tenant-Id`, `X-Actor-Id` (UUIDs), `X-Role`
+  (case-insensitive, one of `employee|manager|hr|finance|admin|super_admin`).
+  Missing/malformed → `400 invalid_identity`; unknown role → `403 forbidden`
+  (fail closed); policy denial → `403 forbidden`.
+- **Roles**: read = any valid role; manage (create/update/archive/restore) =
+  `hr`, `admin`, `super_admin` — the `.ai/security.md` matrix governs where it
+  is wider than this spec's 4-column table.
+- **Error code → status**: `department_not_found` / `position_not_found` /
+  `location_not_found` 404 · `department_name_taken` / `position_title_taken` /
+  `location_name_taken` / `department_archived_in_use` 409 · `department_cycle`
+  400 · `invalid_timezone` 422 · `forbidden` 403 · `invalid_identity` 400 ·
+  `validation_error` 422 (uniform handler for FastAPI RequestValidationError).
+  Body always `{"error": {"code", "message"}}`; messages never echo field values.
+- **operationIds** (drive orval hook names): `listDepartments`,
+  `createDepartment`, `getDepartment`, `updateDepartment`, `archiveDepartment`,
+  `restoreDepartment` — same six for `…Positions` and `…Locations` (18 routes).
+- **Ids/time**: UUIDv7 ids generated in the service (`uuid-utils`);
+  `created_at`/`updated_at` are DB defaults; `archived_at` and audit
+  `occurred_at` come from a `now` parameter injected at the router edge (time
+  is a parameter, never `datetime.now()` inside business logic).
+- Read schemas are titled exactly `Department`, `Position`, `Location`;
+  positions/locations mirror the departments route table at `/api/v1/positions`
+  and `/api/v1/locations`.
+
 ## Events
 
 None in Phase 1. Organization reference data changes are **audited**, not
@@ -103,23 +151,23 @@ them in Phase 4.
 
 - Create a department whose parent is itself or a descendant → `400 department_cycle`.
 - Duplicate name in the same tenant → `409 department_name_taken`.
-- Archive a department that still has active employees → `409 department_archived_in_use` (proposed: block).
+- Archive a department that still has active employees → `409 department_archived_in_use` (PO Decision #1: block).
 - Tenant A requests tenant B's id → `404` (never `403` — no existence leak).
 - Invalid/unknown IANA timezone → `422 invalid_timezone`.
 - `page_size` above the maximum → clamped, not an error.
 
 ## Acceptance criteria
 
-- [ ] API: `POST /departments` with a valid payload returns `201` and the created resource.
-- [ ] API: `GET /departments` paginates and filters by `q` / `parent_id`.
-- [ ] API (failure): duplicate department name in one tenant → `409 department_name_taken`.
-- [ ] API (failure): cycle in the department tree → `400 department_cycle`.
-- [ ] API (failure): archiving a department with active employees → `409 department_archived_in_use`.
-- [ ] API (tenant isolation): tenant B reading tenant A's department → `404 department_not_found`.
-- [ ] API (denied role): an `Employee`-role request to `POST /departments` → `403`.
-- [ ] Audit: every create/update/archive produced an audit entry.
-- [ ] Web: the organization page lists, creates, edits and archives a department; a `409` renders as a visible error state.
-- [ ] Migrations: schema is created by Alembic, not by hand.
+- [x] API: `POST /departments` with a valid payload returns `201` and the created resource.
+- [x] API: `GET /departments` paginates and filters by `q` / `parent_id`.
+- [x] API (failure): duplicate department name in one tenant → `409 department_name_taken`.
+- [x] API (failure): cycle in the department tree → `400 department_cycle`.
+- [x] API (failure): archiving a department with active employees → `409 department_archived_in_use` (unit-proven via `DepartmentUsagePort` fake; integration proof lands with Employees — Risk 1).
+- [x] API (tenant isolation): tenant B reading tenant A's department → `404 department_not_found`.
+- [x] API (denied role): an `Employee`-role request to `POST /departments` → `403`.
+- [x] Audit: every create/update/archive produced an audit entry.
+- [x] Web: the organization page lists, creates, edits and archives a department; a `409` renders as a visible error state.
+- [x] Migrations: schema is created by Alembic, not by hand.
 
 ## Decisions (PO, 2026-09-24)
 

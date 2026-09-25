@@ -34,7 +34,7 @@ domain map in `.ai/domain.md` is their placeholder.
 
 | Feature | Phase | Size | Status | Spec |
 | --- | --- | --- | --- | --- |
-| Organizations (departments, positions, locations) | 1 | S | draft | `organizations.md` |
+| Organizations (departments, positions, locations) | 1 | S | done | `organizations.md` |
 | Employees (records, history, transfers) | 1 | M | draft | `employees.md` |
 | Attendance (check-in/out, lateness, live board) | 1 | M | draft | `attendance.md` |
 | Identity & Access (authN + RBAC) | 2 | M | planned | — |
