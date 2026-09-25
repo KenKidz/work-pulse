@@ -29,3 +29,10 @@ Thumbs.db
 
 # Agent Manager worktree checkouts (never commit nested checkouts)
 .kilo/worktrees/
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/

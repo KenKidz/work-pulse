@@ -63,7 +63,7 @@ contracts/            versioned event schemas + generated OpenAPI
 database/postgres/    seeds and scripts
 tests/e2e/            cross-surface tests
 tasks/                TODO.md (backlog) · doc.md (original brief)
-.kilo/                agent config (/spec, /plan, /check commands; planner, verifier agents)
+.kilo/                agent config (/spec, /plan, /check commands; researcher, verifier agents)
 ```
 
 ## Architecture rules
@@ -98,7 +98,9 @@ ONE FEATURE → ONE SPEC → ONE DOMAIN → ONE API FLOW → ONE EVENT FLOW → 
    template. No code without a spec. If the spec is silent on a behavior, ask;
    never invent product scope.
 2. **Plan** — `/plan .ai/features/<feature>.md` produces an ordered, file-level
-   plan inside the spec (only once decisions are answered).
+   plan inside the spec (only once decisions are answered). The main model
+   plans; subagents are used only for read-only repo lookups (`researcher`)
+   and verification (`verifier`).
 3. **Build** — smallest possible diff, one concern per change, follow the plan.
 4. **Verify** — `/check` (runs `make check`); for risky changes use the
    `verifier` subagent. Fix failures before reporting done.
