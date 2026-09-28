@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workpulse.dev/contracts/events/attendance/attendance-late.v1.json",
+  "title": "WorkPulse attendance.late v1",
+  "description": "A check-in was judged late against the resolved shift (exclusive `start + grace` boundary, location timezone). Emitted alongside `attendance.checked_in`, never instead of it.",
+  "type": "object",
+  "required": ["attendance_id", "employee_id", "workday", "shift_id", "minutes_late"],
+  "additionalProperties": false,
+  "properties": {
+    "attendance_id": {
+      "type": "string",
+      "description": "The attendance record judged late (UUIDv7 string)."
+    },
+    "employee_id": {
+      "type": "string",
+      "description": "Employee the record belongs to (UUIDv7 string)."
+    },
+    "workday": {
+      "type": "string",
+      "format": "date",
+      "description": "Calendar date the lateness was judged on (the record's workday)."
+    },
+    "shift_id": {
+      "type": "string",
+      "description": "Shift the lateness was judged against (UUIDv7 string). Never null — no shift means never late."
+    },
+    "minutes_late": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Whole minutes past `shift.start_time + grace_minutes` (floor) — `0` can accompany a late flag inside the first minute."
+    }
+  }
+}

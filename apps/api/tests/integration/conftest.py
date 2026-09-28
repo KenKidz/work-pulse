@@ -54,7 +54,10 @@ TENANT_A = UUID("00000000-0000-4000-8000-00000000000a")
 TENANT_B = UUID("00000000-0000-4000-8000-00000000000b")
 ACTOR = UUID("00000000-0000-4000-8000-000000000002")
 
-ALL_TABLES = "audit_entries, departments, positions, locations, employees, employments"
+ALL_TABLES = (
+    "audit_entries, departments, positions, locations, employees, employments, "
+    "shifts, attendance_records"
+)
 
 ClientFactory = Callable[..., AsyncClient]
 

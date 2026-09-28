@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workpulse.dev/contracts/events/attendance/attendance-checked-out.v1.json",
+  "title": "WorkPulse attendance.checked_out v1",
+  "description": "An attendance record was closed by a check-out. Identifiers and derived scalars only — no notes or times beyond the listed fields (`.ai/security.md`).",
+  "type": "object",
+  "required": ["attendance_id", "employee_id", "workday", "duration_minutes"],
+  "additionalProperties": false,
+  "properties": {
+    "attendance_id": {
+      "type": "string",
+      "description": "The closed attendance record (UUIDv7 string)."
+    },
+    "employee_id": {
+      "type": "string",
+      "description": "Employee the record belongs to (UUIDv7 string)."
+    },
+    "workday": {
+      "type": "string",
+      "format": "date",
+      "description": "Calendar date the record belongs to (the check-in workday — never recomputed)."
+    },
+    "duration_minutes": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Whole minutes between check-in and check-out (floor)."
+    }
+  }
+}
