@@ -3,7 +3,7 @@
 API_DIR := apps/api
 WEB_DIR := apps/web
 
-.PHONY: help install db-up db-down db-test-up db-seed dev-api dev-web check check-api check-web gen-api format-web
+.PHONY: help install db-up db-down db-test-up db-migrate db-seed dev-api dev-web check check-api check-web check-e2e gen-api format-web
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -12,11 +12,14 @@ install: ## Install API (uv) and web (pnpm workspaces) dependencies
 	cd $(API_DIR) && uv sync
 	pnpm install
 
-db-up: ## Start PostgreSQL (detached)
-	docker compose up -d
+db-up: ## Start PostgreSQL (detached, waits for healthy)
+	docker compose up -d --wait
 
 db-test-up: ## Start the throwaway test PostgreSQL on :5433 (detached)
 	docker compose up -d --wait postgres-test
+
+db-migrate: ## Apply Alembic migrations to the dev database
+	cd $(API_DIR) && uv run alembic upgrade head
 
 db-seed: ## Seed the dev database — idempotent, safe to re-run
 	@for f in database/postgres/seeds/*.sql; do \
@@ -43,6 +46,9 @@ check-api: db-test-up ## API gate: ruff + pyright + pytest (ADR 0006)
 
 check-web: ## Web gate: typecheck + ESLint + Vitest
 	cd $(WEB_DIR) && pnpm run typecheck && pnpm run lint && pnpm run test
+
+check-e2e: db-up db-migrate db-seed ## E2E gate: Playwright (web + api + seeded dev db) — not in `make check` yet
+	npx playwright test
 
 gen-api: ## Regenerate OpenAPI contract + typed API client
 	cd $(API_DIR) && uv run python scripts/export_openapi.py

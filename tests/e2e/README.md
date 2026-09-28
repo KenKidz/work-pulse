@@ -3,6 +3,11 @@
 Cross-surface flows: tests that exercise Next.js + FastAPI + PostgreSQL
 together — the paths per-surface tests deliberately don't cover.
 
-**Empty in Phase 1.** The first e2e test arrives with the first full-stack
-feature (Employees), which pins the tooling (Playwright is the leading
-candidate) in its feature spec.
+Run with `make check-e2e`: it brings PostgreSQL up, applies migrations and
+seeds the dev database, then Playwright starts both dev servers
+(`apps/api` on :8000, `apps/web` on :3000) and runs the suite in Chromium.
+The suite stays out of `make check` until it is fast and stable enough to gate
+every change (`.ai/testing.md` decision 3).
+
+- `employees.spec.ts` — create → list → detail → transfer, and the duplicate
+  email conflict rendered as a visible error state (employees AC12).

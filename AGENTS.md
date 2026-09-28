@@ -41,11 +41,13 @@ Roadmap: `.ai/architecture.md`.
 | `make install` | install API (uv) + web (pnpm workspaces) dependencies |
 | `make db-up` / `make db-down` | start / stop PostgreSQL |
 | `make db-test-up` | start the throwaway test PostgreSQL on :5433 |
+| `make db-migrate` | apply Alembic migrations to the dev database |
 | `make db-seed` | seed the dev database (idempotent) |
 | `make dev-api` | FastAPI dev server on :8000 |
 | `make dev-web` | Next.js dev server on :3000 |
 | `make gen-api` | regenerate OpenAPI + typed `@workpulse/api-client` |
 | `make check` | all gates — run before claiming done |
+| `make check-e2e` | Playwright e2e gate (migrate + seed + dev servers) — not in `make check` yet |
 
 ## Repo map
 

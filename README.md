@@ -14,11 +14,13 @@ Prerequisites: Node >= 20, [pnpm](https://pnpm.io/), [uv](https://docs.astral.sh
 
 ```sh
 make install     # API (uv) + web (pnpm workspaces) dependencies
-make db-up       # PostgreSQL on :5432
+make db-up       # PostgreSQL on :5434
+make db-migrate  # apply Alembic migrations to the dev database
 make dev-api     # FastAPI on http://localhost:8000   (separate terminal)
 make dev-web     # Next.js on http://localhost:3000   (separate terminal)
 make gen-api     # regenerate OpenAPI + typed API client
 make check       # all verification gates
+make check-e2e   # Playwright e2e (migrate + seed + both dev servers)
 ```
 
 ## Repo map
@@ -40,9 +42,10 @@ docs/                 appears when human-facing docs outgrow .ai/
 
 | Gate | Command | Covers |
 | --- | --- | --- |
-| all | `make check` | both gates below |
+| all | `make check` | API + Web gates |
 | API | `make check-api` | pytest (`apps/api/tests/`) |
 | Web | `make check-web` | `tsc --noEmit` + ESLint + Vitest (`apps/web/`) |
+| E2E | `make check-e2e` | Playwright (`tests/e2e/`) — not in `make check` yet |
 
 Test levels, mandatory rules and future gates: `.ai/testing.md`.
 

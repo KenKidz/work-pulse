@@ -6,14 +6,8 @@ does the work.
 
 ## Now
 
-- [ ] `employees.md`: plan → build
-- [ ] Then `attendance.md`: plan → build
+- [ ] `attendance.md`: plan → build
 - [ ] Phase 1 exit criteria (`.ai/product.md`): all three features green end-to-end
-
-## Next
-
-- [ ] Employees: replace `NullDepartmentUsage` with the real usage check and add the integration test for `department_archived_in_use` (organizations spec Risk 1, ADR 0007)
-- [ ] Playwright in `tests/e2e/`, wired as `make check-e2e` — lands with Employees (Vitest landed with ADR 0005)
 
 ## Later
 
@@ -27,6 +21,10 @@ does the work.
 
 ## Done
 
+- [x] Employees built end-to-end (spec T1–T9): pinned API contract (8 routes, uniform errors), event contracts + Phase-1 payload builders, domain service + policies, Postgres repositories, migration `0002`, routers + integration/contract/audit/log tests, regenerated `@workpulse/api-client`, web list/detail/create/edit/transfer/terminate UI; employment-history model recorded in ADR 0008
+- [x] Organizations Risk 1 closed: `PostgresEmployeeUsage` backs `DepartmentUsagePort` — archiving a department with active employees now fails with `409 department_archived_in_use` (integration test included)
+- [x] Playwright lands: `tests/e2e/employees.spec.ts` behind `make check-e2e` (new `db-migrate` + existing `db-up`/`db-seed`, both dev servers via `webServer`); stays out of `make check` until fast and stable (`.ai/testing.md` decision 3)
+- [x] api-client transport fixed to orval's `{data, status, headers}` contract — the e2e layer surfaced what the mocked web tests hid; Organizations UI reads work at runtime again too
 - [x] Organizations built end-to-end (spec T1–T9): pinned API contract (18 routes, uniform errors), domain + Postgres repositories + audit writer, migration `0001`, seeds, regenerated `@workpulse/api-client`, web settings pages (departments/positions/locations); soft-delete semantics recorded in ADR 0007
 - [x] Persistence foundation (landed with Organizations — tooling per ADR 0006: SQLAlchemy 2.0 async + asyncpg, Alembic, Ruff, Pyright, structlog, uuid-utils, pytest-asyncio, httpx): engine/session in `apps/api/app/infrastructure/postgres/`, Alembic under `apps/api/alembic/`, plus a `postgres-test` service in `docker-compose.yml`
 - [x] Dev-identity dependency (`X-Tenant-Id`, `X-Actor-Id`, `X-Role`) in `app/shared/identity.py` — ADR 0004

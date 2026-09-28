@@ -8,6 +8,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         <Link className="font-semibold tracking-tight" href="/dashboard">
           WorkPulse
         </Link>
+        <Link className="text-sm text-muted-foreground hover:text-foreground" href="/employees">
+          Employees
+        </Link>
         <Link
           className="text-sm text-muted-foreground hover:text-foreground"
           href="/settings/organization"

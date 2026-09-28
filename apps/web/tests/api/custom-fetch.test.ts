@@ -15,14 +15,20 @@ afterEach(() => {
 });
 
 describe("customFetch", () => {
-  it("returns parsed JSON for a 200 response and targets the API base URL", async () => {
+  it("wraps a 200 response as { data, status, headers } and targets the API base URL", async () => {
     fetchMock.mockResolvedValueOnce(
       new Response(JSON.stringify({ status: "ok" }), { status: 200 }),
     );
 
-    await expect(customFetch<{ status: string }>("/healthz")).resolves.toEqual({
-      status: "ok",
-    });
+    const result = await customFetch<{
+      data: { status: string };
+      status: number;
+      headers: Headers;
+    }>("/healthz");
+
+    expect(result.data).toEqual({ status: "ok" });
+    expect(result.status).toBe(200);
+    expect(result.headers).toBeInstanceOf(Headers);
     expect(fetchMock).toHaveBeenCalledWith(
       "http://localhost:8000/healthz",
       expect.objectContaining({

@@ -1,6 +1,6 @@
 # Feature: Employees
 
-- **Status:** approved
+- **Status:** done
 - **Phase:** 1
 - **Size:** M
 - **Surfaces:** api+web+events (contracts only in Phase 1)
@@ -233,18 +233,18 @@ No names, emails or salary in any payload.
 
 ## Acceptance criteria
 
-- [ ] API: `POST /employees` with valid references returns `201` and persists an initial employment period.
-- [ ] API: `GET /employees` filters by department/status and paginates.
-- [ ] API: a transfer appends a new employment period and closes the previous one (history is intact).
-- [ ] API (failure): duplicate email → `409 employee_email_taken`.
-- [ ] API (failure): self-manager → `400 employee_self_manager`.
-- [ ] API (failure): transfer to an archived department → `409 transfer_target_archived`.
-- [ ] API (tenant isolation): cross-tenant read/update → `404`.
-- [ ] API (denied role): a `Manager`-role create request → `403`.
-- [ ] Contracts: the four event schemas exist under `contracts/events/employees/` and validate the payloads the service produces.
-- [ ] Audit: create / update / transfer / terminate each wrote an audit entry with no PII values.
-- [ ] Logs: no name, email or phone appears in any log line produced by these flows.
-- [ ] Web: list → detail → transfer flow works; a `409` shows a visible error state.
+- [x] API: `POST /employees` with valid references returns `201` and persists an initial employment period.
+- [x] API: `GET /employees` filters by department/status and paginates.
+- [x] API: a transfer appends a new employment period and closes the previous one (history is intact).
+- [x] API (failure): duplicate email → `409 employee_email_taken`.
+- [x] API (failure): self-manager → `400 employee_self_manager`.
+- [x] API (failure): transfer to an archived department → `409 transfer_target_archived`.
+- [x] API (tenant isolation): cross-tenant read/update → `404`.
+- [x] API (denied role): a `Manager`-role create request → `403`.
+- [x] Contracts: the four event schemas exist under `contracts/events/employees/` and validate the payloads the service produces.
+- [x] Audit: create / update / transfer / terminate each wrote an audit entry with no PII values.
+- [x] Logs: no name, email or phone appears in any log line produced by these flows.
+- [x] Web: list → detail → transfer flow works; a `409` shows a visible error state.
 
 ## Decisions (PO, 2026-09-24)
 
@@ -577,6 +577,24 @@ Verify: `make check-web` green.
   transfer → new period visible in history; second create with a duplicate
   email → **visible 409 error state** (AC12). Deterministic synthetic data
   only (`.ai/testing.md` rule 6).
+
+Built 2026-09-28, three deviations recorded:
+
+1. **Data is run-scoped, not fixed** — employments are append-only and
+   employees are never hard-deleted, so a fixed email makes the suite fail on
+   re-run. Each run namespaces one synthetic employee with a short suffix
+   (`e2e.avery.<run>@workpulse.test`); the flow and organization data it reads
+   stay deterministic. Proven by running the suite twice against one database.
+2. **`check-e2e` gained a `db-migrate` prerequisite** — the gate cannot be
+   green on a database at revision `0001`; the new target applies
+   `alembic upgrade head` before `db-seed` (which is also now part of the
+   documented dev workflow).
+3. **The e2e run surfaced a transport contract bug**: `customFetch` returned
+   the raw JSON body while orval's generated response unions (and every
+   consumer's `data.status === 200` check) expect `{data, status, headers}`.
+   Vitest's mocked client had hidden it; the mutator now fulfils the generated
+   type and its unit test asserts the wrapper. This also repairs the
+   Organizations UI runtime, which was reading empty lists the same way.
 
 Verify: `make check-e2e` green locally (db + both dev servers via webServer).
 

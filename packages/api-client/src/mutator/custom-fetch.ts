@@ -7,6 +7,10 @@
  * responses become ApiError carrying the API's stable `error.code`, so UI
  * layers can map codes to user-visible messages. Generated code calls
  * `customFetch`; never import fetch directly in app code.
+ *
+ * Return contract: `{ data, status, headers }` — the shape orval's generated
+ * response unions declare and every consumer discriminates on
+ * (`data.status === 200`). Keep it in sync with `orval.config.ts`.
  */
 
 const DEFAULT_BASE_URL = "http://localhost:8000";
@@ -72,9 +76,7 @@ export async function customFetch<T>(path: string, init?: RequestInit): Promise<
     throw new ApiError(response.status, code, message);
   }
 
-  if (response.status === 204) {
-    return undefined as T;
-  }
+  const data = response.status === 204 ? undefined : await response.json();
 
-  return (await response.json()) as T;
+  return { data, status: response.status, headers: response.headers } as T;
 }
