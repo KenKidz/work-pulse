@@ -170,7 +170,9 @@ payloads or audit `changes` values (`changes` says `"changed"`).
   scope → `409 shift_scope_taken`. `start_time`/`end_time` are `"HH:MM"`
   strings (`^([01]\d|2[0-3]):[0-5]\d$`); `end_time > start_time` else `422
   shift_time_invalid`. A shift may reference an archived location (lateness
-  still works; ADR 0007 does not apply — no archive on shifts in Phase 1).
+  still works; ADR 0007 does not apply — no archive on shifts in Phase 1). A
+  client-supplied `location_id` that does not exist in the tenant → `404
+  location_not_found` (reused; the id is never echoed).
 - **Board semantics** — counts are independent, **not** a partition (a person
   can be in `present` and `late` at once; UI copy says so):
   - `present` — open record for the date, `work_mode=onsite`
@@ -208,8 +210,10 @@ payloads or audit `changes` values (`changes` says `"changed"`).
   `attendance_already_checked_in` 409 · `attendance_not_open` 409 ·
   `attendance_record_not_found` 404 · `employee_not_active` 409 ·
   `shift_not_found` 404 · `invalid_work_mode` 400 · `shift_time_invalid` 422 ·
-  `shift_scope_taken` 409 · `employee_not_found` 404 (reused) · `forbidden`
-  403 · `invalid_identity` 400 · `validation_error` 422 (uniform handler).
+  `shift_scope_taken` 409 · `employee_not_found` 404 (reused) ·
+  `location_not_found` 404 (reused — shift create/update with a `location_id`
+  outside the tenant) · `forbidden` 403 · `invalid_identity` 400 ·
+  `validation_error` 422 (uniform handler).
 - **Ids/time**: UUIDv7 ids resolved in the service; `now` is a router-injected
   parameter (conventions) and the only wall-clock read.
 

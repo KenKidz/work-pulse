@@ -11,6 +11,86 @@ export interface ArchiveRequest {
   reason?: string | null;
 }
 
+export type WorkMode = typeof WorkMode[keyof typeof WorkMode];
+
+
+export const WorkMode = {
+  onsite: 'onsite',
+  remote: 'remote',
+} as const;
+
+export interface AttendanceRecord {
+  id: string;
+  tenant_id: string;
+  employee_id: string;
+  workday: string;
+  checked_in_at: string;
+  checked_out_at?: string | null;
+  work_mode: WorkMode;
+  late: boolean;
+  shift_id?: string | null;
+  check_in_note?: string | null;
+  check_out_note?: string | null;
+  duration_minutes?: number | null;
+  created_at: string;
+}
+
+/**
+ * Pagination metadata returned with every list response.
+ */
+export interface Page {
+  page: number;
+  page_size: number;
+  total_items: number;
+  total_pages: number;
+}
+
+export interface AttendanceRecordListPage {
+  items: AttendanceRecord[];
+  page: Page;
+}
+
+/**
+ * Independent counts — not a partition (a person can be present and late).
+ */
+export interface BoardCounts {
+  present: number;
+  remote: number;
+  late: number;
+  on_leave: number;
+  absent: number;
+  checked_out: number;
+}
+
+export type BoardAction = typeof BoardAction[keyof typeof BoardAction];
+
+
+export const BoardAction = {
+  checked_in: 'checked_in',
+  checked_out: 'checked_out',
+} as const;
+
+export interface BoardActivity {
+  occurred_at: string;
+  employee_id: string;
+  action: BoardAction;
+}
+
+export interface Board {
+  date: string;
+  counts: BoardCounts;
+  activity: BoardActivity[];
+}
+
+export interface CheckInRequest {
+  work_mode: string;
+  check_in_note?: string | null;
+}
+
+export interface CheckOutRequest {
+  check_out_note?: string | null;
+}
+
 export type EmploymentType = typeof EmploymentType[keyof typeof EmploymentType];
 
 
@@ -64,16 +144,6 @@ export interface DepartmentCreate {
      */
   name: string;
   parent_department_id?: string | null;
-}
-
-/**
- * Pagination metadata returned with every list response.
- */
-export interface Page {
-  page: number;
-  page_size: number;
-  total_items: number;
-  total_pages: number;
 }
 
 export interface DepartmentListPage {
@@ -253,6 +323,39 @@ export interface PositionUpdate {
   description?: string | null;
 }
 
+export interface Shift {
+  id: string;
+  tenant_id: string;
+  name: string;
+  start_time: string;
+  end_time: string;
+  grace_minutes: number;
+  location_id?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ShiftCreate {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  name: string;
+  start_time: string;
+  end_time: string;
+  /** @minimum 0 */
+  grace_minutes: number;
+  location_id?: string | null;
+}
+
+export interface ShiftUpdate {
+  name?: string | null;
+  start_time?: string | null;
+  end_time?: string | null;
+  grace_minutes?: number | null;
+  location_id?: string | null;
+}
+
 export interface TerminationRequest {
   effective_date: string;
   /**
@@ -311,5 +414,18 @@ status?: EmployeeStatus | null;
 manager_id?: string | null;
 page?: number;
 page_size?: number;
+};
+
+export type ListAttendanceRecordsParams = {
+employee_id?: string | null;
+from?: string | null;
+to?: string | null;
+late?: boolean | null;
+page?: number;
+page_size?: number;
+};
+
+export type GetAttendanceBoardParams = {
+date?: string | null;
 };
 

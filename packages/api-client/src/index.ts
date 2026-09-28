@@ -25,6 +25,11 @@ import type {
 
 import type {
   ArchiveRequest,
+  AttendanceRecord,
+  AttendanceRecordListPage,
+  Board,
+  CheckInRequest,
+  CheckOutRequest,
   CreateEmployee,
   Department,
   DepartmentCreate,
@@ -34,8 +39,10 @@ import type {
   EmployeeDetail,
   EmployeeListPage,
   Employment,
+  GetAttendanceBoardParams,
   HTTPValidationError,
   HealthzHealthzGet200,
+  ListAttendanceRecordsParams,
   ListDepartmentsParams,
   ListEmployeesParams,
   ListLocationsParams,
@@ -48,6 +55,9 @@ import type {
   PositionCreate,
   PositionListPage,
   PositionUpdate,
+  Shift,
+  ShiftCreate,
+  ShiftUpdate,
   TerminationRequest,
   TransferRequest,
   UpdateEmployee
@@ -3095,4 +3105,813 @@ export function useListEmployments<TData = Awaited<ReturnType<typeof listEmploym
 
 
 
+
+export type checkInResponse201 = {
+  data: AttendanceRecord
+  status: 201
+}
+
+export type checkInResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type checkInResponseSuccess = (checkInResponse201) & {
+  headers: Headers;
+};
+export type checkInResponseError = (checkInResponse422) & {
+  headers: Headers;
+};
+
+export type checkInResponse = (checkInResponseSuccess | checkInResponseError)
+
+export const getCheckInUrl = () => {
+
+
+
+
+  return `/api/v1/attendance/check-ins`
+}
+
+/**
+ * Open a record for the actor — self-only, server time only (Decision #3).
+ * @summary Check In
+ */
+export const checkIn = async (checkInRequest: CheckInRequest, options?: Parameters<typeof customFetch>[1]): Promise<checkInResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<checkInResponse>(getCheckInUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(checkInRequest)
+  }
+);}
+
+
+
+
+
+export const getCheckInMutationKey = () => ['checkIn'] as const;
+
+export const getCheckInMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof checkIn>>, TError,CheckInMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof checkIn>>, TError,CheckInMutationVariables, TContext> => {
+
+const mutationKey = getCheckInMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof checkIn>>, CheckInMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  checkIn(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CheckInMutationResult = NonNullable<Awaited<ReturnType<typeof checkIn>>>
+    export type CheckInMutationBody = CheckInRequest
+    export type CheckInMutationError = HTTPValidationError
+    export type CheckInMutationVariables = {data: CheckInRequest}
+
+    /**
+ * @summary Check In
+ */
+export const useCheckIn = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof checkIn>>, TError,CheckInMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof checkIn>>,
+        TError,
+        CheckInMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCheckInMutationOptions(options), queryClient);
+    }
+
+export type checkOutResponse200 = {
+  data: AttendanceRecord
+  status: 200
+}
+
+export type checkOutResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type checkOutResponseSuccess = (checkOutResponse200) & {
+  headers: Headers;
+};
+export type checkOutResponseError = (checkOutResponse422) & {
+  headers: Headers;
+};
+
+export type checkOutResponse = (checkOutResponseSuccess | checkOutResponseError)
+
+export const getCheckOutUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/attendance/records/${id}/check-out`
+}
+
+/**
+ * Close the actor's open record; the workday is never recomputed.
+ * @summary Check Out
+ */
+export const checkOut = async (id: string,
+    checkOutRequest: CheckOutRequest, options?: Parameters<typeof customFetch>[1]): Promise<checkOutResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<checkOutResponse>(getCheckOutUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(checkOutRequest)
+  }
+);}
+
+
+
+
+
+export const getCheckOutMutationKey = () => ['checkOut'] as const;
+
+export const getCheckOutMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof checkOut>>, TError,CheckOutMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof checkOut>>, TError,CheckOutMutationVariables, TContext> => {
+
+const mutationKey = getCheckOutMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof checkOut>>, CheckOutMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  checkOut(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CheckOutMutationResult = NonNullable<Awaited<ReturnType<typeof checkOut>>>
+    export type CheckOutMutationBody = CheckOutRequest
+    export type CheckOutMutationError = HTTPValidationError
+    export type CheckOutMutationVariables = {id: string;data: CheckOutRequest}
+
+    /**
+ * @summary Check Out
+ */
+export const useCheckOut = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof checkOut>>, TError,CheckOutMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof checkOut>>,
+        TError,
+        CheckOutMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCheckOutMutationOptions(options), queryClient);
+    }
+
+export type listAttendanceRecordsResponse200 = {
+  data: AttendanceRecordListPage
+  status: 200
+}
+
+export type listAttendanceRecordsResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type listAttendanceRecordsResponseSuccess = (listAttendanceRecordsResponse200) & {
+  headers: Headers;
+};
+export type listAttendanceRecordsResponseError = (listAttendanceRecordsResponse422) & {
+  headers: Headers;
+};
+
+export type listAttendanceRecordsResponse = (listAttendanceRecordsResponseSuccess | listAttendanceRecordsResponseError)
+
+export const getListAttendanceRecordsUrl = (params?: ListAttendanceRecordsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/attendance/records?${stringifiedParams}` : `/api/v1/attendance/records`
+}
+
+/**
+ * Filtered records, scoped to the actor's visibility (T1 role matrix).
+ * @summary List Attendance Records
+ */
+export const listAttendanceRecords = async (params?: ListAttendanceRecordsParams, options?: Parameters<typeof customFetch>[1]): Promise<listAttendanceRecordsResponse> => {
+
+  return customFetch<listAttendanceRecordsResponse>(getListAttendanceRecordsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAttendanceRecordsQueryKey = (params?: ListAttendanceRecordsParams,) => {
+    return [
+    `/api/v1/attendance/records`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListAttendanceRecordsQueryOptions = <TData = Awaited<ReturnType<typeof listAttendanceRecords>>, TError = HTTPValidationError>(params?: ListAttendanceRecordsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAttendanceRecords>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAttendanceRecordsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAttendanceRecords>>> = ({ signal }) => listAttendanceRecords(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAttendanceRecords>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListAttendanceRecordsQueryResult = NonNullable<Awaited<ReturnType<typeof listAttendanceRecords>>>
+export type ListAttendanceRecordsQueryError = HTTPValidationError
+
+
+export function useListAttendanceRecords<TData = Awaited<ReturnType<typeof listAttendanceRecords>>, TError = HTTPValidationError>(
+ params: undefined |  ListAttendanceRecordsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAttendanceRecords>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listAttendanceRecords>>,
+          TError,
+          Awaited<ReturnType<typeof listAttendanceRecords>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListAttendanceRecords<TData = Awaited<ReturnType<typeof listAttendanceRecords>>, TError = HTTPValidationError>(
+ params?: ListAttendanceRecordsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAttendanceRecords>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listAttendanceRecords>>,
+          TError,
+          Awaited<ReturnType<typeof listAttendanceRecords>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListAttendanceRecords<TData = Awaited<ReturnType<typeof listAttendanceRecords>>, TError = HTTPValidationError>(
+ params?: ListAttendanceRecordsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAttendanceRecords>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List Attendance Records
+ */
+
+export function useListAttendanceRecords<TData = Awaited<ReturnType<typeof listAttendanceRecords>>, TError = HTTPValidationError>(
+ params?: ListAttendanceRecordsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAttendanceRecords>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListAttendanceRecordsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type getAttendanceBoardResponse200 = {
+  data: Board
+  status: 200
+}
+
+export type getAttendanceBoardResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type getAttendanceBoardResponseSuccess = (getAttendanceBoardResponse200) & {
+  headers: Headers;
+};
+export type getAttendanceBoardResponseError = (getAttendanceBoardResponse422) & {
+  headers: Headers;
+};
+
+export type getAttendanceBoardResponse = (getAttendanceBoardResponseSuccess | getAttendanceBoardResponseError)
+
+export const getGetAttendanceBoardUrl = (params?: GetAttendanceBoardParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/attendance/board?${stringifiedParams}` : `/api/v1/attendance/board`
+}
+
+/**
+ * Live workforce board for one date (default: the server's UTC date).
+ * @summary Get Attendance Board
+ */
+export const getAttendanceBoard = async (params?: GetAttendanceBoardParams, options?: Parameters<typeof customFetch>[1]): Promise<getAttendanceBoardResponse> => {
+
+  return customFetch<getAttendanceBoardResponse>(getGetAttendanceBoardUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAttendanceBoardQueryKey = (params?: GetAttendanceBoardParams,) => {
+    return [
+    `/api/v1/attendance/board`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetAttendanceBoardQueryOptions = <TData = Awaited<ReturnType<typeof getAttendanceBoard>>, TError = HTTPValidationError>(params?: GetAttendanceBoardParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAttendanceBoard>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAttendanceBoardQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAttendanceBoard>>> = ({ signal }) => getAttendanceBoard(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAttendanceBoard>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetAttendanceBoardQueryResult = NonNullable<Awaited<ReturnType<typeof getAttendanceBoard>>>
+export type GetAttendanceBoardQueryError = HTTPValidationError
+
+
+export function useGetAttendanceBoard<TData = Awaited<ReturnType<typeof getAttendanceBoard>>, TError = HTTPValidationError>(
+ params: undefined |  GetAttendanceBoardParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAttendanceBoard>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAttendanceBoard>>,
+          TError,
+          Awaited<ReturnType<typeof getAttendanceBoard>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetAttendanceBoard<TData = Awaited<ReturnType<typeof getAttendanceBoard>>, TError = HTTPValidationError>(
+ params?: GetAttendanceBoardParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAttendanceBoard>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAttendanceBoard>>,
+          TError,
+          Awaited<ReturnType<typeof getAttendanceBoard>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetAttendanceBoard<TData = Awaited<ReturnType<typeof getAttendanceBoard>>, TError = HTTPValidationError>(
+ params?: GetAttendanceBoardParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAttendanceBoard>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get Attendance Board
+ */
+
+export function useGetAttendanceBoard<TData = Awaited<ReturnType<typeof getAttendanceBoard>>, TError = HTTPValidationError>(
+ params?: GetAttendanceBoardParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAttendanceBoard>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetAttendanceBoardQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type listShiftsResponse200 = {
+  data: Shift[]
+  status: 200
+}
+
+export type listShiftsResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type listShiftsResponseSuccess = (listShiftsResponse200) & {
+  headers: Headers;
+};
+export type listShiftsResponseError = (listShiftsResponse422) & {
+  headers: Headers;
+};
+
+export type listShiftsResponse = (listShiftsResponseSuccess | listShiftsResponseError)
+
+export const getListShiftsUrl = () => {
+
+
+
+
+  return `/api/v1/shifts`
+}
+
+/**
+ * Bare unpaged array, ordered `location_id` nulls-last then `name` (T1).
+ * @summary List Shifts
+ */
+export const listShifts = async ( options?: Parameters<typeof customFetch>[1]): Promise<listShiftsResponse> => {
+
+  return customFetch<listShiftsResponse>(getListShiftsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListShiftsQueryKey = () => {
+    return [
+    `/api/v1/shifts`
+    ] as const;
+    }
+
+
+export const getListShiftsQueryOptions = <TData = Awaited<ReturnType<typeof listShifts>>, TError = HTTPValidationError>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listShifts>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListShiftsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listShifts>>> = ({ signal }) => listShifts({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listShifts>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListShiftsQueryResult = NonNullable<Awaited<ReturnType<typeof listShifts>>>
+export type ListShiftsQueryError = HTTPValidationError
+
+
+export function useListShifts<TData = Awaited<ReturnType<typeof listShifts>>, TError = HTTPValidationError>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listShifts>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listShifts>>,
+          TError,
+          Awaited<ReturnType<typeof listShifts>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListShifts<TData = Awaited<ReturnType<typeof listShifts>>, TError = HTTPValidationError>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listShifts>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listShifts>>,
+          TError,
+          Awaited<ReturnType<typeof listShifts>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListShifts<TData = Awaited<ReturnType<typeof listShifts>>, TError = HTTPValidationError>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listShifts>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List Shifts
+ */
+
+export function useListShifts<TData = Awaited<ReturnType<typeof listShifts>>, TError = HTTPValidationError>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listShifts>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListShiftsQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type createShiftResponse201 = {
+  data: Shift
+  status: 201
+}
+
+export type createShiftResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type createShiftResponseSuccess = (createShiftResponse201) & {
+  headers: Headers;
+};
+export type createShiftResponseError = (createShiftResponse422) & {
+  headers: Headers;
+};
+
+export type createShiftResponse = (createShiftResponseSuccess | createShiftResponseError)
+
+export const getCreateShiftUrl = () => {
+
+
+
+
+  return `/api/v1/shifts`
+}
+
+/**
+ * @summary Create Shift
+ */
+export const createShift = async (shiftCreate: ShiftCreate, options?: Parameters<typeof customFetch>[1]): Promise<createShiftResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<createShiftResponse>(getCreateShiftUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(shiftCreate)
+  }
+);}
+
+
+
+
+
+export const getCreateShiftMutationKey = () => ['createShift'] as const;
+
+export const getCreateShiftMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createShift>>, TError,CreateShiftMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createShift>>, TError,CreateShiftMutationVariables, TContext> => {
+
+const mutationKey = getCreateShiftMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createShift>>, CreateShiftMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createShift(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateShiftMutationResult = NonNullable<Awaited<ReturnType<typeof createShift>>>
+    export type CreateShiftMutationBody = ShiftCreate
+    export type CreateShiftMutationError = HTTPValidationError
+    export type CreateShiftMutationVariables = {data: ShiftCreate}
+
+    /**
+ * @summary Create Shift
+ */
+export const useCreateShift = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createShift>>, TError,CreateShiftMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createShift>>,
+        TError,
+        CreateShiftMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateShiftMutationOptions(options), queryClient);
+    }
+
+export type updateShiftResponse200 = {
+  data: Shift
+  status: 200
+}
+
+export type updateShiftResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type updateShiftResponseSuccess = (updateShiftResponse200) & {
+  headers: Headers;
+};
+export type updateShiftResponseError = (updateShiftResponse422) & {
+  headers: Headers;
+};
+
+export type updateShiftResponse = (updateShiftResponseSuccess | updateShiftResponseError)
+
+export const getUpdateShiftUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/shifts/${id}`
+}
+
+/**
+ * @summary Update Shift
+ */
+export const updateShift = async (id: string,
+    shiftUpdate: ShiftUpdate, options?: Parameters<typeof customFetch>[1]): Promise<updateShiftResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<updateShiftResponse>(getUpdateShiftUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(shiftUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateShiftMutationKey = () => ['updateShift'] as const;
+
+export const getUpdateShiftMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateShift>>, TError,UpdateShiftMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateShift>>, TError,UpdateShiftMutationVariables, TContext> => {
+
+const mutationKey = getUpdateShiftMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateShift>>, UpdateShiftMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateShift(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateShiftMutationResult = NonNullable<Awaited<ReturnType<typeof updateShift>>>
+    export type UpdateShiftMutationBody = ShiftUpdate
+    export type UpdateShiftMutationError = HTTPValidationError
+    export type UpdateShiftMutationVariables = {id: string;data: ShiftUpdate}
+
+    /**
+ * @summary Update Shift
+ */
+export const useUpdateShift = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateShift>>, TError,UpdateShiftMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof updateShift>>,
+        TError,
+        UpdateShiftMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateShiftMutationOptions(options), queryClient);
+    }
 

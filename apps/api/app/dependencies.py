@@ -15,6 +15,7 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings, get_settings
+from app.domains.attendance.service import AttendanceService, ShiftService
 from app.domains.employees.service import EmployeeService
 from app.domains.organizations.service import (
     DepartmentService,
@@ -23,6 +24,10 @@ from app.domains.organizations.service import (
 )
 from app.infrastructure.postgres.audit import PostgresAuditWriter
 from app.infrastructure.postgres.employee_usage import PostgresEmployeeUsage
+from app.infrastructure.postgres.repositories.attendance import (
+    PostgresAttendanceRepository,
+    PostgresShiftRepository,
+)
 from app.infrastructure.postgres.repositories.employees import (
     PostgresEmployeeRepository,
     PostgresEmploymentRepository,
@@ -83,7 +88,32 @@ def get_employee_service(session: SessionDep) -> EmployeeService:
     )
 
 
+def get_attendance_service(session: SessionDep) -> AttendanceService:
+    return AttendanceService(
+        repo=PostgresAttendanceRepository(session),
+        # Shift resolution for lateness and `absent` reads through the same
+        # repository the ShiftService uses (one adapter, one tenant scope).
+        shifts=PostgresShiftRepository(session),
+        audit=PostgresAuditWriter(session),
+    )
+
+
+def get_shift_service(session: SessionDep) -> ShiftService:
+    audit = PostgresAuditWriter(session)
+    return ShiftService(
+        repo=PostgresShiftRepository(session),
+        # `location_id` references are validated through the Organizations
+        # service (conventions: never another domain's internals).
+        locations=LocationService(
+            repo=PostgresLocationRepository(session), audit=audit
+        ),
+        audit=audit,
+    )
+
+
 DepartmentServiceDep = Annotated[DepartmentService, Depends(get_department_service)]
 PositionServiceDep = Annotated[PositionService, Depends(get_position_service)]
 LocationServiceDep = Annotated[LocationService, Depends(get_location_service)]
 EmployeeServiceDep = Annotated[EmployeeService, Depends(get_employee_service)]
+AttendanceServiceDep = Annotated[AttendanceService, Depends(get_attendance_service)]
+ShiftServiceDep = Annotated[ShiftService, Depends(get_shift_service)]
