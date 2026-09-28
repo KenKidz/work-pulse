@@ -17,7 +17,14 @@ from tests.integration.conftest import TEST_DATABASE_URL, alembic_config
 MIGRATION_DB = "workpulse_migration_check"
 ADMIN_URL = TEST_DATABASE_URL  # connect as workpulse to its own db, AUTOCOMMIT
 TARGET_URL = f"{TEST_DATABASE_URL.rsplit('/', 1)[0]}/{MIGRATION_DB}"
-FEATURE_TABLES = {"audit_entries", "departments", "locations", "positions"}
+FEATURE_TABLES = {
+    "audit_entries",
+    "departments",
+    "locations",
+    "positions",
+    "employees",
+    "employments",
+}
 
 
 async def _admin_execute(sql: str) -> None:

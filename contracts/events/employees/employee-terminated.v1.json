@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workpulse.dev/contracts/events/employees/employee-terminated.v1.json",
+  "title": "WorkPulse employee.terminated v1",
+  "description": "The employment ended. The termination reason stays on the audit entry; the payload is identifiers and dates only.",
+  "type": "object",
+  "required": ["employee_id", "effective_date"],
+  "additionalProperties": false,
+  "properties": {
+    "employee_id": {
+      "type": "string",
+      "description": "Employee the event refers to (UUIDv7 string)."
+    },
+    "effective_date": {
+      "type": "string",
+      "description": "Date the termination takes effect (YYYY-MM-DD); the open employment period closes at this date."
+    }
+  }
+}

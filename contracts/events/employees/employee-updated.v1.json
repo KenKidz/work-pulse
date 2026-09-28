@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workpulse.dev/contracts/events/employees/employee-updated.v1.json",
+  "title": "WorkPulse employee.updated v1",
+  "description": "Profile fields changed. Carries the changed field names only — values (names, emails, phones) stay on the audit entry, never here.",
+  "type": "object",
+  "required": ["employee_id", "changed_fields"],
+  "additionalProperties": false,
+  "properties": {
+    "employee_id": {
+      "type": "string",
+      "description": "Employee the event refers to (UUIDv7 string)."
+    },
+    "changed_fields": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": ["first_name", "last_name", "email", "phone"]
+      },
+      "description": "Names of the changed profile fields — never their values."
+    }
+  }
+}

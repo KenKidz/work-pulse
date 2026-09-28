@@ -21,17 +21,22 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from alembic import command
-from app.domains.organizations.repository import NullDepartmentUsage
+from app.domains.employees.service import EmployeeService
 from app.domains.organizations.service import (
     DepartmentService,
     LocationService,
     PositionService,
 )
 from app.infrastructure.postgres.audit import PostgresAuditWriter
+from app.infrastructure.postgres.employee_usage import PostgresEmployeeUsage
 from app.infrastructure.postgres.engine import (
     dispose_engine,
     get_engine,
     get_session_factory,
+)
+from app.infrastructure.postgres.repositories.employees import (
+    PostgresEmployeeRepository,
+    PostgresEmploymentRepository,
 )
 from app.infrastructure.postgres.repositories.organizations import (
     PostgresDepartmentRepository,
@@ -49,7 +54,7 @@ TENANT_A = UUID("00000000-0000-4000-8000-00000000000a")
 TENANT_B = UUID("00000000-0000-4000-8000-00000000000b")
 ACTOR = UUID("00000000-0000-4000-8000-000000000002")
 
-ALL_TABLES = "audit_entries, departments, positions, locations"
+ALL_TABLES = "audit_entries, departments, positions, locations, employees, employments"
 
 ClientFactory = Callable[..., AsyncClient]
 
@@ -104,7 +109,7 @@ async def department_service(session: AsyncSession) -> DepartmentService:
     return DepartmentService(
         repo=PostgresDepartmentRepository(session),
         audit=PostgresAuditWriter(session),
-        usage=NullDepartmentUsage(),
+        usage=PostgresEmployeeUsage(session),
     )
 
 
@@ -122,6 +127,75 @@ async def location_service(session: AsyncSession) -> LocationService:
         repo=PostgresLocationRepository(session),
         audit=PostgresAuditWriter(session),
     )
+
+
+@pytest.fixture
+async def employee_service(session: AsyncSession) -> EmployeeService:
+    audit = PostgresAuditWriter(session)
+    return EmployeeService(
+        repo=PostgresEmployeeRepository(session),
+        employments=PostgresEmploymentRepository(session),
+        departments=DepartmentService(
+            repo=PostgresDepartmentRepository(session),
+            audit=audit,
+            usage=PostgresEmployeeUsage(session),
+        ),
+        positions=PositionService(
+            repo=PostgresPositionRepository(session), audit=audit
+        ),
+        locations=LocationService(
+            repo=PostgresLocationRepository(session), audit=audit
+        ),
+        audit=audit,
+    )
+
+
+async def create_org_refs(
+    client: AsyncClient, *, suffix: str = ""
+) -> tuple[str, str, str]:
+    """Create one department/position/location via HTTP; return their ids."""
+    department = (
+        await client.post("/api/v1/departments", json={"name": f"Engineering{suffix}"})
+    ).json()
+    position = (
+        await client.post("/api/v1/positions", json={"title": f"Engineer{suffix}"})
+    ).json()
+    location = (
+        await client.post(
+            "/api/v1/locations", json={"name": f"HQ{suffix}", "timezone": "UTC"}
+        )
+    ).json()
+    return department["id"], position["id"], location["id"]
+
+
+def employee_payload(
+    refs: tuple[str, str, str],
+    *,
+    first_name: str = "Ada",
+    last_name: str = "Lovelace",
+    email: str = "ada@example.test",
+    manager_id: str | None = None,
+    employee_code: str | None = None,
+    hired_at: str = "2026-01-05",
+    **extra: object,
+) -> dict[str, object]:
+    department_id, position_id, location_id = refs
+    payload: dict[str, object] = {
+        "first_name": first_name,
+        "last_name": last_name,
+        "email": email,
+        "department_id": department_id,
+        "position_id": position_id,
+        "location_id": location_id,
+        "employment_type": "full_time",
+        "hired_at": hired_at,
+    }
+    if manager_id is not None:
+        payload["manager_id"] = manager_id
+    if employee_code is not None:
+        payload["employee_code"] = employee_code
+    payload.update(extra)
+    return payload
 
 
 @pytest.fixture

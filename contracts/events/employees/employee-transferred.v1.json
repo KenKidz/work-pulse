@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workpulse.dev/contracts/events/employees/employee-transferred.v1.json",
+  "title": "WorkPulse employee.transferred v1",
+  "description": "A new employment period started. History is append-only: the previous period closes and this event names the department transition (position/location/manager changes ride along).",
+  "type": "object",
+  "required": [
+    "employee_id",
+    "from_department_id",
+    "to_department_id",
+    "effective_from"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "employee_id": {
+      "type": "string",
+      "description": "Employee the event refers to (UUIDv7 string)."
+    },
+    "from_department_id": {
+      "type": "string",
+      "description": "Department the employee leaves (UUIDv7 string)."
+    },
+    "to_department_id": {
+      "type": "string",
+      "description": "Department the new period starts in (UUIDv7 string)."
+    },
+    "effective_from": {
+      "type": "string",
+      "description": "First day of the new employment period (YYYY-MM-DD); periods are half-open [effective_from, effective_to)."
+    }
+  }
+}

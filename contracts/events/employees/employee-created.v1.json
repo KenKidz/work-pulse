@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workpulse.dev/contracts/events/employees/employee-created.v1.json",
+  "title": "WorkPulse employee.created v1",
+  "description": "An employee record was created. Identifiers and contract type only — no names, emails or phones (`.ai/security.md`).",
+  "type": "object",
+  "required": [
+    "employee_id",
+    "department_id",
+    "position_id",
+    "location_id",
+    "employment_type"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "employee_id": {
+      "type": "string",
+      "description": "Employee the event refers to (UUIDv7 string)."
+    },
+    "department_id": {
+      "type": "string",
+      "description": "Initial department of the employee (UUIDv7 string)."
+    },
+    "position_id": {
+      "type": "string",
+      "description": "Initial position of the employee (UUIDv7 string)."
+    },
+    "location_id": {
+      "type": "string",
+      "description": "Initial location of the employee (UUIDv7 string)."
+    },
+    "employment_type": {
+      "type": "string",
+      "enum": ["full_time", "part_time", "contract", "intern"],
+      "description": "Contract type of the initial employment period."
+    }
+  }
+}

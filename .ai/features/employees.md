@@ -70,7 +70,7 @@ the product answers.
 | Create / update | — | — | Y | Y |
 | Transfer / terminate | — | — | Y | Y |
 
-## API contract (proposed)
+## API contract (final — pinned by T1, 2026-09-28)
 
 | Method & path | Input | Response |
 | --- | --- | --- |
@@ -79,9 +79,9 @@ the product answers.
 | `GET /api/v1/employees/me` | — | `200 Employee` |
 | `GET /api/v1/employees/{id}` | — | `200 EmployeeDetail` (current employment + history) · `404` |
 | `PATCH /api/v1/employees/{id}` | `UpdateEmployee` (profile fields) | `200 Employee` |
-| `POST /api/v1/employees/{id}/transfers` | `{"department_id", "position_id"?, "location_id"?, "manager_id"?, "effective_from", "reason"?}` | `200 Employment` |
-| `POST /api/v1/employees/{id}/termination` | `{"effective_date", "reason"}` | `200 Employee` |
-| `GET /api/v1/employees/{id}/employments` | — | `200 Employment[]` |
+| `POST /api/v1/employees/{id}/transfers` | `TransferRequest` | `200 Employment` (the new period) |
+| `POST /api/v1/employees/{id}/termination` | `TerminationRequest` | `200 Employee` |
+| `GET /api/v1/employees/{id}/employments` | — | `200 Employment[]` (newest first) |
 
 ```json
 CreateEmployee {
@@ -97,13 +97,112 @@ Employee {
   "employment_type", "status", "hired_at", "terminated_at",
   "created_at", "updated_at"
 }
+
+Employment {
+  "id", "tenant_id", "employee_id", "department_id", "position_id",
+  "location_id", "employment_type",
+  "effective_from", "effective_to": null,
+  "created_at"
+}
+
+EmployeeSummary {
+  "id", "employee_code", "first_name", "last_name", "email",
+  "department_id", "position_id", "location_id", "manager_id",
+  "employment_type", "status", "hired_at", "terminated_at"
+}
+
+EmployeeDetail = Employee + {
+  "current_employment": Employment,
+  "employments": Employment[]
+}
+
+UpdateEmployee { "first_name"?, "last_name"?, "email"?, "phone"? }
+
+TransferRequest {
+  "department_id", "position_id"?, "location_id"?, "manager_id"?,
+  "effective_from", "reason"?
+}
+
+TerminationRequest { "effective_date", "reason" }
 ```
 
 Error codes: `employee_not_found` · `employee_email_taken` ·
 `employee_code_taken` · `employee_manager_invalid` · `employee_self_manager` ·
 `employee_already_terminated` · `employment_period_overlap` ·
-`transfer_target_archived` · `department_not_found` · `position_not_found` ·
-`location_not_found`.
+`employee_transfer_effective_invalid` · `transfer_target_archived` ·
+`department_not_found` · `position_not_found` · `location_not_found`.
+
+### Pinned details
+
+- **Dates**: `hired_at`, `effective_from`, `effective_to`, `effective_date`,
+  `terminated_at` are `date` (`YYYY-MM-DD`); `created_at`/`updated_at` are
+  `date-time`; `terminated_at` = the termination `effective_date`.
+- **PATCH scope**: profile fields only (name/email/phone). Manager, type and
+  assignment changes go through transfers (they carry `effective_from`).
+  PATCH on a terminated employee is allowed (record corrections; history is
+  untouched). Absent field = unchanged; `phone` may be set to `null`.
+- **Assignment references**: `department_id`/`position_id`/`location_id` must
+  exist in the tenant and not be archived, on create **and** transfer;
+  `manager_id` must be an active employee of the tenant and ≠ the employee.
+  Omitted transfer fields inherit the current period's values (department is
+  the one required field).
+- **Transfer semantics** (Decision #1 made concrete): periods are half-open
+  `[effective_from, effective_to)`; `effective_to` `null` = open. A transfer
+  closes the current period at `effective_from` and appends a new open one in
+  one transaction — rows are appended, never rewritten. `effective_from` must
+  be `>= hired_at`, `>= current.effective_from` (else the new period would
+  overlap a closed one), and `<= today` (no future-dated scheduling in
+  Phase 1). Transfer of a terminated employee → `409
+  employee_already_terminated`.
+- **Termination**: sets `status=terminated`, `terminated_at=effective_date`,
+  closes the open period at `effective_date`, and nulls `manager_id` on the
+  employee's direct reports (one audit entry per report). The reason is
+  stored on the audit entry only (like archive `reason`), never on events.
+- **Clarifications recorded during the T3–T6 build** (implicit in the pinned
+  rules above): `EmployeeDetail.current_employment` is `null` when no period is
+  open — a terminated employee still reads `200` with the closed history.
+  Termination backdating past the open period's `effective_from` is rejected
+  with `409 employment_period_overlap` (the same period invariant transfers
+  enforce: a period may never close before it starts). Email uniqueness is
+  case-insensitive (functional unique index on `(tenant_id, lower(email))`),
+  and the DB enforces at most one open period per employee (partial unique
+  index) as the backstop behind close+append transfers.
+- **`employee_code`** (Decision #2): auto `EMP-00001` per tenant (max numeric
+  suffix + 1, zero-padded to 5) when omitted; overridable on create; unique
+  per tenant across all rows → `409 employee_code_taken`.
+- **`q` & ordering** (Decision #6): `q` = case-insensitive substring over
+  `first_name`, `last_name`, `email`, `employee_code`. Default order
+  `last_name`, `first_name` ascending (stable pagination); `page`/`page_size`
+  and the `Page` object reuse the shape pinned in organizations. `GET /{id}`
+  of a terminated employee still returns `200`.
+- **Roles** (Decision #7, ADR 0004; identity headers as pinned in
+  organizations): `/employees/me` resolves the employee whose id ==
+  `X-Actor-Id` (any role) → `404 employee_not_found` when the actor has no
+  employee record. `manager` role: list is server-scoped to direct reports
+  (`manager_id == actor_id`), detail only for own reports (otherwise `404
+  employee_not_found`, never 403 — don't leak existence); create/update/
+  transfer/terminate are `hr`/`admin`/`super_admin` only (`403 forbidden`).
+  `employee` role: `/me` only. `.ai/security.md` governs where wider.
+- **Error code → status**: `employee_not_found` / `department_not_found` /
+  `position_not_found` / `location_not_found` 404 · `employee_email_taken` /
+  `employee_code_taken` / `employee_already_terminated` /
+  `employment_period_overlap` / `transfer_target_archived` 409 ·
+  `employee_manager_invalid` / `employee_self_manager` 400 ·
+  `employee_transfer_effective_invalid` 422 (before `hired_at` or in the
+  future) · create-with-archived reference reuses `transfer_target_archived`;
+  transfer-of-terminated reuses `employee_already_terminated`; backdating
+  past `current.effective_from` is `employment_period_overlap` · `forbidden`
+  403 · `invalid_identity` 400 · `validation_error` 422 (uniform handler).
+  Body always `{"error": {"code", "message"}}`; messages are static strings —
+  they never echo field values.
+- **operationIds** (drive orval hook names): `listEmployees`,
+  `createEmployee`, `getCurrentEmployee`, `getEmployee`, `updateEmployee`,
+  `transferEmployee`, `terminateEmployee`, `listEmployments` — 8 routes total.
+- **Ids/time**: UUIDv7 ids and `employee_code` resolved in the service;
+  `now` is a router-injected parameter (conventions). Status enum
+  `active|on_leave|terminated` (`on_leave` is reserved for Attendance — no
+  endpoint in this feature); `employment_type`
+  `full_time|part_time|contract|intern`.
 
 ## Events
 

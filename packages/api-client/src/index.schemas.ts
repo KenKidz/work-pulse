@@ -11,6 +11,42 @@ export interface ArchiveRequest {
   reason?: string | null;
 }
 
+export type EmploymentType = typeof EmploymentType[keyof typeof EmploymentType];
+
+
+export const EmploymentType = {
+  full_time: 'full_time',
+  part_time: 'part_time',
+  contract: 'contract',
+  intern: 'intern',
+} as const;
+
+export interface CreateEmployee {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  first_name: string;
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  last_name: string;
+  /**
+     * @minLength 3
+     * @maxLength 320
+     */
+  email: string;
+  phone?: string | null;
+  department_id: string;
+  position_id: string;
+  location_id: string;
+  manager_id?: string | null;
+  employment_type: EmploymentType;
+  hired_at: string;
+  employee_code?: string | null;
+}
+
 export interface Department {
   id: string;
   tenant_id: string;
@@ -48,6 +84,94 @@ export interface DepartmentListPage {
 export interface DepartmentUpdate {
   name?: string | null;
   parent_department_id?: string | null;
+}
+
+export type EmployeeStatus = typeof EmployeeStatus[keyof typeof EmployeeStatus];
+
+
+export const EmployeeStatus = {
+  active: 'active',
+  on_leave: 'on_leave',
+  terminated: 'terminated',
+} as const;
+
+export interface Employee {
+  id: string;
+  tenant_id: string;
+  employee_code: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone?: string | null;
+  department_id: string;
+  position_id: string;
+  location_id: string;
+  manager_id?: string | null;
+  employment_type: EmploymentType;
+  status: EmployeeStatus;
+  hired_at: string;
+  terminated_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Employment {
+  id: string;
+  tenant_id: string;
+  employee_id: string;
+  department_id: string;
+  position_id: string;
+  location_id: string;
+  employment_type: EmploymentType;
+  effective_from: string;
+  effective_to?: string | null;
+  created_at: string;
+}
+
+export interface EmployeeDetail {
+  id: string;
+  tenant_id: string;
+  employee_code: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone?: string | null;
+  department_id: string;
+  position_id: string;
+  location_id: string;
+  manager_id?: string | null;
+  employment_type: EmploymentType;
+  status: EmployeeStatus;
+  hired_at: string;
+  terminated_at?: string | null;
+  created_at: string;
+  updated_at: string;
+  current_employment?: Employment | null;
+  employments: Employment[];
+}
+
+/**
+ * List rows — Employee minus tenant_id, phone, created_at, updated_at.
+ */
+export interface EmployeeSummary {
+  id: string;
+  employee_code: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  department_id: string;
+  position_id: string;
+  location_id: string;
+  manager_id?: string | null;
+  employment_type: EmploymentType;
+  status: EmployeeStatus;
+  hired_at: string;
+  terminated_at?: string | null;
+}
+
+export interface EmployeeListPage {
+  items: EmployeeSummary[];
+  page: Page;
 }
 
 export type ValidationErrorCtx = { [key: string]: unknown };
@@ -129,6 +253,31 @@ export interface PositionUpdate {
   description?: string | null;
 }
 
+export interface TerminationRequest {
+  effective_date: string;
+  /**
+     * @minLength 1
+     * @maxLength 500
+     */
+  reason: string;
+}
+
+export interface TransferRequest {
+  department_id: string;
+  position_id?: string | null;
+  location_id?: string | null;
+  manager_id?: string | null;
+  effective_from: string;
+  reason?: string | null;
+}
+
+export interface UpdateEmployee {
+  first_name?: string | null;
+  last_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+}
+
 export type HealthzHealthzGet200 = {[key: string]: string};
 
 export type ListDepartmentsParams = {
@@ -149,6 +298,17 @@ page_size?: number;
 export type ListLocationsParams = {
 q?: string | null;
 include_archived?: boolean;
+page?: number;
+page_size?: number;
+};
+
+export type ListEmployeesParams = {
+q?: string | null;
+department_id?: string | null;
+position_id?: string | null;
+location_id?: string | null;
+status?: EmployeeStatus | null;
+manager_id?: string | null;
 page?: number;
 page_size?: number;
 };

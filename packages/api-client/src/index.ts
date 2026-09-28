@@ -25,13 +25,19 @@ import type {
 
 import type {
   ArchiveRequest,
+  CreateEmployee,
   Department,
   DepartmentCreate,
   DepartmentListPage,
   DepartmentUpdate,
+  Employee,
+  EmployeeDetail,
+  EmployeeListPage,
+  Employment,
   HTTPValidationError,
   HealthzHealthzGet200,
   ListDepartmentsParams,
+  ListEmployeesParams,
   ListLocationsParams,
   ListPositionsParams,
   Location,
@@ -41,7 +47,10 @@ import type {
   Position,
   PositionCreate,
   PositionListPage,
-  PositionUpdate
+  PositionUpdate,
+  TerminationRequest,
+  TransferRequest,
+  UpdateEmployee
 } from './index.schemas';
 
 import { customFetch } from './mutator/custom-fetch';
@@ -2168,4 +2177,922 @@ export const useRestoreLocation = <TError = HTTPValidationError,
       > => {
       return useMutation(getRestoreLocationMutationOptions(options), queryClient);
     }
+
+export type listEmployeesResponse200 = {
+  data: EmployeeListPage
+  status: 200
+}
+
+export type listEmployeesResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type listEmployeesResponseSuccess = (listEmployeesResponse200) & {
+  headers: Headers;
+};
+export type listEmployeesResponseError = (listEmployeesResponse422) & {
+  headers: Headers;
+};
+
+export type listEmployeesResponse = (listEmployeesResponseSuccess | listEmployeesResponseError)
+
+export const getListEmployeesUrl = (params?: ListEmployeesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/employees?${stringifiedParams}` : `/api/v1/employees`
+}
+
+/**
+ * @summary List Employees
+ */
+export const listEmployees = async (params?: ListEmployeesParams, options?: Parameters<typeof customFetch>[1]): Promise<listEmployeesResponse> => {
+
+  return customFetch<listEmployeesResponse>(getListEmployeesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListEmployeesQueryKey = (params?: ListEmployeesParams,) => {
+    return [
+    `/api/v1/employees`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListEmployeesQueryOptions = <TData = Awaited<ReturnType<typeof listEmployees>>, TError = HTTPValidationError>(params?: ListEmployeesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listEmployees>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListEmployeesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listEmployees>>> = ({ signal }) => listEmployees(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listEmployees>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListEmployeesQueryResult = NonNullable<Awaited<ReturnType<typeof listEmployees>>>
+export type ListEmployeesQueryError = HTTPValidationError
+
+
+export function useListEmployees<TData = Awaited<ReturnType<typeof listEmployees>>, TError = HTTPValidationError>(
+ params: undefined |  ListEmployeesParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listEmployees>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listEmployees>>,
+          TError,
+          Awaited<ReturnType<typeof listEmployees>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListEmployees<TData = Awaited<ReturnType<typeof listEmployees>>, TError = HTTPValidationError>(
+ params?: ListEmployeesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listEmployees>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listEmployees>>,
+          TError,
+          Awaited<ReturnType<typeof listEmployees>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListEmployees<TData = Awaited<ReturnType<typeof listEmployees>>, TError = HTTPValidationError>(
+ params?: ListEmployeesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listEmployees>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List Employees
+ */
+
+export function useListEmployees<TData = Awaited<ReturnType<typeof listEmployees>>, TError = HTTPValidationError>(
+ params?: ListEmployeesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listEmployees>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListEmployeesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type createEmployeeResponse201 = {
+  data: Employee
+  status: 201
+}
+
+export type createEmployeeResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type createEmployeeResponseSuccess = (createEmployeeResponse201) & {
+  headers: Headers;
+};
+export type createEmployeeResponseError = (createEmployeeResponse422) & {
+  headers: Headers;
+};
+
+export type createEmployeeResponse = (createEmployeeResponseSuccess | createEmployeeResponseError)
+
+export const getCreateEmployeeUrl = () => {
+
+
+
+
+  return `/api/v1/employees`
+}
+
+/**
+ * @summary Create Employee
+ */
+export const createEmployee = async (createEmployeeBody: CreateEmployee, options?: Parameters<typeof customFetch>[1]): Promise<createEmployeeResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<createEmployeeResponse>(getCreateEmployeeUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createEmployeeBody)
+  }
+);}
+
+
+
+
+
+export const getCreateEmployeeMutationKey = () => ['createEmployee'] as const;
+
+export const getCreateEmployeeMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createEmployee>>, TError,CreateEmployeeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createEmployee>>, TError,CreateEmployeeMutationVariables, TContext> => {
+
+const mutationKey = getCreateEmployeeMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createEmployee>>, CreateEmployeeMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createEmployee(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateEmployeeMutationResult = NonNullable<Awaited<ReturnType<typeof createEmployee>>>
+    export type CreateEmployeeMutationBody = CreateEmployee
+    export type CreateEmployeeMutationError = HTTPValidationError
+    export type CreateEmployeeMutationVariables = {data: CreateEmployee}
+
+    /**
+ * @summary Create Employee
+ */
+export const useCreateEmployee = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createEmployee>>, TError,CreateEmployeeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createEmployee>>,
+        TError,
+        CreateEmployeeMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateEmployeeMutationOptions(options), queryClient);
+    }
+
+export type getCurrentEmployeeResponse200 = {
+  data: Employee
+  status: 200
+}
+
+export type getCurrentEmployeeResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type getCurrentEmployeeResponseSuccess = (getCurrentEmployeeResponse200) & {
+  headers: Headers;
+};
+export type getCurrentEmployeeResponseError = (getCurrentEmployeeResponse422) & {
+  headers: Headers;
+};
+
+export type getCurrentEmployeeResponse = (getCurrentEmployeeResponseSuccess | getCurrentEmployeeResponseError)
+
+export const getGetCurrentEmployeeUrl = () => {
+
+
+
+
+  return `/api/v1/employees/me`
+}
+
+/**
+ * @summary Get Current Employee
+ */
+export const getCurrentEmployee = async ( options?: Parameters<typeof customFetch>[1]): Promise<getCurrentEmployeeResponse> => {
+
+  return customFetch<getCurrentEmployeeResponse>(getGetCurrentEmployeeUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCurrentEmployeeQueryKey = () => {
+    return [
+    `/api/v1/employees/me`
+    ] as const;
+    }
+
+
+export const getGetCurrentEmployeeQueryOptions = <TData = Awaited<ReturnType<typeof getCurrentEmployee>>, TError = HTTPValidationError>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCurrentEmployee>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCurrentEmployeeQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCurrentEmployee>>> = ({ signal }) => getCurrentEmployee({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCurrentEmployee>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetCurrentEmployeeQueryResult = NonNullable<Awaited<ReturnType<typeof getCurrentEmployee>>>
+export type GetCurrentEmployeeQueryError = HTTPValidationError
+
+
+export function useGetCurrentEmployee<TData = Awaited<ReturnType<typeof getCurrentEmployee>>, TError = HTTPValidationError>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCurrentEmployee>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCurrentEmployee>>,
+          TError,
+          Awaited<ReturnType<typeof getCurrentEmployee>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetCurrentEmployee<TData = Awaited<ReturnType<typeof getCurrentEmployee>>, TError = HTTPValidationError>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCurrentEmployee>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCurrentEmployee>>,
+          TError,
+          Awaited<ReturnType<typeof getCurrentEmployee>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetCurrentEmployee<TData = Awaited<ReturnType<typeof getCurrentEmployee>>, TError = HTTPValidationError>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCurrentEmployee>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get Current Employee
+ */
+
+export function useGetCurrentEmployee<TData = Awaited<ReturnType<typeof getCurrentEmployee>>, TError = HTTPValidationError>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCurrentEmployee>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetCurrentEmployeeQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type getEmployeeResponse200 = {
+  data: EmployeeDetail
+  status: 200
+}
+
+export type getEmployeeResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type getEmployeeResponseSuccess = (getEmployeeResponse200) & {
+  headers: Headers;
+};
+export type getEmployeeResponseError = (getEmployeeResponse422) & {
+  headers: Headers;
+};
+
+export type getEmployeeResponse = (getEmployeeResponseSuccess | getEmployeeResponseError)
+
+export const getGetEmployeeUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/employees/${id}`
+}
+
+/**
+ * @summary Get Employee
+ */
+export const getEmployee = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<getEmployeeResponse> => {
+
+  return customFetch<getEmployeeResponse>(getGetEmployeeUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetEmployeeQueryKey = (id: string,) => {
+    return [
+    `/api/v1/employees/${id}`
+    ] as const;
+    }
+
+
+export const getGetEmployeeQueryOptions = <TData = Awaited<ReturnType<typeof getEmployee>>, TError = HTTPValidationError>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEmployee>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetEmployeeQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getEmployee>>> = ({ signal }) => getEmployee(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getEmployee>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetEmployeeQueryResult = NonNullable<Awaited<ReturnType<typeof getEmployee>>>
+export type GetEmployeeQueryError = HTTPValidationError
+
+
+export function useGetEmployee<TData = Awaited<ReturnType<typeof getEmployee>>, TError = HTTPValidationError>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEmployee>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getEmployee>>,
+          TError,
+          Awaited<ReturnType<typeof getEmployee>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetEmployee<TData = Awaited<ReturnType<typeof getEmployee>>, TError = HTTPValidationError>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEmployee>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getEmployee>>,
+          TError,
+          Awaited<ReturnType<typeof getEmployee>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetEmployee<TData = Awaited<ReturnType<typeof getEmployee>>, TError = HTTPValidationError>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEmployee>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get Employee
+ */
+
+export function useGetEmployee<TData = Awaited<ReturnType<typeof getEmployee>>, TError = HTTPValidationError>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEmployee>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetEmployeeQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type updateEmployeeResponse200 = {
+  data: Employee
+  status: 200
+}
+
+export type updateEmployeeResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type updateEmployeeResponseSuccess = (updateEmployeeResponse200) & {
+  headers: Headers;
+};
+export type updateEmployeeResponseError = (updateEmployeeResponse422) & {
+  headers: Headers;
+};
+
+export type updateEmployeeResponse = (updateEmployeeResponseSuccess | updateEmployeeResponseError)
+
+export const getUpdateEmployeeUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/employees/${id}`
+}
+
+/**
+ * @summary Update Employee
+ */
+export const updateEmployee = async (id: string,
+    updateEmployeeBody: UpdateEmployee, options?: Parameters<typeof customFetch>[1]): Promise<updateEmployeeResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<updateEmployeeResponse>(getUpdateEmployeeUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(updateEmployeeBody)
+  }
+);}
+
+
+
+
+
+export const getUpdateEmployeeMutationKey = () => ['updateEmployee'] as const;
+
+export const getUpdateEmployeeMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateEmployee>>, TError,UpdateEmployeeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateEmployee>>, TError,UpdateEmployeeMutationVariables, TContext> => {
+
+const mutationKey = getUpdateEmployeeMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateEmployee>>, UpdateEmployeeMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateEmployee(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateEmployeeMutationResult = NonNullable<Awaited<ReturnType<typeof updateEmployee>>>
+    export type UpdateEmployeeMutationBody = UpdateEmployee
+    export type UpdateEmployeeMutationError = HTTPValidationError
+    export type UpdateEmployeeMutationVariables = {id: string;data: UpdateEmployee}
+
+    /**
+ * @summary Update Employee
+ */
+export const useUpdateEmployee = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateEmployee>>, TError,UpdateEmployeeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof updateEmployee>>,
+        TError,
+        UpdateEmployeeMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateEmployeeMutationOptions(options), queryClient);
+    }
+
+export type transferEmployeeResponse200 = {
+  data: Employment
+  status: 200
+}
+
+export type transferEmployeeResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type transferEmployeeResponseSuccess = (transferEmployeeResponse200) & {
+  headers: Headers;
+};
+export type transferEmployeeResponseError = (transferEmployeeResponse422) & {
+  headers: Headers;
+};
+
+export type transferEmployeeResponse = (transferEmployeeResponseSuccess | transferEmployeeResponseError)
+
+export const getTransferEmployeeUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/employees/${id}/transfers`
+}
+
+/**
+ * @summary Transfer Employee
+ */
+export const transferEmployee = async (id: string,
+    transferRequest: TransferRequest, options?: Parameters<typeof customFetch>[1]): Promise<transferEmployeeResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<transferEmployeeResponse>(getTransferEmployeeUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(transferRequest)
+  }
+);}
+
+
+
+
+
+export const getTransferEmployeeMutationKey = () => ['transferEmployee'] as const;
+
+export const getTransferEmployeeMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof transferEmployee>>, TError,TransferEmployeeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof transferEmployee>>, TError,TransferEmployeeMutationVariables, TContext> => {
+
+const mutationKey = getTransferEmployeeMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof transferEmployee>>, TransferEmployeeMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  transferEmployee(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TransferEmployeeMutationResult = NonNullable<Awaited<ReturnType<typeof transferEmployee>>>
+    export type TransferEmployeeMutationBody = TransferRequest
+    export type TransferEmployeeMutationError = HTTPValidationError
+    export type TransferEmployeeMutationVariables = {id: string;data: TransferRequest}
+
+    /**
+ * @summary Transfer Employee
+ */
+export const useTransferEmployee = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof transferEmployee>>, TError,TransferEmployeeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof transferEmployee>>,
+        TError,
+        TransferEmployeeMutationVariables,
+        TContext
+      > => {
+      return useMutation(getTransferEmployeeMutationOptions(options), queryClient);
+    }
+
+export type terminateEmployeeResponse200 = {
+  data: Employee
+  status: 200
+}
+
+export type terminateEmployeeResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type terminateEmployeeResponseSuccess = (terminateEmployeeResponse200) & {
+  headers: Headers;
+};
+export type terminateEmployeeResponseError = (terminateEmployeeResponse422) & {
+  headers: Headers;
+};
+
+export type terminateEmployeeResponse = (terminateEmployeeResponseSuccess | terminateEmployeeResponseError)
+
+export const getTerminateEmployeeUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/employees/${id}/termination`
+}
+
+/**
+ * @summary Terminate Employee
+ */
+export const terminateEmployee = async (id: string,
+    terminationRequest: TerminationRequest, options?: Parameters<typeof customFetch>[1]): Promise<terminateEmployeeResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<terminateEmployeeResponse>(getTerminateEmployeeUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(terminationRequest)
+  }
+);}
+
+
+
+
+
+export const getTerminateEmployeeMutationKey = () => ['terminateEmployee'] as const;
+
+export const getTerminateEmployeeMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof terminateEmployee>>, TError,TerminateEmployeeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof terminateEmployee>>, TError,TerminateEmployeeMutationVariables, TContext> => {
+
+const mutationKey = getTerminateEmployeeMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof terminateEmployee>>, TerminateEmployeeMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  terminateEmployee(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TerminateEmployeeMutationResult = NonNullable<Awaited<ReturnType<typeof terminateEmployee>>>
+    export type TerminateEmployeeMutationBody = TerminationRequest
+    export type TerminateEmployeeMutationError = HTTPValidationError
+    export type TerminateEmployeeMutationVariables = {id: string;data: TerminationRequest}
+
+    /**
+ * @summary Terminate Employee
+ */
+export const useTerminateEmployee = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof terminateEmployee>>, TError,TerminateEmployeeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof terminateEmployee>>,
+        TError,
+        TerminateEmployeeMutationVariables,
+        TContext
+      > => {
+      return useMutation(getTerminateEmployeeMutationOptions(options), queryClient);
+    }
+
+export type listEmploymentsResponse200 = {
+  data: Employment[]
+  status: 200
+}
+
+export type listEmploymentsResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type listEmploymentsResponseSuccess = (listEmploymentsResponse200) & {
+  headers: Headers;
+};
+export type listEmploymentsResponseError = (listEmploymentsResponse422) & {
+  headers: Headers;
+};
+
+export type listEmploymentsResponse = (listEmploymentsResponseSuccess | listEmploymentsResponseError)
+
+export const getListEmploymentsUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/employees/${id}/employments`
+}
+
+/**
+ * @summary List Employments
+ */
+export const listEmployments = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<listEmploymentsResponse> => {
+
+  return customFetch<listEmploymentsResponse>(getListEmploymentsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListEmploymentsQueryKey = (id: string,) => {
+    return [
+    `/api/v1/employees/${id}/employments`
+    ] as const;
+    }
+
+
+export const getListEmploymentsQueryOptions = <TData = Awaited<ReturnType<typeof listEmployments>>, TError = HTTPValidationError>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listEmployments>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListEmploymentsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listEmployments>>> = ({ signal }) => listEmployments(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listEmployments>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListEmploymentsQueryResult = NonNullable<Awaited<ReturnType<typeof listEmployments>>>
+export type ListEmploymentsQueryError = HTTPValidationError
+
+
+export function useListEmployments<TData = Awaited<ReturnType<typeof listEmployments>>, TError = HTTPValidationError>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listEmployments>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listEmployments>>,
+          TError,
+          Awaited<ReturnType<typeof listEmployments>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListEmployments<TData = Awaited<ReturnType<typeof listEmployments>>, TError = HTTPValidationError>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listEmployments>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listEmployments>>,
+          TError,
+          Awaited<ReturnType<typeof listEmployments>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListEmployments<TData = Awaited<ReturnType<typeof listEmployments>>, TError = HTTPValidationError>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listEmployments>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List Employments
+ */
+
+export function useListEmployments<TData = Awaited<ReturnType<typeof listEmployments>>, TError = HTTPValidationError>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listEmployments>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListEmploymentsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 

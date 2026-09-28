@@ -26,22 +26,14 @@ from app.domains.organizations.repository import (
     PositionFilters,
 )
 from app.domains.organizations.schemas import Department, Location, Position
+from app.infrastructure.postgres.like import (
+    LIKE_ESCAPE,
+    contains_pattern,
+)
 from app.infrastructure.postgres.models_audit import (
     AuditEntry,  # noqa: F401  (metadata)
 )
 from app.shared.pagination import PageParams
-
-_LIKE_ESCAPE = "\\"
-
-
-def _contains(term: str) -> str:
-    """Build an ILIKE pattern for substring search, escaping user wildcards."""
-    escaped = (
-        term.replace(_LIKE_ESCAPE, _LIKE_ESCAPE * 2)
-        .replace("%", f"{_LIKE_ESCAPE}%")
-        .replace("_", f"{_LIKE_ESCAPE}_")
-    )
-    return f"%{escaped}%"
 
 
 class PostgresDepartmentRepository:
@@ -75,7 +67,9 @@ class PostgresDepartmentRepository:
             conditions.append(orm.Department.archived_at.is_(None))
         if filters.q:
             conditions.append(
-                orm.Department.name.ilike(_contains(filters.q), escape=_LIKE_ESCAPE)
+                orm.Department.name.ilike(
+                    contains_pattern(filters.q), escape=LIKE_ESCAPE
+                )
             )
         if filters.parent_id is not None:
             conditions.append(orm.Department.parent_department_id == filters.parent_id)
@@ -186,7 +180,9 @@ class PostgresPositionRepository:
             conditions.append(orm.Position.archived_at.is_(None))
         if filters.q:
             conditions.append(
-                orm.Position.title.ilike(_contains(filters.q), escape=_LIKE_ESCAPE)
+                orm.Position.title.ilike(
+                    contains_pattern(filters.q), escape=LIKE_ESCAPE
+                )
             )
 
         total = (
@@ -270,7 +266,7 @@ class PostgresLocationRepository:
             conditions.append(orm.Location.archived_at.is_(None))
         if filters.q:
             conditions.append(
-                orm.Location.name.ilike(_contains(filters.q), escape=_LIKE_ESCAPE)
+                orm.Location.name.ilike(contains_pattern(filters.q), escape=LIKE_ESCAPE)
             )
 
         total = (
