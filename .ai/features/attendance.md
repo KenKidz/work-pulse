@@ -19,8 +19,8 @@ analytics phases cheap later.
 - An employee has **at most one open attendance record** (checked in, not
   checked out) at any time.
 - A check-out requires an open record and closes it.
-- **Server time is authoritative** (proposed): client-supplied timestamps are
-  rejected in Phase 1.
+- **Server time is authoritative**: client-supplied timestamps are rejected in
+  Phase 1.
 - The workday a record belongs to is the calendar date of the check-in **in the
   employee's location timezone**.
 - Lateness: `checked_in_at > shift.start_time + shift.grace_minutes`, evaluated
@@ -84,37 +84,134 @@ analytics phases cheap later.
 | Read team records + board | — | team | Y | Y |
 | Manage shifts | — | — | Y | Y |
 
-## API contract (proposed)
+## API contract (final — pinned by T1, 2026-09-28)
 
 | Method & path | Input | Response |
 | --- | --- | --- |
-| `POST /api/v1/attendance/check-ins` | `{"work_mode": "onsite|remote", "note"?}` | `201 AttendanceRecord` |
-| `POST /api/v1/attendance/records/{id}/check-out` | `{"note"?}` | `200 AttendanceRecord` |
+| `POST /api/v1/attendance/check-ins` | `CheckInRequest` | `201 AttendanceRecord` |
+| `POST /api/v1/attendance/records/{id}/check-out` | `CheckOutRequest` | `200 AttendanceRecord` |
 | `GET /api/v1/attendance/records` | `?employee_id=&from=&to=&late=&page=&page_size=` | `200 {"items": AttendanceRecord[], "page": Page}` |
-| `GET /api/v1/attendance/board` | `?date=YYYY-MM-DD` (default: today, tenant tz) | `200 Board` |
-| `GET /api/v1/shifts` · `POST /api/v1/shifts` · `PATCH /api/v1/shifts/{id}` | `Shift` | `200/201 Shift` |
+| `GET /api/v1/attendance/board` | `?date=YYYY-MM-DD` (default: server UTC date) | `200 Board` |
+| `GET /api/v1/shifts` | — | `200 Shift[]` (bare, unpaged) |
+| `POST /api/v1/shifts` | `ShiftCreate` | `201 Shift` |
+| `PATCH /api/v1/shifts/{id}` | `ShiftUpdate` | `200 Shift` |
 
-```json
+```jsonc
 AttendanceRecord {
-  "id", "tenant_id", "employee_id", "workday": "2026-09-24",
-  "checked_in_at", "checked_out_at": null, "work_mode": "onsite",
-  "late": false, "shift_id": null, "note": null, "created_at"
+  "id", "tenant_id", "employee_id", "workday": date,
+  "checked_in_at": date-time, "checked_out_at": date-time|null,
+  "work_mode": "onsite|remote",
+  "late": bool, "shift_id": uuid|null,
+  "check_in_note": string|null, "check_out_note": string|null,
+  "duration_minutes": int|null,   // null while open; floor whole minutes at close
+  "created_at": date-time
 }
 
 Board {
-  "date": "2026-09-24",
-  "counts": { "present": 0, "remote": 0, "late": 0, "on_leave": 0,
-              "absent": 0, "checked_out": 0 },
-  "activity": [ { "occurred_at", "employee_id", "action": "checked_in" } ]
+  "date": date,
+  "counts": { "present", "remote", "late", "on_leave", "absent", "checked_out" },
+  "activity": [ { "occurred_at": date-time, "employee_id": uuid,
+                  "action": "checked_in|checked_out" } ]
 }
 
-Shift { "id", "tenant_id", "name", "start_time": "09:00", "end_time": "18:00",
-        "grace_minutes": 10, "location_id": null }
+Shift { "id", "tenant_id", "name", "start_time": "HH:MM", "end_time": "HH:MM",
+        "grace_minutes": int, "location_id": uuid|null,
+        "created_at", "updated_at" }
+
+CheckInRequest  { "work_mode": string, "check_in_note"?: string }   // 1..500 chars
+CheckOutRequest { "check_out_note"?: string }                       // 1..500 chars
+
+ShiftCreate/ShiftUpdate { "name", "start_time": "HH:MM", "end_time": "HH:MM",
+        "grace_minutes": int >= 0, "location_id"?: uuid|null }
 ```
 
-Error codes: `attendance_already_checked_in` · `attendance_not_open` ·
-`attendance_record_not_found` · `employee_not_active` · `shift_not_found` ·
-`invalid_work_mode`.
+`workday` and `Board.date` are `date` (`YYYY-MM-DD`); timestamps are
+`date-time`. `check_in_note`/`check_out_note` replace the single `note` of the
+draft. Note fields are free text and treated like PII: never in logs, event
+payloads or audit `changes` values (`changes` says `"changed"`).
+
+### Pinned details
+
+- **Routes & operationIds** (7 — drive orval hook names): `checkIn`
+  (`POST /attendance/check-ins` → `201 AttendanceRecord`) · `checkOut`
+  (`POST /attendance/records/{id}/check-out` → `200 AttendanceRecord`) ·
+  `listAttendanceRecords` (`GET /attendance/records` → `{"items", "page"}`) ·
+  `getAttendanceBoard` (`GET /attendance/board`) · `listShifts`
+  (`GET /shifts` → bare `Shift[]`, unpaged like `EmploymentList`, ordered
+  `location_id` nulls-last then `name`) · `createShift` (`POST /shifts` →
+  `201`) · `updateShift` (`PATCH /shifts/{id}` → `200`). No DELETE: shifts are
+  adjusted, never removed in Phase 1 (removal semantics wait for scheduling).
+- **`listAttendanceRecords` filters**: `employee_id`, `from`, `to` (both filter
+  `workday`, inclusive), `late`, `page`, `page_size` — the clamped `PageParams`
+  and `Page` shape pinned in organizations. Order `checked_in_at` desc, `id`
+  desc (stable pagination). Response `AttendanceRecordListPage`
+  (`{"items", "page"}`); `ShiftList` is the bare array.
+- **Check-in semantics** (Decision #3 made concrete): server time only — no
+  timestamp field is accepted anywhere (any extra field is rejected by
+  `additionalProperties: false`). The actor's employee resolves from
+  `X-Actor-Id` (like `/employees/me`); an actor with no employee record →
+  `404 employee_not_found`. `work_mode` is a plain string validated in the
+  service → `400 invalid_work_mode` (an enum in the schema would collapse the
+  pinned code into the generic 422).
+- **Workday & lateness**: `workday` = calendar date of `checked_in_at` in the
+  **employee's location timezone** (`employees.location_id → locations.timezone`,
+  `zoneinfo`). A record keeps its workday across midnight (23:58 → 00:10).
+  Shift resolution: the employee's location's shift, else the tenant default
+  (`shift.location_id IS NULL`), else none → `late` stays `false`. Lateness:
+  convert `checked_in_at` to the location tz, build `shift.start_time` on the
+  record's `workday` in that tz, and set
+  `late = checked_in_at > shift_start + grace_minutes` — the boundary is
+  **exclusive** (exactly at `start + grace` is not late). `minutes_late` (event
+  payload) = floor whole minutes past `start + grace`. The `late` flag is set
+  once at check-in and never cleared.
+- **Shift scoping** (new decision — see Risks): **at most one shift per scope
+  per tenant** — one per `location_id`, plus at most one tenant default
+  (`location_id` null). Enforced by unique indexes; a second shift for the same
+  scope → `409 shift_scope_taken`. `start_time`/`end_time` are `"HH:MM"`
+  strings (`^([01]\d|2[0-3]):[0-5]\d$`); `end_time > start_time` else `422
+  shift_time_invalid`. A shift may reference an archived location (lateness
+  still works; ADR 0007 does not apply — no archive on shifts in Phase 1).
+- **Board semantics** — counts are independent, **not** a partition (a person
+  can be in `present` and `late` at once; UI copy says so):
+  - `present` — open record for the date, `work_mode=onsite`
+  - `remote` — open record for the date, `work_mode=remote`
+  - `late` — any record for the date with `late=true` (open or closed)
+  - `checked_out` — any record for the date with `checked_out_at` set
+  - `on_leave` — always `0` in Phase 1 (field stays so the contract never
+    changes)
+  - `absent` — active employee in scope with an expected shift (location's,
+    else tenant default) **on the requested date**, with **no record at all**
+    for that date, and `now > shift.start_time + grace` for that date in the
+    location tz. A late check-in removes the employee from `absent` into
+    `present`/`remote` + `late`. The accepted over-count on rest days
+    (Decision #7) is documented in UI copy.
+  - `activity` — check-in and check-out entries of records with
+    `workday == date` (`occurred_at` = `checked_in_at` / `checked_out_at`),
+    newest first, capped at 20.
+  - `?date=YYYY-MM-DD` defaults to the server's current date in **UTC** — there
+    is no tenant-level timezone in the system (see Risks). The web board always
+    sends an explicit date.
+- **Roles** (the six repo roles; Decision #8, ADR 0004; identity headers as
+  pinned in organizations):
+  - check-in / check-out: self only (any role); check-out of a record that is
+    not the actor's → `404 attendance_record_not_found`.
+  - `GET /attendance/records`: `employee`/`finance` → own records only
+    (server-scoped to self; an `employee_id` filter naming anyone else →
+    `404 employee_not_found`); `manager` → self + direct reports (same rule for
+    out-of-scope filters); `hr`/`admin`/`super_admin` → all.
+  - `GET /attendance/board`: `manager` (self + reports scope), `hr`, `admin`,
+    `super_admin`; `employee`/`finance` → `403 forbidden`.
+  - `/shifts` (all three routes): `hr`/`admin`/`super_admin`; else `403`.
+  - Cross-tenant anything → `404`/empty, never another tenant's data.
+- **Error code → status** (uniform `{"error": {"code", "message"}}`, static
+  messages, values never echoed):
+  `attendance_already_checked_in` 409 · `attendance_not_open` 409 ·
+  `attendance_record_not_found` 404 · `employee_not_active` 409 ·
+  `shift_not_found` 404 · `invalid_work_mode` 400 · `shift_time_invalid` 422 ·
+  `shift_scope_taken` 409 · `employee_not_found` 404 (reused) · `forbidden`
+  403 · `invalid_identity` 400 · `validation_error` 422 (uniform handler).
+- **Ids/time**: UUIDv7 ids resolved in the service; `now` is a router-injected
+  parameter (conventions) and the only wall-clock read.
 
 ## Events
 
