@@ -11,6 +11,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         <Link className="text-sm text-muted-foreground hover:text-foreground" href="/employees">
           Employees
         </Link>
+        <Link className="text-sm text-muted-foreground hover:text-foreground" href="/attendance">
+          Attendance
+        </Link>
         <Link
           className="text-sm text-muted-foreground hover:text-foreground"
           href="/settings/organization"
