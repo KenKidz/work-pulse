@@ -6,7 +6,7 @@ does the work.
 
 ## Now
 
-- [ ] Identity & Access (Phase 2): authN + RBAC replacing the dev-identity headers (ADR 0004) — spec `.ai/features/identity-access.md` (draft; decisions resolved 2026-09-29); next: `/plan`
+- [ ] Identity & Access (Phase 2): authN + RBAC replacing the dev-identity headers (ADR 0004) — spec `.ai/features/identity-access.md` (approved; planned 2026-09-29, plan T1–T8); next: build per plan
 
 ## Later
 
