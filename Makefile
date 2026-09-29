@@ -36,7 +36,7 @@ dev-api: ## Run the FastAPI dev server on :8000
 dev-web: ## Run the Next.js dev server on :3000
 	cd $(WEB_DIR) && pnpm run dev
 
-check: check-api check-web ## Run every gate — run before claiming done
+check: check-api check-web check-e2e ## Run every gate — run before claiming done
 
 check-api: db-test-up ## API gate: ruff + pyright + pytest (ADR 0006)
 	cd $(API_DIR) && uv run ruff check .
@@ -47,7 +47,7 @@ check-api: db-test-up ## API gate: ruff + pyright + pytest (ADR 0006)
 check-web: ## Web gate: typecheck + ESLint + Vitest
 	cd $(WEB_DIR) && pnpm run typecheck && pnpm run lint && pnpm run test
 
-check-e2e: db-up db-migrate db-seed ## E2E gate: Playwright (web + api + seeded dev db) — not in `make check` yet
+check-e2e: db-up db-migrate db-seed ## E2E gate: Playwright (web + api + seeded dev db)
 	npx playwright test
 
 gen-api: ## Regenerate OpenAPI contract + typed API client

@@ -9,7 +9,7 @@
 | all | `make check` | both gates below — run before claiming done |
 | API | `make check-api` | Ruff + Pyright + `uv run pytest` in `apps/api` (ADR 0006) |
 | Web | `make check-web` | `tsc --noEmit` + ESLint + Vitest in `apps/web` |
-| E2E | `make check-e2e` | Playwright against web + api + seeded dev db — not in `make check` until fast and stable (decision 3) |
+| E2E | `make check-e2e` | Playwright against web + api + seeded dev db — part of `make check` since 2026-09-29 (decision 3) |
 | Load | Phase 7 | throughput/latency under realistic check-in load |
 
 `make check` grows as phases land (contract validation, e2e, lint). A gate that
@@ -76,3 +76,6 @@ is not wired into `make check` does not protect anything.
 3. **E2E: Playwright** in `tests/e2e/`, behind its own `make check-e2e`. It joins
    `make check` only once it is fast and stable enough to gate every change —
    a flaky gate gets ignored, which is worse than no gate.
+   *(2026-09-29: joined `make check`. Three consecutive green runs of the full
+   suite at ~20s each, 6 tests across all three features, no flakes; a gate
+   this cheap belongs in front of every change.)*

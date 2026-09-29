@@ -7,8 +7,8 @@ import { defineConfig, devices } from '@playwright/test';
  * database; this config then owns both dev servers: FastAPI on :8000 (reads
  * `apps/api/.env`) and Next.js on :3000 (dev-identity + API URL defaults from
  * `packages/api-client`). Chromium only while the suite is young — a slow or
- * flaky gate gets ignored (`.ai/testing.md` decision 3), so the suite stays
- * out of `make check` until it has earned its place there.
+ * flaky gate gets ignored (`.ai/testing.md` decision 3). The suite is part of
+ * `make check` since 2026-09-29: fast (~20s) and stable across repeated runs.
  */
 export default defineConfig({
   testDir: './tests/e2e',

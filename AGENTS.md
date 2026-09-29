@@ -47,7 +47,7 @@ Roadmap: `.ai/architecture.md`.
 | `make dev-web` | Next.js dev server on :3000 |
 | `make gen-api` | regenerate OpenAPI + typed `@workpulse/api-client` |
 | `make check` | all gates — run before claiming done |
-| `make check-e2e` | Playwright e2e gate (migrate + seed + dev servers) — not in `make check` yet |
+| `make check-e2e` | Playwright e2e gate (migrate + seed + dev servers) — part of `make check` |
 
 ## Repo map
 

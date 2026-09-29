@@ -617,7 +617,7 @@ alone).
 | Integration (repo/API) | `test_employees_{api,failures,tenant_isolation,roles,audit,logs}.py`, `test_employees_repository.py`, conftest `ALL_TABLES` | `make check-api` | AC4–AC8, AC10, AC11 as named above; tenant isolation expects 404 not 403 |
 | Contract | `tests/contract/test_employee_events.py` (+ existing OpenAPI drift test via `make gen-api`) | `make check-api` | schema rejects unknown/PII keys; builders' outputs validate; routes exist with pinned shapes |
 | Web | `apps/web/tests/employees/{employees-table,employee-form-dialog,transfer-dialog}.test.tsx` | `make check-web` | loading/empty/error states; 409 visible (duplicate email, archived target); toast on mutation failure |
-| E2E | `tests/e2e/employees.spec.ts` | `make check-e2e` (not yet in `make check`) | full list → detail → transfer flow; 409 rendered visibly end-to-end |
+| E2E | `tests/e2e/employees.spec.ts` | `make check-e2e` (joined `make check` 2026-09-29) | full list → detail → transfer flow; 409 rendered visibly end-to-end |
 
 Cross-cutting: audit assertions on every mutating test group (rule 3);
 `.ai/security.md` PII rules proven by `test_employees_audit.py` +
@@ -651,7 +651,7 @@ proves the "no PII in events" invariant for when Phase 3 starts publishing.
    so it can pass trivially — it still fails the moment someone logs a value.
 7. **E2E gate is not in `make check`** (`.ai/testing.md` decision 3 — flaky
    gates get ignored). It joins once stable; until then CI runs it as its own
-   job.
+   job. *(Resolved 2026-09-29: joined `make check` once fast + stable.)*
 8. **ADR 0008 (recommended) — employment history model**: append-only
    `employments` periods (half-open) + denormalized current assignment refs on
    `employees` (for filtering). Expensive to reverse — payroll/analytics will
