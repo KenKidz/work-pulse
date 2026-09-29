@@ -16,6 +16,11 @@ import anyio
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerificationError
 
+# Pinned cookie contract (`.ai/features/identity-access.md` → Pinned details):
+# HttpOnly, SameSite=Lax, Path=/; `Secure` is settings-driven
+# (`Settings.session_cookie_secure`).
+SESSION_COOKIE_NAME = "wp_session"
+
 _hasher = PasswordHasher()
 
 

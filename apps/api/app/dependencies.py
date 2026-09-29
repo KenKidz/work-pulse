@@ -9,20 +9,25 @@ usage port → domain services.
         SessionDep, SettingsDep
 """
 
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
-from fastapi import Depends
+from fastapi import Cookie, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings, get_settings
 from app.domains.attendance.service import AttendanceService, ShiftService
 from app.domains.employees.service import EmployeeService
+from app.domains.identity.credentials import SESSION_COOKIE_NAME
+from app.domains.identity.schemas import User
+from app.domains.identity.service import AuthService, UserService
 from app.domains.organizations.service import (
     DepartmentService,
     LocationService,
     PositionService,
 )
 from app.infrastructure.postgres.audit import PostgresAuditWriter
+from app.infrastructure.postgres.employee_link import PostgresEmployeeLink
 from app.infrastructure.postgres.employee_usage import PostgresEmployeeUsage
 from app.infrastructure.postgres.repositories.attendance import (
     PostgresAttendanceRepository,
@@ -31,6 +36,10 @@ from app.infrastructure.postgres.repositories.attendance import (
 from app.infrastructure.postgres.repositories.employees import (
     PostgresEmployeeRepository,
     PostgresEmploymentRepository,
+)
+from app.infrastructure.postgres.repositories.identity import (
+    PostgresSessionRepository,
+    PostgresUserRepository,
 )
 from app.infrastructure.postgres.repositories.organizations import (
     PostgresDepartmentRepository,
@@ -111,9 +120,43 @@ def get_shift_service(session: SessionDep) -> ShiftService:
     )
 
 
+def get_auth_service(session: SessionDep, settings: SettingsDep) -> AuthService:
+    return AuthService(
+        users=PostgresUserRepository(session),
+        sessions=PostgresSessionRepository(session),
+        audit=PostgresAuditWriter(session),
+        session_ttl=timedelta(days=settings.session_ttl_days),
+    )
+
+
+def get_user_service(session: SessionDep) -> UserService:
+    return UserService(
+        users=PostgresUserRepository(session),
+        sessions=PostgresSessionRepository(session),
+        links=PostgresEmployeeLink(session),
+        audit=PostgresAuditWriter(session),
+    )
+
+
 DepartmentServiceDep = Annotated[DepartmentService, Depends(get_department_service)]
 PositionServiceDep = Annotated[PositionService, Depends(get_position_service)]
 LocationServiceDep = Annotated[LocationService, Depends(get_location_service)]
 EmployeeServiceDep = Annotated[EmployeeService, Depends(get_employee_service)]
 AttendanceServiceDep = Annotated[AttendanceService, Depends(get_attendance_service)]
 ShiftServiceDep = Annotated[ShiftService, Depends(get_shift_service)]
+AuthServiceDep = Annotated[AuthService, Depends(get_auth_service)]
+UserServiceDep = Annotated[UserService, Depends(get_user_service)]
+
+# The raw session token from the `wp_session` cookie — `None` when absent.
+# Resolution and the 401 live in `AuthService` (one failure path).
+SessionTokenDep = Annotated[str | None, Cookie(alias=SESSION_COOKIE_NAME)]
+
+
+async def get_current_user(
+    service: AuthServiceDep, token: SessionTokenDep = None
+) -> User:
+    """Session cookie → the authenticated user; fail closed (401)."""
+    return await service.me(token, datetime.now(UTC))
+
+
+CurrentUserDep = Annotated[User, Depends(get_current_user)]

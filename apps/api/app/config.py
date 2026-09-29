@@ -27,6 +27,13 @@ class Settings(BaseSettings):
         "postgresql+asyncpg://workpulse:workpulse@localhost:5433/workpulse_test"
     )
 
+    # --- Identity: sessions (pinned in `.ai/features/identity-access.md`) ---
+    # Absolute session lifetime; the `wp_session` cookie itself is a session
+    # cookie (no Max-Age) — the server-side TTL is the authority.
+    session_ttl_days: int = 7
+    # `Secure` flag on the session cookie: off for local HTTP dev, on outside.
+    session_cookie_secure: bool = False
+
 
 @lru_cache
 def get_settings() -> Settings:

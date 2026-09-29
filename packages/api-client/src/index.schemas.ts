@@ -82,6 +82,12 @@ export interface Board {
   activity: BoardActivity[];
 }
 
+export interface ChangePasswordRequest {
+  current_password: string;
+  /** @minLength 10 */
+  new_password: string;
+}
+
 export interface CheckInRequest {
   work_mode: string;
   check_in_note?: string | null;
@@ -294,6 +300,11 @@ export interface LocationUpdate {
   timezone?: string | null;
 }
 
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
 export interface Position {
   id: string;
   tenant_id: string;
@@ -322,6 +333,21 @@ export interface PositionUpdate {
   title?: string | null;
   description?: string | null;
 }
+
+/**
+ * The six pinned Phase 1 roles (`.ai/security.md`).
+ */
+export type Role = typeof Role[keyof typeof Role];
+
+
+export const Role = {
+  employee: 'employee',
+  manager: 'manager',
+  hr: 'hr',
+  finance: 'finance',
+  admin: 'admin',
+  super_admin: 'super_admin',
+} as const;
 
 export interface Shift {
   id: string;
@@ -379,6 +405,17 @@ export interface UpdateEmployee {
   last_name?: string | null;
   email?: string | null;
   phone?: string | null;
+}
+
+export interface User {
+  id: string;
+  tenant_id: string;
+  email: string;
+  role: Role;
+  employee_id?: string | null;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export type HealthzHealthzGet200 = {[key: string]: string};

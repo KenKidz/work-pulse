@@ -484,7 +484,7 @@ additive; existing specs are untouched).
 
 Verify: `make check-api` green (pure unit; no DB).
 
-### T4 — Auth router + session resolver + HTTP tests + regeneration
+### T4 — Auth router + session resolver + HTTP tests + regeneration · done 2026-09-29
 
 - `apps/api/app/shared/errors.py` — add `UnauthenticatedError` (401
   `unauthenticated`); `InvalidIdentityError` survives until T5 deletes it.
