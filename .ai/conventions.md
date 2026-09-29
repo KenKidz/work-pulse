@@ -79,6 +79,11 @@
   login/register.
 - Naming: files `kebab-case.ts(x)` for non-component modules, `PascalCase.tsx`
   for components.
+- UI quality: before building or restyling components/pages, load the
+  `ui-ux-pro-max` skill and follow its guidelines (layout, typography,
+  accessibility, interaction states). Applies to anything visual in `apps/web/`.
+- shadcn/ui: load the `shadcn` skill when adding, updating or debugging
+  components in `components/ui/` or composing shadcn primitives.
 - Gates in `make check-web`: `tsc --noEmit` + ESLint + Vitest.
 
 ## API

@@ -90,7 +90,11 @@ tasks/                TODO.md (backlog) · doc.md (original brief)
     only in the UI. Cross-tenant reads return 404, not 403.
 13. Sensitive mutations write an audit entry (append-only, no PII values).
 14. A spec is not `approved` while its `## Decisions needed` section is open —
-    ask, do not guess.
+   ask, do not guess.
+15. Frontend UI work (components, pages, styling in `apps/web/`) loads the
+    `ui-ux-pro-max` skill first and follows it for layout, accessibility and
+    visual quality — no generic AI-slop UI. shadcn/ui work (components in
+    `components/ui/`, adding/fixing primitives) also loads the `shadcn` skill.
 
 ## Vibe-coding workflow
 
