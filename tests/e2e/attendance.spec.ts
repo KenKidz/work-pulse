@@ -91,9 +91,9 @@ function workdayISO(): string {
   }).format(new Date());
 }
 
-/** The board/feed/table render employees as `emp {last four of the id}`. */
+/** The board/feed/table render employee ids as `Employee …{last four}`. */
 function shortId(id: string): string {
-  return `emp ${id.slice(-4)}`;
+  return `Employee …${id.slice(-4)}`;
 }
 
 function count(page: Page, testId: string): Promise<number> {
@@ -114,14 +114,14 @@ test.describe.serial('attendance', () => {
     // Tab A — the employee's own panel on the explicit workday date.
     await page.goto('/attendance');
     await expect(page.getByRole('heading', { name: 'Attendance', exact: true })).toBeVisible();
-    await page.getByLabel('Board date').fill(workday);
+    await page.getByLabel("Date", { exact: true }).fill(workday);
     await expect(page.getByTestId('check-in-panel')).toBeVisible();
 
     // Tab B opens before the check-in: its cache never sees the open record,
     // so its later submit is the concurrent two-tab duplicate (spec edge case).
     const staleTab = await context.newPage();
     await staleTab.goto('/attendance');
-    await staleTab.getByLabel('Board date').fill(workday);
+    await staleTab.getByLabel("Date", { exact: true }).fill(workday);
     await expect(staleTab.getByRole('button', { name: 'Check in' })).toBeVisible();
 
     const presentBefore = await count(page, 'count-present');

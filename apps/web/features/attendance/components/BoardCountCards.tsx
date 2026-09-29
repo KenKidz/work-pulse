@@ -1,59 +1,99 @@
 "use client";
 
 /**
- * Six board count cards — independent counts, not a partition (T1). Copy
- * states the two documented limitations: overlapping `late`×presence and the
- * `absent` over-count on rest days (Decision #7). `on_leave` stays 0 until
- * Phase 3. Client leaf.
+ * Attendance counts grouped by what they describe: open presence now and
+ * independent markers across the selected workday. Client leaf.
  */
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "cn";
 
 import type { BoardCounts } from "../types";
 import { absentHint, onLeaveHint, workModeHint } from "./labels";
 
-type CountCardProps = {
+type CountCellProps = {
   label: string;
   value: number;
+  valueClassName?: string;
   hint?: string;
-  testId?: string;
+  testId: string;
 };
 
-function CountCard({ label, value, hint, testId }: CountCardProps) {
+function CountCell({ label, value, valueClassName, hint, testId }: CountCellProps) {
   return (
-    <Card className="py-4">
-      <CardHeader className="px-4">
-        <CardTitle className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-          {label}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="px-4">
-        <p className="text-3xl font-semibold tabular-nums" data-testid={testId}>
-          {value}
-        </p>
-        {hint ? <p className="mt-1 text-xs text-muted-foreground">{hint}</p> : null}
-      </CardContent>
-    </Card>
+    <div className="min-w-0">
+      <dt className="text-sm font-medium text-muted-foreground">{label}</dt>
+      <dd
+        className={cn("mt-1 text-2xl leading-none font-semibold tabular-nums", valueClassName)}
+        data-testid={testId}
+      >
+        {value}
+      </dd>
+      {hint ? <p className="mt-2 text-xs leading-4 text-muted-foreground">{hint}</p> : null}
+    </div>
   );
 }
 
 export function BoardCountCards({ counts }: { counts: BoardCounts }) {
   return (
-    <>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        <CountCard label="Present" value={counts.present} testId="count-present" />
-        <CountCard label="Remote" value={counts.remote} testId="count-remote" />
-        <CountCard label="Late" value={counts.late} testId="count-late" />
-        <CountCard
-          label="On leave"
-          value={counts.on_leave}
-          hint={onLeaveHint}
-          testId="count-on-leave"
-        />
-        <CountCard label="Absent" value={counts.absent} hint={absentHint} testId="count-absent" />
-        <CountCard label="Checked out" value={counts.checked_out} testId="count-checked-out" />
+    <section
+      aria-label="Attendance counts"
+      className="overflow-hidden rounded-md border border-border bg-card shadow-none"
+    >
+      <div className="grid md:grid-cols-[minmax(0,4fr)_minmax(0,8fr)]">
+        <div className="border-b border-border bg-primary/5 p-4 sm:p-5 md:border-r md:border-b-0">
+          <h2 className="text-xs font-semibold text-muted-foreground">Current presence</h2>
+          <dl className="mt-4 grid grid-cols-2 gap-4">
+            <CountCell
+              label="On site"
+              value={counts.present}
+              valueClassName="text-success"
+              testId="count-present"
+            />
+            <CountCell
+              label="Remote"
+              value={counts.remote}
+              valueClassName="text-info"
+              testId="count-remote"
+            />
+          </dl>
+        </div>
+
+        <div className="p-4 sm:p-5">
+          <h2 className="text-xs font-semibold text-muted-foreground">Other day counts</h2>
+          <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-5 md:grid-cols-4">
+            <CountCell
+              label="Late"
+              value={counts.late}
+              valueClassName="text-warning"
+              testId="count-late"
+            />
+            <CountCell
+              label="Absent"
+              value={counts.absent}
+              valueClassName="text-destructive"
+              hint={absentHint}
+              testId="count-absent"
+            />
+            <CountCell
+              label="On leave"
+              value={counts.on_leave}
+              valueClassName="text-muted-foreground"
+              hint={onLeaveHint}
+              testId="count-on-leave"
+            />
+            <CountCell
+              label="Checked out"
+              value={counts.checked_out}
+              valueClassName="text-foreground"
+              testId="count-checked-out"
+            />
+          </dl>
+        </div>
       </div>
-      <p className="text-xs text-muted-foreground">{workModeHint}</p>
-    </>
+
+      <p className="border-t border-border px-4 py-3 text-xs leading-5 text-muted-foreground sm:px-5">
+        {workModeHint}
+      </p>
+    </section>
   );
 }

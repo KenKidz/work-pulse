@@ -10,6 +10,13 @@ export const statusLabel: Record<EmployeeStatus, string> = {
   terminated: "Terminated",
 };
 
+/** Status → semantic badge variant; terminated reads quiet, not alarming. */
+export const statusVariant: Record<EmployeeStatus, "success" | "warning" | "muted"> = {
+  active: "success",
+  on_leave: "warning",
+  terminated: "muted",
+};
+
 export const employmentTypeLabel: Record<EmploymentType, string> = {
   full_time: "Full-time",
   part_time: "Part-time",

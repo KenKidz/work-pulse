@@ -1,23 +1,24 @@
 "use client";
 
 /**
- * The live workforce board — request/response in Phase 1 (polling comes
- * later). Composes: the actor's check-in/out panel, the six count cards, the
- * activity feed and the records table, all keyed on one explicit date.
+ * The attendance board — check-in/out, grouped counts, the activity feed and
+ * the records table, all keyed on one explicit date.
  * The web always sends `?date=` explicitly (the server default is the UTC
  * date — T1); today is computed client-side via `todayISO()`.
  * Client leaf: queries + mutations coordinate through the Query cache.
  */
 
+import { CircleAlert } from "lucide-react";
 import { useState } from "react";
 
-import { ApiError } from "@workpulse/api-client/mutator/custom-fetch";
-
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
 
 import {
+  isForbiddenError,
   useAttendanceBoard,
   useAttendanceRecords,
   useCurrentEmployee,
@@ -60,78 +61,106 @@ export function AttendanceBoard() {
             (record.checked_out_at === null || record.checked_out_at === undefined),
         ) ?? null);
 
-  const boardDenied =
-    boardQuery.isError &&
-    boardQuery.error instanceof ApiError &&
-    (boardQuery.error.status === 403 || boardQuery.error.code === "forbidden");
+  const boardDenied = boardQuery.isError && isForbiddenError(boardQuery.error);
+
+  const isToday = date === todayISO();
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <label className="text-sm text-muted-foreground" htmlFor="board-date">
-            Board date
-          </label>
-          <Input
-            id="board-date"
-            type="date"
-            className="w-40"
-            value={date}
-            onChange={(event) => setDate(event.target.value || todayISO())}
-          />
+    <div className="flex flex-col gap-6">
+      <header className="grid gap-5 border-b border-border pb-6 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+        <div className="space-y-2">
+          <h1 className="text-3xl leading-9 font-semibold tracking-tight text-balance">
+            Attendance
+          </h1>
+          <p className="max-w-2xl text-sm leading-5 text-pretty text-muted-foreground">
+            Record your check-in and review attendance for the selected day.
+          </p>
+          <p
+            id="board-date-description"
+            className="max-w-xl pt-1 text-xs leading-5 text-muted-foreground"
+          >
+            Counts and activity use this date. Check-in time is recorded automatically.
+          </p>
         </div>
-        <p className="text-xs text-muted-foreground">
-          Server time decides every record; this date scopes counts and the feed.
-        </p>
-      </div>
+        <div className="flex items-end gap-2">
+          <div className="grid gap-1.5">
+            <Label htmlFor="board-date" className="text-xs font-medium text-muted-foreground">
+              Date
+            </Label>
+            <Input
+              id="board-date"
+              type="date"
+              aria-describedby="board-date-description"
+              className="h-11 w-40 tabular-nums sm:w-44"
+              value={date}
+              onChange={(event) => setDate(event.target.value || todayISO())}
+            />
+          </div>
+          <Button
+            variant="outline"
+            className="h-11 px-4"
+            disabled={isToday}
+            onClick={() => setDate(todayISO())}
+          >
+            Today
+          </Button>
+        </div>
+      </header>
 
       <CheckInPanel openRecord={openRecord} />
 
       {boardQuery.isPending ? (
-        <p className="text-sm text-muted-foreground">Loading board…</p>
-      ) : boardQuery.isError || boardDenied ? (
-        <div role="alert" className="rounded-md border border-destructive/40 p-4 text-sm">
-          <p>
-            {boardDenied
-              ? "The live board is available to managers, HR and admins."
-              : "Could not load the attendance board."}
-          </p>
-          {!boardDenied ? (
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-3"
-              onClick={() => void boardQuery.refetch()}
-            >
-              Retry
-            </Button>
-          ) : null}
+        <div className="flex items-center justify-center gap-2 rounded-md border border-dashed px-6 py-10 text-sm text-muted-foreground">
+          <Spinner className="size-4" />
+          <p>Loading attendance for this date…</p>
         </div>
+      ) : boardQuery.isError || boardDenied ? (
+        <Alert variant="destructive">
+          <CircleAlert aria-hidden="true" />
+          <AlertTitle>
+            {boardDenied ? "Attendance board unavailable" : "Could not load attendance"}
+          </AlertTitle>
+          <AlertDescription>
+            <p>
+              {boardDenied
+                ? "Managers, HR and admins can view workforce attendance."
+                : "Attendance could not be loaded for this date."}
+            </p>
+            {!boardDenied ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-2"
+                onClick={() => void boardQuery.refetch()}
+              >
+                Retry
+              </Button>
+            ) : null}
+          </AlertDescription>
+        </Alert>
       ) : board ? (
         <>
           <BoardCountCards counts={board.counts} />
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.7fr)_minmax(16rem,0.8fr)]">
             <ActivityFeed activity={board.activity} />
-            <Card>
-              <CardContent className="pt-2 text-sm text-muted-foreground">
-                <p className="font-medium text-foreground">How the counts read</p>
-                <p className="mt-2">
-                  Counts are independent, not a partition: a late check-in moves the person into
-                  Present (or Remote) and Late at once; checking out moves them to Checked out and
-                  Late stays.
-                </p>
-                <p className="mt-2">
-                  The board is request/response in Phase 1 — refresh or change the date to update;
-                  live push arrives with realtime in Phase 2.
-                </p>
-              </CardContent>
-            </Card>
+            <aside
+              aria-labelledby="attendance-refresh-title"
+              className="flex flex-col gap-2 border-l-2 border-primary/30 py-1 pl-5"
+            >
+              <h2 id="attendance-refresh-title" className="text-base font-semibold">
+                New activity
+              </h2>
+              <p className="text-sm leading-6 text-muted-foreground">
+                This board does not update automatically. Refresh the page or choose another date to
+                check again.
+              </p>
+            </aside>
           </div>
         </>
       ) : null}
 
-      <section className="space-y-4">
-        <h2 className="text-lg font-semibold tracking-tight">Attendance records</h2>
+      <section className="flex flex-col gap-4">
+        <h2 className="text-lg leading-6 font-semibold tracking-tight">Attendance records</h2>
         <AttendanceRecordsTable />
       </section>
 

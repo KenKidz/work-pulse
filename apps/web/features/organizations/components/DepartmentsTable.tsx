@@ -5,10 +5,14 @@
  * toggle, and row actions Edit / Archive / Restore. Client leaf.
  */
 
-import { Archive, ArchiveRestore, Pencil, Plus } from "lucide-react";
+import { Archive, ArchiveRestore, Building2, CircleAlert, Pencil, Plus } from "lucide-react";
 import { useState } from "react";
 
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/empty-state";
+import { Spinner } from "@/components/ui/spinner";
 import {
   Table,
   TableBody,
@@ -24,6 +28,7 @@ import {
   useDepartmentRestore,
 } from "../hooks/use-departments";
 import type { Department } from "../types";
+import { ArchiveStatusBadge } from "./ArchiveStatusBadge";
 import { DepartmentFormDialog } from "./DepartmentFormDialog";
 
 export function DepartmentsTable() {
@@ -55,7 +60,7 @@ export function DepartmentsTable() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <Button onClick={openCreate}>
           <Plus />
           New department
@@ -69,85 +74,100 @@ export function DepartmentsTable() {
         </Button>
       </div>
 
-      {departmentsQuery.isPending ? (
-        <p className="text-sm text-muted-foreground">Loading departments…</p>
-      ) : departmentsQuery.isError ? (
-        <div role="alert" className="rounded-md border border-destructive/40 p-4 text-sm">
-          <p>Could not load departments.</p>
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-3"
-            onClick={() => void departmentsQuery.refetch()}
-          >
-            Retry
-          </Button>
-        </div>
-      ) : departments.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          No departments yet. Create the first one to structure your organization.
-        </p>
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Parent</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {departments.map((department) => (
-              <TableRow key={department.id}>
-                <TableCell className="font-medium">{department.name}</TableCell>
-                <TableCell>
-                  {department.parent_department_id
-                    ? (nameById.get(department.parent_department_id) ?? "—")
-                    : "—"}
-                </TableCell>
-                <TableCell>{department.archived_at ? "Archived" : "Active"}</TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-1">
-                    <Button
-                      variant="ghost"
-                      size="xs"
-                      aria-label={`Edit ${department.name}`}
-                      onClick={() => openEdit(department)}
-                    >
-                      <Pencil />
-                      Edit
-                    </Button>
-                    {department.archived_at ? (
-                      <Button
-                        variant="ghost"
-                        size="xs"
-                        aria-label={`Restore ${department.name}`}
-                        disabled={restoreDepartment.isPending}
-                        onClick={() => restoreDepartment.mutate({ id: department.id })}
-                      >
-                        <ArchiveRestore />
-                        Restore
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="ghost"
-                        size="xs"
-                        aria-label={`Archive ${department.name}`}
-                        disabled={archiveDepartment.isPending}
-                        onClick={() => archiveDepartment.mutate({ id: department.id })}
-                      >
-                        <Archive />
-                        Archive
-                      </Button>
-                    )}
-                  </div>
-                </TableCell>
+      <Card className="gap-0 overflow-hidden py-0">
+        {departmentsQuery.isPending ? (
+          <div className="flex items-center justify-center gap-2 px-6 py-10 text-sm text-muted-foreground">
+            <Spinner className="size-4" />
+            <p>Loading departments…</p>
+          </div>
+        ) : departmentsQuery.isError ? (
+          <div className="p-4">
+            <Alert variant="destructive">
+              <CircleAlert aria-hidden="true" />
+              <AlertDescription>
+                <p>Could not load departments.</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
+                  onClick={() => void departmentsQuery.refetch()}
+                >
+                  Retry
+                </Button>
+              </AlertDescription>
+            </Alert>
+          </div>
+        ) : departments.length === 0 ? (
+          <div className="p-4">
+            <EmptyState
+              icon={Building2}
+              message="No departments yet. Create the first one to structure your organization."
+            />
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="pl-3">Name</TableHead>
+                <TableHead>Parent</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="pr-3 text-right">Actions</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
+            </TableHeader>
+            <TableBody>
+              {departments.map((department) => (
+                <TableRow key={department.id}>
+                  <TableCell className="pl-3 font-medium">{department.name}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {department.parent_department_id
+                      ? (nameById.get(department.parent_department_id) ?? "—")
+                      : "—"}
+                  </TableCell>
+                  <TableCell>
+                    <ArchiveStatusBadge archivedAt={department.archived_at} />
+                  </TableCell>
+                  <TableCell className="pr-3 text-right">
+                    <div className="flex justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="xs"
+                        aria-label={`Edit ${department.name}`}
+                        onClick={() => openEdit(department)}
+                      >
+                        <Pencil />
+                        Edit
+                      </Button>
+                      {department.archived_at ? (
+                        <Button
+                          variant="ghost"
+                          size="xs"
+                          aria-label={`Restore ${department.name}`}
+                          disabled={restoreDepartment.isPending}
+                          onClick={() => restoreDepartment.mutate({ id: department.id })}
+                        >
+                          <ArchiveRestore />
+                          Restore
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="xs"
+                          aria-label={`Archive ${department.name}`}
+                          disabled={archiveDepartment.isPending}
+                          onClick={() => archiveDepartment.mutate({ id: department.id })}
+                        >
+                          <Archive />
+                          Archive
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </Card>
 
       <DepartmentFormDialog
         key={editing?.id ?? "new"}

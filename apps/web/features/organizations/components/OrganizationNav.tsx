@@ -28,10 +28,10 @@ export function OrganizationNav() {
             href={tab.href}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "border-b-2 px-1 pb-2 text-sm font-medium transition-colors",
+              "border-b-2 px-1 pb-2 text-sm font-medium transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
               active
-                ? "border-foreground text-foreground"
-                : "border-transparent text-muted-foreground hover:text-foreground",
+                ? "border-primary text-foreground"
+                : "border-transparent text-muted-foreground hover:border-border hover:text-foreground",
             )}
           >
             {tab.label}

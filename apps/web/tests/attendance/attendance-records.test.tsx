@@ -59,10 +59,16 @@ describe("AttendanceRecordsTable", () => {
   it("renders records with mode, lateness chip and closed duration", async () => {
     renderWithClient(<AttendanceRecordsTable />);
 
-    expect(await screen.findByText("Onsite")).toBeInTheDocument();
+    expect(await screen.findByText("On site")).toBeInTheDocument();
     expect(screen.getByText("Late")).toBeInTheDocument();
     expect(screen.getByText("8h 33m")).toBeInTheDocument();
-    expect(screen.getByText(/emp a001/i)).toBeInTheDocument();
+    expect(screen.getByText(/Employee …a001/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", {
+        name: "Attendance records. Scroll horizontally to read all columns.",
+      }),
+    ).toHaveAttribute("tabindex", "0");
+    expect(screen.getByText("Swipe sideways to see every attendance field.")).toBeInTheDocument();
   });
 
   it("renders an open record's duration as Open", async () => {

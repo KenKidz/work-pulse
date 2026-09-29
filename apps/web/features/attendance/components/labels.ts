@@ -1,14 +1,13 @@
 /**
  * Human-facing labels for pinned enums — wire values are never rendered.
- * Board copy states the two pinned limitations the spec requires:
- * counts overlap (`late` is orthogonal to presence) and `absent` over-counts
- * on rest days until rosters/Leave land (Decision #7).
+ * Board copy explains the independent counts and the attendance data that is
+ * not tracked yet.
  */
 
 import type { BoardAction, WorkMode } from "../types";
 
 export const workModeLabel: Record<WorkMode, string> = {
-  onsite: "Onsite",
+  onsite: "On site",
   remote: "Remote",
 };
 
@@ -18,9 +17,9 @@ export const boardActionLabel: Record<BoardAction, string> = {
 };
 
 export const workModeHint =
-  "Late employees also appear in Present/Remote — the counts overlap by design.";
+  "Counts overlap: someone can be on site or remote and also be late. These numbers don’t add to a total.";
 
 export const absentHint =
-  "Absent counts anyone whose expected shift has started with no check-in yet; until leave and rosters exist (Phase 3) it over-counts on rest days.";
+  "May include people on a rest day; individual rosters aren’t tracked yet.";
 
-export const onLeaveHint = "Always 0 until the Leave feature lands (Phase 3).";
+export const onLeaveHint = "Leave isn’t tracked yet, so this stays at 0.";

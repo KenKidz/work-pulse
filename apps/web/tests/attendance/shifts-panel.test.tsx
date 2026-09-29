@@ -59,7 +59,15 @@ describe("ShiftsPanel", () => {
 
     expect(await screen.findByText("Standard hours")).toBeInTheDocument();
     expect(screen.getByText("09:00–18:00")).toBeInTheDocument();
-    expect(screen.getByText("Tenant default")).toBeInTheDocument();
+    expect(screen.getByText("Default for all locations")).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", {
+        name: "Configured shifts. Scroll horizontally to see locations and actions.",
+      }),
+    ).toHaveAttribute("tabindex", "0");
+    expect(
+      screen.getByText("Swipe sideways to see locations and editing actions."),
+    ).toBeInTheDocument();
   });
 
   it("shows the no-shifts document state", async () => {
@@ -68,7 +76,7 @@ describe("ShiftsPanel", () => {
     renderWithClient(<ShiftsPanel />);
 
     expect(
-      await screen.findByText(/nobody is judged late until a default shift exists/i),
+      await screen.findByText(/add a shift to start marking late arrivals/i),
     ).toBeInTheDocument();
   });
 

@@ -3,9 +3,24 @@
 import * as React from "react";
 import { cn } from "cn";
 
-function Table({ className, ...props }: React.ComponentProps<"table">) {
+type TableProps = React.ComponentProps<"table"> & {
+  /** Make an overflowable table region keyboard reachable and named. */
+  containerLabel?: string;
+};
+
+function Table({ className, containerLabel, ...props }: TableProps) {
   return (
-    <div data-slot="table-container" className="relative w-full overflow-x-auto">
+    <div
+      data-slot="table-container"
+      role={containerLabel ? "region" : undefined}
+      aria-label={containerLabel}
+      tabIndex={containerLabel ? 0 : undefined}
+      className={cn(
+        "relative w-full overflow-x-auto",
+        containerLabel &&
+          "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+      )}
+    >
       <table
         data-slot="table"
         className={cn("w-full caption-bottom text-sm", className)}

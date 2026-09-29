@@ -20,6 +20,8 @@ _(empty — Phase 1 exit criteria met 2026-09-29; next up is Phase 2 below.)_
 
 ## Done
 
+- [x] UI polish pass (ui-ux-pro-max + shadcn skills): cool shift-paper palette with semantic status tokens, dark mode and reduced-motion support (`globals.css`); app shell (sticky header, active nav, light/dark toggle); shared `Badge`/`Alert`/`Spinner` primitives + `PageHeader`/`EmptyState`; attendance board (grouped presence/day counts, compact check-in action, chronological event rail, responsive keyboard-scrollable tables); employees + organization tables (status badges, card containers, icons in empty/error states); employee detail avatar + employment-history timeline; no API or behavior changes — user-facing copy assertions updated and test IDs preserved (`make check` green 2026-09-29)
+
 - [x] Phase 1 exit criteria (`.ai/product.md`) met 2026-09-29: all three features green end-to-end — `tests/e2e/organizations.spec.ts` closes the last unproven surface (create department + position → assign to employee → archive-in-use `409` visible → transfer out → archive/restore round-trip); `make check` (incl. e2e) green, and the e2e suite joined `make check` (fast + stable per `.ai/testing.md` decision 3)
 
 - [x] Attendance built end-to-end (spec T1–T7): pinned API contract (7 routes, uniform errors incl. reused `location_not_found`), three event contracts + Phase-1 payload builders, domain services + policies, PostgreSQL repositories, migration `0003`, routers + integration/contract/audit/role/tenant-isolation tests, regenerated `@workpulse/api-client`, web board/check-in/records/shifts UI; `tests/e2e/attendance.spec.ts` behind `make check-e2e` (fresh per-run employee, two-tab 409); Phase-1 semantics recorded in ADR 0009

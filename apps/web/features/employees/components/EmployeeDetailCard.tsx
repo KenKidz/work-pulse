@@ -6,12 +6,15 @@
  * termination are disabled once the employee is terminated. Client leaf.
  */
 
-import { ArrowLeft, Pencil, Repeat, UserMinus } from "lucide-react";
+import { ArrowLeft, CircleAlert, Pencil, Repeat, UserMinus } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Spinner } from "@/components/ui/spinner";
 import { useDepartments } from "@/features/organizations/hooks/use-departments";
 import { useLocations } from "@/features/organizations/hooks/use-locations";
 import { usePositions } from "@/features/organizations/hooks/use-positions";
@@ -19,7 +22,7 @@ import { usePositions } from "@/features/organizations/hooks/use-positions";
 import { formatDate } from "./dates";
 import { EmployeeFormDialog } from "./EmployeeFormDialog";
 import { EmploymentHistory } from "./EmploymentHistory";
-import { employmentTypeLabel, statusLabel } from "./labels";
+import { employmentTypeLabel, statusLabel, statusVariant } from "./labels";
 import { TerminateDialog } from "./TerminateDialog";
 import { TransferDialog } from "./TransferDialog";
 import { useEmployee, useEmployees } from "../hooks/use-employees";
@@ -53,7 +56,7 @@ function useLookups() {
 
 function DetailRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex justify-between gap-4 py-1.5 text-sm">
+    <div className="flex justify-between gap-4 py-2 text-sm">
       <dt className="text-muted-foreground">{label}</dt>
       <dd className="text-right font-medium">{children}</dd>
     </div>
@@ -69,14 +72,24 @@ export function EmployeeDetailCard({ id }: { id: string }) {
   const lookups = useLookups();
 
   if (employeeQuery.isPending) {
-    return <p className="text-sm text-muted-foreground">Loading employee…</p>;
+    return (
+      <div className="flex items-center justify-center gap-2 rounded-lg border border-dashed px-6 py-10 text-sm text-muted-foreground">
+        <Spinner className="size-4" />
+        <p>Loading employee…</p>
+      </div>
+    );
   }
 
   if (employeeQuery.isError) {
     return (
-      <div role="alert" className="rounded-md border border-destructive/40 p-4 text-sm">
-        <p>Could not load this employee. It may not exist.</p>
-        <Button asChild variant="outline" size="sm" className="mt-3">
+      <div className="space-y-4">
+        <Alert variant="destructive">
+          <CircleAlert aria-hidden="true" />
+          <AlertDescription>
+            <p>Could not load this employee. It may not exist.</p>
+          </AlertDescription>
+        </Alert>
+        <Button asChild variant="outline" size="sm">
           <Link href="/employees">Back to employees</Link>
         </Button>
       </div>
@@ -90,25 +103,39 @@ export function EmployeeDetailCard({ id }: { id: string }) {
   const managerName = employee.manager_id
     ? (lookups.colleagueName(employee.manager_id) ?? "—")
     : "—";
+  const initials = `${employee.first_name.charAt(0)}${employee.last_name.charAt(0)}`.toUpperCase();
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
+        <div className="min-w-0">
           <Button asChild variant="ghost" size="sm" className="mb-2 -ml-2">
             <Link href="/employees">
               <ArrowLeft />
               Employees
             </Link>
           </Button>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {employee.first_name} {employee.last_name}
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {employee.employee_code} · {statusLabel[employee.status]}
-          </p>
+          <div className="flex items-center gap-3">
+            <div
+              aria-hidden="true"
+              className="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary/10 text-base font-semibold text-primary"
+            >
+              {initials}
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-2xl font-semibold tracking-tight text-balance">
+                {employee.first_name} {employee.last_name}
+              </h1>
+              <p className="mt-1.5 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                <span className="font-mono text-xs">{employee.employee_code}</span>
+                <Badge variant={statusVariant[employee.status]}>
+                  {statusLabel[employee.status]}
+                </Badge>
+              </p>
+            </div>
+          </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" aria-label="Edit profile" onClick={() => setEditOpen(true)}>
             <Pencil />
             Edit profile
@@ -135,11 +162,15 @@ export function EmployeeDetailCard({ id }: { id: string }) {
       </div>
 
       {terminated ? (
-        <p className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
-          This employee was terminated
-          {employee.terminated_at ? ` on ${formatDate(employee.terminated_at)}` : ""}. Transfers and
-          further termination are disabled.
-        </p>
+        <Alert variant="destructive">
+          <AlertDescription>
+            <p>
+              This employee was terminated
+              {employee.terminated_at ? ` on ${formatDate(employee.terminated_at)}` : ""}. Transfers
+              and further termination are disabled.
+            </p>
+          </AlertDescription>
+        </Alert>
       ) : null}
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -148,7 +179,7 @@ export function EmployeeDetailCard({ id }: { id: string }) {
             <CardTitle>Profile</CardTitle>
           </CardHeader>
           <CardContent>
-            <dl>
+            <dl className="divide-y">
               <DetailRow label="Email">{employee.email}</DetailRow>
               <DetailRow label="Phone">{employee.phone ?? "—"}</DetailRow>
               <DetailRow label="Employment type">
@@ -157,7 +188,10 @@ export function EmployeeDetailCard({ id }: { id: string }) {
               <DetailRow label="Hired on">{formatDate(employee.hired_at)}</DetailRow>
               <DetailRow label="Manager">
                 {employee.manager_id ? (
-                  <Link className="hover:underline" href={`/employees/${employee.manager_id}`}>
+                  <Link
+                    className="underline-offset-4 hover:underline"
+                    href={`/employees/${employee.manager_id}`}
+                  >
                     {managerName}
                   </Link>
                 ) : (
@@ -174,7 +208,7 @@ export function EmployeeDetailCard({ id }: { id: string }) {
           </CardHeader>
           <CardContent>
             {employee.current_employment ? (
-              <dl>
+              <dl className="divide-y">
                 <DetailRow label="Department">
                   {lookups.departmentName(employee.current_employment.department_id)}
                 </DetailRow>

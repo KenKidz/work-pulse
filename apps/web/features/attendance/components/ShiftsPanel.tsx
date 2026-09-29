@@ -8,12 +8,12 @@
  */
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Pencil, Plus } from "lucide-react";
+import { CircleAlert, Clock, Pencil, Plus } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
-import { ApiError } from "@workpulse/api-client/mutator/custom-fetch";
-
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -24,6 +24,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { EmptyState } from "@/components/empty-state";
 import {
   Form,
   FormControl,
@@ -33,6 +34,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
 import {
   Table,
   TableBody,
@@ -45,6 +47,7 @@ import {
 import {
   attendanceFieldErrors,
   errorMessage,
+  isForbiddenError,
   useShiftCreate,
   useShifts,
   useShiftUpdate,
@@ -71,82 +74,100 @@ export function ShiftsPanel() {
   }
 
   return (
-    <Card data-testid="shifts-panel">
+    <Card data-testid="shifts-panel" className="rounded-md border-border shadow-none">
       <CardHeader>
         <CardTitle>Shifts</CardTitle>
         <CardDescription>
-          One shift per location scope plus a tenant default; location-scoped shifts win over the
-          default when judging lateness.
+          Use one default shift for every location, or set a different shift for a specific
+          location.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="flex flex-col gap-4">
         <div>
-          <Button onClick={openCreate}>
+          <Button onClick={openCreate} className="min-h-11">
             <Plus />
             New shift
           </Button>
         </div>
 
         {shiftsQuery.isPending ? (
-          <p className="text-sm text-muted-foreground">Loading shifts…</p>
-        ) : shiftsQuery.isError ? (
-          <div role="alert" className="rounded-md border border-destructive/40 p-4 text-sm">
-            {shiftsQuery.error instanceof ApiError &&
-            (shiftsQuery.error.status === 403 || shiftsQuery.error.code === "forbidden") ? (
-              <p>Only HR, admins and super admins can manage shifts.</p>
-            ) : (
-              <p>Could not load shifts.</p>
-            )}
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-3"
-              onClick={() => void shiftsQuery.refetch()}
-            >
-              Retry
-            </Button>
+          <div className="flex items-center justify-center gap-2 rounded-lg border border-dashed px-6 py-10 text-sm text-muted-foreground">
+            <Spinner className="size-4" />
+            <p>Loading shifts…</p>
           </div>
+        ) : shiftsQuery.isError ? (
+          <Alert variant="destructive">
+            <CircleAlert aria-hidden="true" />
+            <AlertDescription>
+              {isForbiddenError(shiftsQuery.error) ? (
+                <p>Only HR, admins and super admins can manage shifts.</p>
+              ) : (
+                <p>Could not load shifts.</p>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-2"
+                onClick={() => void shiftsQuery.refetch()}
+              >
+                Retry
+              </Button>
+            </AlertDescription>
+          </Alert>
         ) : shifts.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No shifts configured — nobody is judged late until a default shift exists.
-          </p>
+          <EmptyState icon={Clock} message="Add a shift to start marking late arrivals." />
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Window</TableHead>
-                <TableHead>Grace</TableHead>
-                <TableHead>Scope</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {shifts.map((shift) => (
-                <TableRow key={shift.id}>
-                  <TableCell className="font-medium">{shift.name}</TableCell>
-                  <TableCell className="font-mono text-xs">
-                    {shift.start_time}–{shift.end_time}
-                  </TableCell>
-                  <TableCell>{shift.grace_minutes}m</TableCell>
-                  <TableCell>
-                    {shift.location_id ? `loc ${shift.location_id.slice(-4)}` : "Tenant default"}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="xs"
-                      aria-label={`Edit ${shift.name}`}
-                      onClick={() => openEdit(shift)}
-                    >
-                      <Pencil />
-                      Edit
-                    </Button>
-                  </TableCell>
+          <>
+            <p className="text-xs text-muted-foreground sm:hidden">
+              Swipe sideways to see locations and editing actions.
+            </p>
+            <Table
+              aria-label="Configured shifts"
+              containerLabel="Configured shifts. Scroll horizontally to see locations and actions."
+            >
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead>Name</TableHead>
+                  <TableHead>Hours</TableHead>
+                  <TableHead>Grace period</TableHead>
+                  <TableHead>Applies to</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {shifts.map((shift) => (
+                  <TableRow key={shift.id}>
+                    <TableCell className="font-medium">{shift.name}</TableCell>
+                    <TableCell className="text-sm tabular-nums">
+                      {shift.start_time}–{shift.end_time}
+                    </TableCell>
+                    <TableCell className="tabular-nums">{shift.grace_minutes} min</TableCell>
+                    <TableCell>
+                      {shift.location_id ? (
+                        <span className="text-sm text-muted-foreground">
+                          Location …{shift.location_id.slice(-4)}
+                        </span>
+                      ) : (
+                        <Badge variant="secondary">Default for all locations</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="xs"
+                        className="min-h-11 sm:min-h-7"
+                        aria-label={`Edit ${shift.name}`}
+                        onClick={() => openEdit(shift)}
+                      >
+                        <Pencil />
+                        Edit
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </>
         )}
 
         <ShiftFormDialog
@@ -218,12 +239,12 @@ export function ShiftFormDialog({ open, onOpenChange, shift }: ShiftFormDialogPr
         <DialogHeader>
           <DialogTitle>{isEdit ? "Edit shift" : "New shift"}</DialogTitle>
           <DialogDescription>
-            Times are `HH:MM` local to the scope. The lateness boundary is start + grace, exclusive.
+            Times follow the location’s local clock. Someone is late after the shift’s grace period.
           </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" noValidate>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
             <FormField
               control={form.control}
               name="name"

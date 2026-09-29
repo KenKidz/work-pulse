@@ -165,9 +165,11 @@ describe("AttendanceBoard", () => {
   it("documents the pinned copy: overlapping counts, absent over-count, on_leave zero", async () => {
     renderBoard();
 
-    expect(await screen.findByText(/counts are independent, not a partition/i)).toBeInTheDocument();
-    expect(screen.getByText(/over-counts on rest days/i)).toBeInTheDocument();
-    expect(screen.getByText(/always 0 until the leave feature lands/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/counts overlap: someone can be on site or remote and also be late/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/may include people on a rest day/i)).toBeInTheDocument();
+    expect(screen.getByText(/leave isn’t tracked yet, so this stays at 0/i)).toBeInTheDocument();
   });
 
   it("sends the explicit board date plus filters to every query", async () => {
@@ -186,7 +188,7 @@ describe("AttendanceBoard", () => {
 
     renderBoard();
 
-    expect(screen.getByText("Loading board…")).toBeInTheDocument();
+    expect(screen.getByText("Loading attendance for this date…")).toBeInTheDocument();
   });
 
   it("renders a forbidden board as the pinned denied state without a retry", async () => {
@@ -201,7 +203,9 @@ describe("AttendanceBoard", () => {
 
     renderBoard();
 
-    expect(await screen.findByText(/available to managers, hr and admins/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/managers, hr and admins can view workforce attendance/i),
+    ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /retry/i })).not.toBeInTheDocument();
   });
 
@@ -244,8 +248,7 @@ describe("AttendanceBoard", () => {
     renderBoard();
 
     const open = await screen.findByTestId("open-record");
-    expect(open).toHaveTextContent("Checked in — Remote");
-    expect(open).toHaveTextContent("(late)");
+    expect(open).toHaveTextContent("You’re checked in remotely and late.");
 
     await waitFor(() =>
       expect(useListAttendanceRecords).toHaveBeenCalledWith(

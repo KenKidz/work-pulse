@@ -1,13 +1,15 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ThemeProvider } from "next-themes";
 import { useState, type ReactNode } from "react";
 
 import { Toaster } from "@/components/ui/sonner";
 
 /**
- * Client-side providers: TanStack Query cache + toast outlet.
- * Kept as the single "use client" boundary mounted by the root layout.
+ * Client-side providers: theme (light/dark/system) + TanStack Query cache +
+ * toast outlet. Kept as the single "use client" boundary mounted by the root
+ * layout.
  */
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
@@ -24,9 +26,11 @@ export function Providers({ children }: { children: ReactNode }) {
   );
 
   return (
-    <QueryClientProvider client={queryClient}>
-      {children}
-      <Toaster />
-    </QueryClientProvider>
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+      <QueryClientProvider client={queryClient}>
+        {children}
+        <Toaster />
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }

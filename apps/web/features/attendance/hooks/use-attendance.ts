@@ -49,6 +49,11 @@ export function errorMessage(error: unknown): string {
   return error instanceof ApiError ? error.message : "Something went wrong. Please try again.";
 }
 
+/** Shared role-denied classification: the board and the shifts list both honor it. */
+export function isForbiddenError(error: unknown): boolean {
+  return error instanceof ApiError && (error.status === 403 || error.code === "forbidden");
+}
+
 export type CheckFieldName = "work_mode" | "root";
 
 export type AttendanceFieldErrors = Partial<Record<CheckFieldName, string>>;

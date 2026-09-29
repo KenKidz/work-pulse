@@ -11,8 +11,10 @@
  */
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { CircleAlert, LogIn } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { cn } from "cn";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -80,28 +82,33 @@ export function CheckInPanel({ openRecord }: CheckInPanelProps) {
   }
 
   return (
-    <Card data-testid="check-in-panel">
-      <CardHeader>
+    <Card data-testid="check-in-panel" className="gap-0 rounded-md border-border py-0 shadow-none">
+      <CardHeader className="px-5 pt-5 pb-3">
         <CardTitle>Your attendance</CardTitle>
-        <CardDescription>
-          Server time is authoritative — client timestamps are never accepted.
-        </CardDescription>
+        <CardDescription>Your check-in time is recorded automatically.</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="flex flex-col gap-4 px-5 pb-5">
         {openRecord ? (
           <div
             data-testid="open-record"
-            className="flex flex-wrap items-center justify-between gap-3 rounded-md border bg-muted/40 p-3 text-sm"
+            className="flex flex-wrap items-center justify-between gap-4 rounded-sm border border-success/30 bg-success/5 p-4 text-sm"
           >
-            <div>
-              <p className="font-medium">
-                Checked in — {workModeLabel[openRecord.work_mode]}
-                {openRecord.late ? " (late)" : ""}
-              </p>
-              <p className="text-muted-foreground">
-                Since {formatClockTime(openRecord.checked_in_at)}
-                {openRecord.workday ? ` · workday ${openRecord.workday}` : ""}
-              </p>
+            <div className="flex items-center gap-3">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-sm bg-success/10 text-success">
+                <LogIn className="size-4" aria-hidden="true" />
+              </span>
+              <div>
+                <p role="status" className="font-medium">
+                  You’re checked in {openRecord.work_mode === "remote" ? "remotely" : "on site"}
+                  {openRecord.late ? " and late" : ""}.
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Since{" "}
+                  <time dateTime={openRecord.checked_in_at}>
+                    {formatClockTime(openRecord.checked_in_at)}
+                  </time>
+                </p>
+              </div>
             </div>
             <Button
               variant="outline"
@@ -113,15 +120,23 @@ export function CheckInPanel({ openRecord }: CheckInPanelProps) {
           </div>
         ) : (
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onCheckIn)} className="space-y-4" noValidate>
+            <form
+              onSubmit={form.handleSubmit(onCheckIn)}
+              className="grid gap-4 sm:grid-cols-[12rem_minmax(0,1fr)_auto] sm:items-end"
+              noValidate
+            >
               <FormField
                 control={form.control}
                 name="work_mode"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="gap-1.5">
                     <FormLabel>Work mode</FormLabel>
                     <FormControl>
-                      <div role="radiogroup" aria-label="Work mode" className="flex w-fit gap-2">
+                      <div
+                        role="radiogroup"
+                        aria-label="Work mode"
+                        className="grid grid-cols-2 gap-1"
+                      >
                         {(["onsite", "remote"] as const).map((mode) => (
                           <button
                             key={mode}
@@ -130,7 +145,12 @@ export function CheckInPanel({ openRecord }: CheckInPanelProps) {
                             aria-checked={field.value === mode}
                             data-testid={`work-mode-${mode}`}
                             onClick={() => field.onChange(mode)}
-                            className="rounded-md border px-3 py-1.5 text-sm aria-checked:border-primary aria-checked:bg-primary aria-checked:text-primary-foreground data-[active=true]:border-primary data-[active=true]:bg-primary data-[active=true]:text-primary-foreground"
+                            className={cn(
+                              "min-h-11 cursor-pointer rounded-sm border px-3 text-sm font-medium transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
+                              field.value === mode
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : "border-input bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                            )}
                           >
                             {workModeLabel[mode]}
                           </button>
@@ -146,35 +166,33 @@ export function CheckInPanel({ openRecord }: CheckInPanelProps) {
                 control={form.control}
                 name="check_in_note"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="gap-1.5">
                     <FormLabel>Note (optional)</FormLabel>
                     <FormControl>
-                      <Textarea {...field} value={field.value ?? ""} rows={2} />
+                      <Textarea
+                        {...field}
+                        value={field.value ?? ""}
+                        rows={2}
+                        className="min-h-11"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              {rootError ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {rootError}
-                </p>
-              ) : null}
-
-              <Button type="submit" disabled={checkIn.isPending}>
+              <Button type="submit" disabled={checkIn.isPending} className="min-h-11 sm:px-5">
                 {checkIn.isPending ? "Checking in…" : "Check in"}
               </Button>
             </form>
           </Form>
         )}
 
-        {openRecord ? (
-          rootError ? (
-            <p role="alert" className="text-sm text-destructive">
-              {rootError}
-            </p>
-          ) : null
+        {rootError ? (
+          <p role="alert" className="flex items-start gap-2 text-sm text-destructive">
+            <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+            {rootError}
+          </p>
         ) : null}
       </CardContent>
     </Card>

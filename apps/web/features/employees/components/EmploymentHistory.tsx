@@ -6,6 +6,10 @@
  * presentational. Client leaf.
  */
 
+import { cn } from "cn";
+
+import { Badge } from "@/components/ui/badge";
+
 import { employmentTypeLabel } from "./labels";
 import { formatDate } from "./dates";
 import type { Employment } from "../types";
@@ -33,30 +37,37 @@ export function EmploymentHistory({
 
   return (
     <ol className="space-y-3">
-      {periods.map((employment) => (
-        <li key={employment.id} data-testid="employment-period" className="rounded-md border p-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="font-medium">
-              {departmentName(employment.department_id)}
-              <span className="text-muted-foreground">
-                {" "}
-                · {positionTitle(employment.position_id)} · {locationName(employment.location_id)}
-              </span>
+      {periods.map((employment) => {
+        const current = !employment.effective_to;
+        return (
+          <li
+            key={employment.id}
+            data-testid="employment-period"
+            className="relative overflow-hidden rounded-lg border bg-card p-3 pl-4"
+          >
+            <span
+              aria-hidden="true"
+              className={cn("absolute inset-y-0 left-0 w-1", current ? "bg-primary" : "bg-border")}
+            />
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="font-medium">
+                {departmentName(employment.department_id)}
+                <span className="text-muted-foreground">
+                  {" "}
+                  · {positionTitle(employment.position_id)} · {locationName(employment.location_id)}
+                </span>
+              </p>
+              {current ? <Badge variant="success">Current</Badge> : null}
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {formatDate(employment.effective_from)} –{" "}
+              {employment.effective_to ? formatDate(employment.effective_to) : "Present"}
+              {" · "}
+              {employmentTypeLabel[employment.employment_type]}
             </p>
-            {!employment.effective_to ? (
-              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                Current
-              </span>
-            ) : null}
-          </div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {formatDate(employment.effective_from)} –{" "}
-            {employment.effective_to ? formatDate(employment.effective_to) : "Present"}
-            {" · "}
-            {employmentTypeLabel[employment.employment_type]}
-          </p>
-        </li>
-      ))}
+          </li>
+        );
+      })}
     </ol>
   );
 }

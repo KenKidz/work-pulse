@@ -6,11 +6,15 @@
  * Loading/empty/error states per the pinned AC12. Client leaf.
  */
 
-import { Search, UserPlus } from "lucide-react";
+import { CircleAlert, Search, UserPlus, Users } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/empty-state";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -19,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Spinner } from "@/components/ui/spinner";
 import {
   Table,
   TableBody,
@@ -32,7 +37,7 @@ import { useDepartments } from "@/features/organizations/hooks/use-departments";
 import { usePositions } from "@/features/organizations/hooks/use-positions";
 import { useLocations } from "@/features/organizations/hooks/use-locations";
 
-import { employmentTypeLabel, statusLabel } from "../components/labels";
+import { employmentTypeLabel, statusLabel, statusVariant } from "../components/labels";
 import { useEmployees } from "../hooks/use-employees";
 import type { EmployeeStatus, ListEmployeesParams } from "../types";
 import { EmployeeFormDialog } from "./EmployeeFormDialog";
@@ -223,95 +228,110 @@ export function EmployeesTable() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <FiltersRow params={params} onChange={change} />
-        <Button onClick={() => setDialogOpen(true)}>
+        <Button className="ml-auto" onClick={() => setDialogOpen(true)}>
           <UserPlus />
           New employee
         </Button>
       </div>
 
-      {employeesQuery.isPending ? (
-        <p className="text-sm text-muted-foreground">Loading employees…</p>
-      ) : employeesQuery.isError ? (
-        <div role="alert" className="rounded-md border border-destructive/40 p-4 text-sm">
-          <p>Could not load employees.</p>
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-3"
-            onClick={() => void employeesQuery.refetch()}
-          >
-            Retry
-          </Button>
-        </div>
-      ) : employees.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          No employees match. Create the first employee record to build the workforce.
-        </p>
-      ) : (
-        <>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Code</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {employees.map((employee) => (
-                <TableRow key={employee.id}>
-                  <TableCell className="font-mono text-xs">{employee.employee_code}</TableCell>
-                  <TableCell className="font-medium">
-                    <Link className="hover:underline" href={`/employees/${employee.id}`}>
-                      {employee.first_name} {employee.last_name}
-                    </Link>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{employee.email}</TableCell>
-                  <TableCell>{employmentTypeLabel[employee.employment_type]}</TableCell>
-                  <TableCell>
-                    <span
-                      data-status={employee.status}
-                      className="rounded-full border px-2 py-0.5 text-xs"
-                    >
-                      {statusLabel[employee.status]}
-                    </span>
-                  </TableCell>
+      <Card className="gap-0 overflow-hidden py-0">
+        {employeesQuery.isPending ? (
+          <div className="flex items-center justify-center gap-2 px-6 py-10 text-sm text-muted-foreground">
+            <Spinner className="size-4" />
+            <p>Loading employees…</p>
+          </div>
+        ) : employeesQuery.isError ? (
+          <div className="p-4">
+            <Alert variant="destructive">
+              <CircleAlert aria-hidden="true" />
+              <AlertDescription>
+                <p>Could not load employees.</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
+                  onClick={() => void employeesQuery.refetch()}
+                >
+                  Retry
+                </Button>
+              </AlertDescription>
+            </Alert>
+          </div>
+        ) : employees.length === 0 ? (
+          <div className="p-4">
+            <EmptyState
+              icon={Users}
+              message="No employees match. Create the first employee record to build the workforce."
+            />
+          </div>
+        ) : (
+          <>
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="pl-3">Code</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead className="pr-3">Status</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {employees.map((employee) => (
+                  <TableRow key={employee.id}>
+                    <TableCell className="pl-3 font-mono text-xs">
+                      {employee.employee_code}
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      <Link
+                        className="underline-offset-4 hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+                        href={`/employees/${employee.id}`}
+                      >
+                        {employee.first_name} {employee.last_name}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{employee.email}</TableCell>
+                    <TableCell>{employmentTypeLabel[employee.employment_type]}</TableCell>
+                    <TableCell className="pr-3">
+                      <Badge variant={statusVariant[employee.status]} data-status={employee.status}>
+                        {statusLabel[employee.status]}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
 
-          {page && page.total_pages > 1 ? (
-            <div className="flex items-center justify-end gap-2 text-sm">
-              <Button
-                variant="outline"
-                size="sm"
-                aria-label="Previous page"
-                disabled={page.page <= 1}
-                onClick={() => change({ page: page.page - 1 })}
-              >
-                Previous
-              </Button>
-              <span className="text-muted-foreground">
-                Page {page.page} of {page.total_pages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                aria-label="Next page"
-                disabled={page.page >= page.total_pages}
-                onClick={() => change({ page: page.page + 1 })}
-              >
-                Next
-              </Button>
-            </div>
-          ) : null}
-        </>
-      )}
+            {page && page.total_pages > 1 ? (
+              <div className="flex items-center justify-end gap-2 border-t px-4 py-3 text-sm">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  aria-label="Previous page"
+                  disabled={page.page <= 1}
+                  onClick={() => change({ page: page.page - 1 })}
+                >
+                  Previous
+                </Button>
+                <span className="text-muted-foreground">
+                  Page {page.page} of {page.total_pages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  aria-label="Next page"
+                  disabled={page.page >= page.total_pages}
+                  onClick={() => change({ page: page.page + 1 })}
+                >
+                  Next
+                </Button>
+              </div>
+            ) : null}
+          </>
+        )}
+      </Card>
 
       <EmployeeFormDialog open={dialogOpen} onOpenChange={setDialogOpen} employee={null} />
     </div>
