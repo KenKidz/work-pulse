@@ -37,7 +37,7 @@ domain map in `.ai/domain.md` is their placeholder.
 | Organizations (departments, positions, locations) | 1 | S | done | `organizations.md` |
 | Employees (records, history, transfers) | 1 | M | done | `employees.md` |
 | Attendance (check-in/out, lateness, live board) | 1 | M | done | `attendance.md` |
-| Identity & Access (authN + RBAC) | 2 | M | draft | `identity-access.md` |
+| Identity & Access (authN + RBAC) | 2 | M | implementing | `identity-access.md` |
 | Realtime Command Center (WebSocket board) | 2 | M | planned | — |
 | Leave (requests, approvals, balances, calendar) | 3 | M | planned | — |
 | Notifications (email/Slack delivery) | 3 | S | planned | — |

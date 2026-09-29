@@ -6,7 +6,7 @@ does the work.
 
 ## Now
 
-- [ ] Identity & Access (Phase 2): authN + RBAC replacing the dev-identity headers (ADR 0004) — spec `.ai/features/identity-access.md` (approved; planned 2026-09-29, plan T1–T8); next: build per plan
+- [ ] Identity & Access (Phase 2): authN + RBAC replacing the dev-identity headers (ADR 0004) — spec `.ai/features/identity-access.md` (implementing; plan T1–T8 — T1 done 2026-09-29, technical defaults pinned as contract surface); next: T2 persistence (users + sessions · migration 0004 · credential helpers · seeds)
 
 ## Later
 

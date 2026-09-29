@@ -1,6 +1,6 @@
 # Feature: Identity & Access
 
-- **Status:** approved
+- **Status:** implementing
 - **Phase:** 2
 - **Size:** M
 - **Surfaces:** api+web
@@ -35,19 +35,20 @@ nothing else.
   An employee has at most one user.
 - **Sessions** (decision 1): opaque random 256-bit token, stored **hashed**
   (SHA-256 — the token is high-entropy, the hash is a lookup key) in a
-  `sessions` table with an absolute `expires_at` (proposed: 7 days). Delivered
-  as an httpOnly `wp_session` cookie (`SameSite=Lax`; `Secure` outside local
-  dev). Logout deletes the row; every request re-resolves user + role from the
-  session, so role changes and deactivation take effect immediately.
+  `sessions` table with an absolute `expires_at` (7 days). Delivered as an
+  httpOnly `wp_session` cookie (`SameSite=Lax`; `Secure` outside local dev).
+  Logout deletes the row; every request re-resolves user + role from the
+  session, so role changes and deactivation take effect immediately. The exact
+  token/cookie mechanics are pinned in **API contract → Pinned details**.
 - **No user enumeration**: a wrong password and an unknown email both fail with
   an identical `401 invalid_credentials`.
 - Changing own password requires the current password; an admin reset does not.
   **Both revoke every existing session of that user** (decision 4).
 - A deactivated user cannot log in, and any existing session of theirs is
   rejected (`401 unauthenticated`).
-- (proposed) A tenant must retain at least one active `admin`/`super_admin`
-  user; deactivating the last one is rejected.
-- (proposed) Password rule: minimum 10 characters, no complexity requirements.
+- A tenant must retain at least one active `admin`/`super_admin` user;
+  deactivating the last one is rejected (`409 last_admin`, service-level).
+- Password rule: minimum 10 characters, no complexity requirements.
 - Authorization stays in `domains/<name>/policies.py`; the web app only hides
   UI. Cross-tenant reads return **404**, never 403.
 - The identity consumed by policies keeps its shape — `{tenant_id, actor_id,
@@ -166,7 +167,42 @@ names): `login`, `logout`, `getCurrentUser`, `changePassword`, `listUsers`,
 - **Identity object** (the swap ADR 0004 froze the shape of):
   `{tenant_id, actor_id /* user id */, role, employee_id /* UUID | None */}`.
   Resolved per request from the session → user row; the dev-identity headers
-  are deleted, not kept behind a flag (decision 5).
+  are deleted, not kept behind a flag (decision 5). `DevIdentity` is renamed
+  `Identity`. A user with no employee link hitting an employee-scoped flow
+  (`/employees/me`, check-in/out, employee self-scope) gets `404
+  employee_not_found` (or the route's existing not-found code) — never a
+  server error.
+- **Sessions & cookie** (T1): opaque token = 32 random bytes
+  (`secrets.token_urlsafe` — the 256-bit secret); the cookie carries the raw
+  token, `sessions.token_hash` stores its SHA-256 hexdigest (lookup key
+  only). Absolute TTL **7 days** (`expires_at`); expired rows are rejected on
+  read. Cookie `wp_session`: `HttpOnly`, `SameSite=Lax`, `Path=/`; `Secure`
+  toggled by a settings flag (`SESSION_COOKIE_SECURE`, on outside local dev).
+  Logout deletes the row and clears the cookie; logout without a session is
+  `204`.
+- **Passwords** (T1): argon2id via argon2-cffi `PasswordHasher` defaults
+  (t=3, m=64 MiB, p=4 — ADR 0006's pre-agreed dependency; `pyjwt` stays
+  unused). Hashing/verification is sync CPU work and runs off the event loop
+  (`anyio.to_thread`). Minimum 10 characters, no complexity rules (shorter →
+  `validation_error` 422). Email is a plain string (consistent with
+  employees) — no new dependency.
+- **Audit actions** (T1): one entry each, `entity_type: "user"`,
+  `entity_id` = user id, `actor_id` = acting **user** id: `user.created` ·
+  `user.updated` (`changed_fields` names only — email/role/employee_id; a
+  role change is recorded here, not a separate action) · `user.activated` ·
+  `user.deactivated` · `user.password_changed` (own, current password
+  required) · `user.password_reset` (admin). `changes` never contains
+  password material. Login/logout are not audited; failed logins are never
+  stored.
+- **Auth routes** (T1): `LoginRequest {"email", "password"}` → `200 User` +
+  `Set-Cookie: wp_session=...`; the same `User` shape is returned everywhere —
+  never password material or session data. `GET /auth/me` and
+  `PUT /auth/password` resolve the session exactly like every other protected
+  route. The `400 invalid_identity` code is **retired** with the dev headers
+  (ADR 0004's one-place validation moves into the session resolver): a
+  missing or unusable session is always `401 unauthenticated`.
+- **Last-admin guard & list order** (T1): `409 last_admin` is a service-level
+  check (not a DB constraint); default user list order `email` ascending.
 - **Pagination/filters** reuse the pinned Phase 1 shape (`?page=`, `?page_size=`
   clamped, `Page` object). `q` = case-insensitive substring of `email`; `role`
   exact; `active` bool. Default order `email` ascending.
@@ -203,7 +239,7 @@ consumer concern, out of scope here.)
   admins here by design of decision 7; never to unauthenticated callers).
 - `employee_id` pointing at another tenant's employee → `404 employee_not_found`.
 - Employee already linked to a user → `409 employee_link_taken`.
-- (proposed) Deactivating the last active admin/super_admin → `409 last_admin`.
+- Deactivating the last active admin/super_admin → `409 last_admin`.
 - Password change/reset revokes all of that user's sessions: their other tabs
   get `401` on the next request.
 - Role change is effective on the next request (identity re-resolved per
@@ -277,9 +313,10 @@ consumer concern, out of scope here.)
    provisioning is out of scope; if one person ever needs accounts in two
    tenants, login gains a disambiguation step later.
 
-Technical defaults recorded here, cheap to reverse: session absolute TTL
-(proposed 7 days), password minimum 10 characters, cookie name `wp_session`,
-SHA-256 token lookup hash, (proposed) `409 last_admin` guard.
+Technical defaults recorded here, cheap to reverse — **decided in T1** and
+pinned as contract surface in **API contract → Pinned details**: session
+absolute TTL 7 days, password minimum 10 characters, cookie name `wp_session`,
+SHA-256 token lookup hash, `409 last_admin` guard.
 
 ## Plan
 
@@ -313,7 +350,7 @@ moment they are deleted. Every task ends with `make check` green.
 | AC13 | bad-credentials submit keeps the user on the page and surfaces `invalid_credentials` | T7 `LoginForm` error state keyed on `ApiError.code` | `apps/web/tests/auth/login-form.test.tsx` + e2e |
 | AC14 | e2e: seeded user logs in through the UI and completes a protected flow; dev-identity-headers-only request rejected | T5 e2e bridge (real logins replace header injection) + T7 UI-login specs | `tests/e2e/auth.spec.ts` (incl. headers-only request → 401) |
 
-### T1 — Pin the remaining technical details (docs only)
+### T1 — Pin the remaining technical details (docs only) · done 2026-09-29
 
 The routes/shapes/error table above are already pinned. Promote the
 "proposed" defaults to decided and pin the rest as contract surface:
