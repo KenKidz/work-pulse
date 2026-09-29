@@ -93,8 +93,10 @@ tasks/                TODO.md (backlog) · doc.md (original brief)
    ask, do not guess.
 15. Frontend UI work (components, pages, styling in `apps/web/`) loads the
     `ui-ux-pro-max` skill first and follows it for layout, accessibility and
-    visual quality — no generic AI-slop UI. shadcn/ui work (components in
-    `components/ui/`, adding/fixing primitives) also loads the `shadcn` skill.
+    visual quality — no generic AI-slop UI. New UI or visual redesigns also load
+    the `frontend-design` skill for intentional, non-templated art direction.
+    shadcn/ui work (components in `components/ui/`, adding/fixing primitives)
+    also loads the `shadcn` skill.
 
 ## Vibe-coding workflow
 
