@@ -105,6 +105,10 @@ async def test_user_scoping_both_directions(
     assert (await users.get(TENANT_B, user_a.id)) is None  # A invisible to B
     assert (await users.get(TENANT_A, user_b.id)) is None
 
+    # The credential projection (session resolution) is tenant-scoped too.
+    assert (await users.get_credentials(TENANT_A, user_a.id)) is not None
+    assert (await users.get_credentials(TENANT_B, user_a.id)) is None
+
     items_a, total_a = await users.list(TENANT_A, UserFilters(), PageParams())
     items_b, total_b = await users.list(TENANT_B, UserFilters(), PageParams())
     assert total_a == 1 and [item.id for item in items_a] == [user_a.id]
@@ -122,9 +126,15 @@ async def test_email_is_globally_unique_across_tenants(
     assert await users.email_taken("other@workpulse.test") is False
     assert await users.email_taken("same@workpulse.test", exclude_id=first.id) is False
 
-    # Login's lookup is global on purpose (the account resolves the tenant).
+    # Login's lookup is global on purpose (the account resolves the tenant)
+    # and returns the credential projection: wire user + password hash.
     found = await users.get_by_email("same@workpulse.test")
-    assert found is not None and found.id == first.id and found.tenant_id == TENANT_A
+    assert (
+        found is not None
+        and found.user.id == first.id
+        and found.user.tenant_id == TENANT_A
+        and found.password_hash == "argon2-placeholder"
+    )
     assert await users.get_by_email("missing@workpulse.test") is None
 
     # Global uniqueness (decision 7): the other tenant cannot reuse the email.

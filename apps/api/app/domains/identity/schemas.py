@@ -41,6 +41,20 @@ class User(BaseModel):
     updated_at: datetime
 
 
+class UserCredentials(BaseModel):
+    """Internal auth projection: the wire `User` plus its argon2 password hash.
+
+    Deliberately **not** a `User` subclass — the wire shape can never
+    accidentally carry password material, and callers must ask for `.user`
+    explicitly. Repositories and services only; never returned over HTTP.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    user: User
+    password_hash: str
+
+
 class Session(BaseModel):
     """The stored session row — internal only, never returned over HTTP.
 

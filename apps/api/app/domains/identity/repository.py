@@ -24,7 +24,7 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-from app.domains.identity.schemas import Session, User
+from app.domains.identity.schemas import Session, User, UserCredentials
 from app.shared.identity import Role
 from app.shared.pagination import PageParams
 
@@ -40,12 +40,24 @@ class UserFilters(BaseModel):
 class UserRepository(Protocol):
     async def get(self, tenant_id: UUID, user_id: UUID) -> User | None: ...
 
-    async def get_by_email(self, email: str) -> User | None:
+    async def get_by_email(self, email: str) -> UserCredentials | None:
         """Global lookup — the account resolves the tenant at login.
 
         Exact match: `users.email` is unique globally with no case-folding
         normalization (pinned), so this lookup matches the unique constraint
-        exactly.
+        exactly. Returns the credential projection so `AuthService.login` can
+        verify the password; the wire `User` never carries password material.
+        """
+        ...
+
+    async def get_credentials(
+        self, tenant_id: UUID, user_id: UUID
+    ) -> UserCredentials | None:
+        """Tenant-scoped credential projection for a resolved session.
+
+        Session rows carry `tenant_id`, so a token can only ever resolve its
+        own tenant's user. `AuthService` uses this for `/auth/me` and when a
+        password change must re-verify the current password.
         """
         ...
 

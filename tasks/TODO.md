@@ -6,7 +6,7 @@ does the work.
 
 ## Now
 
-- [ ] Identity & Access (Phase 2): authN + RBAC replacing the dev-identity headers (ADR 0004) — spec `.ai/features/identity-access.md` (implementing; plan T1–T8 — T1 done 2026-09-29, technical defaults pinned as contract surface; T2 done 2026-09-29, identity persistence landed: `users` + `sessions` models/adapters, migration 0004, password/session-token helpers, repository tests, seeded dev users `admin@`/`hr@`/`worker@workpulse.test` — `make check` green); next: T3 identity domain core (AuthService + UserService + policies + unit tests)
+- [ ] Identity & Access (Phase 2): authN + RBAC replacing the dev-identity headers (ADR 0004) — spec `.ai/features/identity-access.md` (implementing; plan T1–T8 — T1 done 2026-09-29, technical defaults pinned as contract surface; T2 done 2026-09-29, identity persistence landed: `users` + `sessions` models/adapters, migration 0004, password/session-token helpers, repository tests, seeded dev users `admin@`/`hr@`/`worker@workpulse.test`; T3 done 2026-09-29, identity domain core: `AuthService` + `UserService` + `ensure_can_manage_users`, internal `UserCredentials` projection (composition — the wire `User` can never carry the hash), unit suite `tests/unit/identity/`, verifier pass recorded — `make check` green); next: T4 auth router + session resolver + HTTP tests + regeneration
 
 ## Later
 

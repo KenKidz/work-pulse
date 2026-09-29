@@ -20,12 +20,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domains.identity import models as orm
 from app.domains.identity.exceptions import UserEmailTakenError
+from app.domains.identity.policies import ADMIN_ROLES
 from app.domains.identity.repository import UserFilters
-from app.domains.identity.schemas import Session, User
+from app.domains.identity.schemas import Session, User, UserCredentials
 from app.infrastructure.postgres.like import LIKE_ESCAPE, contains_pattern
 from app.shared.errors import WorkPulseError
 from app.shared.identity import Role
 from app.shared.pagination import PageParams
+
+
+def _credentials(row: orm.User) -> UserCredentials:
+    """The internal credential projection — wire `User` + password hash."""
+    return UserCredentials(
+        user=User.model_validate(row), password_hash=row.password_hash
+    )
 
 
 def _map_unique_violation(exc: IntegrityError) -> WorkPulseError | None:
@@ -54,11 +62,21 @@ class PostgresUserRepository:
         row = (await self._session.execute(stmt)).scalar_one_or_none()
         return User.model_validate(row) if row is not None else None
 
-    async def get_by_email(self, email: str) -> User | None:
+    async def get_by_email(self, email: str) -> UserCredentials | None:
         # Global on purpose: login resolves the tenant from the account.
         stmt = select(orm.User).where(orm.User.email == email)
         row = (await self._session.execute(stmt)).scalar_one_or_none()
-        return User.model_validate(row) if row is not None else None
+        return _credentials(row) if row is not None else None
+
+    async def get_credentials(
+        self, tenant_id: UUID, user_id: UUID
+    ) -> UserCredentials | None:
+        stmt = select(orm.User).where(
+            orm.User.id == user_id,
+            orm.User.tenant_id == tenant_id,
+        )
+        row = (await self._session.execute(stmt)).scalar_one_or_none()
+        return _credentials(row) if row is not None else None
 
     async def email_taken(self, email: str, exclude_id: UUID | None = None) -> bool:
         # Global on purpose (decision 7): one account per email across tenants.
@@ -85,7 +103,7 @@ class PostgresUserRepository:
             .where(
                 orm.User.tenant_id == tenant_id,
                 orm.User.active.is_(True),
-                orm.User.role.in_([Role.ADMIN.value, Role.SUPER_ADMIN.value]),
+                orm.User.role.in_(sorted(role.value for role in ADMIN_ROLES)),
             )
         )
         return (await self._session.execute(stmt)).scalar_one()

@@ -449,7 +449,7 @@ Verify: docs-only diff; `make check` still green.
 Verify: `make check-api` green; `make check-e2e` still green (seeds are
 additive; existing specs are untouched).
 
-### T3 — Identity domain core (services + policies) + unit tests
+### T3 — Identity domain core (services + policies) + unit tests · done 2026-09-29
 
 - `apps/api/app/domains/identity/service.py`:
   - `AuthService` (repos + `AuditWriter`, `now` parameters):
@@ -674,7 +674,11 @@ assertions; the identical-body assertion proves the no-enumeration rule.
    checking before any real deployment; Phase 8 owns deploy topology.
 2. **No rate limiting on login** — brute force is possible until Phase 7's
    rate limiting/lockout lands. Argon2 (≈50–100 ms/verify) is the only brake.
-   Accepted explicitly (out of scope); keep the roadmap item visible.
+   Accepted explicitly (out of scope); keep the roadmap item visible. Bodies
+   are byte-identical across unknown email / wrong password / deactivated
+   (pinned), but unknown emails skip the argon2 verify, so response timing
+   still distinguishes them — a dummy-hash verify for unknown emails is the
+   cheap follow-up if the threat model tightens (T3, verified).
 3. **Audit/event `actor_id` semantics change** — pre-swap audit rows carry
    employee ids, post-swap rows carry user ids, in the same column; the
    attendance event envelopes' `actor_id` likewise (shapes unchanged — no
@@ -705,3 +709,9 @@ assertions; the identical-body assertion proves the no-enumeration rule.
     (decision 1; ADR 0006's pyjwt stays unused), global email uniqueness +
     tenant resolution from the account (decision 7), identity-object swap and
     its `actor_id` semantics. Argon2-cffi needs no ADR (ADR 0006 pre-agreed).
+11. **Employee-link uniqueness is a service-level check** — T2 pinned no unique
+    index on `users.employee_id`, so two concurrent creates/updates can link
+    one employee to two users (same accepted Phase 2 race class as Risk 8,
+    `employee_link_taken` 409 in the normal path — noted by T3's verifier).
+    A partial unique index on `(tenant_id, employee_id) WHERE employee_id IS
+    NOT NULL` is the DB backstop when it matters.
