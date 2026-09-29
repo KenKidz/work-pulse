@@ -6,7 +6,7 @@ does the work.
 
 ## Now
 
-_(empty — Phase 1 exit criteria met 2026-09-29; next up is Phase 2 below.)_
+- [ ] Identity & Access (Phase 2): authN + RBAC replacing the dev-identity headers (ADR 0004) — spec `.ai/features/identity-access.md` (draft; decisions resolved 2026-09-29); next: `/plan`
 
 ## Later
 
