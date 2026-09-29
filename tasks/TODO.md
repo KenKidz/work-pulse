@@ -6,7 +6,7 @@ does the work.
 
 ## Now
 
-- [ ] Identity & Access (Phase 2): authN + RBAC replacing the dev-identity headers (ADR 0004) — spec `.ai/features/identity-access.md` (implementing; plan T1–T8 — T1 done 2026-09-29, technical defaults pinned as contract surface); next: T2 persistence (users + sessions · migration 0004 · credential helpers · seeds)
+- [ ] Identity & Access (Phase 2): authN + RBAC replacing the dev-identity headers (ADR 0004) — spec `.ai/features/identity-access.md` (implementing; plan T1–T8 — T1 done 2026-09-29, technical defaults pinned as contract surface; T2 done 2026-09-29, identity persistence landed: `users` + `sessions` models/adapters, migration 0004, password/session-token helpers, repository tests, seeded dev users `admin@`/`hr@`/`worker@workpulse.test` — `make check` green); next: T3 identity domain core (AuthService + UserService + policies + unit tests)
 
 ## Later
 

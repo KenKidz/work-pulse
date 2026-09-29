@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 # Import model modules for their side effects (registering tables on Base).
 import app.domains.attendance.models  # noqa: F401
 import app.domains.employees.models  # noqa: F401
+import app.domains.identity.models  # noqa: F401
 import app.domains.organizations.models  # noqa: F401
 import app.infrastructure.postgres.models_audit  # noqa: F401
 from alembic import context

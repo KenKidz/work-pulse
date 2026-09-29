@@ -392,7 +392,7 @@ The routes/shapes/error table above are already pinned. Promote the
 
 Verify: docs-only diff; `make check` still green.
 
-### T2 — Persistence: users + sessions · migration 0004 · credentials helpers · seeds
+### T2 — Persistence: users + sessions · migration 0004 · credentials helpers · seeds · done 2026-09-29
 
 - `uv add argon2-cffi` to `apps/api` (rule 10: justified by the credential
   business rules; ADR 0006 sanctioned it for Phase 2; `pyjwt` stays unused).

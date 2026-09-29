@@ -24,6 +24,10 @@ FEATURE_TABLES = {
     "positions",
     "employees",
     "employments",
+    "shifts",
+    "attendance_records",
+    "users",
+    "sessions",
 }
 
 

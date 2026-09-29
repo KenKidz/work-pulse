@@ -37,6 +37,16 @@ class ForbiddenError(WorkPulseError):
         super().__init__(message)
 
 
+class UnauthenticatedError(WorkPulseError):
+    """Missing, unknown, expired or revoked session — fail closed (401)."""
+
+    status_code = 401
+    code = "unauthenticated"
+
+    def __init__(self, message: str = "Authentication required") -> None:
+        super().__init__(message)
+
+
 class InvalidIdentityError(WorkPulseError):
     """Missing or malformed dev-identity headers (400, ADR 0004)."""
 

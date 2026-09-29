@@ -7,8 +7,9 @@
 -- One tenant-default shift (09:00–18:00, grace 10) and one Ho Chi Minh Office
 -- scoped shift (08:30–17:30, grace 10) so location-scoped lateness is
 -- demonstrable: HCM employees are judged in Asia/Ho_Chi_Minh against
--- 08:30 + 10, everyone else against the tenant default. No employee rows —
--- e2e and manual testing create their own.
+-- 08:30 + 10, everyone else against the tenant default. Employee rows: seed
+-- 003 adds one dev worker (a login-able account); e2e and manual testing
+-- create their own.
 
 BEGIN;
 

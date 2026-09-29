@@ -56,7 +56,7 @@ ACTOR = UUID("00000000-0000-4000-8000-000000000002")
 
 ALL_TABLES = (
     "audit_entries, departments, positions, locations, employees, employments, "
-    "shifts, attendance_records"
+    "shifts, attendance_records, users, sessions"
 )
 
 ClientFactory = Callable[..., AsyncClient]
