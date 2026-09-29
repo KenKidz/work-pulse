@@ -11,3 +11,7 @@ every change (`.ai/testing.md` decision 3).
 
 - `employees.spec.ts` — create → list → detail → transfer, and the duplicate
   email conflict rendered as a visible error state (employees AC12).
+- `attendance.spec.ts` — check in → board counts and activity update → check
+  out, and a stale second tab's duplicate check-in rendered as the visible 409
+  error state (attendance AC12). A fresh employee is created per run via the
+  API and impersonated by rewriting the dev-identity header (ADR 0004).

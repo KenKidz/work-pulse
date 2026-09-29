@@ -1,6 +1,6 @@
 # Feature: Attendance
 
-- **Status:** approved
+- **Status:** done
 - **Phase:** 1
 - **Size:** M
 - **Surfaces:** api+web+events (contracts only in Phase 1)
@@ -242,18 +242,18 @@ Contracts in Phase 1, published in Phase 3:
 
 ## Acceptance criteria
 
-- [ ] API: check-in returns `201` with an open record and the correct workday for the location timezone.
-- [ ] API: check-out closes the record and reports `duration_minutes`.
-- [ ] API: a check-in after `shift.start + grace` sets `late: true` and produces an `attendance.late` contract payload.
-- [ ] API (failure): double check-in → `409 attendance_already_checked_in`.
-- [ ] API (failure): check-out without an open record → `409 attendance_not_open`.
-- [ ] API (failure): check-in by a terminated employee → `409 employee_not_active`.
-- [ ] API (tenant isolation): tenant B's board shows none of tenant A's records.
-- [ ] API (denied role): an `Employee`-role request to another employee's records → `403`/`404`.
-- [ ] Unit tests use an injected clock — no wall-time assertions.
-- [ ] Contracts: the three event schemas exist and validate produced payloads.
-- [ ] Audit: each check-in/check-out wrote an audit entry.
-- [ ] Web: check in → the board counts and activity feed update on refresh; a `409` renders as a visible error state.
+- [x] API: check-in returns `201` with an open record and the correct workday for the location timezone.
+- [x] API: check-out closes the record and reports `duration_minutes`.
+- [x] API: a check-in after `shift.start + grace` sets `late: true` and produces an `attendance.late` contract payload.
+- [x] API (failure): double check-in → `409 attendance_already_checked_in`.
+- [x] API (failure): check-out without an open record → `409 attendance_not_open`.
+- [x] API (failure): check-in by a terminated employee → `409 employee_not_active`.
+- [x] API (tenant isolation): tenant B's board shows none of tenant A's records.
+- [x] API (denied role): an `Employee`-role request to another employee's records → `403`/`404`.
+- [x] Unit tests use an injected clock — no wall-time assertions.
+- [x] Contracts: the three event schemas exist and validate produced payloads.
+- [x] Audit: each check-in/check-out wrote an audit entry.
+- [x] Web: check in → the board counts and activity feed update on refresh; a `409` renders as a visible error state.
 
 ## Decisions (PO, 2026-09-24)
 
@@ -619,6 +619,18 @@ Verify: `make check` green.
   the acceptance criteria ticked.
 
 Verify: `make check` green; `make check-e2e` green.
+
+Built 2026-09-29, one deviation recorded: **the e2e impersonates its per-run
+employee instead of switching the dev identity by env.** Phase 1 identity is
+baked into the client bundle when the web server starts (`NEXT_PUBLIC_DEV_*`),
+so a fresh employee cannot become the browser's actor through env alone; the
+fixture creates the employee via the API and the spec rewrites the pinned
+`X-Actor-Id` header on the page's API calls (`context.route`). The flow still
+runs entirely through the real UI, and a fresh actor per run keeps the suite
+repeatable against the dev database (the full suite passed twice in a row
+against one migrated + seeded database). The duplicate check-in case uses the
+same mechanism: a second page opened before the check-in submits a stale form
+and renders the pinned visible 409 error state.
 
 ### Risks, unknowns & decisions that deserve an ADR
 

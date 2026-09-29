@@ -35,8 +35,8 @@ domain map in `.ai/domain.md` is their placeholder.
 | Feature | Phase | Size | Status | Spec |
 | --- | --- | --- | --- | --- |
 | Organizations (departments, positions, locations) | 1 | S | done | `organizations.md` |
-| Employees (records, history, transfers) | 1 | M | draft | `employees.md` |
-| Attendance (check-in/out, lateness, live board) | 1 | M | draft | `attendance.md` |
+| Employees (records, history, transfers) | 1 | M | done | `employees.md` |
+| Attendance (check-in/out, lateness, live board) | 1 | M | done | `attendance.md` |
 | Identity & Access (authN + RBAC) | 2 | M | planned | — |
 | Realtime Command Center (WebSocket board) | 2 | M | planned | — |
 | Leave (requests, approvals, balances, calendar) | 3 | M | planned | — |
@@ -55,4 +55,5 @@ Build order inside Phase 1: **Organizations → Employees → Attendance** (each
 depends on the previous one's reference data).
 
 All three Phase 1 specs have their `## Decisions` resolved (2026-09-24, ADR 0003
-+ ADR 0004) and are ready for `/plan`.
++ ADR 0004) and are built end-to-end (`done`); `make check-e2e` covers the
+Employees and Attendance flows.

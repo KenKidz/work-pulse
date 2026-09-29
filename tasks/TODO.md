@@ -6,7 +6,6 @@ does the work.
 
 ## Now
 
-- [ ] `attendance.md`: plan → build
 - [ ] Phase 1 exit criteria (`.ai/product.md`): all three features green end-to-end
 
 ## Later
@@ -21,6 +20,7 @@ does the work.
 
 ## Done
 
+- [x] Attendance built end-to-end (spec T1–T7): pinned API contract (7 routes, uniform errors incl. reused `location_not_found`), three event contracts + Phase-1 payload builders, domain services + policies, PostgreSQL repositories, migration `0003`, routers + integration/contract/audit/role/tenant-isolation tests, regenerated `@workpulse/api-client`, web board/check-in/records/shifts UI; `tests/e2e/attendance.spec.ts` behind `make check-e2e` (fresh per-run employee, two-tab 409); Phase-1 semantics recorded in ADR 0009
 - [x] Employees built end-to-end (spec T1–T9): pinned API contract (8 routes, uniform errors), event contracts + Phase-1 payload builders, domain service + policies, Postgres repositories, migration `0002`, routers + integration/contract/audit/log tests, regenerated `@workpulse/api-client`, web list/detail/create/edit/transfer/terminate UI; employment-history model recorded in ADR 0008
 - [x] Organizations Risk 1 closed: `PostgresEmployeeUsage` backs `DepartmentUsagePort` — archiving a department with active employees now fails with `409 department_archived_in_use` (integration test included)
 - [x] Playwright lands: `tests/e2e/employees.spec.ts` behind `make check-e2e` (new `db-migrate` + existing `db-up`/`db-seed`, both dev servers via `webServer`); stays out of `make check` until fast and stable (`.ai/testing.md` decision 3)
