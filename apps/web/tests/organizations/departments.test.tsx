@@ -139,6 +139,19 @@ describe("DepartmentsTable", () => {
     expect(screen.getAllByText("Active")).toHaveLength(2);
   });
 
+  it("names and hints the horizontal scroll region", async () => {
+    vi.mocked(useListDepartments).mockReturnValue(listState([ENGINEERING]) as never);
+
+    renderTable();
+
+    expect(
+      await screen.findByRole("region", {
+        name: "Departments. Scroll horizontally to see every department field.",
+      }),
+    ).toHaveAttribute("tabindex", "0");
+    expect(screen.getByText("Swipe sideways to see every department field.")).toBeInTheDocument();
+  });
+
   it("shows a loading state", () => {
     vi.mocked(useListDepartments).mockReturnValue(
       listState([], { data: undefined, isPending: true }) as never,

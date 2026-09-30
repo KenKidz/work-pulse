@@ -137,6 +137,19 @@ describe("LocationsTable", () => {
     expect(screen.getByText("1 Nguyen Hue Blvd")).toBeInTheDocument();
   });
 
+  it("names and hints the horizontal scroll region", async () => {
+    vi.mocked(useListLocations).mockReturnValue(listState([HQ]) as never);
+
+    renderTable();
+
+    expect(
+      await screen.findByRole("region", {
+        name: "Locations. Scroll horizontally to see every location field.",
+      }),
+    ).toHaveAttribute("tabindex", "0");
+    expect(screen.getByText("Swipe sideways to see every location field.")).toBeInTheDocument();
+  });
+
   it("creates a location, invalidates the list and toasts", async () => {
     const user = userEvent.setup();
     mutateFns.create.mockResolvedValue({

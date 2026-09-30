@@ -2,6 +2,7 @@ import { Activity } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { MobileNav } from "@/components/mobile-nav";
 import { MainNav } from "@/components/main-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
 
@@ -20,12 +21,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <MainNav className="hidden h-16 md:flex" />
           <div className="ml-auto flex items-center">
             <ThemeToggle />
-          </div>
-        </div>
-        {/* On small screens the nav moves to its own scrollable row. */}
-        <div className="border-t border-border md:hidden">
-          <div className="mx-auto max-w-7xl overflow-x-auto px-4 sm:px-6">
-            <MainNav className="h-12 w-max" />
+            <MobileNav />
           </div>
         </div>
       </header>

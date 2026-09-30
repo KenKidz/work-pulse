@@ -58,12 +58,12 @@ function FiltersRow({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2" data-testid="employee-filters">
-      <div className="relative">
+      <div className="relative w-full sm:w-64">
         <Search className="absolute top-1/2 left-2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           aria-label="Search employees"
           placeholder="Search name, email or code"
-          className="w-64 pl-8"
+          className="w-full pl-8"
           value={params.q ?? ""}
           onChange={(event) => onChange({ q: event.target.value || undefined })}
         />
@@ -75,7 +75,7 @@ function FiltersRow({
           onChange({ department_id: value === ANY ? undefined : value, page: 1 })
         }
       >
-        <SelectTrigger aria-label="Filter by department" className="w-48">
+        <SelectTrigger aria-label="Filter by department" className="w-full sm:w-48">
           <SelectValue placeholder="All departments" />
         </SelectTrigger>
         <SelectContent>
@@ -90,7 +90,7 @@ function FiltersRow({
           onChange({ position_id: value === ANY ? undefined : value, page: 1 })
         }
       >
-        <SelectTrigger aria-label="Filter by position" className="w-48">
+        <SelectTrigger aria-label="Filter by position" className="w-full sm:w-48">
           <SelectValue placeholder="All positions" />
         </SelectTrigger>
         <SelectContent>
@@ -105,7 +105,7 @@ function FiltersRow({
           onChange({ location_id: value === ANY ? undefined : value, page: 1 })
         }
       >
-        <SelectTrigger aria-label="Filter by location" className="w-48">
+        <SelectTrigger aria-label="Filter by location" className="w-full sm:w-48">
           <SelectValue placeholder="All locations" />
         </SelectTrigger>
         <SelectContent>
@@ -120,7 +120,7 @@ function FiltersRow({
           onChange({ status: value === ANY ? undefined : (value as EmployeeStatus), page: 1 })
         }
       >
-        <SelectTrigger aria-label="Filter by status" className="w-40">
+        <SelectTrigger aria-label="Filter by status" className="w-full sm:w-40">
           <SelectValue placeholder="All statuses" />
         </SelectTrigger>
         <SelectContent>
@@ -137,7 +137,7 @@ function FiltersRow({
           onChange({ manager_id: value === ANY ? undefined : value, page: 1 })
         }
       >
-        <SelectTrigger aria-label="Filter by manager" className="w-48">
+        <SelectTrigger aria-label="Filter by manager" className="w-full sm:w-48">
           <SelectValue placeholder="All managers" />
         </SelectTrigger>
         <SelectContent>
@@ -236,7 +236,7 @@ export function EmployeesTable() {
         </Button>
       </div>
 
-      <Card className="gap-0 overflow-hidden py-0">
+      <Card className="gap-0 overflow-hidden rounded-md border-border py-0 shadow-none">
         {employeesQuery.isPending ? (
           <div className="flex items-center justify-center gap-2 px-6 py-10 text-sm text-muted-foreground">
             <Spinner className="size-4" />
@@ -268,7 +268,13 @@ export function EmployeesTable() {
           </div>
         ) : (
           <>
-            <Table>
+            <p className="px-4 py-2 text-xs text-muted-foreground sm:hidden">
+              Swipe sideways to see every employee field.
+            </p>
+            <Table
+              aria-label="Employees"
+              containerLabel="Employees. Scroll horizontally to read all columns."
+            >
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="pl-3">Code</TableHead>

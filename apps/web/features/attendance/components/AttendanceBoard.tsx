@@ -91,14 +91,14 @@ export function AttendanceBoard() {
               id="board-date"
               type="date"
               aria-describedby="board-date-description"
-              className="h-11 w-40 tabular-nums sm:w-44"
+              className="min-h-11 w-40 tabular-nums sm:w-44"
               value={date}
               onChange={(event) => setDate(event.target.value || todayISO())}
             />
           </div>
           <Button
             variant="outline"
-            className="h-11 px-4"
+            className="min-h-11 px-4"
             disabled={isToday}
             onClick={() => setDate(todayISO())}
           >

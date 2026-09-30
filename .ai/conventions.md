@@ -16,14 +16,14 @@
 - Commands: `uv run uvicorn app.main:app --reload` · `uv run pytest`.
 - Domain module pattern — every domain package contains:
 
-  | File | Meaning |
-  | --- | --- |
-  | `models.py` | persistence/domain model |
-  | `schemas.py` | input/output contracts |
-  | `service.py` | use cases (the only place business logic lives) |
-  | `repository.py` | data-access abstraction |
-  | `events.py` | domain events emitted by this domain |
-  | `policies.py` | business rules / authorization |
+  | File            | Meaning                                              |
+  | --------------- | ---------------------------------------------------- |
+  | `models.py`     | persistence/domain model                             |
+  | `schemas.py`    | input/output contracts                               |
+  | `service.py`    | use cases (the only place business logic lives)      |
+  | `repository.py` | data-access abstraction                              |
+  | `events.py`     | domain events emitted by this domain                 |
+  | `policies.py`   | business rules / authorization                       |
   | `exceptions.py` | domain-specific errors (`WorkPulseError` subclasses) |
 
 - Routers translate HTTP → service calls. No business logic, no SQL, no Kafka in
@@ -85,6 +85,41 @@
 - Visual design: for new UI surfaces or redesigns, also load the
   `frontend-design` skill — deliberate aesthetic direction, typography and
   detail work, not templated defaults.
+
+### Presentation rules
+
+- **Card chrome by role:** data panels (a table, count board, activity feed,
+  check-in panel or shifts panel inside a bordered container) use
+  `rounded-md border-border shadow-none`; elevated cards (destination/link
+  cards, landing cards and reading cards) keep the `card.tsx` default
+  `rounded-xl shadow-sm`.
+- **List tables:** always pass `containerLabel` to `components/ui/table.tsx` and
+  render the `sm:hidden` “Swipe sideways to see every … field.” hint above it
+  (exemplar: `AttendanceRecordsTable.tsx:162-167`).
+- **Row actions:** table actions use `className="min-h-11 sm:min-h-7"` on
+  `size="xs"` buttons (exemplar: `ShiftsPanel.tsx:157-158`).
+- **Filter controls:** use `w-full sm:w-…` so controls stack below `sm`
+  (exemplar: `AttendanceRecordsTable.tsx:63,71`).
+- **Dialog field pairs:** use `grid-cols-1 gap-… sm:grid-cols-2`.
+- **Mono data labels:** employee codes and timezones use `font-mono`, which
+  resolves to Fira Code.
+- **One control language (Button / Input / Select / Textarea):** every
+  interactive control comes from `components/ui/` and keeps the shared spec —
+  `h-9` height, `rounded-md`, `text-sm`, `border-input shadow-xs` fields, one
+  focus ring (`ring-[3px] ring-ring/50`), `aria-invalid:border-destructive`,
+  `disabled:opacity-50`. Never raw `<button>/<input>/<select>/<textarea>`, and
+  never a feature-local copy of these metrics.
+- **Call-site `className` is layout-only:** choose `variant` + `size`;
+  `className` may add width, spacing or alignment (`w-full sm:w-48`, `ml-auto`,
+  `tabular-nums`) — never control metrics: no `h-*`, `size-*`, `rounded-*`,
+  `text-*`, `border-*`, shadow or ring classes (exemplar:
+  `DepartmentFormDialog.tsx:133,151`).
+- **Touch targets use the `11` unit (44px) — the one allowed metric
+  override:** `min-h-11` on wide controls (row actions `min-h-11 sm:min-h-7`,
+  see Row actions), `size="icon"` + `size-11` on icon buttons (exemplar:
+  `mobile-nav.tsx:38,52`). Never a fixed `h-…`/`size-…` fighting the `size`
+  prop, and never a `rounded-*` override.
+
 - shadcn/ui: load the `shadcn` skill when adding, updating or debugging
   components in `components/ui/` or composing shadcn primitives.
 - Gates in `make check-web`: `tsc --noEmit` + ESLint + Vitest.

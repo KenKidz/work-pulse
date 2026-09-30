@@ -50,3 +50,6 @@ pnpm workspace member — `pnpm install` runs from the repo root (`make install`
 - Strict TypeScript; no new dependencies without a spec.
 - pnpm's strict `node_modules`: declare every package you import in
   `apps/web/package.json` — no relying on hoisted transitive deps.
+- Presentation rules for the control language (button/input/select), cards,
+  list tables, row actions, filters, dialogs and mono data labels live in
+  `.ai/conventions.md` under `Presentation rules`.

@@ -1,4 +1,4 @@
-import { Building2, CalendarClock, Users, type LucideIcon } from "lucide-react";
+import { Building2, CalendarClock, LayoutDashboard, Users, type LucideIcon } from "lucide-react";
 
 export type Destination = {
   href: string;
@@ -38,4 +38,13 @@ export const DESTINATIONS: Destination[] = [
     blurb: "Departments, positions and locations your workforce hangs off.",
     summary: "Departments, positions and locations — with archive and restore.",
   },
+];
+
+/**
+ * Every primary navigation destination — Dashboard plus the Phase 1
+ * surfaces — so the desktop nav and the mobile drawer cannot drift.
+ */
+export const NAV_ITEMS = [
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  ...DESTINATIONS.map(({ href, label, icon }) => ({ href, label, icon })),
 ];

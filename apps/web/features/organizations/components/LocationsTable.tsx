@@ -66,7 +66,7 @@ export function LocationsTable() {
         </Button>
       </div>
 
-      <Card className="gap-0 overflow-hidden py-0">
+      <Card className="gap-0 overflow-hidden rounded-md border-border py-0 shadow-none">
         {locationsQuery.isPending ? (
           <div className="flex items-center justify-center gap-2 px-6 py-10 text-sm text-muted-foreground">
             <Spinner className="size-4" />
@@ -97,67 +97,78 @@ export function LocationsTable() {
             />
           </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="pl-3">Name</TableHead>
-                <TableHead>Address</TableHead>
-                <TableHead>Timezone</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="pr-3 text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {locations.map((location) => (
-                <TableRow key={location.id}>
-                  <TableCell className="pl-3 font-medium">{location.name}</TableCell>
-                  <TableCell className="max-w-64 truncate text-muted-foreground">
-                    {location.address ?? "—"}
-                  </TableCell>
-                  <TableCell className="font-mono text-xs">{location.timezone}</TableCell>
-                  <TableCell>
-                    <ArchiveStatusBadge archivedAt={location.archived_at} />
-                  </TableCell>
-                  <TableCell className="pr-3 text-right">
-                    <div className="flex justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="xs"
-                        aria-label={`Edit ${location.name}`}
-                        onClick={() => openEdit(location)}
-                      >
-                        <Pencil />
-                        Edit
-                      </Button>
-                      {location.archived_at ? (
-                        <Button
-                          variant="ghost"
-                          size="xs"
-                          aria-label={`Restore ${location.name}`}
-                          disabled={restoreLocation.isPending}
-                          onClick={() => restoreLocation.mutate({ id: location.id })}
-                        >
-                          <ArchiveRestore />
-                          Restore
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="ghost"
-                          size="xs"
-                          aria-label={`Archive ${location.name}`}
-                          disabled={archiveLocation.isPending}
-                          onClick={() => archiveLocation.mutate({ id: location.id })}
-                        >
-                          <Archive />
-                          Archive
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
+          <>
+            <p className="px-4 py-2 text-xs text-muted-foreground sm:hidden">
+              Swipe sideways to see every location field.
+            </p>
+            <Table
+              aria-label="Locations"
+              containerLabel="Locations. Scroll horizontally to see every location field."
+            >
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="pl-3">Name</TableHead>
+                  <TableHead>Address</TableHead>
+                  <TableHead>Timezone</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="pr-3 text-right">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {locations.map((location) => (
+                  <TableRow key={location.id}>
+                    <TableCell className="pl-3 font-medium">{location.name}</TableCell>
+                    <TableCell className="max-w-64 truncate text-muted-foreground">
+                      {location.address ?? "—"}
+                    </TableCell>
+                    <TableCell className="font-mono text-xs">{location.timezone}</TableCell>
+                    <TableCell>
+                      <ArchiveStatusBadge archivedAt={location.archived_at} />
+                    </TableCell>
+                    <TableCell className="pr-3 text-right">
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="xs"
+                          className="min-h-11 sm:min-h-7"
+                          aria-label={`Edit ${location.name}`}
+                          onClick={() => openEdit(location)}
+                        >
+                          <Pencil />
+                          Edit
+                        </Button>
+                        {location.archived_at ? (
+                          <Button
+                            variant="ghost"
+                            size="xs"
+                            className="min-h-11 sm:min-h-7"
+                            aria-label={`Restore ${location.name}`}
+                            disabled={restoreLocation.isPending}
+                            onClick={() => restoreLocation.mutate({ id: location.id })}
+                          >
+                            <ArchiveRestore />
+                            Restore
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="xs"
+                            className="min-h-11 sm:min-h-7"
+                            aria-label={`Archive ${location.name}`}
+                            disabled={archiveLocation.isPending}
+                            onClick={() => archiveLocation.mutate({ id: location.id })}
+                          >
+                            <Archive />
+                            Archive
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </>
         )}
       </Card>
 

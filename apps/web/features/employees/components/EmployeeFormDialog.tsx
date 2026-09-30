@@ -169,7 +169,7 @@ export function EmployeeFormDialog({ open, onOpenChange, employee }: EmployeeFor
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" noValidate>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FormField
                 control={form.control}
                 name="first_name"
@@ -233,7 +233,7 @@ export function EmployeeFormDialog({ open, onOpenChange, employee }: EmployeeFor
 
             {!isEdit ? (
               <>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <FormField
                     control={form.control}
                     name="department_id"
@@ -284,7 +284,7 @@ export function EmployeeFormDialog({ open, onOpenChange, employee }: EmployeeFor
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <FormField
                     control={form.control}
                     name="location_id"
@@ -341,7 +341,7 @@ export function EmployeeFormDialog({ open, onOpenChange, employee }: EmployeeFor
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <FormField
                     control={form.control}
                     name="employment_type"

@@ -89,6 +89,7 @@
 
 @theme inline {
   --font-sans: var(--font-fira-sans);
+  --font-mono: var(--font-fira-code);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);

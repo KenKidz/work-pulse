@@ -6,24 +6,18 @@
  * technology too. Destinations come from the shared catalog.
  */
 
-import { LayoutDashboard } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "cn";
 
-import { DESTINATIONS } from "@/components/destinations";
-
-const ITEMS = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  ...DESTINATIONS.map(({ href, label, icon }) => ({ href, label, icon })),
-];
+import { NAV_ITEMS } from "@/components/destinations";
 
 export function MainNav({ className }: { className?: string }) {
   const pathname = usePathname();
 
   return (
     <nav aria-label="Main" className={cn("flex items-center gap-1", className)}>
-      {ITEMS.map((item) => {
+      {NAV_ITEMS.map((item) => {
         const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
         return (
           <Link

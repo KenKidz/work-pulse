@@ -136,6 +136,19 @@ describe("PositionsTable", () => {
     expect(screen.getByText("Active")).toBeInTheDocument();
   });
 
+  it("names and hints the horizontal scroll region", async () => {
+    vi.mocked(useListPositions).mockReturnValue(listState([SENIOR_NURSE]) as never);
+
+    renderTable();
+
+    expect(
+      await screen.findByRole("region", {
+        name: "Positions. Scroll horizontally to see every position field.",
+      }),
+    ).toHaveAttribute("tabindex", "0");
+    expect(screen.getByText("Swipe sideways to see every position field.")).toBeInTheDocument();
+  });
+
   it("creates a position, invalidates the list and toasts", async () => {
     const user = userEvent.setup();
     mutateFns.create.mockResolvedValue({

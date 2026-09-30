@@ -136,6 +136,17 @@ describe("EmployeesTable", () => {
     expect(screen.getByText("Active")).toBeInTheDocument();
   });
 
+  it("names and hints the horizontal scroll region", async () => {
+    renderTable();
+
+    expect(
+      await screen.findByRole("region", {
+        name: "Employees. Scroll horizontally to read all columns.",
+      }),
+    ).toHaveAttribute("tabindex", "0");
+    expect(screen.getByText("Swipe sideways to see every employee field.")).toBeInTheDocument();
+  });
+
   it("shows a loading state", () => {
     wireQuery(useListEmployees, listState([], { data: undefined, isPending: true }));
 

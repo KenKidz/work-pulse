@@ -74,7 +74,7 @@ export function DepartmentsTable() {
         </Button>
       </div>
 
-      <Card className="gap-0 overflow-hidden py-0">
+      <Card className="gap-0 overflow-hidden rounded-md border-border py-0 shadow-none">
         {departmentsQuery.isPending ? (
           <div className="flex items-center justify-center gap-2 px-6 py-10 text-sm text-muted-foreground">
             <Spinner className="size-4" />
@@ -105,67 +105,78 @@ export function DepartmentsTable() {
             />
           </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="pl-3">Name</TableHead>
-                <TableHead>Parent</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="pr-3 text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {departments.map((department) => (
-                <TableRow key={department.id}>
-                  <TableCell className="pl-3 font-medium">{department.name}</TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {department.parent_department_id
-                      ? (nameById.get(department.parent_department_id) ?? "—")
-                      : "—"}
-                  </TableCell>
-                  <TableCell>
-                    <ArchiveStatusBadge archivedAt={department.archived_at} />
-                  </TableCell>
-                  <TableCell className="pr-3 text-right">
-                    <div className="flex justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="xs"
-                        aria-label={`Edit ${department.name}`}
-                        onClick={() => openEdit(department)}
-                      >
-                        <Pencil />
-                        Edit
-                      </Button>
-                      {department.archived_at ? (
-                        <Button
-                          variant="ghost"
-                          size="xs"
-                          aria-label={`Restore ${department.name}`}
-                          disabled={restoreDepartment.isPending}
-                          onClick={() => restoreDepartment.mutate({ id: department.id })}
-                        >
-                          <ArchiveRestore />
-                          Restore
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="ghost"
-                          size="xs"
-                          aria-label={`Archive ${department.name}`}
-                          disabled={archiveDepartment.isPending}
-                          onClick={() => archiveDepartment.mutate({ id: department.id })}
-                        >
-                          <Archive />
-                          Archive
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
+          <>
+            <p className="px-4 py-2 text-xs text-muted-foreground sm:hidden">
+              Swipe sideways to see every department field.
+            </p>
+            <Table
+              aria-label="Departments"
+              containerLabel="Departments. Scroll horizontally to see every department field."
+            >
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="pl-3">Name</TableHead>
+                  <TableHead>Parent</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="pr-3 text-right">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {departments.map((department) => (
+                  <TableRow key={department.id}>
+                    <TableCell className="pl-3 font-medium">{department.name}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {department.parent_department_id
+                        ? (nameById.get(department.parent_department_id) ?? "—")
+                        : "—"}
+                    </TableCell>
+                    <TableCell>
+                      <ArchiveStatusBadge archivedAt={department.archived_at} />
+                    </TableCell>
+                    <TableCell className="pr-3 text-right">
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="xs"
+                          className="min-h-11 sm:min-h-7"
+                          aria-label={`Edit ${department.name}`}
+                          onClick={() => openEdit(department)}
+                        >
+                          <Pencil />
+                          Edit
+                        </Button>
+                        {department.archived_at ? (
+                          <Button
+                            variant="ghost"
+                            size="xs"
+                            className="min-h-11 sm:min-h-7"
+                            aria-label={`Restore ${department.name}`}
+                            disabled={restoreDepartment.isPending}
+                            onClick={() => restoreDepartment.mutate({ id: department.id })}
+                          >
+                            <ArchiveRestore />
+                            Restore
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="xs"
+                            className="min-h-11 sm:min-h-7"
+                            aria-label={`Archive ${department.name}`}
+                            disabled={archiveDepartment.isPending}
+                            onClick={() => archiveDepartment.mutate({ id: department.id })}
+                          >
+                            <Archive />
+                            Archive
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </>
         )}
       </Card>
 

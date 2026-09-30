@@ -89,7 +89,7 @@ function FiltersRow({
           })
         }
       >
-        <SelectTrigger aria-label="Filter by lateness" className="w-36">
+        <SelectTrigger aria-label="Filter by lateness" className="w-full sm:w-36">
           <SelectValue placeholder="Any lateness" />
         </SelectTrigger>
         <SelectContent>
@@ -102,7 +102,7 @@ function FiltersRow({
       <Input
         aria-label="Filter by employee id"
         placeholder="Employee id"
-        className="w-64"
+        className="w-full sm:w-64"
         value={params.employee_id ?? ""}
         onChange={(event) => onChange({ employee_id: event.target.value || undefined, page: 1 })}
       />

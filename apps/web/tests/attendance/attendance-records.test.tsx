@@ -69,6 +69,14 @@ describe("AttendanceRecordsTable", () => {
       }),
     ).toHaveAttribute("tabindex", "0");
     expect(screen.getByText("Swipe sideways to see every attendance field.")).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Filter by lateness" })).toHaveClass(
+      "w-full",
+      "sm:w-36",
+    );
+    expect(screen.getByRole("textbox", { name: "Filter by employee id" })).toHaveClass(
+      "w-full",
+      "sm:w-64",
+    );
   });
 
   it("renders an open record's duration as Open", async () => {
