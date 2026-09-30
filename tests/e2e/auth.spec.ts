@@ -45,13 +45,18 @@ test.describe.serial('auth', () => {
     await uiLogin(page, ADMIN_EMAIL);
 
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
-    // The header identity shows the signed-in account.
+    // The header shows the account menu trigger; the signed-in account's
+    // identity lives inside the dropdown.
+    const account = page.getByRole('button', { name: /Account menu/ });
+    await expect(account).toBeVisible();
+    await account.click();
     await expect(page.getByText(ADMIN_EMAIL)).toBeVisible();
   });
 
   test('signing out ends the session', async ({ page }) => {
     await uiLogin(page, ADMIN_EMAIL);
-    await page.getByRole('button', { name: 'Sign out' }).click();
+    await page.getByRole('button', { name: /Account menu/ }).click();
+    await page.getByRole('menuitem', { name: 'Sign out' }).click();
     await expect(page).toHaveURL(/\/login$/);
 
     // The cookie is gone: a protected route redirects to login again.

@@ -5,7 +5,9 @@
  * gone), not a transient failure. Login invalidates the current-user cache so
  * the dashboard shell refetches with the fresh cookie; logout clears the whole
  * cache — every cached surface is tenant/user-scoped and must not leak into
- * the next session. `ApiError.code` maps to static, user-facing messages
+ * the next session, and a failed logout toasts the pinned error message (the
+ * session survives; the account menu has already closed by then).
+ * `ApiError.code` maps to static, user-facing messages
  * (`.ai/conventions.md`); login failures stay on the page (spec AC13).
  */
 
@@ -17,6 +19,7 @@ import {
 } from "@workpulse/api-client";
 import { ApiError } from "@workpulse/api-client/mutator/custom-fetch";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 /** The signed-in user — the session resolves exactly like every API call. */
 export function useCurrentUser() {
@@ -49,6 +52,11 @@ export function useSignOut() {
         queryClient.clear();
         router.push("/login");
         router.refresh();
+      },
+      onError: (error) => {
+        // Same pattern as the organization mutation hooks: the pinned message,
+        // never the raw error. The user stays signed in on a failed logout.
+        toast.error(authErrorMessage(error));
       },
     },
   });

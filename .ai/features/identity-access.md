@@ -644,6 +644,16 @@ source; reset-dialog failures render the pinned `userFieldErrors` mapping.
   switch from the T5 `login()` helper to UI login (decision 5's end state);
   the attendance check-in flow runs as the seeded worker user (AC14).
 
+Polish (2026-09-30): the header account control became a dropdown menu — a
+44px ghost `Avatar` trigger (initials derived from the email local part,
+first letter of up to two `.`/`_`/`-` words, `?` when nothing is derivable;
+the wire `User` carries no display name) opening the identity block (email,
+truncated, plus the role as a secondary `Badge`) and a destructive-labelled
+Sign out row. The standalone theme toggle is untouched. `roleLabel` moved to
+`features/auth/labels.ts` (the identity owner) and is re-exported by the users
+feature, so `auth → users` imports never appear. Still **no change-own-password
+UI** (unchanged scope; the route remains for later).
+
 Verify: `make check` green.
 
 ### T8 — Record · done 2026-09-30
