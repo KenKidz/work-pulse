@@ -4,7 +4,7 @@ from tests.integration.conftest import (
     TENANT_A,
     TENANT_B,
     ClientFactory,
-    identity_headers,
+    identity,
 )
 
 UNKNOWN_ID = "00000000-0000-4000-8000-00000000dead"
@@ -101,12 +101,12 @@ async def test_unknown_id_returns_404(client_factory: ClientFactory) -> None:
 
 async def test_parent_not_in_tenant_returns_404(client_factory: ClientFactory) -> None:
     """Parent must exist IN THE TENANT — a foreign id is a 404, never a 403."""
-    async with client_factory(identity_headers(tenant=TENANT_B)) as tenant_b:
+    async with client_factory(identity(tenant=TENANT_B)) as tenant_b:
         foreign = (
             await tenant_b.post("/api/v1/departments", json={"name": "Foreign"})
         ).json()
 
-    async with client_factory(identity_headers(tenant=TENANT_A)) as tenant_a:
+    async with client_factory(identity(tenant=TENANT_A)) as tenant_a:
         create = await tenant_a.post(
             "/api/v1/departments",
             json={"name": "Sneaky", "parent_department_id": foreign["id"]},
@@ -152,12 +152,12 @@ async def test_malformed_id_is_validation_error(client_factory: ClientFactory) -
 async def test_tenant_b_sees_no_error_detail_from_tenant_a(
     client_factory: ClientFactory,
 ) -> None:
-    async with client_factory(identity_headers(tenant=TENANT_A)) as tenant_a:
+    async with client_factory(identity(tenant=TENANT_A)) as tenant_a:
         created = (
             await tenant_a.post("/api/v1/departments", json={"name": "Engineering"})
         ).json()
 
-    async with client_factory(identity_headers(tenant=TENANT_B)) as tenant_b:
+    async with client_factory(identity(tenant=TENANT_B)) as tenant_b:
         response = await tenant_b.get(f"/api/v1/departments/{created['id']}")
 
     assert response.status_code == 404

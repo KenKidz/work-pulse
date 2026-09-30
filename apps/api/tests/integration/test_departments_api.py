@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from app.domains.organizations.schemas import DepartmentCreate
 from app.domains.organizations.service import DepartmentService
 from app.shared.identity import Role
-from tests.integration.conftest import TENANT_A, ClientFactory, dev_identity
+from tests.integration.conftest import TENANT_A, ClientFactory, identity
 
 PINNED_DEPARTMENT_KEYS = {
     "id",
@@ -101,10 +101,10 @@ async def test_list_paginates_and_filters(client_factory: ClientFactory) -> None
 async def test_list_pagination_over_25_rows(
     client_factory: ClientFactory, department_service: DepartmentService
 ) -> None:
-    identity = dev_identity(role=Role.ADMIN)
+    caller = identity(role=Role.ADMIN)
     for index in range(25):
         await department_service.create(
-            identity,
+            caller,
             DepartmentCreate(name=f"dept-{index:02d}"),
             datetime(2026, 9, 24, tzinfo=UTC),
         )

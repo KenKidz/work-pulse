@@ -1,8 +1,8 @@
 """Structured logging (structlog, ADR 0006).
 
 Pretty console output in development, JSON elsewhere. The request middleware
-binds `request_id` and `tenant_id` (when the header is present) to every log
-line of a request. Never log PII — ids and outcomes only (`.ai/security.md`).
+binds `request_id` to every log line of a request. Never log PII — ids and
+outcomes only (`.ai/security.md`).
 """
 
 import logging
@@ -51,10 +51,11 @@ def get_logger(name: str = "workpulse") -> structlog.typing.FilteringBoundLogger
 
 
 class RequestContextMiddleware(BaseHTTPMiddleware):
-    """Bind a `request_id` (and `tenant_id`, when sent) to every request.
+    """Bind a `request_id` to every log line of a request.
 
-    The `X-Tenant-Id` header is logged as a raw string only for correlation —
-    identity validation lives in `app.shared.identity`, never here.
+    The tenant is resolved with the session inside the request (Phase 2 authN)
+    and is deliberately not bound here — the old `X-Tenant-Id` correlation
+    header died with the dev identity (ADR 0004).
     """
 
     async def dispatch(
@@ -65,10 +66,6 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
         request_id = request.headers.get("X-Request-Id") or str(uuid.uuid4())
         structlog.contextvars.clear_contextvars()
         structlog.contextvars.bind_contextvars(request_id=request_id)
-
-        tenant_id = request.headers.get("X-Tenant-Id")
-        if tenant_id:
-            structlog.contextvars.bind_contextvars(tenant_id=tenant_id)
 
         log = get_logger("http")
         started = time.perf_counter()

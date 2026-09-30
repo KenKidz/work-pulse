@@ -19,7 +19,7 @@ from tests.integration.conftest import (
     ClientFactory,
     create_org_refs,
     employee_payload,
-    identity_headers,
+    identity,
 )
 
 PINNED_RECORD_KEYS = {
@@ -186,7 +186,7 @@ async def test_records_list_filters_and_stable_pagination(
                 "/api/v1/attendance/check-ins", json={"work_mode": "onsite"}
             )
         ).json()
-    async with client_factory(identity_headers(actor=UUID(grace["id"]))) as other:
+    async with client_factory(identity(employee_id=UUID(grace["id"]))) as other:
         grace_record = (
             await other.post(
                 "/api/v1/attendance/check-ins", json={"work_mode": "remote"}
@@ -292,7 +292,7 @@ async def test_board_counts_independent_and_activity_newest_first(
             )
         ).json()
     clock["now"] = datetime(2026, 9, 24, 11, 5, tzinfo=UTC)
-    async with client_factory(identity_headers(actor=UUID(grace["id"]))) as other:
+    async with client_factory(identity(employee_id=UUID(grace["id"]))) as other:
         await other.post("/api/v1/attendance/check-ins", json={"work_mode": "remote"})
 
     board_date = actor_record["workday"]

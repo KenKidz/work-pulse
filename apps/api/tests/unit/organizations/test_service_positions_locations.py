@@ -21,7 +21,7 @@ from app.domains.organizations.schemas import (
     PositionUpdate,
 )
 from app.domains.organizations.service import LocationService, PositionService
-from app.shared.identity import DevIdentity, Role
+from app.shared.identity import Identity, Role
 from app.shared.pagination import PageParams
 from tests.unit.organizations.fakes import (
     FakeLocationRepo,
@@ -32,7 +32,7 @@ from tests.unit.organizations.fakes import (
 TENANT_A = UUID("00000000-0000-4000-8000-00000000000a")
 ACTOR = UUID("00000000-0000-4000-8000-000000000002")
 NOW = datetime(2026, 9, 24, 12, 0, tzinfo=UTC)
-IDENTITY = DevIdentity(tenant_id=TENANT_A, actor_id=ACTOR, role=Role.HR)
+IDENTITY = Identity(tenant_id=TENANT_A, actor_id=ACTOR, role=Role.HR)
 
 
 @pytest.fixture

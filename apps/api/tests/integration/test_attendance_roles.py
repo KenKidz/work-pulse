@@ -10,13 +10,14 @@ from app.domains.employees.schemas import EmployeeStatus, EmploymentType
 from app.infrastructure.postgres.repositories.employees import (
     PostgresEmployeeRepository,
 )
+from app.shared.identity import Role
 from tests.integration.conftest import (
     ACTOR,
     TENANT_A,
     ClientFactory,
     create_org_refs,
     employee_payload,
-    identity_headers,
+    identity,
 )
 
 SHIFT_PAYLOAD = {
@@ -50,7 +51,7 @@ async def _seed_actor(session: AsyncSession, refs: tuple[str, str, str]) -> None
 async def test_board_denied_for_employee_and_finance(
     client_factory: ClientFactory, role: str
 ) -> None:
-    async with client_factory(identity_headers(role=role)) as client:
+    async with client_factory(identity(role=Role(role))) as client:
         response = await client.get("/api/v1/attendance/board")
 
     assert response.status_code == 403  # T1: employee/finance → 403
@@ -81,10 +82,10 @@ async def test_employee_records_are_self_scoped_and_foreign_filter_is_404(
                 "/api/v1/attendance/check-ins", json={"work_mode": "onsite"}
             )
         ).json()
-    async with client_factory(identity_headers(actor=UUID(outsider["id"]))) as them:
+    async with client_factory(identity(employee_id=UUID(outsider["id"]))) as them:
         await them.post("/api/v1/attendance/check-ins", json={"work_mode": "onsite"})
 
-    async with client_factory(identity_headers(role="employee")) as employee:
+    async with client_factory(identity(role=Role.EMPLOYEE)) as employee:
         listed = await employee.get("/api/v1/attendance/records")
         foreign = await employee.get(
             "/api/v1/attendance/records", params={"employee_id": outsider["id"]}
@@ -122,16 +123,16 @@ async def test_manager_records_scope_is_self_and_direct_reports(
             )
         ).json()
 
-    async with client_factory(identity_headers(actor=UUID(report["id"]))) as them:
+    async with client_factory(identity(employee_id=UUID(report["id"]))) as them:
         report_record = (
             await them.post(
                 "/api/v1/attendance/check-ins", json={"work_mode": "onsite"}
             )
         ).json()
-    async with client_factory(identity_headers(actor=UUID(outsider["id"]))) as them:
+    async with client_factory(identity(employee_id=UUID(outsider["id"]))) as them:
         await them.post("/api/v1/attendance/check-ins", json={"work_mode": "onsite"})
 
-    async with client_factory(identity_headers(role="manager")) as manager:
+    async with client_factory(identity(role=Role.MANAGER)) as manager:
         listed = await manager.get("/api/v1/attendance/records")
         foreign = await manager.get(
             "/api/v1/attendance/records", params={"employee_id": outsider["id"]}
@@ -148,7 +149,7 @@ async def test_manager_records_scope_is_self_and_direct_reports(
 async def test_non_shift_roles_cannot_manage_shifts(
     client_factory: ClientFactory, role: str
 ) -> None:
-    async with client_factory(identity_headers(role=role)) as client:
+    async with client_factory(identity(role=Role(role))) as client:
         created = await client.post("/api/v1/shifts", json=SHIFT_PAYLOAD)
         listed = await client.get("/api/v1/shifts")
         patched = await client.patch(
@@ -164,7 +165,7 @@ async def test_non_shift_roles_cannot_manage_shifts(
 async def test_shift_roles_can_manage_shifts(
     client_factory: ClientFactory, role: str
 ) -> None:
-    async with client_factory(identity_headers(role=role)) as client:
+    async with client_factory(identity(role=Role(role))) as client:
         created = await client.post("/api/v1/shifts", json=SHIFT_PAYLOAD)
         assert created.status_code == 201
         listed = await client.get("/api/v1/shifts")

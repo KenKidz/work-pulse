@@ -7,8 +7,8 @@ Repositories speak the wire schemas (`schemas.py`); ORM translation happens
 inside the Postgres adapters.
 
 `AttendanceFilters` carries the *effective* filters: the service resolves the
-actor's visibility scope into `employee_ids` (T1 role matrix) and only then
-calls `list`. `EmployeeContext` is the employer/location read attendance rules
+current user's visibility scope into `employee_ids` (T1 role matrix) and only
+then calls `list`. `EmployeeContext` is the employer/location read attendance rules
 need — the employee row joined with their location's timezone, which the
 check-in workday/lateness judgement and the board's `absent` count depend on.
 """

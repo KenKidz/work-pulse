@@ -148,9 +148,10 @@ payloads or audit `changes` values (`changes` says `"changed"`).
   (`{"items", "page"}`); `ShiftList` is the bare array.
 - **Check-in semantics** (Decision #3 made concrete): server time only — no
   timestamp field is accepted anywhere (any extra field is rejected by
-  `additionalProperties: false`). The actor's employee resolves from
-  `X-Actor-Id` (like `/employees/me`); an actor with no employee record →
-  `404 employee_not_found`. `work_mode` is a plain string validated in the
+  `additionalProperties: false`). The acting user's employee link resolves from
+  `identity.employee_id` (like `/employees/me`; Phase 2 session identity — the
+  Phase 1 `X-Actor-Id` header source was deleted); a user with no employee link
+  → `404 employee_not_found`. `work_mode` is a plain string validated in the
   service → `400 invalid_work_mode` (an enum in the schema would collapse the
   pinned code into the generic 422).
 - **Workday & lateness**: `workday` = calendar date of `checked_in_at` in the
@@ -212,7 +213,7 @@ payloads or audit `changes` values (`changes` says `"changed"`).
   `shift_not_found` 404 · `invalid_work_mode` 400 · `shift_time_invalid` 422 ·
   `shift_scope_taken` 409 · `employee_not_found` 404 (reused) ·
   `location_not_found` 404 (reused — shift create/update with a `location_id`
-  outside the tenant) · `forbidden` 403 · `invalid_identity` 400 ·
+  outside the tenant) · `forbidden` 403 · `unauthenticated` 401 ·
   `validation_error` 422 (uniform handler).
 - **Ids/time**: UUIDv7 ids resolved in the service; `now` is a router-injected
   parameter (conventions) and the only wall-clock read.
@@ -276,8 +277,10 @@ Contracts in Phase 1, published in Phase 3:
    Accepted limitation: Phase 1 has no rosters and no leave data, so this
    over-counts on rest days and cannot subtract leave until Phase 3. The board
    documents this in the UI copy.
-8. Identity is the **dev identity** (ADR 0004): self check-in resolves from
-   `X-Actor-Id`; board/records access is role-checked in `policies.py`.
+8. Identity is the **session-resolved identity** (Phase 2, ADR 0004's swap —
+   `.ai/features/identity-access.md` T5): self check-in resolves from
+   `identity.employee_id`; board/records access is role-checked in
+   `policies.py`.
 
 ## Plan
 
@@ -358,9 +361,10 @@ deltas (they are contract surface; review here, not during the build):
   clamping). Order `checked_in_at` desc, `id` desc (stable pagination).
 - **Check-in semantics** (Decision #3 made concrete): server time only — no
   timestamp field is accepted anywhere (any extra field is rejected by
-  `additionalProperties: false`). The actor's employee resolves from
-  `X-Actor-Id` (like `/employees/me`); an actor with no employee record →
-  `404 employee_not_found`. `work_mode` is a plain string validated in the
+  `additionalProperties: false`). The acting user's employee link resolves from
+  `identity.employee_id` (like `/employees/me`; Phase 2 session identity — the
+  Phase 1 `X-Actor-Id` header source was deleted); a user with no employee link
+  → `404 employee_not_found`. `work_mode` is a plain string validated in the
   service → `400 invalid_work_mode` (an enum in the schema would collapse the
   pinned code into the generic 422).
 - **Workday & lateness**: `workday` = calendar date of `checked_in_at` in the
@@ -552,7 +556,8 @@ Verify: `make check-api` green.
   routes tagged `shifts`; declare `/records/{id}/check-out` so it cannot
   collide with list routes).
 - Integration tests (existing helpers `create_org_refs`, `employee_payload`,
-  `identity_headers(TENANT_A/B, ACTOR, role)` reused):
+  `identity(TENANT_A/B, role, …)` — the `get_identity` dependency override —
+  reused):
   - `test_attendance_api.py` — check-in `201` pinned body + correct workday for
     a Ho Chi Minh employee; check-out `200` with `duration_minutes`; records
     list filters + pagination; board counts/activity update after check-in and
@@ -605,13 +610,14 @@ Verify: `make check` green.
 
 ### T7 — E2E · records
 
-- `tests/e2e/attendance.spec.ts` (gate `make check-e2e`, pattern of
-  `employees.spec.ts` — `RUN`-suffixed fixtures; dev-identity headers are
-  injected by the web transport): fixture creates an employee via the API
-  against the seeded org refs (fixed seed UUIDs), then drives the UI: check in →
-  board counts and activity update → check out → `checked_out` count; a second
-  check-in attempt shows the visible `409` error state. Repeatable across runs
-  (fresh employee per run).
+- `tests/e2e/attendance.spec.ts` (gate `make check-e2e`): the browser logs in
+  as the seeded worker user (`worker@workpulse.test`, linked to synthetic
+  employee `...0021` by seed 003) through the real API, then drives the UI:
+  check in → the open record and its row appear → check out; a second check-in
+  attempt shows the visible `409` error state. Repeatable across runs — the
+  worker's record is closed at the end and any leftover open record is closed
+  through the API up front (workday-agnostic: the duplicate-check-in guard does
+  not filter by workday).
 - Records (same change): tick and move the `attendance.md` item in
   `tasks/TODO.md`; write **ADR 0009 — Attendance Phase-1 semantics** (shift
   scoping, exclusive lateness boundary, overlapping board counts, UTC default
@@ -620,17 +626,12 @@ Verify: `make check` green.
 
 Verify: `make check` green; `make check-e2e` green.
 
-Built 2026-09-29, one deviation recorded: **the e2e impersonates its per-run
-employee instead of switching the dev identity by env.** Phase 1 identity is
-baked into the client bundle when the web server starts (`NEXT_PUBLIC_DEV_*`),
-so a fresh employee cannot become the browser's actor through env alone; the
-fixture creates the employee via the API and the spec rewrites the pinned
-`X-Actor-Id` header on the page's API calls (`context.route`). The flow still
-runs entirely through the real UI, and a fresh actor per run keeps the suite
-repeatable against the dev database (the full suite passed twice in a row
-against one migrated + seeded database). The duplicate check-in case uses the
-same mechanism: a second page opened before the check-in submits a stale form
-and renders the pinned visible 409 error state.
+Built 2026-09-29 (Phase 1); the Phase 2 identity swap
+(`.ai/features/identity-access.md` T5) replaced the impersonation described
+here: the spec now logs in as the seeded worker (`tests/e2e/auth.ts`), no
+dev-identity headers exist, and the check-in panel replaced the board-count
+assertions. The per-run fresh actor became the one seeded worker, so the suite
+runs serially against a single dev database (see `tests/e2e/README.md`).
 
 ### Risks, unknowns & decisions that deserve an ADR
 

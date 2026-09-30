@@ -18,7 +18,7 @@ from app.domains.organizations.schemas import (
     DepartmentUpdate,
 )
 from app.domains.organizations.service import DepartmentService
-from app.shared.identity import DevIdentity, Role
+from app.shared.identity import Identity, Role
 from app.shared.pagination import PageParams
 from tests.unit.organizations.fakes import (
     FakeDepartmentRepo,
@@ -32,8 +32,8 @@ ACTOR = UUID("00000000-0000-4000-8000-000000000002")
 NOW = datetime(2026, 9, 24, 12, 0, tzinfo=UTC)
 
 
-def identity(tenant_id: UUID = TENANT_A, role: Role = Role.HR) -> DevIdentity:
-    return DevIdentity(tenant_id=tenant_id, actor_id=ACTOR, role=role)
+def identity(tenant_id: UUID = TENANT_A, role: Role = Role.HR) -> Identity:
+    return Identity(tenant_id=tenant_id, actor_id=ACTOR, role=role)
 
 
 @pytest.fixture

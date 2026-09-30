@@ -511,7 +511,7 @@ Verify: `make check-api` green (pure unit; no DB).
 Verify: `make check` green (web and e2e untouched and green; existing API
 routes still authenticate via the dev headers).
 
-### T5 — The identity swap (atomic: dependency + consumers + tests + mutator + e2e)
+### T5 — The identity swap (atomic: dependency + consumers + tests + mutator + e2e) · done 2026-09-30
 
 ADR 0004's exit criterion, as one change — headers cannot half-die:
 

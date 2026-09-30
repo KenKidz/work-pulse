@@ -47,16 +47,6 @@ class UnauthenticatedError(WorkPulseError):
         super().__init__(message)
 
 
-class InvalidIdentityError(WorkPulseError):
-    """Missing or malformed dev-identity headers (400, ADR 0004)."""
-
-    status_code = 400
-    code = "invalid_identity"
-
-    def __init__(self, message: str = "Invalid identity") -> None:
-        super().__init__(message)
-
-
 def register_error_handlers(application: FastAPI) -> None:
     """Attach handlers that keep every error response the same shape."""
 

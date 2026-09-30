@@ -10,13 +10,14 @@ from app.domains.employees.schemas import EmployeeStatus, EmploymentType
 from app.infrastructure.postgres.repositories.employees import (
     PostgresEmployeeRepository,
 )
+from app.shared.identity import Role
 from tests.integration.conftest import (
     ACTOR,
     TENANT_A,
     ClientFactory,
     create_org_refs,
     employee_payload,
-    identity_headers,
+    identity,
 )
 
 
@@ -45,7 +46,7 @@ async def test_non_manage_roles_cannot_create(
 ) -> None:
     async with client_factory() as admin:
         refs = await create_org_refs(admin)
-    async with client_factory(identity_headers(role=role)) as client:
+    async with client_factory(identity(role=Role(role))) as client:
         response = await client.post("/api/v1/employees", json=employee_payload(refs))
 
     assert response.status_code == 403  # AC8
@@ -62,7 +63,7 @@ async def test_non_manage_roles_cannot_mutate(
             await admin.post("/api/v1/employees", json=employee_payload(refs))
         ).json()
 
-    async with client_factory(identity_headers(role=role)) as client:
+    async with client_factory(identity(role=Role(role))) as client:
         responses = [
             await client.patch(
                 f"/api/v1/employees/{created['id']}", json={"first_name": "Nope"}
@@ -86,7 +87,7 @@ async def test_non_manage_roles_cannot_mutate(
 async def test_manage_roles_can_create(
     client_factory: ClientFactory, role: str
 ) -> None:
-    async with client_factory(identity_headers(role=role)) as client:
+    async with client_factory(identity(role=Role(role))) as client:
         refs = await create_org_refs(client)
         response = await client.post("/api/v1/employees", json=employee_payload(refs))
 
@@ -103,7 +104,7 @@ async def test_roles_without_read_capability_get_403_on_list_and_detail(
             await admin.post("/api/v1/employees", json=employee_payload(refs))
         ).json()
 
-    async with client_factory(identity_headers(role=role)) as client:
+    async with client_factory(identity(role=Role(role))) as client:
         listed = await client.get("/api/v1/employees")
         detail = await client.get(f"/api/v1/employees/{created['id']}")
 
@@ -120,7 +121,7 @@ async def test_employee_role_can_only_read_me(
         refs = await create_org_refs(admin)
     await _seed_actor(session, refs)
 
-    async with client_factory(identity_headers(role="employee")) as employee:
+    async with client_factory(identity(role=Role.EMPLOYEE)) as employee:
         mine = await employee.get("/api/v1/employees/me")
         listed = await employee.get("/api/v1/employees")
 
@@ -156,7 +157,7 @@ async def test_manager_sees_only_direct_reports(
             )
         ).json()
 
-    async with client_factory(identity_headers(role="manager")) as manager:
+    async with client_factory(identity(role=Role.MANAGER)) as manager:
         listed = await manager.get("/api/v1/employees")
         own_report = await manager.get(f"/api/v1/employees/{report['id']}")
         non_report = await manager.get(f"/api/v1/employees/{outsider['id']}")
@@ -180,7 +181,7 @@ async def test_manager_cannot_read_non_report_employments(
         ).json()
     await _seed_actor(session, refs)
 
-    async with client_factory(identity_headers(role="manager")) as manager:
+    async with client_factory(identity(role=Role.MANAGER)) as manager:
         response = await manager.get(f"/api/v1/employees/{outsider['id']}/employments")
 
     assert response.status_code == 404

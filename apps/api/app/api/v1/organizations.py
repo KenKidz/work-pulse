@@ -12,6 +12,7 @@ from fastapi import APIRouter, Query
 
 from app.dependencies import (
     DepartmentServiceDep,
+    IdentityDep,
     LocationServiceDep,
     PositionServiceDep,
 )
@@ -36,7 +37,6 @@ from app.domains.organizations.schemas import (
     PositionListPage,
     PositionUpdate,
 )
-from app.shared.identity import IdentityDep
 from app.shared.pagination import PageParamsDep
 
 router = APIRouter()

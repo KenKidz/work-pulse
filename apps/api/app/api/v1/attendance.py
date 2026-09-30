@@ -17,7 +17,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Query
 
-from app.dependencies import AttendanceServiceDep, ShiftServiceDep
+from app.dependencies import AttendanceServiceDep, IdentityDep, ShiftServiceDep
 from app.domains.attendance.policies import (
     ensure_can_manage_shifts,
     ensure_can_read_board,
@@ -34,7 +34,6 @@ from app.domains.attendance.schemas import (
     ShiftList,
     ShiftUpdate,
 )
-from app.shared.identity import IdentityDep
 from app.shared.pagination import PageParamsDep
 
 router = APIRouter()

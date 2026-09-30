@@ -4,7 +4,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.infrastructure.postgres.models_audit import AuditEntry
-from tests.integration.conftest import ACTOR, TENANT_A, ClientFactory
+from app.shared.identity import Role
+from tests.integration.conftest import TENANT_A, USER, ClientFactory, identity
 
 
 async def _audit_rows(session: AsyncSession) -> list[AuditEntry]:
@@ -35,7 +36,7 @@ async def test_department_lifecycle_writes_one_row_per_transition(
     ]
     for row in rows:
         assert row.tenant_id == TENANT_A
-        assert row.actor_id == ACTOR
+        assert row.actor_id == USER  # the acting user id
         assert str(row.entity_id) == created["id"]
         assert row.entity_type == "department"
         assert row.occurred_at is not None
@@ -123,12 +124,7 @@ async def test_failed_mutations_write_no_audit_rows(
         )
         assert duplicate.status_code == 409
 
-        employee_headers = {
-            "X-Tenant-Id": "00000000-0000-4000-8000-00000000000a",
-            "X-Actor-Id": "00000000-0000-4000-8000-000000000002",
-            "X-Role": "employee",
-        }
-    async with client_factory(employee_headers) as employee:
+    async with client_factory(identity(role=Role.EMPLOYEE)) as employee:
         denied = await employee.post("/api/v1/departments", json={"name": "Nope"})
         assert denied.status_code == 403
 

@@ -9,7 +9,7 @@ requires the "Manage users, roles, permissions" capability.
 """
 
 from app.shared.errors import ForbiddenError
-from app.shared.identity import DevIdentity, Role
+from app.shared.identity import Identity, Role
 
 # The admin role set, defined once for the whole domain: the user-management
 # policy, the `last_admin` guard in the service, and the active-admin count in
@@ -17,7 +17,7 @@ from app.shared.identity import DevIdentity, Role
 ADMIN_ROLES = frozenset({Role.ADMIN, Role.SUPER_ADMIN})
 
 
-def ensure_can_manage_users(identity: DevIdentity) -> None:
+def ensure_can_manage_users(identity: Identity) -> None:
     """List/read/create/update/activate/deactivate/reset: admin, super_admin."""
     if identity.role not in ADMIN_ROLES:
         raise ForbiddenError("Not allowed to manage users")

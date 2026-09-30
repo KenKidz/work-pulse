@@ -16,6 +16,7 @@ from app.infrastructure.postgres.repositories.employees import (
 from tests.integration.conftest import (
     ACTOR,
     TENANT_A,
+    USER,
     ClientFactory,
     create_org_refs,
 )
@@ -103,7 +104,7 @@ async def test_every_mutation_writes_one_entry_without_note_values(
 
     checked_in = rows[0]
     assert checked_in.tenant_id == TENANT_A
-    assert checked_in.actor_id == ACTOR
+    assert checked_in.actor_id == USER  # the acting user id
     assert str(checked_in.entity_id) == record["id"]
     assert checked_in.occurred_at is not None
     assert _changes(checked_in)["employee_id"]["new"] == str(ACTOR)

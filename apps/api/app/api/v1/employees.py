@@ -11,7 +11,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Query
 
-from app.dependencies import EmployeeServiceDep
+from app.dependencies import EmployeeServiceDep, IdentityDep
 from app.domains.employees.policies import (
     ensure_can_manage_employees,
     ensure_can_read_employees,
@@ -29,7 +29,6 @@ from app.domains.employees.schemas import (
     TransferRequest,
     UpdateEmployee,
 )
-from app.shared.identity import IdentityDep
 from app.shared.pagination import PageParamsDep
 
 router = APIRouter()

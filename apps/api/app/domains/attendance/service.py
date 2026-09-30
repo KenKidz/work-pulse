@@ -17,8 +17,9 @@ Rules implemented here (pinned in `.ai/features/attendance.md`):
 - **At most one open record** per employee: a pre-check here plus the partial
   unique index backstop (Postgres maps that race to
   `409 attendance_already_checked_in`).
-- **Self-only capture**: check-in/check-out resolve the actor's own employee
-  from `X-Actor-Id`; a non-active employee cannot check in or out.
+- **Self-only capture**: check-in/check-out resolve the employee linked to the
+  acting user (`identity.employee_id`); a non-active employee cannot check in
+  or out.
 - **Visibility** (T1 role matrix): `employee`/`finance` see their own records;
   `manager` sees self + direct reports; `hr`/`admin`/`super_admin` see all. An
   out-of-scope `employee_id` filter is a `404 employee_not_found` — existence
@@ -86,7 +87,7 @@ from app.domains.employees.exceptions import EmployeeNotFoundError
 from app.domains.employees.schemas import EmployeeStatus
 from app.domains.organizations.service import LocationService
 from app.shared.audit import AuditEntryCreate, AuditWriter
-from app.shared.identity import DevIdentity, Role
+from app.shared.identity import Identity, Role
 from app.shared.pagination import PageParams
 
 ACTIVITY_LIMIT = 20  # board feed cap (pinned)
@@ -150,11 +151,13 @@ class AttendanceService:
     # --- captures ------------------------------------------------------------
 
     async def check_in(
-        self, identity: DevIdentity, payload: CheckInRequest, now: datetime
+        self, identity: Identity, payload: CheckInRequest, now: datetime
     ) -> AttendanceMutation:
-        """Open a record for the actor — self-only, server time only."""
+        """Open a record for the linked employee — self-only, server time only."""
         tenant_id = identity.tenant_id
-        context = await self._repo.employee_context(tenant_id, identity.actor_id)
+        if identity.employee_id is None:
+            raise EmployeeNotFoundError()
+        context = await self._repo.employee_context(tenant_id, identity.employee_id)
         if context is None:
             raise EmployeeNotFoundError()
         if context.status != EmployeeStatus.ACTIVE:
@@ -237,21 +240,26 @@ class AttendanceService:
 
     async def check_out(
         self,
-        identity: DevIdentity,
+        identity: Identity,
         record_id: UUID,
         payload: CheckOutRequest,
         now: datetime,
     ) -> AttendanceMutation:
-        """Close the actor's open record; the workday is never recomputed."""
+        """Close the linked employee's open record; the workday is never recomputed."""
         tenant_id = identity.tenant_id
         record = await self._repo.get(tenant_id, record_id)
-        if record is None or record.employee_id != identity.actor_id:
-            # Someone else's record is a 404 — its existence is not leaked.
+        if (
+            identity.employee_id is None
+            or record is None
+            or record.employee_id != identity.employee_id
+        ):
+            # Someone else's record (or an unlinked user's) is a 404 — its
+            # existence is not leaked.
             raise AttendanceRecordNotFoundError()
         if record.checked_out_at is not None:
             raise AttendanceNotOpenError()
 
-        context = await self._repo.employee_context(tenant_id, identity.actor_id)
+        context = await self._repo.employee_context(tenant_id, identity.employee_id)
         if context is None:  # pragma: no cover — the record proves the employee
             raise EmployeeNotFoundError()
         if context.status != EmployeeStatus.ACTIVE:
@@ -305,7 +313,7 @@ class AttendanceService:
 
     async def list_records(
         self,
-        identity: DevIdentity,
+        identity: Identity,
         *,
         employee_id: UUID | None = None,
         from_date: date | None = None,
@@ -313,7 +321,7 @@ class AttendanceService:
         late: bool | None = None,
         page: PageParams,
     ) -> AttendanceRecordListPage:
-        """Filtered records, scoped to the actor's visibility (T1 role matrix)."""
+        """Filtered records, scoped to the current user's visibility (T1)."""
         effective = await self._visible_employee_ids(identity, employee_id)
         filters = AttendanceFilters(
             employee_ids=effective,
@@ -324,9 +332,7 @@ class AttendanceService:
         items, total = await self._repo.list(identity.tenant_id, filters, page)
         return AttendanceRecordListPage(items=list(items), page=page.make_page(total))
 
-    async def board(
-        self, identity: DevIdentity, board_date: date, now: datetime
-    ) -> Board:
+    async def board(self, identity: Identity, board_date: date, now: datetime) -> Board:
         """Live workforce board for one date, scoped to visible employees."""
         tenant_id = identity.tenant_id
         visible = await self._scoped_employees(identity)
@@ -382,17 +388,23 @@ class AttendanceService:
     # --- shared internals ------------------------------------------------------
 
     async def _visible_employee_ids(
-        self, identity: DevIdentity, employee_id: UUID | None
+        self, identity: Identity, employee_id: UUID | None
     ) -> Sequence[UUID] | None:
         """Effective list scope; `None` means unscoped (hr/admin/super_admin).
 
-        An `employee_id` outside the actor's visibility is a 404 — existence is
+        An `employee_id` outside the current user's visibility is a 404 — existence is
         not leaked to employees, finance or managers.
         """
         if identity.role in (Role.EMPLOYEE, Role.FINANCE):
-            if employee_id is not None and employee_id != identity.actor_id:
+            if identity.employee_id is None:
+                # No employee link → no visible employees; an explicit id is a
+                # 404, never a server error.
+                if employee_id is not None:
+                    raise EmployeeNotFoundError()
+                return []
+            if employee_id is not None and employee_id != identity.employee_id:
                 raise EmployeeNotFoundError()
-            return [identity.actor_id]
+            return [identity.employee_id]
         if identity.role == Role.MANAGER:
             visible = await self._scoped_employees(identity)
             visible_ids = [context.id for context in visible]
@@ -403,13 +415,15 @@ class AttendanceService:
             return visible_ids
         return [employee_id] if employee_id is not None else None
 
-    async def _scoped_employees(
-        self, identity: DevIdentity
-    ) -> Sequence[EmployeeContext]:
+    async def _scoped_employees(self, identity: Identity) -> Sequence[EmployeeContext]:
         """Board/list scope: every employee, or a manager's self + reports."""
         if identity.role == Role.MANAGER:
+            if identity.employee_id is None:
+                # No employee link → a manager sees nobody (`manager_id=None`
+                # would mean "all employees" in the repository).
+                return []
             return await self._repo.visible_employees(
-                identity.tenant_id, manager_id=identity.actor_id
+                identity.tenant_id, manager_id=identity.employee_id
             )
         return await self._repo.visible_employees(identity.tenant_id)
 
@@ -471,11 +485,11 @@ class ShiftService:
         self._locations = locations
         self._audit = audit
 
-    async def list(self, identity: DevIdentity) -> ShiftList:
+    async def list(self, identity: Identity) -> ShiftList:
         return list(await self._repo.list(identity.tenant_id))
 
     async def create(
-        self, identity: DevIdentity, payload: ShiftCreate, now: datetime
+        self, identity: Identity, payload: ShiftCreate, now: datetime
     ) -> Shift:
         tenant_id = identity.tenant_id
         if payload.end_time <= payload.start_time:
@@ -515,7 +529,7 @@ class ShiftService:
 
     async def update(
         self,
-        identity: DevIdentity,
+        identity: Identity,
         shift_id: UUID,
         payload: ShiftUpdate,
         now: datetime,

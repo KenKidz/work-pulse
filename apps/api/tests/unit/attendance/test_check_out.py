@@ -120,12 +120,24 @@ async def test_check_out_unknown_record_is_not_found(
 async def test_check_out_of_another_employees_record_is_not_found(
     service: AttendanceService, attendance_repo: FakeAttendanceRepo
 ) -> None:
-    seed_employee(attendance_repo)  # the actor
+    seed_employee(attendance_repo)  # the employee the user is linked to
     seed_employee(attendance_repo, employee_id=REPORT)
     record = await seed_record(attendance_repo, employee_id=REPORT)
 
     with pytest.raises(AttendanceRecordNotFoundError):
         await service.check_out(identity(), record.id, CheckOutRequest(), NOW)
+
+
+async def test_check_out_without_employee_link_is_not_found(
+    service: AttendanceService, attendance_repo: FakeAttendanceRepo
+) -> None:
+    seed_employee(attendance_repo)
+    record = await seed_record(attendance_repo)
+
+    with pytest.raises(AttendanceRecordNotFoundError):
+        await service.check_out(
+            identity(employee_id=None), record.id, CheckOutRequest(), NOW
+        )
 
 
 async def test_terminated_actor_cannot_check_out(

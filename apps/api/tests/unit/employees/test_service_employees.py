@@ -36,7 +36,7 @@ from app.shared.audit import AuditEntryCreate
 from app.shared.identity import Role
 from app.shared.pagination import PageParams
 from tests.unit.employees.conftest import (
-    ACTOR,
+    EMPLOYEE_ID,
     HIRED_AT,
     NOW,
     TENANT_A,
@@ -151,7 +151,7 @@ async def test_create_same_email_allowed_in_other_tenant(
     refs_b = await orgs.seed(TENANT_B)
     await create_employee(service, refs_a)
 
-    other = await create_employee(service, refs_b, dev_identity=identity(TENANT_B))
+    other = await create_employee(service, refs_b, caller=identity(TENANT_B))
 
     assert other.tenant_id == TENANT_B
     assert other.employee_code == "EMP-00001"
@@ -227,20 +227,23 @@ async def test_get_cross_tenant_and_unknown_are_not_found(
         await service.get(identity(), uuid7())
 
 
-async def test_me_resolves_actor_and_missing_is_not_found(
+async def test_me_resolves_linked_employee_and_missing_is_not_found(
     service: EmployeeService,
     repo: FakeEmployeeRepo,
     orgs: OrgWorld,
 ) -> None:
     refs = await orgs.seed()
-    # The actor's own record must carry the actor id — seed it directly.
+    # The employee linked to the acting user — a separate row from the user id.
     await seed_actor_employee(repo, refs)
 
-    mine = await service.me(identity())
-    assert mine.id == ACTOR
+    mine = await service.me(identity(employee_id=EMPLOYEE_ID))
+    assert mine.id == EMPLOYEE_ID
 
+    # A user without an employee link and a cross-tenant link both 404.
     with pytest.raises(EmployeeNotFoundError):
-        await service.me(identity(TENANT_B))
+        await service.me(identity())
+    with pytest.raises(EmployeeNotFoundError):
+        await service.me(identity(TENANT_B, employee_id=EMPLOYEE_ID))
 
 
 async def test_detail_returns_current_and_history_newest_first(
@@ -288,10 +291,10 @@ async def test_manager_reads_only_own_reports(
     service: EmployeeService, repo: FakeEmployeeRepo, orgs: OrgWorld
 ) -> None:
     refs = await orgs.seed()
-    await seed_actor_employee(repo, refs)  # the manager is the request actor
-    report = await create_employee(service, refs, manager_id=ACTOR)
+    await seed_actor_employee(repo, refs)  # the manager's employee link
+    report = await create_employee(service, refs, manager_id=EMPLOYEE_ID)
     outsider = await create_employee(service, refs, email="outsider@example.test")
-    manager = identity(role=Role.MANAGER)
+    manager = identity(role=Role.MANAGER, employee_id=EMPLOYEE_ID)
 
     page = await service.list(manager, EmployeeFilters(), PageParams())
     assert [item.id for item in page.items] == [report.id]
@@ -309,6 +312,24 @@ async def test_manager_reads_only_own_reports(
         manager, EmployeeFilters(manager_id=outsider.id), PageParams()
     )
     assert [item.id for item in forced.items] == [report.id]
+
+
+async def test_manager_without_employee_link_sees_no_reports(
+    service: EmployeeService, orgs: OrgWorld
+) -> None:
+    refs = await orgs.seed()
+    target = await create_employee(service, refs)  # manager-less by default
+    unlinked = identity(role=Role.MANAGER)
+
+    page = await service.list(unlinked, EmployeeFilters(), PageParams())
+    assert page.items == []
+    assert page.page.total_items == 0
+    # The target exists (`manager_id=None`): the 404 must come from the
+    # manager-scoping guard, not the unknown-employee path.
+    with pytest.raises(EmployeeNotFoundError):
+        await service.get_detail(unlinked, target.id)
+    with pytest.raises(EmployeeNotFoundError):
+        await service.list_employments(unlinked, target.id)
 
 
 async def test_list_filters_are_passed_through(

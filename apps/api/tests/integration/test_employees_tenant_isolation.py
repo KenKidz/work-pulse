@@ -5,7 +5,7 @@ from tests.integration.conftest import (
     ClientFactory,
     create_org_refs,
     employee_payload,
-    identity_headers,
+    identity,
 )
 
 
@@ -18,7 +18,7 @@ async def test_tenant_b_cannot_touch_tenant_a_employee(
             await tenant_a.post("/api/v1/employees", json=employee_payload(refs))
         ).json()
 
-    async with client_factory(identity_headers(tenant=TENANT_B)) as tenant_b:
+    async with client_factory(identity(tenant=TENANT_B)) as tenant_b:
         own_refs = await create_org_refs(tenant_b)
         responses = [
             await tenant_b.get(f"/api/v1/employees/{created['id']}"),
@@ -57,7 +57,7 @@ async def test_tenant_b_cannot_reference_tenant_a_rows(
             )
         ).json()
 
-    async with client_factory(identity_headers(tenant=TENANT_B)) as tenant_b:
+    async with client_factory(identity(tenant=TENANT_B)) as tenant_b:
         own_refs = await create_org_refs(tenant_b)
         foreign_department = await tenant_b.post(
             "/api/v1/employees",
@@ -85,7 +85,7 @@ async def test_employee_email_uniqueness_is_per_tenant(
         first = await tenant_a.post("/api/v1/employees", json=employee_payload(refs_a))
     assert first.status_code == 201
 
-    async with client_factory(identity_headers(tenant=TENANT_B)) as tenant_b:
+    async with client_factory(identity(tenant=TENANT_B)) as tenant_b:
         refs_b = await create_org_refs(tenant_b)
         second = await tenant_b.post("/api/v1/employees", json=employee_payload(refs_b))
 

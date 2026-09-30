@@ -292,8 +292,8 @@
             }
           },
           {
-            "name": "x-tenant-id",
-            "in": "header",
+            "name": "wp_session",
+            "in": "cookie",
             "required": false,
             "schema": {
               "anyOf": [
@@ -304,39 +304,7 @@
                   "type": "null"
                 }
               ],
-              "title": "X-Tenant-Id"
-            }
-          },
-          {
-            "name": "x-actor-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Actor-Id"
-            }
-          },
-          {
-            "name": "x-role",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Role"
+              "title": "Wp Session"
             }
           }
         ],
@@ -371,8 +339,8 @@
         "operationId": "createDepartment",
         "parameters": [
           {
-            "name": "x-tenant-id",
-            "in": "header",
+            "name": "wp_session",
+            "in": "cookie",
             "required": false,
             "schema": {
               "anyOf": [
@@ -383,39 +351,7 @@
                   "type": "null"
                 }
               ],
-              "title": "X-Tenant-Id"
-            }
-          },
-          {
-            "name": "x-actor-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Actor-Id"
-            }
-          },
-          {
-            "name": "x-role",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Role"
+              "title": "Wp Session"
             }
           }
         ],
@@ -472,8 +408,8 @@
             }
           },
           {
-            "name": "x-tenant-id",
-            "in": "header",
+            "name": "wp_session",
+            "in": "cookie",
             "required": false,
             "schema": {
               "anyOf": [
@@ -484,39 +420,7 @@
                   "type": "null"
                 }
               ],
-              "title": "X-Tenant-Id"
-            }
-          },
-          {
-            "name": "x-actor-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Actor-Id"
-            }
-          },
-          {
-            "name": "x-role",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Role"
+              "title": "Wp Session"
             }
           }
         ],
@@ -561,8 +465,8 @@
             }
           },
           {
-            "name": "x-tenant-id",
-            "in": "header",
+            "name": "wp_session",
+            "in": "cookie",
             "required": false,
             "schema": {
               "anyOf": [
@@ -573,39 +477,7 @@
                   "type": "null"
                 }
               ],
-              "title": "X-Tenant-Id"
-            }
-          },
-          {
-            "name": "x-actor-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Actor-Id"
-            }
-          },
-          {
-            "name": "x-role",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Role"
+              "title": "Wp Session"
             }
           }
         ],
@@ -662,8 +534,8 @@
             }
           },
           {
-            "name": "x-tenant-id",
-            "in": "header",
+            "name": "wp_session",
+            "in": "cookie",
             "required": false,
             "schema": {
               "anyOf": [
@@ -674,39 +546,7 @@
                   "type": "null"
                 }
               ],
-              "title": "X-Tenant-Id"
-            }
-          },
-          {
-            "name": "x-actor-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Actor-Id"
-            }
-          },
-          {
-            "name": "x-role",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Role"
+              "title": "Wp Session"
             }
           }
         ],
@@ -770,8 +610,8 @@
             }
           },
           {
-            "name": "x-tenant-id",
-            "in": "header",
+            "name": "wp_session",
+            "in": "cookie",
             "required": false,
             "schema": {
               "anyOf": [
@@ -782,39 +622,7 @@
                   "type": "null"
                 }
               ],
-              "title": "X-Tenant-Id"
-            }
-          },
-          {
-            "name": "x-actor-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Actor-Id"
-            }
-          },
-          {
-            "name": "x-role",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Role"
+              "title": "Wp Session"
             }
           }
         ],
@@ -898,8 +706,8 @@
             }
           },
           {
-            "name": "x-tenant-id",
-            "in": "header",
+            "name": "wp_session",
+            "in": "cookie",
             "required": false,
             "schema": {
               "anyOf": [
@@ -910,39 +718,7 @@
                   "type": "null"
                 }
               ],
-              "title": "X-Tenant-Id"
-            }
-          },
-          {
-            "name": "x-actor-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Actor-Id"
-            }
-          },
-          {
-            "name": "x-role",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Role"
+              "title": "Wp Session"
             }
           }
         ],
@@ -977,8 +753,8 @@
         "operationId": "createPosition",
         "parameters": [
           {
-            "name": "x-tenant-id",
-            "in": "header",
+            "name": "wp_session",
+            "in": "cookie",
             "required": false,
             "schema": {
               "anyOf": [
@@ -989,39 +765,7 @@
                   "type": "null"
                 }
               ],
-              "title": "X-Tenant-Id"
-            }
-          },
-          {
-            "name": "x-actor-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Actor-Id"
-            }
-          },
-          {
-            "name": "x-role",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Role"
+              "title": "Wp Session"
             }
           }
         ],
@@ -1078,8 +822,8 @@
             }
           },
           {
-            "name": "x-tenant-id",
-            "in": "header",
+            "name": "wp_session",
+            "in": "cookie",
             "required": false,
             "schema": {
               "anyOf": [
@@ -1090,39 +834,7 @@
                   "type": "null"
                 }
               ],
-              "title": "X-Tenant-Id"
-            }
-          },
-          {
-            "name": "x-actor-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Actor-Id"
-            }
-          },
-          {
-            "name": "x-role",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Role"
+              "title": "Wp Session"
             }
           }
         ],
@@ -1167,8 +879,8 @@
             }
           },
           {
-            "name": "x-tenant-id",
-            "in": "header",
+            "name": "wp_session",
+            "in": "cookie",
             "required": false,
             "schema": {
               "anyOf": [
@@ -1179,39 +891,7 @@
                   "type": "null"
                 }
               ],
-              "title": "X-Tenant-Id"
-            }
-          },
-          {
-            "name": "x-actor-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Actor-Id"
-            }
-          },
-          {
-            "name": "x-role",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Role"
+              "title": "Wp Session"
             }
           }
         ],
@@ -1268,8 +948,8 @@
             }
           },
           {
-            "name": "x-tenant-id",
-            "in": "header",
+            "name": "wp_session",
+            "in": "cookie",
             "required": false,
             "schema": {
               "anyOf": [
@@ -1280,39 +960,7 @@
                   "type": "null"
                 }
               ],
-              "title": "X-Tenant-Id"
-            }
-          },
-          {
-            "name": "x-actor-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Actor-Id"
-            }
-          },
-          {
-            "name": "x-role",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Role"
+              "title": "Wp Session"
             }
           }
         ],
@@ -1376,8 +1024,8 @@
             }
           },
           {
-            "name": "x-tenant-id",
-            "in": "header",
+            "name": "wp_session",
+            "in": "cookie",
             "required": false,
             "schema": {
               "anyOf": [
@@ -1388,39 +1036,7 @@
                   "type": "null"
                 }
               ],
-              "title": "X-Tenant-Id"
-            }
-          },
-          {
-            "name": "x-actor-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Actor-Id"
-            }
-          },
-          {
-            "name": "x-role",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Role"
+              "title": "Wp Session"
             }
           }
         ],
@@ -1504,8 +1120,8 @@
             }
           },
           {
-            "name": "x-tenant-id",
-            "in": "header",
+            "name": "wp_session",
+            "in": "cookie",
             "required": false,
             "schema": {
               "anyOf": [
@@ -1516,39 +1132,7 @@
                   "type": "null"
                 }
               ],
-              "title": "X-Tenant-Id"
-            }
-          },
-          {
-            "name": "x-actor-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Actor-Id"
-            }
-          },
-          {
-            "name": "x-role",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Role"
+              "title": "Wp Session"
             }
           }
         ],
@@ -1583,8 +1167,8 @@
         "operationId": "createLocation",
         "parameters": [
           {
-            "name": "x-tenant-id",
-            "in": "header",
+            "name": "wp_session",
+            "in": "cookie",
             "required": false,
             "schema": {
               "anyOf": [
@@ -1595,39 +1179,7 @@
                   "type": "null"
                 }
               ],
-              "title": "X-Tenant-Id"
-            }
-          },
-          {
-            "name": "x-actor-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Actor-Id"
-            }
-          },
-          {
-            "name": "x-role",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Role"
+              "title": "Wp Session"
             }
           }
         ],
@@ -1684,8 +1236,8 @@
             }
           },
           {
-            "name": "x-tenant-id",
-            "in": "header",
+            "name": "wp_session",
+            "in": "cookie",
             "required": false,
             "schema": {
               "anyOf": [
@@ -1696,39 +1248,7 @@
                   "type": "null"
                 }
               ],
-              "title": "X-Tenant-Id"
-            }
-          },
-          {
-            "name": "x-actor-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Actor-Id"
-            }
-          },
-          {
-            "name": "x-role",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Role"
+              "title": "Wp Session"
             }
           }
         ],
@@ -1773,8 +1293,8 @@
             }
           },
           {
-            "name": "x-tenant-id",
-            "in": "header",
+            "name": "wp_session",
+            "in": "cookie",
             "required": false,
             "schema": {
               "anyOf": [
@@ -1785,39 +1305,7 @@
                   "type": "null"
                 }
               ],
-              "title": "X-Tenant-Id"
-            }
-          },
-          {
-            "name": "x-actor-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Actor-Id"
-            }
-          },
-          {
-            "name": "x-role",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Role"
+              "title": "Wp Session"
             }
           }
         ],
@@ -1874,8 +1362,8 @@
             }
           },
           {
-            "name": "x-tenant-id",
-            "in": "header",
+            "name": "wp_session",
+            "in": "cookie",
             "required": false,
             "schema": {
               "anyOf": [
@@ -1886,39 +1374,7 @@
                   "type": "null"
                 }
               ],
-              "title": "X-Tenant-Id"
-            }
-          },
-          {
-            "name": "x-actor-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Actor-Id"
-            }
-          },
-          {
-            "name": "x-role",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Role"
+              "title": "Wp Session"
             }
           }
         ],
@@ -1982,8 +1438,8 @@
             }
           },
           {
-            "name": "x-tenant-id",
-            "in": "header",
+            "name": "wp_session",
+            "in": "cookie",
             "required": false,
             "schema": {
               "anyOf": [
@@ -1994,39 +1450,7 @@
                   "type": "null"
                 }
               ],
-              "title": "X-Tenant-Id"
-            }
-          },
-          {
-            "name": "x-actor-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Actor-Id"
-            }
-          },
-          {
-            "name": "x-role",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Role"
+              "title": "Wp Session"
             }
           }
         ],
@@ -2184,8 +1608,8 @@
             }
           },
           {
-            "name": "x-tenant-id",
-            "in": "header",
+            "name": "wp_session",
+            "in": "cookie",
             "required": false,
             "schema": {
               "anyOf": [
@@ -2196,39 +1620,7 @@
                   "type": "null"
                 }
               ],
-              "title": "X-Tenant-Id"
-            }
-          },
-          {
-            "name": "x-actor-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Actor-Id"
-            }
-          },
-          {
-            "name": "x-role",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Role"
+              "title": "Wp Session"
             }
           }
         ],
@@ -2263,8 +1655,8 @@
         "operationId": "createEmployee",
         "parameters": [
           {
-            "name": "x-tenant-id",
-            "in": "header",
+            "name": "wp_session",
+            "in": "cookie",
             "required": false,
             "schema": {
               "anyOf": [
@@ -2275,39 +1667,7 @@
                   "type": "null"
                 }
               ],
-              "title": "X-Tenant-Id"
-            }
-          },
-          {
-            "name": "x-actor-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Actor-Id"
-            }
-          },
-          {
-            "name": "x-role",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Role"
+              "title": "Wp Session"
             }
           }
         ],
@@ -2354,8 +1714,8 @@
         "operationId": "getCurrentEmployee",
         "parameters": [
           {
-            "name": "x-tenant-id",
-            "in": "header",
+            "name": "wp_session",
+            "in": "cookie",
             "required": false,
             "schema": {
               "anyOf": [
@@ -2366,39 +1726,7 @@
                   "type": "null"
                 }
               ],
-              "title": "X-Tenant-Id"
-            }
-          },
-          {
-            "name": "x-actor-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Actor-Id"
-            }
-          },
-          {
-            "name": "x-role",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Role"
+              "title": "Wp Session"
             }
           }
         ],
@@ -2445,8 +1773,8 @@
             }
           },
           {
-            "name": "x-tenant-id",
-            "in": "header",
+            "name": "wp_session",
+            "in": "cookie",
             "required": false,
             "schema": {
               "anyOf": [
@@ -2457,39 +1785,7 @@
                   "type": "null"
                 }
               ],
-              "title": "X-Tenant-Id"
-            }
-          },
-          {
-            "name": "x-actor-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Actor-Id"
-            }
-          },
-          {
-            "name": "x-role",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Role"
+              "title": "Wp Session"
             }
           }
         ],
@@ -2534,8 +1830,8 @@
             }
           },
           {
-            "name": "x-tenant-id",
-            "in": "header",
+            "name": "wp_session",
+            "in": "cookie",
             "required": false,
             "schema": {
               "anyOf": [
@@ -2546,39 +1842,7 @@
                   "type": "null"
                 }
               ],
-              "title": "X-Tenant-Id"
-            }
-          },
-          {
-            "name": "x-actor-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Actor-Id"
-            }
-          },
-          {
-            "name": "x-role",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Role"
+              "title": "Wp Session"
             }
           }
         ],
@@ -2635,8 +1899,8 @@
             }
           },
           {
-            "name": "x-tenant-id",
-            "in": "header",
+            "name": "wp_session",
+            "in": "cookie",
             "required": false,
             "schema": {
               "anyOf": [
@@ -2647,39 +1911,7 @@
                   "type": "null"
                 }
               ],
-              "title": "X-Tenant-Id"
-            }
-          },
-          {
-            "name": "x-actor-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Actor-Id"
-            }
-          },
-          {
-            "name": "x-role",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Role"
+              "title": "Wp Session"
             }
           }
         ],
@@ -2736,8 +1968,8 @@
             }
           },
           {
-            "name": "x-tenant-id",
-            "in": "header",
+            "name": "wp_session",
+            "in": "cookie",
             "required": false,
             "schema": {
               "anyOf": [
@@ -2748,39 +1980,7 @@
                   "type": "null"
                 }
               ],
-              "title": "X-Tenant-Id"
-            }
-          },
-          {
-            "name": "x-actor-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Actor-Id"
-            }
-          },
-          {
-            "name": "x-role",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Role"
+              "title": "Wp Session"
             }
           }
         ],
@@ -2837,8 +2037,8 @@
             }
           },
           {
-            "name": "x-tenant-id",
-            "in": "header",
+            "name": "wp_session",
+            "in": "cookie",
             "required": false,
             "schema": {
               "anyOf": [
@@ -2849,39 +2049,7 @@
                   "type": "null"
                 }
               ],
-              "title": "X-Tenant-Id"
-            }
-          },
-          {
-            "name": "x-actor-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Actor-Id"
-            }
-          },
-          {
-            "name": "x-role",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Role"
+              "title": "Wp Session"
             }
           }
         ],
@@ -2923,8 +2091,8 @@
         "operationId": "checkIn",
         "parameters": [
           {
-            "name": "x-tenant-id",
-            "in": "header",
+            "name": "wp_session",
+            "in": "cookie",
             "required": false,
             "schema": {
               "anyOf": [
@@ -2935,39 +2103,7 @@
                   "type": "null"
                 }
               ],
-              "title": "X-Tenant-Id"
-            }
-          },
-          {
-            "name": "x-actor-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Actor-Id"
-            }
-          },
-          {
-            "name": "x-role",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Role"
+              "title": "Wp Session"
             }
           }
         ],
@@ -3025,8 +2161,8 @@
             }
           },
           {
-            "name": "x-tenant-id",
-            "in": "header",
+            "name": "wp_session",
+            "in": "cookie",
             "required": false,
             "schema": {
               "anyOf": [
@@ -3037,39 +2173,7 @@
                   "type": "null"
                 }
               ],
-              "title": "X-Tenant-Id"
-            }
-          },
-          {
-            "name": "x-actor-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Actor-Id"
-            }
-          },
-          {
-            "name": "x-role",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Role"
+              "title": "Wp Session"
             }
           }
         ],
@@ -3204,8 +2308,8 @@
             }
           },
           {
-            "name": "x-tenant-id",
-            "in": "header",
+            "name": "wp_session",
+            "in": "cookie",
             "required": false,
             "schema": {
               "anyOf": [
@@ -3216,39 +2320,7 @@
                   "type": "null"
                 }
               ],
-              "title": "X-Tenant-Id"
-            }
-          },
-          {
-            "name": "x-actor-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Actor-Id"
-            }
-          },
-          {
-            "name": "x-role",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Role"
+              "title": "Wp Session"
             }
           }
         ],
@@ -3303,8 +2375,8 @@
             }
           },
           {
-            "name": "x-tenant-id",
-            "in": "header",
+            "name": "wp_session",
+            "in": "cookie",
             "required": false,
             "schema": {
               "anyOf": [
@@ -3315,39 +2387,7 @@
                   "type": "null"
                 }
               ],
-              "title": "X-Tenant-Id"
-            }
-          },
-          {
-            "name": "x-actor-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Actor-Id"
-            }
-          },
-          {
-            "name": "x-role",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Role"
+              "title": "Wp Session"
             }
           }
         ],
@@ -3385,8 +2425,8 @@
         "operationId": "listShifts",
         "parameters": [
           {
-            "name": "x-tenant-id",
-            "in": "header",
+            "name": "wp_session",
+            "in": "cookie",
             "required": false,
             "schema": {
               "anyOf": [
@@ -3397,39 +2437,7 @@
                   "type": "null"
                 }
               ],
-              "title": "X-Tenant-Id"
-            }
-          },
-          {
-            "name": "x-actor-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Actor-Id"
-            }
-          },
-          {
-            "name": "x-role",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Role"
+              "title": "Wp Session"
             }
           }
         ],
@@ -3468,8 +2476,8 @@
         "operationId": "createShift",
         "parameters": [
           {
-            "name": "x-tenant-id",
-            "in": "header",
+            "name": "wp_session",
+            "in": "cookie",
             "required": false,
             "schema": {
               "anyOf": [
@@ -3480,39 +2488,7 @@
                   "type": "null"
                 }
               ],
-              "title": "X-Tenant-Id"
-            }
-          },
-          {
-            "name": "x-actor-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Actor-Id"
-            }
-          },
-          {
-            "name": "x-role",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Role"
+              "title": "Wp Session"
             }
           }
         ],
@@ -3569,8 +2545,8 @@
             }
           },
           {
-            "name": "x-tenant-id",
-            "in": "header",
+            "name": "wp_session",
+            "in": "cookie",
             "required": false,
             "schema": {
               "anyOf": [
@@ -3581,39 +2557,7 @@
                   "type": "null"
                 }
               ],
-              "title": "X-Tenant-Id"
-            }
-          },
-          {
-            "name": "x-actor-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Actor-Id"
-            }
-          },
-          {
-            "name": "x-role",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Role"
+              "title": "Wp Session"
             }
           }
         ],

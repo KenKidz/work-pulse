@@ -6,14 +6,14 @@ import pytest
 
 from app.domains.organizations.policies import ensure_can_manage, ensure_can_read
 from app.shared.errors import ForbiddenError
-from app.shared.identity import DevIdentity, Role
+from app.shared.identity import Identity, Role
 
 TENANT = UUID("00000000-0000-4000-8000-000000000001")
 ACTOR = UUID("00000000-0000-4000-8000-000000000002")
 
 
-def make_identity(role: Role) -> DevIdentity:
-    return DevIdentity(tenant_id=TENANT, actor_id=ACTOR, role=role)
+def make_identity(role: Role) -> Identity:
+    return Identity(tenant_id=TENANT, actor_id=ACTOR, role=role)
 
 
 @pytest.mark.parametrize("role", list(Role))

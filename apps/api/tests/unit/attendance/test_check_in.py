@@ -165,7 +165,7 @@ async def test_workday_uses_location_timezone_not_utc(
     # … and 00:10 on 09-25 in the location tz while UTC is still on 09-24.
     after_midnight = datetime(2026, 9, 24, 17, 10, tzinfo=UTC)
     second = await check_in(
-        service, dev_identity=identity(actor_id=REPORT), now=after_midnight
+        service, caller=identity(employee_id=REPORT), now=after_midnight
     )
     assert second.record.workday == date(2026, 9, 25)
 
@@ -254,6 +254,17 @@ async def test_actor_without_employee_record_is_not_found(
 ) -> None:
     with pytest.raises(EmployeeNotFoundError) as exc:
         await check_in(service)
+
+    assert exc.value.code == "employee_not_found"
+    assert exc.value.status_code == 404
+
+
+async def test_check_in_without_employee_link_is_not_found(
+    service: AttendanceService,
+) -> None:
+    """A user with no employee link fails closed (404, never a server error)."""
+    with pytest.raises(EmployeeNotFoundError) as exc:
+        await check_in(service, caller=identity(employee_id=None))
 
     assert exc.value.code == "employee_not_found"
     assert exc.value.status_code == 404

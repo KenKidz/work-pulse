@@ -3,8 +3,14 @@
 `tests/conftest.py` sets `DATABASE_URL` from `DATABASE_TEST_URL` before any
 `app.*` import; this module upgrades the schema once per session via Alembic
 and truncates all tables between tests. Fixtures: a shared `session`,
-fully-wired domain services, and `client_factory(headers)` for in-process
+fully-wired domain services, and `client_factory(identity)` for in-process
 HTTP calls.
+
+Identity is injected through the `get_identity` dependency override — the dev
+headers are deleted, not flagged (`.ai/features/identity-access.md`,
+decision 5). `client_factory()` is the tenant-A admin; pass an explicit
+`identity(...)` to switch tenant/role/employee link, or `client_factory(None)`
+to leave the real session resolver in place (no cookie → `401`).
 
 Loop scope is session-wide (pyproject `asyncio_default_*_loop_scope`) so the
 global engine/pool is created and used inside one event loop.
@@ -21,6 +27,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from alembic import command
+from app.dependencies import get_identity
 from app.domains.employees.service import EmployeeService
 from app.domains.organizations.service import (
     DepartmentService,
@@ -45,14 +52,15 @@ from app.infrastructure.postgres.repositories.organizations import (
 )
 from app.infrastructure.postgres.session import get_session
 from app.main import app
-from app.shared.identity import DevIdentity, Role
+from app.shared.identity import Identity, Role
 from tests.conftest import TEST_DATABASE_URL
 
 API_DIR = Path(__file__).resolve().parents[2]
 
 TENANT_A = UUID("00000000-0000-4000-8000-00000000000a")
 TENANT_B = UUID("00000000-0000-4000-8000-00000000000b")
-ACTOR = UUID("00000000-0000-4000-8000-000000000002")
+USER = UUID("00000000-0000-4000-8000-000000000031")  # the acting user id
+ACTOR = UUID("00000000-0000-4000-8000-000000000002")  # its default employee link
 
 ALL_TABLES = (
     "audit_entries, departments, positions, locations, employees, employments, "
@@ -62,14 +70,28 @@ ALL_TABLES = (
 ClientFactory = Callable[..., AsyncClient]
 
 
-def identity_headers(
-    tenant: UUID = TENANT_A, actor: UUID = ACTOR, role: str = "admin"
-) -> dict[str, str]:
-    return {"X-Tenant-Id": str(tenant), "X-Actor-Id": str(actor), "X-Role": role}
+def identity(
+    tenant: UUID = TENANT_A,
+    role: Role = Role.ADMIN,
+    *,
+    user_id: UUID = USER,
+    employee_id: UUID | None = ACTOR,
+) -> Identity:
+    """An explicit request identity: acting user id + optional employee link.
+
+    The user id and the employee id are deliberately different values. The
+    default acting user is linked to employee `ACTOR`; pass
+    `employee_id=None` for an account without an employee link.
+    """
+    return Identity(
+        tenant_id=tenant,
+        actor_id=user_id,
+        role=role,
+        employee_id=employee_id,
+    )
 
 
-def dev_identity(tenant: UUID = TENANT_A, role: Role = Role.ADMIN) -> DevIdentity:
-    return DevIdentity(tenant_id=tenant, actor_id=ACTOR, role=role)
+DEFAULT_IDENTITY = identity()
 
 
 def alembic_config(database_url: str) -> Config:
@@ -205,8 +227,10 @@ def employee_payload(
 async def client_factory(session: AsyncSession) -> AsyncIterator[ClientFactory]:
     """Build in-process HTTP clients sharing the test session.
 
-    Omit `headers` for the tenant-A admin dev identity; pass an explicit dict
-    (possibly empty) to control identity headers exactly.
+    Each client injects its identity through the `get_identity` dependency
+    override (the dev headers no longer exist). Omit the argument for the
+    tenant-A admin; pass `None` to leave the real session resolver in place
+    (a request without a valid `wp_session` cookie is then `401`).
     """
 
     async def _override_get_session() -> AsyncIterator[AsyncSession]:
@@ -214,12 +238,14 @@ async def client_factory(session: AsyncSession) -> AsyncIterator[ClientFactory]:
 
     app.dependency_overrides[get_session] = _override_get_session
 
-    def factory(headers: dict[str, str] | None = None) -> AsyncClient:
-        resolved = identity_headers() if headers is None else headers
+    def factory(identity: Identity | None = DEFAULT_IDENTITY) -> AsyncClient:
+        if identity is None:
+            app.dependency_overrides.pop(get_identity, None)
+        else:
+            app.dependency_overrides[get_identity] = lambda: identity
         return AsyncClient(
             transport=ASGITransport(app=app),
             base_url="http://testserver",
-            headers=resolved,
         )
 
     try:

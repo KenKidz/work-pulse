@@ -16,7 +16,7 @@ from tests.integration.conftest import (
     ClientFactory,
     create_org_refs,
     employee_payload,
-    identity_headers,
+    identity,
 )
 
 DEFAULT_SHIFT = {
@@ -132,7 +132,7 @@ async def test_check_out_of_someone_elses_record_is_404(
                 "/api/v1/attendance/check-ins", json={"work_mode": "onsite"}
             )
         ).json()
-    async with client_factory(identity_headers(actor=UUID(other["id"]))) as them:
+    async with client_factory(identity(employee_id=UUID(other["id"]))) as them:
         response = await them.post(
             f"/api/v1/attendance/records/{opened['id']}/check-out", json={}
         )
@@ -164,13 +164,13 @@ async def test_terminated_employee_cannot_check_in_or_out(
         )
         assert response.status_code == 200
 
-    async with client_factory(identity_headers(actor=UUID(terminated["id"]))) as gone:
+    async with client_factory(identity(employee_id=UUID(terminated["id"]))) as gone:
         never_checked_in = await gone.post(
             "/api/v1/attendance/check-ins", json={"work_mode": "onsite"}
         )
 
     async with client_factory(
-        identity_headers(actor=UUID(open_at_termination["id"]))
+        identity(employee_id=UUID(open_at_termination["id"]))
     ) as leaving:
         opened = (
             await leaving.post(
@@ -184,7 +184,7 @@ async def test_terminated_employee_cannot_check_in_or_out(
         )
         assert response.status_code == 200
     async with client_factory(
-        identity_headers(actor=UUID(open_at_termination["id"]))
+        identity(employee_id=UUID(open_at_termination["id"]))
     ) as leaving:
         check_out = await leaving.post(
             f"/api/v1/attendance/records/{opened['id']}/check-out", json={}

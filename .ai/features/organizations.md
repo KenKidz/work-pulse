@@ -117,17 +117,18 @@ Error codes: `department_not_found` · `department_name_taken` ·
 - **Timezone**: validated in the service via `zoneinfo.ZoneInfo` →
   `422 invalid_timezone` in the uniform error shape (never FastAPI's `detail`
   shape). Required on location create, optional on patch.
-- **Identity** (ADR 0004): `X-Tenant-Id`, `X-Actor-Id` (UUIDs), `X-Role`
-  (case-insensitive, one of `employee|manager|hr|finance|admin|super_admin`).
-  Missing/malformed → `400 invalid_identity`; unknown role → `403 forbidden`
-  (fail closed); policy denial → `403 forbidden`.
+- **Identity** (ADR 0004's Phase 2 swap, `.ai/features/identity-access.md` T5):
+  the `wp_session` cookie resolved by `get_identity` →
+  `{tenant_id, actor_id /* user id */, role, employee_id}`. A missing, unknown
+  or expired session, or a deactivated user → `401 unauthenticated` (fail
+  closed); policy denial → `403 forbidden`.
 - **Roles**: read = any valid role; manage (create/update/archive/restore) =
   `hr`, `admin`, `super_admin` — the `.ai/security.md` matrix governs where it
   is wider than this spec's 4-column table.
 - **Error code → status**: `department_not_found` / `position_not_found` /
   `location_not_found` 404 · `department_name_taken` / `position_title_taken` /
   `location_name_taken` / `department_archived_in_use` 409 · `department_cycle`
-  400 · `invalid_timezone` 422 · `forbidden` 403 · `invalid_identity` 400 ·
+  400 · `invalid_timezone` 422 · `forbidden` 403 · `unauthenticated` 401 ·
   `validation_error` 422 (uniform handler for FastAPI RequestValidationError).
   Body always `{"error": {"code", "message"}}`; messages never echo field values.
 - **operationIds** (drive orval hook names): `listDepartments`,
@@ -239,17 +240,18 @@ confirm both), note the Surfaces-table E2E row as deferred to Employees
 - **Timezone**: validated in the service via `zoneinfo.ZoneInfo` →
   `422 invalid_timezone` in the uniform error shape (never FastAPI's `detail`
   shape). Required on location create, optional on patch.
-- **Identity** (ADR 0004): `X-Tenant-Id`, `X-Actor-Id` (UUIDs), `X-Role`
-  (case-insensitive, one of `employee|manager|hr|finance|admin|super_admin`).
-  Missing/malformed → `400 invalid_identity`; unknown role → `403 forbidden`
-  (fail closed); policy denial → `403 forbidden`.
+- **Identity** (ADR 0004's Phase 2 swap, `.ai/features/identity-access.md` T5):
+  the `wp_session` cookie resolved by `get_identity` →
+  `{tenant_id, actor_id /* user id */, role, employee_id}`. A missing, unknown
+  or expired session, or a deactivated user → `401 unauthenticated` (fail
+  closed); policy denial → `403 forbidden`.
 - **Roles**: read = any valid role; manage (create/update/archive/restore) =
   `hr`, `admin`, `super_admin` — the `.ai/security.md` matrix governs where it
   is wider than this spec's 4-column table.
 - **Error code → status**: `department_not_found` / `position_not_found` /
   `location_not_found` 404 · `department_name_taken` / `position_title_taken` /
   `location_name_taken` / `department_archived_in_use` 409 · `department_cycle`
-  400 · `invalid_timezone` 422 · `forbidden` 403 · `invalid_identity` 400 ·
+  400 · `invalid_timezone` 422 · `forbidden` 403 · `unauthenticated` 401 ·
   `validation_error` 422 (uniform handler for FastAPI RequestValidationError).
   Body always `{"error": {"code", "message"}}`; messages never echo field values.
 - **operationIds** (drive orval hook names): `listDepartments`,
@@ -297,26 +299,28 @@ in this task; `test_health.py` still passes).
 ### T3 — Shared plumbing: identity · pagination · audit port · uniform errors
 
 - `apps/api/app/shared/identity.py`: `Role` str-enum (six pinned values),
-  `DevIdentity` (`tenant_id: UUID`, `actor_id: UUID`, `role: Role`),
-  `IdentityDep` parsing the three headers exactly per the pinned contract
-  (fail closed).
+  `Identity` (`tenant_id: UUID`, `actor_id` = user id, `role: Role`,
+  `employee_id: UUID | None`) — shipped in Phase 1 as the header-parsing
+  `DevIdentity`; the Phase 2 swap resolves it from the session
+  (`.ai/features/identity-access.md` T5).
 - `apps/api/app/shared/pagination.py`: `PageParams` dependency (clamping per
   contract), `Page` model `{page, page_size, total_items, total_pages}`.
 - `apps/api/app/shared/audit.py`: `AuditEntryCreate` (`tenant_id`, `actor_id`,
   `action`, `entity_type`, `entity_id`, `occurred_at`, `reason?`, `changes?`)
   and `AuditWriter` protocol (single async `write`); append-only — no
   update/delete path anywhere.
-- `apps/api/app/shared/errors.py`: add `ForbiddenError` (403 `forbidden`),
-  `InvalidIdentityError` (400 `invalid_identity`), and a
+- `apps/api/app/shared/errors.py`: add `ForbiddenError` (403 `forbidden`) and a
   `RequestValidationError` handler returning `422 validation_error` in the
-  uniform shape.
+  uniform shape. Phase 1 also added `InvalidIdentityError` (400
+  `invalid_identity`) — deleted with the Phase 2 swap, where `unauthenticated`
+  401 replaces it.
 
 **Tests** (unit, no I/O — `make check-api`): `tests/unit/test_identity.py`
-(valid headers; role case-insensitive; missing header → `invalid_identity`;
-unknown role → `forbidden`), `test_pagination.py` (clamps: `page=0`,
-`page_size=10_000`), `test_audit_entry.py` (entry carries exactly the pinned
-fields — no PII slots), `test_errors.py` (malformed JSON body → uniform
-`validation_error` shape).
+(session resolves to the identity; unlinked → `employee_id=None`; missing,
+unknown or expired session and deactivated user → `401 unauthenticated`),
+`test_pagination.py` (clamps: `page=0`, `page_size=10_000`),
+`test_audit_entry.py` (entry carries exactly the pinned fields — no PII slots),
+`test_errors.py` (malformed JSON body → uniform `validation_error` shape).
 
 ### T4 — Organizations domain core (pure, no I/O)
 
@@ -380,8 +384,9 @@ hr/admin/super_admin allowed, read allowed for all).
   `DATABASE_TEST_URL` **before** importing `app.*`; runs `alembic upgrade head`
   once per session; truncates all tables between tests; fixtures: session,
   fully-wired services (real repos + `NullDepartmentUsage` + audit writer),
-  `client_factory(headers)` → `httpx.AsyncClient(ASGITransport(app))` with
-  dev-identity headers.
+  `client_factory(identity)` → `httpx.AsyncClient(ASGITransport(app))` with the
+  `get_identity` dependency override (Phase 2; `None` leaves the real session
+  resolver, so no cookie → `401`).
 
 **Tests** (integration, gate `make check-api`): `test_migrations.py` — against
 a throwaway database created on the `postgres-test` server
@@ -413,8 +418,8 @@ descendant-parent; unknown id 404; parent not in tenant 404),
 position, location → 404 with the `*_not_found` code; B's lists contain none of
 A's rows; the same name in two tenants is allowed), `test_roles_api.py` (AC7:
 employee POST → `403 forbidden`; manager POST → 403; hr POST → 201; admin
-archive → 200; missing headers → `400 invalid_identity`; `X-Role: ceo` →
-403), `test_audit_integration.py` (AC8: create/patch/archive/restore each
+archive → 200; a dev-identity headers-only request with no session →
+`401 unauthenticated`; a forbidden role → 403), `test_audit_integration.py` (AC8: create/patch/archive/restore each
 wrote one row with correct `actor_id`/`action`/`entity_type`/`entity_id`;
 archive `reason` recorded; no-op writes no row; `changes` holds old/new name),
 `test_positions_api.py` (CRUD happy + `position_title_taken` 409),
@@ -437,16 +442,18 @@ further diff; `make check-web` still green (client growth is additive).
   `database/postgres/README.md` — usage note.
 
 **Verify**: `make db-up && make db-seed && make db-seed` (second run is a
-no-op); with `make dev-api`, `curl` `GET /api/v1/departments` with the three
-dev-identity headers returns the seeded items.
+no-op); with `make dev-api`, log in via `POST /api/v1/auth/login` as a seeded
+user and `curl` `GET /api/v1/departments` with the session cookie returns the
+seeded items.
 
-### T8 — Web: dev-identity transport + departments page
+### T8 — Web: session transport + departments page
 
-- `packages/api-client/src/mutator/custom-fetch.ts` — inject `X-Tenant-Id`,
-  `X-Actor-Id`, `X-Role` from `NEXT_PUBLIC_DEV_TENANT_ID` /
-  `NEXT_PUBLIC_DEV_ACTOR_ID` / `NEXT_PUBLIC_DEV_ROLE`, defaulting to the seed
-  tenant/actor and role `admin` (temporary trust boundary per ADR 0004 —
-  removed with Phase 2 authN). `.env.example` gains the three variables.
+- `packages/api-client/src/mutator/custom-fetch.ts` — Phase 1 injected
+  `X-Tenant-Id` / `X-Actor-Id` / `X-Role` as ADR 0004's temporary trust
+  boundary; the Phase 2 swap deleted those headers. The mutator now sends the
+  `wp_session` cookie (`credentials: "include"`,
+  `.ai/features/identity-access.md` T5), and the `NEXT_PUBLIC_DEV_*` variables
+  are gone from `.env.example`.
 - `apps/web/components/ui/select.tsx` — added via the shadcn CLI (uses the
   existing `radix-ui` dependency; no new package) for the parent picker.
 - `apps/web/features/organizations/` — `api.ts` (query-key prefixes +
@@ -466,8 +473,8 @@ dev-identity headers returns the seeded items.
   `apps/web/app/(dashboard)/layout.tsx` gains an "Organization" nav link.
 
 **Tests** (gate `make check-web`): extend
-`apps/web/tests/api/custom-fetch.test.ts` (dev-identity headers sent by
-default; env overrides win); `apps/web/tests/organizations/departments.test.tsx`
+`apps/web/tests/api/custom-fetch.test.ts` (session cookie sent via
+`credentials: "include"`; no dev-identity headers); `apps/web/tests/organizations/departments.test.tsx`
 with the api-client module mocked — renders fetched rows; create success
 invalidates the list; **create failing with `409 department_name_taken` shows a
 visible field error + toast (AC9 failure case)**; empty state; list-error

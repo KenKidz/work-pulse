@@ -9,13 +9,14 @@ from app.domains.employees.schemas import EmployeeStatus, EmploymentType
 from app.infrastructure.postgres.repositories.employees import (
     PostgresEmployeeRepository,
 )
+from app.shared.identity import Role
 from tests.integration.conftest import (
     ACTOR,
     TENANT_A,
     ClientFactory,
     create_org_refs,
     employee_payload,
-    identity_headers,
+    identity,
 )
 
 PINNED_EMPLOYEE_KEYS = {
@@ -261,13 +262,13 @@ async def test_me_resolves_the_actor_record(
         hired_at=date(2026, 1, 5),
     )
 
-    async with client_factory(identity_headers(role="employee")) as employee:
+    async with client_factory(identity(role=Role.EMPLOYEE)) as employee:
         mine = await employee.get("/api/v1/employees/me")
     assert mine.status_code == 200
     assert mine.json()["id"] == str(ACTOR)
 
     missing_actor = UUID("00000000-0000-4000-8000-000000000003")
-    async with client_factory(identity_headers(actor=missing_actor)) as other:
+    async with client_factory(identity(employee_id=missing_actor)) as other:
         missing = await other.get("/api/v1/employees/me")
     assert missing.status_code == 404
     assert missing.json()["error"]["code"] == "employee_not_found"

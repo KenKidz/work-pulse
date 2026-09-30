@@ -1,17 +1,46 @@
-"""AC7 — role enforcement at the HTTP edge, fail-closed identity handling."""
+"""AC3 + the roles matrix — role enforcement at the HTTP edge, fail-closed
+session handling.
+
+Role tests inject an explicit identity through the `get_identity` dependency
+override; the fail-closed tests leave the real session resolver in place (no
+override) so the cookie → session → user path runs for real.
+"""
+
+from datetime import UTC, datetime, timedelta
 
 import pytest
+from sqlalchemy.ext.asyncio import AsyncSession
+from uuid_utils.compat import uuid7
 
-from tests.integration.conftest import ClientFactory, identity_headers
+from app.domains.identity.credentials import (
+    hash_password,
+    new_session_token,
+    session_token_hash,
+)
+from app.infrastructure.postgres.repositories.identity import (
+    PostgresSessionRepository,
+    PostgresUserRepository,
+)
+from app.shared.identity import Role
+from tests.integration.conftest import (
+    TENANT_A,
+    USER,
+    ClientFactory,
+    identity,
+)
 
 READ_PATHS = ["/api/v1/departments", "/api/v1/positions", "/api/v1/locations"]
 
+UNAUTHENTICATED_BODY = {
+    "error": {"code": "unauthenticated", "message": "Authentication required"}
+}
 
-@pytest.mark.parametrize("role", ["employee", "manager", "finance"])
+
+@pytest.mark.parametrize("role", [Role.EMPLOYEE, Role.MANAGER, Role.FINANCE])
 async def test_non_manage_roles_cannot_create(
-    client_factory: ClientFactory, role: str
+    client_factory: ClientFactory, role: Role
 ) -> None:
-    async with client_factory(identity_headers(role=role)) as client:
+    async with client_factory(identity(role=role)) as client:
         department = await client.post(
             "/api/v1/departments", json={"name": "Engineering"}
         )
@@ -25,39 +54,37 @@ async def test_non_manage_roles_cannot_create(
         assert response.json()["error"]["code"] == "forbidden"
 
 
-@pytest.mark.parametrize("role", ["employee", "manager", "finance"])
+@pytest.mark.parametrize("role", [Role.EMPLOYEE, Role.MANAGER, Role.FINANCE])
 async def test_non_manage_roles_cannot_archive(
-    client_factory: ClientFactory, role: str
+    client_factory: ClientFactory, role: Role
 ) -> None:
-    async with client_factory(identity_headers(role="admin")) as admin:
+    async with client_factory(identity(role=Role.ADMIN)) as admin:
         created = (
             await admin.post("/api/v1/departments", json={"name": "Engineering"})
         ).json()
 
-    async with client_factory(identity_headers(role=role)) as client:
+    async with client_factory(identity(role=role)) as client:
         response = await client.post(f"/api/v1/departments/{created['id']}/archive")
 
     assert response.status_code == 403
     assert response.json()["error"]["code"] == "forbidden"
 
 
-@pytest.mark.parametrize(
-    "role", ["employee", "manager", "hr", "finance", "admin", "super_admin"]
-)
+@pytest.mark.parametrize("role", list(Role))
 async def test_every_valid_role_can_read(
-    client_factory: ClientFactory, role: str
+    client_factory: ClientFactory, role: Role
 ) -> None:
-    async with client_factory(identity_headers(role=role)) as client:
+    async with client_factory(identity(role=role)) as client:
         for path in READ_PATHS:
             response = await client.get(path)
             assert response.status_code == 200, f"{role} GET {path}"
 
 
-@pytest.mark.parametrize("role", ["hr", "admin", "super_admin"])
+@pytest.mark.parametrize("role", [Role.HR, Role.ADMIN, Role.SUPER_ADMIN])
 async def test_manage_roles_can_create(
-    client_factory: ClientFactory, role: str
+    client_factory: ClientFactory, role: Role
 ) -> None:
-    async with client_factory(identity_headers(role=role)) as client:
+    async with client_factory(identity(role=role)) as client:
         response = await client.post(
             "/api/v1/departments", json={"name": f"Dept {role}"}
         )
@@ -66,11 +93,11 @@ async def test_manage_roles_can_create(
 
 
 async def test_hr_create_and_admin_archive(client_factory: ClientFactory) -> None:
-    async with client_factory(identity_headers(role="hr")) as hr:
+    async with client_factory(identity(role=Role.HR)) as hr:
         created = await hr.post("/api/v1/departments", json={"name": "Engineering"})
     assert created.status_code == 201
 
-    async with client_factory(identity_headers(role="admin")) as admin:
+    async with client_factory(identity(role=Role.ADMIN)) as admin:
         archived = await admin.post(
             f"/api/v1/departments/{created.json()['id']}/archive",
             json={"reason": "reorg"},
@@ -78,64 +105,71 @@ async def test_hr_create_and_admin_archive(client_factory: ClientFactory) -> Non
     assert archived.status_code == 200
 
 
-async def test_missing_headers_return_400_invalid_identity(
+# --- fail-closed session handling (no override: the real resolver runs) -------
+
+PROTECTED_REQUESTS = [
+    ("GET", "/api/v1/departments", None),
+    ("GET", "/api/v1/positions", None),
+    ("GET", "/api/v1/locations", None),
+    ("GET", "/api/v1/employees", None),
+    ("GET", "/api/v1/employees/me", None),
+    ("GET", "/api/v1/attendance/records", None),
+    ("GET", "/api/v1/attendance/board", None),
+    ("GET", "/api/v1/shifts", None),
+    ("GET", "/api/v1/auth/me", None),
+    ("POST", "/api/v1/departments", {"name": "X"}),
+    ("POST", "/api/v1/attendance/check-ins", {"work_mode": "onsite"}),
+    (
+        "PUT",
+        "/api/v1/auth/password",
+        {"current_password": "x", "new_password": "long-enough-password"},
+    ),
+]
+
+
+async def test_unusable_sessions_are_401_on_every_protected_route(
+    client_factory: ClientFactory, session: AsyncSession
+) -> None:
+    """AC3: missing / unknown / expired session → `401 unauthenticated`."""
+    user = await PostgresUserRepository(session).add(
+        TENANT_A,
+        uuid7(),
+        email="ada@workpulse.test",
+        role=Role.HR,
+        employee_id=None,
+        password_hash=await hash_password("irrelevant-password"),
+        active=True,
+    )
+    expired_token = new_session_token()
+    await PostgresSessionRepository(session).add(
+        TENANT_A,
+        uuid7(),
+        user_id=user.id,
+        token_hash=session_token_hash(expired_token),
+        expires_at=datetime.now(UTC) - timedelta(seconds=1),
+    )
+
+    for token in (None, "not-a-real-token", expired_token):
+        async with client_factory(None) as client:
+            if token is not None:
+                client.cookies.set("wp_session", token)
+            for method, path, body in PROTECTED_REQUESTS:
+                response = await client.request(method, path, json=body)
+                assert response.status_code == 401, f"{token=} {method} {path}"
+                assert response.json() == UNAUTHENTICATED_BODY, f"{method} {path}"
+
+
+async def test_dev_identity_headers_alone_no_longer_authenticate(
     client_factory: ClientFactory,
 ) -> None:
-    async with client_factory(headers={}) as client:
-        responses = [
-            await client.get("/api/v1/departments"),
-            await client.post("/api/v1/departments", json={"name": "Engineering"}),
-        ]
+    """AC14: the retired dev-identity headers carry no authority."""
+    headers = {
+        "X-Tenant-Id": str(TENANT_A),
+        "X-Actor-Id": str(USER),
+        "X-Role": "admin",
+    }
 
-    for response in responses:
-        assert response.status_code == 400
-        assert response.json()["error"]["code"] == "invalid_identity"
-
-
-@pytest.mark.parametrize(
-    "headers",
-    [
-        {
-            "X-Actor-Id": "00000000-0000-4000-8000-000000000002",
-            "X-Role": "admin",
-        },  # no tenant
-        {
-            "X-Tenant-Id": "00000000-0000-4000-8000-00000000000a",
-            "X-Role": "admin",
-        },  # no actor
-        {
-            "X-Tenant-Id": "00000000-0000-4000-8000-00000000000a",
-            "X-Actor-Id": "00000000-0000-4000-8000-000000000002",
-        },  # no role
-        {**identity_headers(), "X-Tenant-Id": "not-a-uuid"},
-        {**identity_headers(), "X-Actor-Id": "not-a-uuid"},
-    ],
-    ids=["no-tenant", "no-actor", "no-role", "bad-tenant", "bad-actor"],
-)
-async def test_partial_or_malformed_identity_is_400(
-    client_factory: ClientFactory, headers: dict[str, str]
-) -> None:
-    async with client_factory(headers=headers) as client:
-        response = await client.get("/api/v1/departments")
-
-    assert response.status_code == 400
-    assert response.json()["error"]["code"] == "invalid_identity"
-
-
-async def test_unknown_role_fails_closed_with_403(
-    client_factory: ClientFactory,
-) -> None:
-    async with client_factory(identity_headers(role="ceo")) as client:
-        response = await client.get("/api/v1/departments")
-
-    assert response.status_code == 403
-    assert response.json()["error"]["code"] == "forbidden"
-
-
-async def test_role_header_is_case_insensitive(client_factory: ClientFactory) -> None:
-    async with client_factory(identity_headers(role="ADMIN")) as client:
-        response = await client.post(
-            "/api/v1/departments", json={"name": "Engineering"}
-        )
-
-    assert response.status_code == 201
+    async with client_factory(None) as client:
+        response = await client.get("/api/v1/departments", headers=headers)
+        assert response.status_code == 401
+        assert response.json() == UNAUTHENTICATED_BODY

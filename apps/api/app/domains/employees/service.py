@@ -66,7 +66,7 @@ from app.domains.organizations.service import (
     PositionService,
 )
 from app.shared.audit import AuditEntryCreate, AuditWriter
-from app.shared.identity import DevIdentity, Role
+from app.shared.identity import Identity, Role
 from app.shared.pagination import PageParams
 
 
@@ -94,31 +94,34 @@ class EmployeeService:
 
     # --- reads ---------------------------------------------------------------
 
-    async def get(self, identity: DevIdentity, employee_id: UUID) -> Employee:
+    async def get(self, identity: Identity, employee_id: UUID) -> Employee:
         """Tenant-scoped fetch (no role scoping) — used by mutations."""
         employee = await self._repo.get(identity.tenant_id, employee_id)
         if employee is None:
             raise EmployeeNotFoundError()
         return employee
 
-    async def _get_visible(self, identity: DevIdentity, employee_id: UUID) -> Employee:
+    async def _get_visible(self, identity: Identity, employee_id: UUID) -> Employee:
         """Fetch with the manager-scoping rule applied.
 
         A manager may only see their own direct reports; a non-report is a 404
-        (never 403 — existence is not leaked).
+        (never 403 — existence is not leaked). An unlinked manager sees nobody:
+        `manager_id=None` would otherwise match every manager-less employee.
         """
         employee = await self.get(identity, employee_id)
-        if identity.role == Role.MANAGER and employee.manager_id != identity.actor_id:
+        if identity.role == Role.MANAGER and (
+            identity.employee_id is None or employee.manager_id != identity.employee_id
+        ):
             raise EmployeeNotFoundError()
         return employee
 
-    async def me(self, identity: DevIdentity) -> Employee:
-        """`/me`: the employee whose id is the current actor (any role)."""
-        return await self.get(identity, identity.actor_id)
+    async def me(self, identity: Identity) -> Employee:
+        """`/me`: the employee linked to the current user (`employee_id`)."""
+        if identity.employee_id is None:
+            raise EmployeeNotFoundError()
+        return await self.get(identity, identity.employee_id)
 
-    async def get_detail(
-        self, identity: DevIdentity, employee_id: UUID
-    ) -> EmployeeDetail:
+    async def get_detail(self, identity: Identity, employee_id: UUID) -> EmployeeDetail:
         employee = await self._get_visible(identity, employee_id)
         employments = await self._employments.history(identity.tenant_id, employee_id)
         return EmployeeDetail(
@@ -128,21 +131,25 @@ class EmployeeService:
         )
 
     async def list_employments(
-        self, identity: DevIdentity, employee_id: UUID
+        self, identity: Identity, employee_id: UUID
     ) -> EmploymentList:
         await self._get_visible(identity, employee_id)
         return list(await self._employments.history(identity.tenant_id, employee_id))
 
     async def list(
         self,
-        identity: DevIdentity,
+        identity: Identity,
         filters: EmployeeFilters,
         page: PageParams,
     ) -> EmployeeListPage:
         effective = filters
         if identity.role == Role.MANAGER:
             # Server-side scoping: a manager always lists their own reports only.
-            effective = filters.model_copy(update={"manager_id": identity.actor_id})
+            if identity.employee_id is None:
+                # No employee link → no reports. (`manager_id=None` would mean
+                # "unscoped" in the repository and leak every employee.)
+                return EmployeeListPage(items=[], page=page.make_page(0))
+            effective = filters.model_copy(update={"manager_id": identity.employee_id})
         items, total = await self._repo.list(identity.tenant_id, effective, page)
         return EmployeeListPage(
             items=[EmployeeSummary.model_validate(item) for item in items],
@@ -152,7 +159,7 @@ class EmployeeService:
     # --- writes --------------------------------------------------------------
 
     async def create(
-        self, identity: DevIdentity, payload: CreateEmployee, now: datetime
+        self, identity: Identity, payload: CreateEmployee, now: datetime
     ) -> Employee:
         tenant_id = identity.tenant_id
         if await self._repo.email_taken(tenant_id, payload.email):
@@ -224,7 +231,7 @@ class EmployeeService:
 
     async def update(
         self,
-        identity: DevIdentity,
+        identity: Identity,
         employee_id: UUID,
         payload: UpdateEmployee,
         now: datetime,
@@ -261,7 +268,7 @@ class EmployeeService:
 
     async def transfer(
         self,
-        identity: DevIdentity,
+        identity: Identity,
         employee_id: UUID,
         payload: TransferRequest,
         now: datetime,
@@ -366,7 +373,7 @@ class EmployeeService:
 
     async def terminate(
         self,
-        identity: DevIdentity,
+        identity: Identity,
         employee_id: UUID,
         payload: TerminationRequest,
         now: datetime,
@@ -439,7 +446,7 @@ class EmployeeService:
 
     async def _ensure_targets(
         self,
-        identity: DevIdentity,
+        identity: Identity,
         department_id: UUID,
         position_id: UUID,
         location_id: UUID,
@@ -456,7 +463,7 @@ class EmployeeService:
             raise TransferTargetArchivedError()
 
     async def _ensure_manager(
-        self, identity: DevIdentity, employee_id: UUID, manager_id: UUID
+        self, identity: Identity, employee_id: UUID, manager_id: UUID
     ) -> None:
         if manager_id == employee_id:
             raise EmployeeSelfManagerError()

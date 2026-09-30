@@ -15,7 +15,7 @@ from tests.integration.conftest import (
     TENANT_B,
     ClientFactory,
     create_org_refs,
-    identity_headers,
+    identity,
 )
 
 
@@ -65,7 +65,7 @@ async def test_tenant_b_stays_isolated_from_tenant_a_attendance(
             )
         ).json()
 
-    async with client_factory(identity_headers(tenant=TENANT_B)) as tenant_b:
+    async with client_factory(identity(tenant=TENANT_B)) as tenant_b:
         board = await tenant_b.get(
             "/api/v1/attendance/board", params={"date": record["workday"]}
         )

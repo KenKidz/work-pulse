@@ -9,7 +9,7 @@ from uuid_utils.compat import uuid7
 from app.domains.identity.credentials import hash_password
 from app.domains.identity.schemas import User
 from app.domains.identity.service import AuthService, UserService
-from app.shared.identity import DevIdentity, Role
+from app.shared.identity import Identity, Role
 from tests.unit.identity.fakes import (
     PLACEHOLDER_HASH,
     FakeEmployeeLinkPort,
@@ -26,8 +26,8 @@ SESSION_TTL = timedelta(days=7)
 DEFAULT_PASSWORD = "correct horse battery"  # >= 10 chars (pinned minimum)
 
 
-def identity(tenant_id: UUID = TENANT_A, role: Role = Role.ADMIN) -> DevIdentity:
-    return DevIdentity(tenant_id=tenant_id, actor_id=ACTOR, role=role)
+def identity(tenant_id: UUID = TENANT_A, role: Role = Role.ADMIN) -> Identity:
+    return Identity(tenant_id=tenant_id, actor_id=ACTOR, role=role)
 
 
 @pytest.fixture(scope="session")

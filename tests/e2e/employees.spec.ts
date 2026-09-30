@@ -13,6 +13,8 @@
 
 import { expect, test, type Locator, type Page } from '@playwright/test';
 
+import { ADMIN_EMAIL, login } from './auth';
+
 const RUN = Date.now().toString(36);
 const FIRST_NAME = 'Avery';
 const LAST_NAME = `Stone-${RUN}`;
@@ -45,6 +47,11 @@ async function fillCreateForm(page: Page, dialog: Locator, lastName: string) {
 }
 
 test.describe.serial('employees', () => {
+  test.beforeEach(async ({ context }) => {
+    // Real login (Phase 2 authN): the seeded admin's cookie drives the page.
+    await login(context, ADMIN_EMAIL);
+  });
+
   test('create → list → detail → transfer leaves the history intact', async ({ page }) => {
     await page.goto('/employees');
     await expect(page.getByRole('heading', { name: 'Employees' })).toBeVisible();

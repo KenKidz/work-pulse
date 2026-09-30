@@ -45,7 +45,7 @@ the product answers.
 
 - **Documents** (presigned upload/download — Phase 4+, security review first).
 - **Skills** (belongs with Performance).
-- Authentication and real user accounts (Phase 2) — Phase 1 uses the dev identity.
+- Authentication and real user accounts (landed in Phase 2, `.ai/features/identity-access.md`) — this feature consumes the session-resolved identity.
 - Re-hire of a terminated employee (see `## Decisions`).
 - Bulk import / CSV, org-chart views, self-service profile editing beyond `me`.
 
@@ -175,14 +175,15 @@ Error codes: `employee_not_found` · `employee_email_taken` ·
   `last_name`, `first_name` ascending (stable pagination); `page`/`page_size`
   and the `Page` object reuse the shape pinned in organizations. `GET /{id}`
   of a terminated employee still returns `200`.
-- **Roles** (Decision #7, ADR 0004; identity headers as pinned in
-  organizations): `/employees/me` resolves the employee whose id ==
-  `X-Actor-Id` (any role) → `404 employee_not_found` when the actor has no
-  employee record. `manager` role: list is server-scoped to direct reports
-  (`manager_id == actor_id`), detail only for own reports (otherwise `404
-  employee_not_found`, never 403 — don't leak existence); create/update/
-  transfer/terminate are `hr`/`admin`/`super_admin` only (`403 forbidden`).
-  `employee` role: `/me` only. `.ai/security.md` governs where wider.
+- **Roles** (Decision #7, ADR 0004's Phase 2 swap; identity as pinned in
+  organizations): `/employees/me` resolves the employee linked to the acting
+  user (`identity.employee_id`, any role) → `404 employee_not_found` when the
+  user has no employee link. `manager` role: list is server-scoped to direct
+  reports (`manager_id == identity.employee_id`; an unlinked manager sees
+  nobody), detail only for own reports (otherwise `404 employee_not_found`,
+  never 403 — don't leak existence); create/update/transfer/terminate are
+  `hr`/`admin`/`super_admin` only (`403 forbidden`). `employee` role: `/me`
+  only. `.ai/security.md` governs where wider.
 - **Error code → status**: `employee_not_found` / `department_not_found` /
   `position_not_found` / `location_not_found` 404 · `employee_email_taken` /
   `employee_code_taken` / `employee_already_terminated` /
@@ -192,7 +193,7 @@ Error codes: `employee_not_found` · `employee_email_taken` ·
   future) · create-with-archived reference reuses `transfer_target_archived`;
   transfer-of-terminated reuses `employee_already_terminated`; backdating
   past `current.effective_from` is `employment_period_overlap` · `forbidden`
-  403 · `invalid_identity` 400 · `validation_error` 422 (uniform handler).
+  403 · `unauthenticated` 401 · `validation_error` 422 (uniform handler).
   Body always `{"error": {"code", "message"}}`; messages are static strings —
   they never echo field values.
 - **operationIds** (drive orval hook names): `listEmployees`,
@@ -263,8 +264,10 @@ No names, emails or salary in any payload.
    employment period to a terminated employee later without a migration.
 6. **`q` searches first name, last name, email and `employee_code`** — nothing
    free-text beyond those fields.
-7. Identity in Phase 1 is the **dev identity** (ADR 0004), so `/employees/me`
-   resolves from `X-Actor-Id`; role checks are real code, not placeholders.
+7. Identity is the **session-resolved identity** (Phase 2, ADR 0004's swap —
+   `.ai/features/identity-access.md` T5), so `/employees/me` resolves from
+   `identity.employee_id` (Phase 1's dev-identity header source was deleted);
+   role checks are real code, not placeholders.
 
 ## Plan
 
@@ -355,10 +358,11 @@ deltas (they are contract surface; review here, not during the build):
   `last_name`, `email`, `employee_code`. Default order `last_name`,
   `first_name` ascending (stable pagination). `GET /{id}` of a terminated
   employee still returns `200`.
-- **Roles** (Decision #7, ADR 0004): `/employees/me` resolves the employee
-  whose id == `X-Actor-Id` (any role) → `404 employee_not_found` when the actor
-  has no employee record. `manager` role: list is server-scoped to direct
-  reports (`manager_id == actor_id`), detail only for own reports (otherwise
+- **Roles** (Decision #7, ADR 0004's Phase 2 swap): `/employees/me` resolves
+  the employee linked to the acting user (`identity.employee_id`, any role) →
+  `404 employee_not_found` when the user has no employee link. `manager` role:
+  list is server-scoped to direct reports (`manager_id == identity.employee_id`;
+  an unlinked manager sees nobody), detail only for own reports (otherwise
   `404 employee_not_found`, never 403 — don't leak existence); create/update/
   transfer/terminate are HR/admin/super_admin only (`403 forbidden`).
   `employee` role: `/me` only. `.ai/security.md` governs where wider.
@@ -463,7 +467,8 @@ Verify: `make check-api` green (organizations tests untouched and green).
     Decision #2); insert employee + initial employment period `[hired_at, ∞)`
     in one transaction; audit `employee.created` (ids/type only).
   - `list`/`get`/`current` (`/me`): filters as pinned; manager-role scoping
-    applied in the service (repository gets `manager_id=actor_id` forced).
+    applied in the service (repository gets `manager_id=identity.employee_id`
+    forced; an unlinked manager sees nobody).
   - `update`: `exclude_unset` diffing (organizations pattern); email change →
     `email_taken` check; audit `employee.updated` with `changed_fields` names
     only (AC10/AC11 — never values).

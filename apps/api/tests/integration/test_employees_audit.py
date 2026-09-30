@@ -6,13 +6,14 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.infrastructure.postgres.models_audit import AuditEntry
+from app.shared.identity import Role
 from tests.integration.conftest import (
-    ACTOR,
     TENANT_A,
+    USER,
     ClientFactory,
     create_org_refs,
     employee_payload,
-    identity_headers,
+    identity,
 )
 
 PII_VALUES = ["Zorblax", "Qqweird", "pii-unique@example.test", "+84-555-0100"]
@@ -74,7 +75,7 @@ async def test_full_lifecycle_writes_one_row_per_mutation(
     ]
     for row in rows:
         assert row.tenant_id == TENANT_A
-        assert row.actor_id == ACTOR
+        assert row.actor_id == USER
         assert row.occurred_at is not None
 
     assert str(rows[0].entity_id) == manager["id"]
@@ -105,7 +106,7 @@ async def test_failed_mutations_write_no_rows(
         )
         assert duplicate.status_code == 409
 
-    async with client_factory(identity_headers(role="manager")) as denied:
+    async with client_factory(identity(role=Role.MANAGER)) as denied:
         rejected = await denied.post(
             "/api/v1/employees", json=employee_payload(refs, employee_code="EMP-00003")
         )

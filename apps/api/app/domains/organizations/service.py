@@ -57,7 +57,7 @@ from app.domains.organizations.schemas import (
     PositionUpdate,
 )
 from app.shared.audit import AuditEntryCreate, AuditWriter
-from app.shared.identity import DevIdentity
+from app.shared.identity import Identity
 from app.shared.pagination import PageParams
 
 
@@ -89,7 +89,7 @@ class DepartmentService:
         self._usage = usage
 
     async def create(
-        self, identity: DevIdentity, payload: DepartmentCreate, now: datetime
+        self, identity: Identity, payload: DepartmentCreate, now: datetime
     ) -> Department:
         tenant_id = identity.tenant_id
         if await self._repo.name_taken(tenant_id, payload.name):
@@ -125,7 +125,7 @@ class DepartmentService:
         )
         return created
 
-    async def get(self, identity: DevIdentity, department_id: UUID) -> Department:
+    async def get(self, identity: Identity, department_id: UUID) -> Department:
         department = await self._repo.get(identity.tenant_id, department_id)
         if department is None:
             raise DepartmentNotFoundError()
@@ -133,7 +133,7 @@ class DepartmentService:
 
     async def list(
         self,
-        identity: DevIdentity,
+        identity: Identity,
         filters: DepartmentFilters,
         page: PageParams,
     ) -> DepartmentListPage:
@@ -142,7 +142,7 @@ class DepartmentService:
 
     async def update(
         self,
-        identity: DevIdentity,
+        identity: Identity,
         department_id: UUID,
         payload: DepartmentUpdate,
         now: datetime,
@@ -196,7 +196,7 @@ class DepartmentService:
 
     async def archive(
         self,
-        identity: DevIdentity,
+        identity: Identity,
         department_id: UUID,
         payload: ArchiveRequest | None,
         now: datetime,
@@ -231,7 +231,7 @@ class DepartmentService:
         return updated
 
     async def restore(
-        self, identity: DevIdentity, department_id: UUID, now: datetime
+        self, identity: Identity, department_id: UUID, now: datetime
     ) -> Department:
         existing = await self.get(identity, department_id)
         if existing.archived_at is None:
@@ -262,7 +262,7 @@ class PositionService:
         self._audit = audit
 
     async def create(
-        self, identity: DevIdentity, payload: PositionCreate, now: datetime
+        self, identity: Identity, payload: PositionCreate, now: datetime
     ) -> Position:
         tenant_id = identity.tenant_id
         if await self._repo.title_taken(tenant_id, payload.title):
@@ -285,21 +285,21 @@ class PositionService:
         )
         return created
 
-    async def get(self, identity: DevIdentity, position_id: UUID) -> Position:
+    async def get(self, identity: Identity, position_id: UUID) -> Position:
         position = await self._repo.get(identity.tenant_id, position_id)
         if position is None:
             raise PositionNotFoundError()
         return position
 
     async def list(
-        self, identity: DevIdentity, filters: PositionFilters, page: PageParams
+        self, identity: Identity, filters: PositionFilters, page: PageParams
     ) -> PositionListPage:
         items, total = await self._repo.list(identity.tenant_id, filters, page)
         return PositionListPage(items=list(items), page=page.make_page(total))
 
     async def update(
         self,
-        identity: DevIdentity,
+        identity: Identity,
         position_id: UUID,
         payload: PositionUpdate,
         now: datetime,
@@ -341,7 +341,7 @@ class PositionService:
 
     async def archive(
         self,
-        identity: DevIdentity,
+        identity: Identity,
         position_id: UUID,
         payload: ArchiveRequest | None,
         now: datetime,
@@ -370,7 +370,7 @@ class PositionService:
         return updated
 
     async def restore(
-        self, identity: DevIdentity, position_id: UUID, now: datetime
+        self, identity: Identity, position_id: UUID, now: datetime
     ) -> Position:
         existing = await self.get(identity, position_id)
         if existing.archived_at is None:
@@ -401,7 +401,7 @@ class LocationService:
         self._audit = audit
 
     async def create(
-        self, identity: DevIdentity, payload: LocationCreate, now: datetime
+        self, identity: Identity, payload: LocationCreate, now: datetime
     ) -> Location:
         tenant_id = identity.tenant_id
         _validate_timezone(payload.timezone)
@@ -428,21 +428,21 @@ class LocationService:
         )
         return created
 
-    async def get(self, identity: DevIdentity, location_id: UUID) -> Location:
+    async def get(self, identity: Identity, location_id: UUID) -> Location:
         location = await self._repo.get(identity.tenant_id, location_id)
         if location is None:
             raise LocationNotFoundError()
         return location
 
     async def list(
-        self, identity: DevIdentity, filters: LocationFilters, page: PageParams
+        self, identity: Identity, filters: LocationFilters, page: PageParams
     ) -> LocationListPage:
         items, total = await self._repo.list(identity.tenant_id, filters, page)
         return LocationListPage(items=list(items), page=page.make_page(total))
 
     async def update(
         self,
-        identity: DevIdentity,
+        identity: Identity,
         location_id: UUID,
         payload: LocationUpdate,
         now: datetime,
@@ -486,7 +486,7 @@ class LocationService:
 
     async def archive(
         self,
-        identity: DevIdentity,
+        identity: Identity,
         location_id: UUID,
         payload: ArchiveRequest | None,
         now: datetime,
@@ -515,7 +515,7 @@ class LocationService:
         return updated
 
     async def restore(
-        self, identity: DevIdentity, location_id: UUID, now: datetime
+        self, identity: Identity, location_id: UUID, now: datetime
     ) -> Location:
         existing = await self.get(identity, location_id)
         if existing.archived_at is None:

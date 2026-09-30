@@ -3,10 +3,11 @@
 Providers for request-scoped resources live here. Routers receive them through
 their signatures; domains never construct infrastructure clients themselves.
 This module is the composition root: session → repositories → audit writer →
-usage port → domain services.
+usage port → domain services, plus the session-resolved identity dependency
+(`get_identity` / `IdentityDep`, ADR 0004's one validation point).
 
     from app.dependencies import DepartmentServiceDep, EmployeeServiceDep,
-        SessionDep, SettingsDep
+        IdentityDep, SessionDep, SettingsDep
 """
 
 from datetime import UTC, datetime, timedelta
@@ -47,6 +48,7 @@ from app.infrastructure.postgres.repositories.organizations import (
     PostgresPositionRepository,
 )
 from app.infrastructure.postgres.session import get_session
+from app.shared.identity import Identity
 
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
@@ -160,3 +162,22 @@ async def get_current_user(
 
 
 CurrentUserDep = Annotated[User, Depends(get_current_user)]
+
+
+async def get_identity(user: CurrentUserDep) -> Identity:
+    """Session cookie → the request identity (ADR 0004's one validation point).
+
+    `actor_id` is the authenticated **user** id; `employee_id` carries the
+    optional employee link (employee-scoped flows fail closed on `None`). A
+    missing/unknown/expired session or a deactivated account is always
+    `401 unauthenticated` — resolved by `AuthService.me` above.
+    """
+    return Identity(
+        tenant_id=user.tenant_id,
+        actor_id=user.id,
+        role=user.role,
+        employee_id=user.employee_id,
+    )
+
+
+IdentityDep = Annotated[Identity, Depends(get_identity)]

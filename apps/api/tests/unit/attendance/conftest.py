@@ -25,13 +25,14 @@ from app.domains.attendance.service import (
 from app.domains.employees.schemas import EmployeeStatus
 from app.domains.organizations.schemas import Location
 from app.domains.organizations.service import LocationService
-from app.shared.identity import DevIdentity, Role
+from app.shared.identity import Identity, Role
 from tests.unit.attendance.fakes import FakeAttendanceRepo, FakeShiftRepo
 from tests.unit.organizations.fakes import FakeLocationRepo, RecordingAuditWriter
 
 TENANT_A = UUID("00000000-0000-4000-8000-00000000000a")
 TENANT_B = UUID("00000000-0000-4000-8000-00000000000b")
-ACTOR = UUID("00000000-0000-4000-8000-000000000002")
+USER = UUID("00000000-0000-4000-8000-000000000031")  # the acting user id
+ACTOR = UUID("00000000-0000-4000-8000-000000000002")  # its employee link
 REPORT = UUID("00000000-0000-4000-8000-000000000003")
 OTHER = UUID("00000000-0000-4000-8000-000000000004")
 LOCATION = UUID("00000000-0000-4000-8000-00000000000c")
@@ -46,9 +47,21 @@ TODAY = date(2026, 9, 24)
 def identity(
     tenant_id: UUID = TENANT_A,
     role: Role = Role.HR,
-    actor_id: UUID = ACTOR,
-) -> DevIdentity:
-    return DevIdentity(tenant_id=tenant_id, actor_id=actor_id, role=role)
+    *,
+    employee_id: UUID | None = ACTOR,
+    actor_id: UUID = USER,
+) -> Identity:
+    """The acting user (`actor_id`) plus its optional employee link.
+
+    The user id and the employee id are deliberately different values: the
+    identity the services consume carries both (ADR 0004 swap).
+    """
+    return Identity(
+        tenant_id=tenant_id,
+        actor_id=actor_id,
+        role=role,
+        employee_id=employee_id,
+    )
 
 
 @pytest.fixture
@@ -192,13 +205,13 @@ async def seed_record(
 async def check_in(
     service: AttendanceService,
     *,
-    dev_identity: DevIdentity | None = None,
+    caller: Identity | None = None,
     work_mode: str = "onsite",
     note: str | None = None,
     now: datetime = NOW,
 ) -> AttendanceMutation:
     return await service.check_in(
-        dev_identity or identity(),
+        caller or identity(),
         CheckInRequest(work_mode=work_mode, check_in_note=note),
         now,
     )

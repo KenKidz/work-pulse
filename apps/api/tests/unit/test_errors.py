@@ -6,7 +6,7 @@ from pydantic import BaseModel
 
 from app.shared.errors import (
     ForbiddenError,
-    InvalidIdentityError,
+    UnauthenticatedError,
     register_error_handlers,
 )
 
@@ -27,9 +27,9 @@ def make_app() -> FastAPI:
     async def boom_forbidden() -> None:
         raise ForbiddenError("Not allowed")
 
-    @app.get("/boom-identity")
-    async def boom_identity() -> None:
-        raise InvalidIdentityError("Missing identity header X-Tenant-Id")
+    @app.get("/boom-unauthenticated")
+    async def boom_unauthenticated() -> None:
+        raise UnauthenticatedError()
 
     return app
 
@@ -64,11 +64,10 @@ def test_forbidden_error_shape() -> None:
     assert response.json() == {"error": {"code": "forbidden", "message": "Not allowed"}}
 
 
-def test_invalid_identity_error_shape() -> None:
-    response = client.get("/boom-identity")
+def test_unauthenticated_error_shape() -> None:
+    response = client.get("/boom-unauthenticated")
 
-    assert response.status_code == 400
-    assert response.json()["error"] == {
-        "code": "invalid_identity",
-        "message": "Missing identity header X-Tenant-Id",
+    assert response.status_code == 401
+    assert response.json() == {
+        "error": {"code": "unauthenticated", "message": "Authentication required"}
     }

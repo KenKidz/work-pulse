@@ -63,7 +63,7 @@ from app.domains.identity.schemas import (
     UserListPage,
 )
 from app.shared.audit import AuditEntryCreate, AuditWriter
-from app.shared.identity import DevIdentity
+from app.shared.identity import Identity
 from app.shared.pagination import PageParams
 
 
@@ -194,7 +194,7 @@ class UserService:
 
     # --- reads ---------------------------------------------------------------
 
-    async def get(self, identity: DevIdentity, user_id: UUID) -> User:
+    async def get(self, identity: Identity, user_id: UUID) -> User:
         """Tenant-scoped fetch — cross-tenant ids answer like missing ones."""
         user = await self._users.get(identity.tenant_id, user_id)
         if user is None:
@@ -203,7 +203,7 @@ class UserService:
 
     async def list(
         self,
-        identity: DevIdentity,
+        identity: Identity,
         filters: UserFilters,
         page: PageParams,
     ) -> UserListPage:
@@ -213,7 +213,7 @@ class UserService:
     # --- writes --------------------------------------------------------------
 
     async def create(
-        self, identity: DevIdentity, payload: CreateUser, now: datetime
+        self, identity: Identity, payload: CreateUser, now: datetime
     ) -> User:
         tenant_id = identity.tenant_id
         # Global uniqueness (decision 7) — an email held by another tenant is a
@@ -253,7 +253,7 @@ class UserService:
 
     async def update(
         self,
-        identity: DevIdentity,
+        identity: Identity,
         user_id: UUID,
         payload: UpdateUser,
         now: datetime,
@@ -292,9 +292,7 @@ class UserService:
         )
         return updated
 
-    async def activate(
-        self, identity: DevIdentity, user_id: UUID, now: datetime
-    ) -> User:
+    async def activate(self, identity: Identity, user_id: UUID, now: datetime) -> User:
         existing = await self.get(identity, user_id)
         if existing.active:
             return existing  # 200 no-op, no audit entry (archive/restore idiom)
@@ -316,7 +314,7 @@ class UserService:
         return updated
 
     async def deactivate(
-        self, identity: DevIdentity, user_id: UUID, now: datetime
+        self, identity: Identity, user_id: UUID, now: datetime
     ) -> User:
         existing = await self.get(identity, user_id)
         if not existing.active:
@@ -347,7 +345,7 @@ class UserService:
 
     async def reset_password(
         self,
-        identity: DevIdentity,
+        identity: Identity,
         user_id: UUID,
         payload: ResetPasswordRequest,
         now: datetime,

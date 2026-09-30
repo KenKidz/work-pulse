@@ -17,6 +17,8 @@
 
 import { expect, test, type Locator, type Page } from '@playwright/test';
 
+import { ADMIN_EMAIL, login } from './auth';
+
 const RUN = Date.now().toString(36);
 const DEPARTMENT = `Field Ops-${RUN}`;
 const POSITION_TITLE = `Ops Lead-${RUN}`;
@@ -44,6 +46,11 @@ function namedRow(page: Page, name: string): Locator {
 }
 
 test.describe.serial('organizations', () => {
+  test.beforeEach(async ({ context }) => {
+    // Real login (Phase 2 authN): the seeded admin's cookie drives the page.
+    await login(context, ADMIN_EMAIL);
+  });
+
   test('create a department and a position; both list as Active', async ({ page }) => {
     await page.goto('/settings/organization/departments');
     await expect(page.getByRole('heading', { name: 'Organization' })).toBeVisible();
