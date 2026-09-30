@@ -44,6 +44,8 @@ pnpm workspace member — `pnpm install` runs from the repo root (`make install`
 - All HTTP goes through `@workpulse/api-client` (alias import) — never ad-hoc
   `fetch`/axios in components. Regenerate, don't hand-edit, generated code.
 - Server data lives only in the Query cache; Zustand is UI-only state.
+- Debounce filter, search and sort inputs (~300ms) before refetching — never one
+  API call per keystroke. Details: `.ai/conventions.md` (TypeScript section).
 - Forms: react-hook-form + zod, schema colocated in the feature.
 - Times: UTC ISO 8601 from the API; render through `lib/datetime.ts`.
 - `"use client"` only on interactive leaves; Server Components by default.

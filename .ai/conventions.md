@@ -68,6 +68,11 @@
   `[feature, ...scope, params]`; mutations invalidate by key. No shadow copies
   in component state or stores.
 - Zustand stores are UI-only (filters, modals, selection), one per feature.
+- **Debounce filter, search and sort inputs:** any control that refetches a list
+  (search `q`, filter fields, sort order) is debounced (~300ms) before the query
+  key changes — never one API call per keystroke. Discrete one-shot controls
+  (select, toggle, date picker) apply immediately; a single change cannot storm
+  requests. Shared hook: `hooks/use-debounced-value.ts`.
 - Forms: react-hook-form + zod, schema colocated in the feature; the server
   stays the authority — map `ApiError.code` back to field errors.
 - Time: the API contract is UTC ISO 8601 strings; convert only at render via
