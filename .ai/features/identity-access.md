@@ -1,6 +1,6 @@
 # Feature: Identity & Access
 
-- **Status:** implementing
+- **Status:** done
 - **Phase:** 2
 - **Size:** M
 - **Surfaces:** api+web
@@ -250,40 +250,40 @@ consumer concern, out of scope here.)
 
 ## Acceptance criteria
 
-- [ ] API (authN): given a seeded user, when `POST /auth/login` with the correct
+- [x] API (authN): given a seeded user, when `POST /auth/login` with the correct
       email + password, then `200 User`, a `wp_session` cookie is set, and
       `GET /auth/me` returns that user.
-- [ ] API (failure): wrong password and unknown email both return `401
+- [x] API (failure): wrong password and unknown email both return `401
       invalid_credentials` with identical bodies.
-- [ ] API (failure): a request with a missing/unknown/expired session returns
+- [x] API (failure): a request with a missing/unknown/expired session returns
       `401 unauthenticated` on every protected route.
-- [ ] API (revocation): after `PUT /auth/password` succeeds, the pre-change
+- [x] API (revocation): after `PUT /auth/password` succeeds, the pre-change
       session is rejected with `401`, and logging in with the new password works.
-- [ ] API (denied role): an HR user calling `POST /api/v1/users` gets `403
+- [x] API (denied role): an HR user calling `POST /api/v1/users` gets `403
       forbidden`; only admin/super_admin may manage users.
-- [ ] API (tenant isolation): tenant B's admin calling `GET /users/{id}` for a
+- [x] API (tenant isolation): tenant B's admin calling `GET /users/{id}` for a
       tenant A user gets `404 user_not_found`, and `GET /users` never lists
       cross-tenant rows.
-- [ ] API (users): admin creates a user with an employee link → `201`; duplicate
+- [x] API (users): admin creates a user with an employee link → `201`; duplicate
       global email → `409 user_email_taken`; already-linked employee → `409
       employee_link_taken`; other tenant's employee → `404 employee_not_found`.
-- [ ] API (failure): a deactivated user cannot log in (`401`) and an existing
+- [x] API (failure): a deactivated user cannot log in (`401`) and an existing
       session is rejected; `activate` restores access.
-- [ ] API (audit): user create, update, activate, deactivate, password change
+- [x] API (audit): user create, update, activate, deactivate, password change
       and password reset each write one audit entry carrying the acting user id
       and no password values.
-- [ ] API (consumer adaptation): for a session whose user links to employee E,
+- [x] API (consumer adaptation): for a session whose user links to employee E,
       `GET /employees/me` returns E and check-in opens E's record — regression
       for the `actor_id` → `employee_id` swap.
-- [ ] Web: the login form authenticates and lands on the dashboard; wrong
+- [x] Web: the login form authenticates and lands on the dashboard; wrong
       credentials show the error state; unauthenticated visits to `(dashboard)`
       routes redirect to the login page.
-- [ ] Web: Settings → Users (admin) lists users and the create / edit /
+- [x] Web: Settings → Users (admin) lists users and the create / edit /
       deactivate / reset-password flows render success and `ApiError` error
       states; the page is unreachable and hidden for non-admin roles.
-- [ ] Web (failure): submitting the login form with bad credentials keeps the
+- [x] Web (failure): submitting the login form with bad credentials keeps the
       user on the page and surfaces the `invalid_credentials` message.
-- [ ] E2E: a seeded user logs in through the UI and completes a protected flow
+- [x] E2E: a seeded user logs in through the UI and completes a protected flow
       (e.g. attendance check-in); a request carrying only the old dev-identity
       headers (no session) is rejected.
 
@@ -646,7 +646,7 @@ source; reset-dialog failures render the pinned `userFieldErrors` mapping.
 
 Verify: `make check` green.
 
-### T8 — Record
+### T8 — Record · done 2026-09-30
 
 - `.ai/decisions/0010-authn-sessions-and-identity-swap.md` — ADR (see risks):
   DB-backed opaque sessions over JWT, global email uniqueness + tenant

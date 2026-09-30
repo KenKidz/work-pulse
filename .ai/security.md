@@ -40,11 +40,13 @@ Capability rows are the product's real authorization surface. `Y` = allowed,
   never in the web app (the UI hides, the API enforces).
 - **ABAC later** (Phase 4+): attributes such as "manager of this employee",
   "same location", "within approval threshold".
-- **Phase 1 (no authN yet — decided, ADR 0004):** every request carries a *dev identity*
-  (`X-Tenant-Id`, `X-Actor-Id`, `X-Role`) injected by the dev environment and
-  validated by a dependency. Policy code is written against that identity
-  exactly as it will be against a real session, so Phase 2 only swaps the
-  identity source. This keeps Phase 1 honest without building auth early.
+- **Identity is session-resolved** (since Phase 2, ADR 0010): every request
+  resolves `Identity {tenant_id, actor_id /* user id */, role, employee_id}`
+  from the `wp_session` cookie in one dependency (`app/dependencies.py`) — the
+  Phase 1 dev headers (ADR 0004) are deleted, not flagged. Policy code
+  consumes that identity unchanged; the swap changed the source and nothing
+  else. Audit `actor_id` and event-envelope `actor_id` carry the authenticated
+  user id from the swap on (pre-swap rows carry employee ids).
 - Fail closed: an unknown role, a missing tenant, or a policy that cannot decide
   → deny.
 - Cross-tenant reads return **404** (not 403) so existence is not leaked.

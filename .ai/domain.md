@@ -11,7 +11,7 @@
 | **Organization** | the structure the workforce hangs off | Department, Position, Location, Team | 1 |
 | **Employees** | the employee record and its employment history | Employee, Employment | 1 |
 | **Attendance** | presence in real time | AttendanceRecord, Shift | 1 |
-| **Identity & Access** | users, roles, permissions, sessions | User, Role, PermissionGrant | 2 |
+| **Identity & Access** | users, roles, permissions, sessions | User, Session, Role, PermissionGrant | 2 |
 | **Realtime Command Center** | live workforce board | PresenceState (hot state) | 2 |
 | **Leave** | requests, approvals, balances, calendar | LeaveRequest, LeaveBalance, LeavePolicy | 3 |
 | **Notifications** | message delivery across channels | Notification, Delivery | 3 |

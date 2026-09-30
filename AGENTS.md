@@ -18,19 +18,21 @@ Phase 1 slice: **Organizations → Employees → Attendance**.
 
 ## Stack
 
-Phase 1 (installed today):
+Installed so far:
 
 - Frontend: Next.js (App Router) + TypeScript strict, Tailwind CSS v4 + shadcn/ui,
   TanStack Query, orval-generated `@workpulse/api-client`, react-hook-form + zod,
   Zustand, dayjs — `apps/web/` (ADR 0005)
 - Backend: FastAPI + SQLAlchemy 2.0 (async) + Alembic, managed by uv —
   `apps/api/` (ADR 0006)
+- AuthN: argon2id passwords + DB-backed opaque sessions (`wp_session` cookie),
+  session-resolved identity (ADR 0010)
 - Datastore: PostgreSQL (docker compose) — `database/postgres/`
 
 Requires Python 3.12+, Node >= 20, pnpm, Docker, and uv.
 
-Later phases — **do not add these without a spec + ADR**: Redis + WebSocket +
-authN/RBAC (2), Kafka + outbox + workers (3), ClickHouse + payroll (4),
+Later phases — **do not add these without a spec + ADR**: Redis + WebSocket (2),
+Kafka + outbox + workers (3), ClickHouse + payroll (4),
 CDC (5), observability (6), load/reliability (7), Kubernetes + CI/CD (8).
 Roadmap: `.ai/architecture.md`.
 
