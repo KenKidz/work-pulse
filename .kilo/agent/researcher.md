@@ -13,8 +13,10 @@ write, edit, or plan anything.
 
 Given a question or a list of symbols/files:
 
-- Find the real files, symbols, and call paths that answer it (Glob/Grep/Read
-  first; semantic search when the exact name is unknown).
+- Find the real files, symbols, and call paths that answer it. This repo is
+  CodeGraph-indexed, so prefer it first (`codegraph explore "<symbols or
+  question>"` — see AGENTS.md); fall back to Glob/Grep/Read for what it misses
+  and semantic search when the exact name is unknown.
 - Read the surrounding code, not just the match — report what callers expect,
   which conventions the code follows, and what a change there would touch.
 - Answer with exact file paths + line ranges, short verbatim snippets, and a

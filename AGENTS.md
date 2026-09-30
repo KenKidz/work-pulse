@@ -68,6 +68,20 @@ tasks/                TODO.md (backlog) · doc.md (original brief)
 .kilo/                agent config (/spec, /plan, /check commands; researcher, verifier agents)
 ```
 
+## CodeGraph
+
+This repo is indexed by CodeGraph (`.codegraph/` at the repo root). For questions
+about where or how code works, reach for it BEFORE grep/find or reading files:
+
+- MCP tool (when available): `codegraph_explore` answers most code questions in
+  one call — verbatim line-numbered source, call paths, blast radius.
+- Shell (always works): `codegraph explore "<symbol names or question>"`.
+
+Treat returned source as already read — do not re-verify with grep. CodeGraph is
+navigation, not proof: `make check` and tests still decide correctness. If the
+index is missing, skip CodeGraph and use Glob/Grep/Read; never run `codegraph
+init` yourself.
+
 ## Architecture rules
 
 1. Business logic lives in `apps/api/app/domains/<domain>/`.
