@@ -13,7 +13,7 @@
 
 import { expect, test, type Locator, type Page } from '@playwright/test';
 
-import { ADMIN_EMAIL, login } from './auth';
+import { ADMIN_EMAIL, uiLogin } from './auth';
 
 const RUN = Date.now().toString(36);
 const FIRST_NAME = 'Avery';
@@ -47,9 +47,9 @@ async function fillCreateForm(page: Page, dialog: Locator, lastName: string) {
 }
 
 test.describe.serial('employees', () => {
-  test.beforeEach(async ({ context }) => {
-    // Real login (Phase 2 authN): the seeded admin's cookie drives the page.
-    await login(context, ADMIN_EMAIL);
+  test.beforeEach(async ({ page }) => {
+    // Real login through the UI (Phase 2 authN, decision 5's end state).
+    await uiLogin(page, ADMIN_EMAIL);
   });
 
   test('create → list → detail → transfer leaves the history intact', async ({ page }) => {

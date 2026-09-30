@@ -1,4 +1,13 @@
-import { Building2, CalendarClock, LayoutDashboard, Users, type LucideIcon } from "lucide-react";
+import {
+  Building2,
+  CalendarClock,
+  LayoutDashboard,
+  UserCog,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
+
+import type { Role } from "@workpulse/api-client/index.schemas";
 
 export type Destination = {
   href: string;
@@ -40,11 +49,34 @@ export const DESTINATIONS: Destination[] = [
   },
 ];
 
+export type NavItem = {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  /** Restricted to these roles when present; everyone sees the rest. */
+  roles?: Role[];
+};
+
 /**
- * Every primary navigation destination — Dashboard plus the Phase 1
- * surfaces — so the desktop nav and the mobile drawer cannot drift.
+ * The roles that manage user accounts — the single web-side source (mirrors
+ * the API's `ADMIN_ROLES`): the nav entry hides Users for everyone else and
+ * the users page guard redirects non-admins, so the two cannot drift.
  */
-export const NAV_ITEMS = [
+export const MANAGE_USER_ROLES: Role[] = ["admin", "super_admin"];
+
+/**
+ * Every primary navigation destination — Dashboard, the Phase 1 surfaces and
+ * the admin-only Users management — so the desktop nav and the mobile drawer
+ * cannot drift. Role-restricted entries are filtered by `useAuth()` in the
+ * navs; the API policy (`ensure_can_manage_users`) stays the authority.
+ */
+export const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   ...DESTINATIONS.map(({ href, label, icon }) => ({ href, label, icon })),
+  {
+    href: "/settings/users",
+    label: "Users",
+    icon: UserCog,
+    roles: MANAGE_USER_ROLES,
+  },
 ];

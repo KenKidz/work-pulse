@@ -591,10 +591,22 @@ the same task (this is the gate the atomicity argument rests on).
 
 Verify: `make check` green.
 
-### T7 — Web: login · logout · auth guard · Settings → Users · e2e UI login
+### T7 — Web: login · logout · auth guard · Settings → Users · e2e UI login · done 2026-09-30
 
 All HTTP via regenerated `@workpulse/api-client` hooks (cookies flow through
-the T5 mutator; no hand-written fetch):
+the T5 mutator; no hand-written fetch). One naming deviation: the cookie guard
+lands in **`apps/web/proxy.ts`**, not `middleware.ts` — Next.js 16 (installed,
+ADR 0005) renamed the middleware file and its export to `proxy`; it is the
+same cookie-presence guard this section pinned. A pre-commit review pass also
+hardened the slice: the `(dashboard)` 401 path signs the stale cookie out
+(idempotent logout) before routing to `/login` — without it the
+presence-only `/login → /dashboard` proxy branch loops a stale-cookie
+visitor forever (regression-tested in e2e); login success clears the whole
+query cache (no cross-session bleed); the edit dialog remounts per target
+(`key`) so RHF prefill matches the row instead of create defaults; the users
+search debounces 300 ms; the employee picker's list query mounts with the
+open dialog; the admin-role set and the six-role list each have one web-side
+source; reset-dialog failures render the pinned `userFieldErrors` mapping.
 
 - `apps/web/features/auth/` — `api.ts` (query keys + invalidation),
   `hooks/use-auth.ts` (`useCurrentUser` = generated `getCurrentUser`,

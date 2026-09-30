@@ -6,10 +6,10 @@
  *
  * Phase 2 authN (ADR 0004's swap): the browser acts as the seeded worker user
  * (`worker@workpulse.test`, linked to synthetic employee `...0021` by seed
- * 003), logged in for real through the API — the dev-identity header
+ * 003), logged in through the real UI — the dev-identity header
  * impersonation is deleted, not flagged. An employee-scoped check-in needs an
  * employee link, and only the seeded worker has one (the admin and HR seeds
- * are unlinked accounts; user provisioning arrives in T6).
+ * are unlinked accounts; user provisioning landed with T6).
  *
  * Runs against the seeded dev database (`make check-e2e` brings PostgreSQL
  * up, migrates and seeds first). Repeatable: the worker's record is closed at
@@ -26,7 +26,7 @@
 
 import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 
-import { API_URL, WORKER_EMAIL, WORKER_EMPLOYEE_ID, login } from './auth';
+import { API_URL, WORKER_EMAIL, WORKER_EMPLOYEE_ID, uiLogin } from './auth';
 
 /** Today in the employee's location timezone — the API's workday definition. */
 function workdayISO(): string {
@@ -78,7 +78,7 @@ test.describe.serial('attendance', () => {
     context,
     page,
   }) => {
-    await login(context, WORKER_EMAIL);
+    await uiLogin(page, WORKER_EMAIL);
     // An interrupted earlier run may have left the worker's day open on any
     // workday — recover through the API before the UI flow starts.
     await closeOpenRecords(context);

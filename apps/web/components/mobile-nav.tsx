@@ -14,6 +14,7 @@ import { useState } from "react";
 import { cn } from "cn";
 
 import { NAV_ITEMS } from "@/components/destinations";
+import { useAuth } from "@/features/auth/components/AuthGate";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -27,6 +28,7 @@ import {
 
 export function MobileNav() {
   const pathname = usePathname();
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
 
   return (
@@ -55,7 +57,9 @@ export function MobileNav() {
           </SheetClose>
         </SheetHeader>
         <nav aria-label="Main" className="flex flex-col gap-1 p-3">
-          {NAV_ITEMS.map((item) => {
+          {NAV_ITEMS.filter(
+            (item) => !item.roles || (user !== null && item.roles.includes(user.role)),
+          ).map((item) => {
             const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
             return (
               <Link
