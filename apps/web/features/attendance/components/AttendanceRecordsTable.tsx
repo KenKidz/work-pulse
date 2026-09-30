@@ -34,6 +34,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
+
 import { useAttendanceRecords } from "../hooks/use-attendance";
 import type { ListAttendanceRecordsParams } from "../types";
 import { formatClockTime, formatDate, formatDuration } from "./dates";
@@ -115,20 +117,36 @@ export function AttendanceRecordsTable() {
     page: 1,
     page_size: RECORDS_PAGE_SIZE,
   });
+  // The employee-id filter box state — fed to the query through
+  // useDebouncedValue so typing costs one list request on a 300 ms pause, not
+  // one per keystroke. Typing resets the page immediately; only the API call
+  // waits. Dates and the lateness select are one-shot: they commit directly.
+  const [employeeIdInput, setEmployeeIdInput] = useState("");
+  const debouncedEmployeeId = useDebouncedValue(employeeIdInput);
 
-  const recordsQuery = useAttendanceRecords(params);
+  const recordsQuery = useAttendanceRecords({
+    ...params,
+    employee_id: debouncedEmployeeId || undefined,
+  });
   const listResponse = recordsQuery.data;
   const records = listResponse && listResponse.status === 200 ? listResponse.data.items : [];
   const page = listResponse && listResponse.status === 200 ? listResponse.data.page : null;
 
   function change(next: Partial<ListAttendanceRecordsParams>) {
+    // The employee-id input goes through the debounce; dates and selects
+    // commit directly.
+    if ("employee_id" in next) {
+      setEmployeeIdInput(next.employee_id ?? "");
+      setParams((current) => (current.page === 1 ? current : { ...current, page: 1 }));
+      return;
+    }
     setParams((current) => ({ ...current, ...next }));
   }
 
   return (
     <Card className="gap-0 overflow-hidden rounded-md border-border py-0 shadow-none">
       <div className="border-b bg-muted/50 px-4 py-3 sm:px-5">
-        <FiltersRow params={params} onChange={change} />
+        <FiltersRow params={{ ...params, employee_id: employeeIdInput }} onChange={change} />
       </div>
 
       {recordsQuery.isPending ? (

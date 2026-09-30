@@ -101,6 +101,14 @@ const ALICE: EmployeeSummary = {
 
 const createEmployee = vi.fn<(variables: unknown) => Promise<unknown>>();
 
+/** All list calls carrying the table's page size (shared mocked hook). */
+function tableCalls() {
+  return vi
+    .mocked(useListEmployees)
+    .mock.calls.map(([params]) => params)
+    .filter((params) => params?.page_size === EMPLOYEES_PAGE_SIZE);
+}
+
 function renderTable() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -193,6 +201,24 @@ describe("EmployeesTable", () => {
         expect.objectContaining({ status: "active", page: 1 }),
       ),
     );
+  });
+
+  it("debounces the search input: one request per pause, none per keystroke", async () => {
+    const user = userEvent.setup();
+    renderTable();
+
+    await user.type(await screen.findByRole("textbox", { name: "Search employees" }), "ali");
+
+    await waitFor(() =>
+      expect(useListEmployees).toHaveBeenCalledWith(expect.objectContaining({ q: "ali" })),
+    );
+
+    // The committed query only ever saw the final value — no per-keystroke
+    // requests for "a" or "al" on the way there.
+    const committed = tableCalls()
+      .map((params) => params?.q)
+      .filter((q) => q !== undefined);
+    expect(committed).toEqual(["ali"]);
   });
 
   it("clearing a filter drops the parameter instead of sending null (422 regression)", async () => {

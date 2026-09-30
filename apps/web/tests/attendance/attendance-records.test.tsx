@@ -143,6 +143,26 @@ describe("AttendanceRecordsTable", () => {
     );
   });
 
+  it("debounces the employee id input: one request per pause, none per keystroke", async () => {
+    const user = userEvent.setup();
+    renderWithClient(<AttendanceRecordsTable />);
+
+    await user.type(await screen.findByRole("textbox", { name: "Filter by employee id" }), "a001");
+
+    await waitFor(() =>
+      expect(useListAttendanceRecords).toHaveBeenCalledWith(
+        expect.objectContaining({ employee_id: "a001" }),
+      ),
+    );
+
+    // The committed query only ever saw the final value — no per-keystroke
+    // requests on the way there.
+    const committed = tableCalls()
+      .map((params) => params?.employee_id)
+      .filter((value) => value !== undefined);
+    expect(committed).toEqual(["a001"]);
+  });
+
   it("clearing a filter drops the parameter instead of sending null (422 regression)", async () => {
     const user = userEvent.setup();
     renderWithClient(<AttendanceRecordsTable />);
@@ -168,9 +188,14 @@ describe("AttendanceRecordsTable", () => {
 
 /** Most recent call carrying the table's page size (shared mocked hook). */
 function lastTableCall(): Record<string, unknown> | undefined {
-  const calls = vi.mocked(useListAttendanceRecords).mock.calls.map(([params]) => params) as (
-    Record<string, unknown> | undefined
-  )[];
-  const tableCalls = calls.filter((params) => params && params.page_size === RECORDS_PAGE_SIZE);
-  return tableCalls[tableCalls.length - 1];
+  return tableCalls()[tableCalls().length - 1];
+}
+
+/** All table query calls (page_size distinguishes them from other mocked uses). */
+function tableCalls(): (Record<string, unknown> | undefined)[] {
+  return (
+    vi
+      .mocked(useListAttendanceRecords)
+      .mock.calls.map(([params]) => params) as (Record<string, unknown> | undefined)[]
+  ).filter((params) => params && params.page_size === RECORDS_PAGE_SIZE);
 }

@@ -35,6 +35,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
+
 import { useAuth } from "@/features/auth/components/AuthGate";
 import { MANAGE_USER_ROLES } from "@/components/destinations";
 
@@ -130,9 +132,11 @@ export function UsersTable() {
   const router = useRouter();
   const { user } = useAuth();
   const [params, setParams] = useState<ListUsersParams>({ page: 1, page_size: USERS_PAGE_SIZE });
-  // The search box state — committed to `params.q` on a 300 ms pause so a
-  // typed email costs one list request, not one per keystroke.
+  // The search box state — fed to the query through useDebouncedValue so a
+  // typed email costs one list request on a 300 ms pause, not one per
+  // keystroke. Typing resets the page immediately; only the API call waits.
   const [searchInput, setSearchInput] = useState("");
+  const debouncedSearch = useDebouncedValue(searchInput);
   const [state, setState] = useState<UsersTableState>({
     editing: null,
     formOpen: false,
@@ -145,13 +149,6 @@ export function UsersTable() {
   const allowed = user !== null && MANAGE_USER_ROLES.includes(user.role);
 
   useEffect(() => {
-    const handle = window.setTimeout(() => {
-      setParams((current) => ({ ...current, q: searchInput || undefined, page: 1 }));
-    }, 300);
-    return () => window.clearTimeout(handle);
-  }, [searchInput]);
-
-  useEffect(() => {
     // Direct visits by non-admins never render the surface (AC12's
     // "unreachable"); the users API would 403 anyway.
     if (user !== null && !allowed) {
@@ -159,7 +156,7 @@ export function UsersTable() {
     }
   }, [user, allowed, router]);
 
-  const usersQuery = useUsers(params);
+  const usersQuery = useUsers({ ...params, q: debouncedSearch || undefined });
   const listResponse = usersQuery.data;
   const users = listResponse && listResponse.status === 200 ? listResponse.data.items : [];
   const page = listResponse && listResponse.status === 200 ? listResponse.data.page : null;
@@ -168,6 +165,7 @@ export function UsersTable() {
     // The q input goes through the debounce; selects commit directly.
     if ("q" in next) {
       setSearchInput(next.q ?? "");
+      setParams((current) => (current.page === 1 ? current : { ...current, page: 1 }));
       return;
     }
     setParams((current) => ({ ...current, ...next }));

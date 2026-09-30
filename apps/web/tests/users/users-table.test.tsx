@@ -107,6 +107,14 @@ const mockUseEmployees = vi.mocked(useEmployees);
 const activateUser = vi.fn<(variables: unknown) => Promise<unknown>>();
 const deactivateUser = vi.fn<(variables: unknown) => Promise<unknown>>();
 
+/** All list calls carrying the table's page size (shared mocked hook). */
+function tableCalls() {
+  return vi
+    .mocked(useListUsers)
+    .mock.calls.map(([params]) => params)
+    .filter((params) => params?.page_size === USERS_PAGE_SIZE);
+}
+
 function renderTable() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -213,6 +221,24 @@ describe("UsersTable", () => {
         expect.objectContaining({ active: false, page: 1 }),
       ),
     );
+  });
+
+  it("debounces the search input: one request per pause, none per keystroke", async () => {
+    const user = userEvent.setup();
+    renderTable();
+
+    await user.type(await screen.findByRole("textbox", { name: "Search users" }), "adm");
+
+    await waitFor(() =>
+      expect(useListUsers).toHaveBeenCalledWith(expect.objectContaining({ q: "adm" })),
+    );
+
+    // The committed query only ever saw the final value — no per-keystroke
+    // requests for "a" or "ad" on the way there.
+    const committed = tableCalls()
+      .map((params) => params?.q)
+      .filter((q) => q !== undefined);
+    expect(committed).toEqual(["adm"]);
   });
 
   it("clearing a filter drops the parameter instead of sending null (422 regression)", async () => {

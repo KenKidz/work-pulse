@@ -33,6 +33,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
+
 import { useDepartments } from "@/features/organizations/hooks/use-departments";
 import { usePositions } from "@/features/organizations/hooks/use-positions";
 import { useLocations } from "@/features/organizations/hooks/use-locations";
@@ -216,20 +218,31 @@ export function EmployeesTable() {
     page_size: EMPLOYEES_PAGE_SIZE,
   });
   const [dialogOpen, setDialogOpen] = useState(false);
+  // The search box state — fed to the query through useDebouncedValue so a
+  // typed query costs one list request on a 300 ms pause, not one per
+  // keystroke. Typing resets the page immediately; only the API call waits.
+  const [searchInput, setSearchInput] = useState("");
+  const debouncedSearch = useDebouncedValue(searchInput);
 
-  const employeesQuery = useEmployees(params);
+  const employeesQuery = useEmployees({ ...params, q: debouncedSearch || undefined });
   const listResponse = employeesQuery.data;
   const employees = listResponse && listResponse.status === 200 ? listResponse.data.items : [];
   const page = listResponse && listResponse.status === 200 ? listResponse.data.page : null;
 
   function change(next: Partial<ListEmployeesParams>) {
+    // The q input goes through the debounce; selects commit directly.
+    if ("q" in next) {
+      setSearchInput(next.q ?? "");
+      setParams((current) => (current.page === 1 ? current : { ...current, page: 1 }));
+      return;
+    }
     setParams((current) => ({ ...current, ...next }));
   }
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <FiltersRow params={params} onChange={change} />
+        <FiltersRow params={{ ...params, q: searchInput }} onChange={change} />
         <Button className="ml-auto" onClick={() => setDialogOpen(true)}>
           <UserPlus />
           New employee
