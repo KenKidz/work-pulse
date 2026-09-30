@@ -133,6 +133,33 @@ export interface CreateEmployee {
   employee_code?: string | null;
 }
 
+/**
+ * The six pinned Phase 1 roles (`.ai/security.md`).
+ */
+export type Role = typeof Role[keyof typeof Role];
+
+
+export const Role = {
+  employee: 'employee',
+  manager: 'manager',
+  hr: 'hr',
+  finance: 'finance',
+  admin: 'admin',
+  super_admin: 'super_admin',
+} as const;
+
+export interface CreateUser {
+  /**
+     * @minLength 3
+     * @maxLength 320
+     */
+  email: string;
+  /** @minLength 10 */
+  password: string;
+  role: Role;
+  employee_id?: string | null;
+}
+
 export interface Department {
   id: string;
   tenant_id: string;
@@ -334,20 +361,10 @@ export interface PositionUpdate {
   description?: string | null;
 }
 
-/**
- * The six pinned Phase 1 roles (`.ai/security.md`).
- */
-export type Role = typeof Role[keyof typeof Role];
-
-
-export const Role = {
-  employee: 'employee',
-  manager: 'manager',
-  hr: 'hr',
-  finance: 'finance',
-  admin: 'admin',
-  super_admin: 'super_admin',
-} as const;
+export interface ResetPasswordRequest {
+  /** @minLength 10 */
+  new_password: string;
+}
 
 export interface Shift {
   id: string;
@@ -407,6 +424,12 @@ export interface UpdateEmployee {
   phone?: string | null;
 }
 
+export interface UpdateUser {
+  email?: string | null;
+  role?: Role | null;
+  employee_id?: string | null;
+}
+
 export interface User {
   id: string;
   tenant_id: string;
@@ -418,7 +441,20 @@ export interface User {
   updated_at: string;
 }
 
+export interface UserListPage {
+  items: User[];
+  page: Page;
+}
+
 export type HealthzHealthzGet200 = {[key: string]: string};
+
+export type ListUsersParams = {
+q?: string | null;
+role?: Role | null;
+active?: boolean | null;
+page?: number;
+page_size?: number;
+};
 
 export type ListDepartmentsParams = {
 q?: string | null;

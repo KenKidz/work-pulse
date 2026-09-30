@@ -27,20 +27,10 @@ from app.infrastructure.postgres.repositories.identity import (
 )
 from app.main import app
 from app.shared.identity import Role
-from tests.integration.conftest import TENANT_A, ClientFactory
+from tests.integration.conftest import PINNED_USER_KEYS, TENANT_A, ClientFactory
 
 PASSWORD = "correct-horse-battery"
 NEW_PASSWORD = "stapled-battery-wrong"
-PINNED_USER_KEYS = {
-    "id",
-    "tenant_id",
-    "email",
-    "role",
-    "employee_id",
-    "active",
-    "created_at",
-    "updated_at",
-}
 INVALID_CREDENTIALS_BODY = {
     "error": {"code": "invalid_credentials", "message": "Invalid email or password"}
 }

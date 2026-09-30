@@ -560,7 +560,7 @@ ADR 0004's exit criterion, as one change — headers cannot half-die:
 Verify: `make check` green — `check-api`, `check-web` and `check-e2e` all in
 the same task (this is the gate the atomicity argument rests on).
 
-### T6 — Users router + HTTP tests + regeneration
+### T6 — Users router + HTTP tests + regeneration · done 2026-09-30
 
 - `apps/api/app/api/v1/users.py` — the 7 routes as pinned (`listUsers`,
   `createUser`, `getUser`, `updateUser`, `activateUser`, `deactivateUser`,

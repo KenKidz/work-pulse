@@ -62,6 +62,19 @@ TENANT_B = UUID("00000000-0000-4000-8000-00000000000b")
 USER = UUID("00000000-0000-4000-8000-000000000031")  # the acting user id
 ACTOR = UUID("00000000-0000-4000-8000-000000000002")  # its default employee link
 
+# The pinned wire `User` key set (`.ai/features/identity-access.md` → API
+# contract) — shared so the auth and users suites assert one vocabulary.
+PINNED_USER_KEYS = {
+    "id",
+    "tenant_id",
+    "email",
+    "role",
+    "employee_id",
+    "active",
+    "created_at",
+    "updated_at",
+}
+
 ALL_TABLES = (
     "audit_entries, departments, positions, locations, employees, employments, "
     "shifts, attendance_records, users, sessions"

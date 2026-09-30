@@ -117,6 +117,21 @@ PROTECTED_REQUESTS = [
     ("GET", "/api/v1/attendance/board", None),
     ("GET", "/api/v1/shifts", None),
     ("GET", "/api/v1/auth/me", None),
+    ("GET", "/api/v1/users", None),
+    (
+        "POST",
+        "/api/v1/users",
+        {"email": "x@y.test", "password": "long-enough-password", "role": "employee"},
+    ),
+    ("GET", f"/api/v1/users/{USER}", None),
+    ("PATCH", f"/api/v1/users/{USER}", {"email": "x@y.test"}),
+    ("POST", f"/api/v1/users/{USER}/activate", None),
+    ("POST", f"/api/v1/users/{USER}/deactivate", None),
+    (
+        "POST",
+        f"/api/v1/users/{USER}/password",
+        {"new_password": "long-enough-password"},
+    ),
     ("POST", "/api/v1/departments", {"name": "X"}),
     ("POST", "/api/v1/attendance/check-ins", {"work_mode": "onsite"}),
     (
