@@ -90,6 +90,9 @@
 - Visual design: for new UI surfaces or redesigns, also load the
   `frontend-design` skill — deliberate aesthetic direction, typography and
   detail work, not templated defaults.
+- UI review/audit: load the `web-design-guidelines` skill and run
+  `ui-ux-pro-max` accessibility searches (`--domain ux`, `--stack`) as the
+  checklist.
 
 ### Presentation rules
 

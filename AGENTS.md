@@ -113,7 +113,9 @@ init` yourself.
     visual quality — no generic AI-slop UI. New UI or visual redesigns also load
     the `frontend-design` skill for intentional, non-templated art direction.
     shadcn/ui work (components in `components/ui/`, adding/fixing primitives)
-    also loads the `shadcn` skill.
+    also loads the `shadcn` skill. UI review/audit work loads the
+    `web-design-guidelines` skill and uses `ui-ux-pro-max` accessibility
+    searches (`--domain ux`, `--stack`) as its checklist.
 
 ## Vibe-coding workflow
 
