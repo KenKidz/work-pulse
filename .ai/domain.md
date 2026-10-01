@@ -57,7 +57,7 @@ Rules:
 | Location | physical site, owns a timezone |
 | Shift | planned work window (start, end, grace minutes) used to judge lateness |
 | Attendance record | one check-in → check-out pair for an employee on a workday |
-| Presence state | derived, live status: `PRESENT`, `REMOTE`, `LATE`, `ON_LEAVE`, `ABSENT`, `CHECKED_OUT` |
+| Presence state | derived, live status: `PRESENT`, `REMOTE`, `CHECKED_OUT`, `ABSENT`, `ON_LEAVE` with an orthogonal `late` flag (ADR 0009) |
 | Leave request | a time-off ask moving through an approval state machine |
 | Leave balance | entitlement per leave type per year |
 | Overtime | hours beyond the shift, requiring approval before payroll counts them |

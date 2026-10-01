@@ -1,6 +1,6 @@
 # Feature: Realtime Command Center
 
-- **Status:** approved
+- **Status:** implementing
 - **Phase:** 2
 - **Size:** M
 - **Surfaces:** api+web
@@ -25,9 +25,13 @@ the source of truth.
 
 ## Business rules
 
-- **PostgreSQL is the source of truth; Redis PresenceState is derived hot
-  state.** It must be rebuildable at any time from attendance records +
-  employees + shifts; a Redis flush degrades latency, never invents facts.
+- **PostgreSQL is the source of truth; PresenceState is a live derived
+  projection.** It is materialized as a per-connection projection (rows map +
+  recounted counts) rebuilt from a PostgreSQL snapshot at connect time and
+  kept fresh by channel frames — **no Redis rows cache exists** (explicitly
+  deferred; a read-through cache with TTL is the known upgrade, one port
+  swap). A Redis outage degrades latency — deltas stop, the client's ~60s
+  snapshot refresh keeps the board current — and never invents facts.
   Domains never import Redis directly — a port wraps it
   (`.ai/architecture.md` rule 3).
 - **Fan-out crosses API processes through Redis pub/sub**, one channel per
@@ -95,8 +99,10 @@ the source of truth.
   counts, a who-is-working-now table (names joined client-side) and a live
   activity rail — with loading, empty, "live updates unavailable" and denied
   states.
-- Infra: a `redis` service in `docker-compose.yml`, `REDIS_URL` in
-  `.env.example`, a Redis client wrapper in `app/infrastructure/redis/`.
+- Infra: `redis` + `redis-test` services in `docker-compose.yml`, a Redis
+  client wrapper in `app/infrastructure/redis/`, and `Settings.redis_url` in
+  `apps/api/app/config.py` (default `redis://localhost:6379/0` — the repo has
+  no `.env.example`; the settings default carries it).
 - Contract: versioned WS frame schemas in `contracts/realtime/`.
 - Tests: unit (projection, injected clock), integration (REST snapshot, hub
   fan-out against Redis), contract (frames vs schema, PII absence), e2e (live
@@ -134,7 +140,7 @@ the source of truth.
 | Web routes | `apps/web/app/(dashboard)/command-center/` |
 | API tests | `apps/api/tests/unit` · `tests/integration` · `tests/contract` |
 | E2E | `tests/e2e/command-center.spec.ts` |
-| Infra config | `docker-compose.yml` (redis service) · `.env.example` (`REDIS_URL`) |
+| Infra config | `docker-compose.yml` (redis + redis-test services) · `apps/api/app/config.py` (`Settings.redis_url`; no `.env.example` exists — the default lives here) |
 
 Touch points in existing code (same change; their specs updated with the why):
 `attendance/service.py` calls the realtime presence-delta port after check-in /
@@ -195,15 +201,28 @@ PresenceRow {
   resource path `/api/v1/realtime/board` as an upgrade — one resource, two
   transports, one payload shape. Frames are validated against
   `contracts/realtime/board.v1.json`, not OpenAPI.
-- **Handshake auth**: `wp_session` cookie resolved via `app/dependencies.py`
-  (ADR 0010). Missing/invalid session → upgrade rejected with **401**;
-  valid session, insufficient role → **403**. In both cases zero application
-  frames are sent. The REST snapshot uses the same resolution and the uniform
-  error shape (`unauthenticated`, `forbidden`).
+- **Handshake auth** (mechanics verified in T1, 2026-10-01): `wp_session`
+  cookie resolved via `app/dependencies.py` (ADR 0010). Denial is
+  **close-before-accept** — `websocket.close` before `websocket.accept`, zero
+  application frames — and uvicorn's WS implementations answer that with one
+  upgrade status, **403**, for both cases (a missing/invalid session and a
+  valid session with an insufficient role look identical on the upgrade).
+  401-vs-403 is deliberately not carried on the upgrade: the ASGI
+  `websocket.http.response` extension could express distinct statuses but is
+  not used, and browser JS could not observe them anyway (the WebSocket API
+  surfaces only error/close). The distinction lives on the REST snapshot,
+  which uses the same resolution and the uniform error shape: missing/invalid
+  session → `401 unauthenticated`; valid session, insufficient role → `403
+  forbidden`.
 - **Delta contract**: `presence.upsert` is a **full-row idempotent upsert** with
   fresh `counts` — redelivery is harmless and clients never patch partial
   state. At most one delta per attendance transition (a late check-in carries
   `late: true` and `minutes_late` in the row; there is no separate late frame).
+- **`minutes_late` recompute**: the `late` flag is stored and immutable;
+  `minutes_late` is recomputed from the record's `shift_id` + the shift's
+  `start_time`/`grace_minutes` (the shared `_shift_boundary`) at read/publish
+  time. Editing a shift after a late check-in therefore changes the displayed
+  minutes — accepted (risk 3); the `late` flag itself never drifts.
 - **Snapshot recomputation** always follows ADR 0009's board rules (workday in
   the location timezone, shift resolution location → tenant default → none,
   exclusive lateness boundary) — the projection and `GET /attendance/board`
@@ -215,8 +234,11 @@ PresenceRow {
 - **`date` rollover**: a delta whose `date` ≠ the client's snapshot date does
   not patch rows — the client refetches `GET /realtime/board`. Server-side,
   midnight rollover is handled by snapshot recomputation (UTC date).
-- **Heartbeat**: the server holds connections with protocol-level ping;
-  dead connections are reaped. No application-level `ping`/`pong` frames.
+- **Heartbeat**: uvicorn's built-in WebSocket ping/pong
+  (`uvicorn[standard]`); dead connections are reaped. No application-level
+  `ping`/`pong` frames and no lifespan task — each connection subscribes to
+  `realtime:tenant:{tenant_id}` itself on upgrade (a refcounted in-process hub
+  is the known upgrade path for N viewers; the protocol does not change).
 - **Error codes** (REST, uniform shape): `unauthenticated` 401 · `forbidden`
   403 · `validation_error` 422 (uniform handler, unused — the snapshot takes no
   parameters). WS rejections are HTTP status on the upgrade response, not the
@@ -277,8 +299,9 @@ in-process port as the projection's input; the frame protocol is unchanged.
 - [ ] API (failure): given an `employee` or `finance` session, when they request
   the snapshot or attempt the upgrade, then `403` (uniform `forbidden`) /
   rejected upgrade, and no board frame is ever delivered.
-- [ ] API (failure): given a missing or invalid `wp_session` cookie, then `401`
-  (`unauthenticated`) and the upgrade is rejected before any frame.
+- [ ] API (failure): given a missing or invalid `wp_session` cookie, then the
+  REST snapshot is `401` (`unauthenticated`) and the upgrade is rejected
+  before any frame (single denial status on the upgrade — Pinned details).
 - [ ] API (tenant isolation): given sockets in two tenants, when tenant A
   checks in, then tenant B receives no frame, and each snapshot contains only
   its own tenant's rows (404/empty rules).
@@ -368,15 +391,18 @@ in-process port as the projection's input; the frame protocol is unchanged.
   self + direct reports; unlinked manager → nobody; others → tenant).
   Out-of-scope facts are dropped server-side after a lazy visible-set refresh.
 - **WS denial**: close-before-accept (zero application frames); both denial
-  cases surface as the ASGI denial status (T1 verifies whether 401 vs 403 is
-  expressible on the upgrade; the distinction is carried by the REST codes).
+  cases surface as the single ASGI denial status **403** — verified in T1:
+  uvicorn hardcodes 403 on the pre-accept close path in both WS
+  implementations. 401 vs 403 is expressible via the ASGI
+  `websocket.http.response` extension (Starlette 1.7's `WebSocket.send`
+  supports it) but is not used; the distinction is carried by the REST codes.
 - **Heartbeat** = uvicorn's built-in WS ping/pong (`uvicorn[standard]`); no
   application-level ping frames. No lifespan task needed: each connection
   subscribes to the tenant channel itself (upgrade path: refcounted hub).
 - **No Postgres migration, no new domain events, no audit entries** (read-only
   surface). Redis enters exactly where ADR 0006 phase-gated it.
 
-### T1 — Pin the WS protocol contracts + remaining technical details (docs only)
+### T1 — Pin the WS protocol contracts + remaining technical details (docs only) · done 2026-10-01
 
 **Changes**
 
@@ -384,15 +410,20 @@ in-process port as the projection's input; the frame protocol is unchanged.
   as `contracts/events/attendance/*.v1.json`, `additionalProperties: false`):
   `presence-row`, `board-snapshot`, and a `frame` union discriminated on
   `type: "snapshot" | "presence.upsert"` — exactly the shapes pinned in API
-  contract above. Contract before producer/consumer.
+  contract above. Contract before producer/consumer. The frame union is the
+  root (WS messages validate against the file); REST bodies validate against
+  `#/$defs/board-snapshot`.
 - `contracts/README.md` — one paragraph: `contracts/realtime/` holds versioned
   WebSocket **projection** protocols (not the event catalog; same
   additive-only / new-version-on-break rule; no PII).
 - Spec updates in this same change (pin-remaining-details precedent =
   identity-access T1):
-  - Handshake denial mechanics: verify installed Starlette's close-before-accept
-    behavior; pin the real upgrade status (expected: a single denial status for
-    both cases, with 401-vs-403 observable via REST `GET /realtime/board`).
+  - Handshake denial mechanics: verified the installed Starlette 1.7.0 +
+    uvicorn close-before-accept path — it answers a single **403** for both
+    denial cases (both WS implementations hardcode it), 401-vs-403 is only
+    expressible via the unused ASGI `websocket.http.response` extension and
+    would be invisible to browser JS; the distinction is observable via REST
+    `GET /realtime/board` and pinned there.
   - PresenceState materialization wording (business rule 1): live projection +
     channel frames; Redis rows cache explicitly deferred.
   - `minutes_late` recompute rule (from `record.shift_id` at read time).
@@ -406,8 +437,10 @@ in-process port as the projection's input; the frame protocol is unchanged.
 
 **Verify:** `make check` green (docs + inert JSON only; research confirmed
 nothing globs `contracts/` outside `contracts/events/` and `openapi.json`).
+The schema itself is checked as valid Draft 2020-12 and smoked against
+accept/reject frame samples (extra keys, PII keys, bad discriminator, caps).
 
-### T2 — Redis infrastructure (deps · compose · settings · ports · adapters)
+### T2 — Redis infrastructure (deps · compose · settings · ports · adapters) · done 2026-10-01
 
 **Changes**
 
@@ -639,11 +672,15 @@ No Postgres migration, no `contracts/events/` changes, no audit assertions
 
 ### Risks · unknowns · ADR candidates
 
-1. **WS denial status (unknown → T1):** Starlette's close-before-accept may
-   hardcode one denial status (403) for both unauthenticated and forbidden —
-   the spec's 401/403-on-the-upgrade wording is then narrowed to "denied on
-   the upgrade; the 401/403 distinction lives on the REST route". Verified and
-   pinned in T1 before any code.
+1. **WS denial status (resolved in T1, 2026-10-01):** verified against the
+   installed Starlette 1.7.0 + uvicorn (both WS implementations,
+   `websockets` and `websockets-sansio`): the close-before-accept path answers
+   a single **403** for both unauthenticated and forbidden — the upgrade
+   wording is narrowed to "denied on the upgrade; the 401/403 distinction
+   lives on the REST route". Distinct statuses are expressible through the
+   ASGI `websocket.http.response` extension (advertised in the scope;
+   `websocket.http.response.start` before accept) but are deliberately not
+   used: browser JS cannot observe the upgrade status either way.
 2. **PresenceState materialization (ADR candidate → ADR 0011):** this plan
    chooses the live per-connection projection over a Redis rows cache (fewer
    staleness paths; snapshot = one PG computation, which ADR 0009 already

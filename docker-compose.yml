@@ -1,4 +1,4 @@
-# Local development infrastructure (Phase 1: PostgreSQL only).
+# Local development infrastructure (PostgreSQL + Phase-2 Redis).
 # The apps run natively via `make dev-api` / `make dev-web` — see the Makefile.
 
 services:
@@ -34,6 +34,30 @@ services:
       - /var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U workpulse -d workpulse_test"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      # Loopback only: the apps run natively on the host, and an
+      # unauthenticated Redis must never be reachable from the network.
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis-test:
+    image: redis:7-alpine
+    ports:
+      - "127.0.0.1:6380:6379"
+    tmpfs:
+      - /data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 10

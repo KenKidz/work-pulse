@@ -27,6 +27,11 @@ class Settings(BaseSettings):
         "postgresql+asyncpg://workpulse:workpulse@localhost:5433/workpulse_test"
     )
 
+    # --- Phase 2: realtime fan-out (`make redis-up`) ---
+    # Pub/sub bus for the Realtime Command Center. Integration tests point
+    # `REDIS_URL` at the throwaway `redis-test` service on :6380.
+    redis_url: str = "redis://localhost:6379/0"
+
     # --- Identity: sessions (pinned in `.ai/features/identity-access.md`) ---
     # Absolute session lifetime; the `wp_session` cookie itself is a session
     # cookie (no Max-Age) — the server-side TTL is the authority.

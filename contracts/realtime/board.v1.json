@@ -1,0 +1,197 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workpulse.dev/contracts/realtime/board.v1.json",
+  "title": "WorkPulse realtime board v1",
+  "description": "WebSocket projection protocol for the Realtime Command Center board: the server→client `snapshot` and `presence.upsert` frames (no client→server frames in v1). This is a projection of already-recorded attendance facts, not a domain fact — it is not part of the event catalog and carries no envelope (`.ai/features/realtime-command-center.md`). Identifiers and state only — no names, emails, notes or any PII (`.ai/security.md`). Validate a WS message against the root — a union discriminated on `type`; validate a REST `GET /api/v1/realtime/board` body against `#/$defs/board-snapshot`, which is exactly the `snapshot` frame's body.",
+  "type": "object",
+  "oneOf": [
+    { "$ref": "#/$defs/snapshot-frame" },
+    { "$ref": "#/$defs/presence-upsert-frame" }
+  ],
+  "$defs": {
+    "counts": {
+      "title": "RealtimeBoardCounts",
+      "description": "Overlapping counts, not a partition (ADR 0009): `late` co-occurs with `present`/`remote`/`checked_out`. Full counts ride every frame — clients never derive them. Clock-driven transitions (absent onset at shift start + grace) push nothing and land on the next ~60s snapshot refresh.",
+      "type": "object",
+      "required": ["present", "remote", "late", "on_leave", "absent", "checked_out"],
+      "additionalProperties": false,
+      "properties": {
+        "present": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Employees with an open record for the workday, working onsite."
+        },
+        "remote": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Employees with an open record for the workday, working remote."
+        },
+        "late": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Rows with the orthogonal `late` flag set — a cut across the other statuses, never a status of its own (ADR 0009)."
+        },
+        "on_leave": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Always 0 until the Leave context lands; the key stays so this contract never changes."
+        },
+        "absent": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "In-scope active employees with an expected shift (location's, else tenant default), no record at all for the workday, and now > shift start + grace (ADR 0009; rest-day over-count accepted and documented in UI copy)."
+        },
+        "checked_out": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Employees whose attendance record for the workday is closed."
+        }
+      }
+    },
+    "presence-row": {
+      "title": "PresenceRow",
+      "description": "One employee's presence for the current workday: one status plus an orthogonal `late` flag (ADR 0009). Every push is a full-row idempotent upsert — redelivery is harmless and clients never patch partial state.",
+      "type": "object",
+      "required": ["employee_id", "status", "late", "minutes_late", "since", "attendance_id"],
+      "additionalProperties": false,
+      "properties": {
+        "employee_id": {
+          "type": "string",
+          "description": "Employee the row belongs to (UUIDv7 string). Display names are joined client-side from employee data the web already holds."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["present", "remote", "checked_out", "absent", "on_leave"],
+          "description": "Presence status. `late` is never a status — it is the orthogonal flag below (ADR 0009)."
+        },
+        "late": {
+          "type": "boolean",
+          "description": "Set once at check-in against the exclusive shift.start + grace boundary; never cleared."
+        },
+        "minutes_late": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "description": "Whole minutes past shift start + grace while `late` is true — recomputed from the record's shift at read/publish time; `null` when not late."
+        },
+        "since": {
+          "type": ["string", "null"],
+          "format": "date-time",
+          "description": "`checked_in_at` for present/remote, `checked_out_at` for checked_out, `null` for absent/on_leave (UTC ISO 8601)."
+        },
+        "attendance_id": {
+          "type": ["string", "null"],
+          "description": "The workday's attendance record (UUIDv7 string); `null` for absent rows."
+        }
+      }
+    },
+    "activity-entry": {
+      "title": "RealtimeActivityEntry",
+      "description": "One recent attendance transition for the activity rail. Identifiers only — the web joins display names.",
+      "type": "object",
+      "required": ["occurred_at", "employee_id", "action"],
+      "additionalProperties": false,
+      "properties": {
+        "occurred_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the transition happened (UTC ISO 8601)."
+        },
+        "employee_id": {
+          "type": "string",
+          "description": "Employee the transition belongs to (UUIDv7 string)."
+        },
+        "action": {
+          "type": "string",
+          "enum": ["checked_in", "checked_out"],
+          "description": "The attendance transition. Lateness rides the check-in row — there is no separate late entry."
+        }
+      }
+    },
+    "board-snapshot": {
+      "title": "RealtimeBoardSnapshot",
+      "description": "The one board payload: REST `200` of `GET /api/v1/realtime/board` and the body of the `snapshot` frame (which adds `type`) — one resource, two transports. Current workday only; no date parameter exists anywhere. Rows are unordered (the client sorts); `presence` is uncapped, `activity` is newest-first capped 20.",
+      "type": "object",
+      "required": ["date", "counts", "presence", "activity"],
+      "additionalProperties": false,
+      "properties": {
+        "date": {
+          "type": "string",
+          "format": "date",
+          "description": "Current workday (YYYY-MM-DD, the server UTC date). A delta whose `date` differs from the client's snapshot date makes the client refetch this snapshot instead of patching."
+        },
+        "counts": { "$ref": "#/$defs/counts" },
+        "presence": {
+          "type": "array",
+          "description": "Every in-scope employee with a record for the workday, plus every in-scope employee currently counted absent. Uncapped, unordered.",
+          "items": { "$ref": "#/$defs/presence-row" }
+        },
+        "activity": {
+          "type": "array",
+          "description": "Recent attendance transitions, newest first, capped 20.",
+          "maxItems": 20,
+          "items": { "$ref": "#/$defs/activity-entry" }
+        }
+      }
+    },
+    "snapshot-frame": {
+      "title": "RealtimeSnapshotFrame",
+      "description": "First frame after the handshake, and again after every reconnect resync: the whole board as of connect time. Body fields are exactly `#/$defs/board-snapshot` (spelled out here because `additionalProperties: false` cannot compose across `$ref`).",
+      "type": "object",
+      "required": ["type", "date", "counts", "presence", "activity"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "snapshot",
+          "description": "Frame discriminator."
+        },
+        "date": {
+          "type": "string",
+          "format": "date",
+          "description": "Current workday (YYYY-MM-DD, the server UTC date)."
+        },
+        "counts": { "$ref": "#/$defs/counts" },
+        "presence": {
+          "type": "array",
+          "description": "Every in-scope employee with a record for the workday, plus every in-scope employee currently counted absent. Uncapped, unordered.",
+          "items": { "$ref": "#/$defs/presence-row" }
+        },
+        "activity": {
+          "type": "array",
+          "description": "Recent attendance transitions, newest first, capped 20.",
+          "maxItems": 20,
+          "items": { "$ref": "#/$defs/activity-entry" }
+        }
+      }
+    },
+    "presence-upsert-frame": {
+      "title": "RealtimePresenceUpsertFrame",
+      "description": "One attendance transition (check-in / check-out) projected to every in-scope viewer: the changed row as a full-row idempotent upsert, plus fresh full counts over the connection's known rows — never client-side derivation. Transient, at-most-once delivery: missed deltas are recovered by resyncing a snapshot on reconnect (durable replay is Phase 3's outbox + Kafka, feeding this same protocol).",
+      "type": "object",
+      "required": ["type", "date", "counts", "row", "occurred_at", "reason"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "presence.upsert",
+          "description": "Frame discriminator."
+        },
+        "date": {
+          "type": "string",
+          "format": "date",
+          "description": "Workday the delta belongs to (YYYY-MM-DD). If it differs from the client's snapshot date, the client refetches instead of patching."
+        },
+        "counts": { "$ref": "#/$defs/counts" },
+        "row": { "$ref": "#/$defs/presence-row" },
+        "occurred_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the transition happened (UTC ISO 8601) — drives the activity rail."
+        },
+        "reason": {
+          "type": "string",
+          "enum": ["checked_in", "checked_out"],
+          "description": "Which attendance transition caused the upsert. At most one delta per transition; lateness is carried on the row, never as its own frame."
+        }
+      }
+    }
+  }
+}

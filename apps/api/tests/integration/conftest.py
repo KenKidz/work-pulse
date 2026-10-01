@@ -51,6 +51,7 @@ from app.infrastructure.postgres.repositories.organizations import (
     PostgresPositionRepository,
 )
 from app.infrastructure.postgres.session import get_session
+from app.infrastructure.redis.client import dispose_redis
 from app.main import app
 from app.shared.identity import Identity, Role
 from tests.conftest import TEST_DATABASE_URL
@@ -125,6 +126,13 @@ def _migrate_schema() -> Iterator[None]:
 async def _engine_lifecycle() -> AsyncIterator[None]:
     yield
     await dispose_engine()
+
+
+@pytest.fixture(scope="session", autouse=True)
+async def _redis_lifecycle() -> AsyncIterator[None]:
+    """Close the lazily-created Redis client when the session ends."""
+    yield
+    await dispose_redis()
 
 
 @pytest.fixture(autouse=True)

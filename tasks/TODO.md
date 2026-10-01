@@ -6,7 +6,7 @@ does the work.
 
 ## Now
 
-- [ ] Realtime Command Center (Phase 2, Redis + WebSocket board) — spec + plan approved: `.ai/features/realtime-command-center.md` (T1–T7 ready to implement)
+- [ ] Realtime Command Center (Phase 2, Redis + WebSocket board) — implementing: `.ai/features/realtime-command-center.md` (T1 done — WS board contract + remaining tech pins; T2 done — Redis infra: `redis` dep, compose services, `Settings.redis_url`, `shared/presence.py` ports, pub/sub adapters + bus tests; T3–T7 remain)
 
 ## Later
 
