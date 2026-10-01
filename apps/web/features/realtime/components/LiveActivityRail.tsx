@@ -4,6 +4,11 @@
  * Live activity rail — check-ins and check-outs pushed by `presence.upsert`
  * frames (plus the snapshot's recent history), newest first, capped at 20.
  * Names are joined client-side. Client leaf.
+ *
+ * Guide-rail geometry: rows grid as `3rem` time column + `gap-x-3` + a `0.75rem`
+ * dot column, so the dot column's center sits at 4.125rem (3rem + 0.75rem +
+ * half of 0.75rem) — the rail's `before` element anchors there, not on the
+ * column's left edge, and the card-halo dots sit on top of the 1px line.
  */
 
 import { Activity } from "lucide-react";
@@ -39,7 +44,7 @@ export function LiveActivityRail({
         ) : (
           <ol
             aria-label="Live activity"
-            className="relative flex flex-col gap-1 before:absolute before:inset-y-4 before:left-[3.75rem] before:w-px before:bg-border before:content-['']"
+            className="relative flex flex-col gap-1 before:absolute before:inset-y-4 before:left-[4.125rem] before:w-px before:bg-border before:content-['']"
           >
             {activity.map((entry) => {
               const checkedIn = entry.action === "checked_in";

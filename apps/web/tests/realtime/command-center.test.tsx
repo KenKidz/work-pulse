@@ -212,7 +212,8 @@ describe("CommandCenter", () => {
     expect(screen.getByTestId("count-checked-out")).toHaveTextContent("0");
     expect(screen.getByTestId("count-on-leave")).toHaveTextContent("0");
 
-    const table = screen.getByTestId("presence-table");
+    // The sm+ table holds the joined text; jsdom renders both row views.
+    const table = screen.getByTestId("presence-table-desktop");
     expect(within(table).getByText("Wendy Worker")).toBeInTheDocument();
     expect(within(table).getByText("EMP-00002")).toBeInTheDocument();
     expect(within(table).getByText("Late · 12m")).toBeInTheDocument();
@@ -222,6 +223,19 @@ describe("CommandCenter", () => {
     const rail = screen.getByTestId("live-activity");
     expect(within(rail).getByText("Wendy Worker")).toBeInTheDocument();
     expect(within(rail).getByText("checked in")).toBeInTheDocument();
+  });
+
+  it("renders stacked presence rows for phones beside the sm+ table", async () => {
+    renderCommandCenter();
+
+    const mobileRows = await screen.findByTestId("presence-table-mobile");
+    expect(within(mobileRows).getByText("Wendy Worker")).toBeInTheDocument();
+    expect(within(mobileRows).getByText("EMP-00002")).toBeInTheDocument();
+    expect(within(mobileRows).getByText("On site")).toBeInTheDocument();
+    expect(within(mobileRows).getByText("Late · 12m")).toBeInTheDocument();
+    // Both row renderings share the card — the desktop table stays in the DOM
+    // (CSS-hidden on phones, the stacked rows CSS-hidden on sm+).
+    expect(screen.getByTestId("presence-table-desktop")).toBeInTheDocument();
   });
 
   it("orders working rows before absent rows", async () => {
@@ -266,7 +280,7 @@ describe("CommandCenter", () => {
     await screen.findByTestId("presence-table");
     // GET /employees is reports-only for managers; the /me merge names self.
     expect(
-      within(screen.getByTestId("presence-table")).getByText("Mary Manager"),
+      within(screen.getByTestId("presence-table-desktop")).getByText("Mary Manager"),
     ).toBeInTheDocument();
     expect(
       within(screen.getByTestId("live-activity")).getByText("Mary Manager"),

@@ -662,6 +662,22 @@ since 2026-09-29).
 **Verify:** `make check` green; the chain spec → domain → API → protocol → UI
 → test is walkable without searching the repo.
 
+### UI refinement — stacked presence rows on phones · done 2026-10-01
+
+- On phones (< `sm`) `PresenceTable` renders the same rows as stacked entries
+  (name + `since`, then status/late badges and the employee code) so every
+  presence field is visible without sideways scrolling — the wall is a glance
+  surface, not a record browser. The `sm+` table, its `containerLabel`, the
+  card chrome and all test ids are unchanged; the "Swipe sideways" hint left
+  this card (phones no longer have an overflow region — other list tables keep
+  it, per `Presentation rules`). Badges render through shared `StatusBadge` /
+  `LateBadge` helpers. Web tests pin both row views inside the card
+  (`presence-table-desktop` / `presence-table-mobile`).
+
+**Verify:** `pnpm run typecheck && pnpm run lint && pnpm run test` green (155
+web tests); e2e selectors untouched (`presence-${status}` rows still live on
+the sm+ table; Playwright runs at desktop viewport).
+
 ### Test strategy
 
 | Layer | What is added | Gate | Failure case covered |

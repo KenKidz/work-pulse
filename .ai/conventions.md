@@ -100,7 +100,9 @@
   `rounded-xl shadow-sm`.
 - **List tables:** always pass `containerLabel` to `components/ui/table.tsx` and
   render the `sm:hidden` “Swipe sideways to see every … field.” hint above it
-  (exemplar: `AttendanceRecordsTable.tsx:162-167`).
+  (exemplar: `AttendanceRecordsTable.tsx:162-167`). Surfaces with a stacked
+  mobile row rendering instead of an overflow table drop the hint
+  (exemplar: `realtime/components/PresenceTable.tsx`).
 - **Row actions:** table actions use `className="min-h-11 sm:min-h-7"` on
   `size="xs"` buttons (exemplar: `ShiftsPanel.tsx:157-158`).
 - **Filter controls:** use `w-full sm:w-…` so controls stack below `sm`

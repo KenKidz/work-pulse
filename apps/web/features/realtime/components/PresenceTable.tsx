@@ -1,10 +1,13 @@
 "use client";
 
 /**
- * Who-is-working-now table — every row the server sent (records for the
- * workday plus currently-absent employees), already sorted working-first.
- * Display names and codes are joined client-side from the employee
- * directory; `since` renders local clock time via dayjs. Client leaf.
+ * Who-is-working-now — every row the server sent (records for the workday
+ * plus currently-absent employees), already sorted working-first. Display
+ * names and codes are joined client-side from the employee directory;
+ * `since` renders local clock time via dayjs. Client leaf.
+ *
+ * Phones get stacked presence rows (name + `since`, then status/late badges
+ * and the code) so every field stays visible; `sm+` keeps the table.
  */
 
 import { Users } from "lucide-react";
@@ -22,9 +25,32 @@ import {
 } from "@/components/ui/table";
 
 import { presenceStatusLabel, presenceStatusVariant } from "../labels";
-import type { PresenceRow } from "../types";
+import type { PresenceRow, PresenceRowStatus } from "../types";
 import type { EmployeeDirectory } from "../utils";
 import { employeeCode, employeeDisplayName, formatClockTime, formatMinutes } from "../utils";
+
+function StatusBadge({ status }: { status: PresenceRowStatus }) {
+  return <Badge variant={presenceStatusVariant[status]}>{presenceStatusLabel[status]}</Badge>;
+}
+
+function LateBadge({ row }: { row: PresenceRow }) {
+  return (
+    <Badge variant="warning">
+      {row.minutes_late != null ? `Late · ${formatMinutes(row.minutes_late)}` : "Late"}
+    </Badge>
+  );
+}
+
+function SinceText({ since }: { since: string | null | undefined }) {
+  if (!since) {
+    return <span className="font-mono text-xs text-muted-foreground">—</span>;
+  }
+  return (
+    <time dateTime={since} className="font-mono text-xs text-muted-foreground tabular-nums">
+      {formatClockTime(since)}
+    </time>
+  );
+}
 
 export function PresenceTable({
   rows,
@@ -51,60 +77,86 @@ export function PresenceTable({
         </CardContent>
       ) : (
         <>
-          <p className="px-4 pb-2 text-xs text-muted-foreground sm:hidden">
-            Swipe sideways to see every presence field.
-          </p>
-          <Table
+          {/* Stacked rows on phones — the wall's glance surface, no sideways scroll. */}
+          <ul
             aria-label="Presence"
-            containerLabel="Presence. Scroll horizontally to read all columns."
+            data-testid="presence-table-mobile"
+            className="flex flex-col sm:hidden"
           >
-            <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="pl-5">Employee</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Late</TableHead>
-                <TableHead className="pr-5">Since</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((row) => {
-                const code = employeeCode(row.employee_id, directory);
-                return (
-                  <TableRow key={row.employee_id} data-testid={`presence-${row.status}`}>
-                    <TableCell className="pl-5">
-                      <div className="flex flex-col">
-                        <span className="font-medium">
-                          {employeeDisplayName(row.employee_id, directory)}
-                        </span>
-                        {code ? (
-                          <span className="font-mono text-xs text-muted-foreground">{code}</span>
-                        ) : null}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={presenceStatusVariant[row.status]}>
-                        {presenceStatusLabel[row.status]}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {row.late ? (
-                        <Badge variant="warning">
-                          {row.minutes_late != null
-                            ? `Late · ${formatMinutes(row.minutes_late)}`
-                            : "Late"}
-                        </Badge>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="pr-5 font-mono text-xs text-muted-foreground tabular-nums">
-                      {row.since ? formatClockTime(row.since) : "—"}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+            {rows.map((row) => {
+              const code = employeeCode(row.employee_id, directory);
+              return (
+                <li
+                  key={row.employee_id}
+                  className="border-b border-border px-5 py-3 last:border-b-0"
+                >
+                  <div className="flex items-baseline justify-between gap-x-3">
+                    <span className="min-w-0 font-medium break-words">
+                      {employeeDisplayName(row.employee_id, directory)}
+                    </span>
+                    <SinceText since={row.since} />
+                  </div>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <StatusBadge status={row.status} />
+                    {row.late ? <LateBadge row={row} /> : null}
+                    {code ? (
+                      <span className="ml-auto font-mono text-xs text-muted-foreground">
+                        {code}
+                      </span>
+                    ) : null}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+
+          <div className="hidden sm:block" data-testid="presence-table-desktop">
+            <Table
+              aria-label="Presence"
+              containerLabel="Presence. Scroll horizontally to read all columns."
+            >
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="pl-5">Employee</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Late</TableHead>
+                  <TableHead className="pr-5">Since</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rows.map((row) => {
+                  const code = employeeCode(row.employee_id, directory);
+                  return (
+                    <TableRow key={row.employee_id} data-testid={`presence-${row.status}`}>
+                      <TableCell className="pl-5">
+                        <div className="flex flex-col">
+                          <span className="font-medium">
+                            {employeeDisplayName(row.employee_id, directory)}
+                          </span>
+                          {code ? (
+                            <span className="font-mono text-xs text-muted-foreground">{code}</span>
+                          ) : null}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge status={row.status} />
+                      </TableCell>
+                      <TableCell>
+                        {row.late ? (
+                          <LateBadge row={row} />
+                        ) : (
+                          <span className="text-sm text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="pr-5 font-mono text-xs text-muted-foreground tabular-nums">
+                        {row.since ? formatClockTime(row.since) : "—"}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
         </>
       )}
     </Card>
