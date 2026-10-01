@@ -15,7 +15,7 @@ import { NextResponse, type NextRequest } from "next/server";
 const SESSION_COOKIE = "wp_session";
 
 /** The `(dashboard)` route group's URL roots. */
-const DASHBOARD_ROOTS = ["/dashboard", "/employees", "/attendance", "/settings"];
+const DASHBOARD_ROOTS = ["/dashboard", "/employees", "/attendance", "/command-center", "/settings"];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -46,6 +46,7 @@ export const config = {
     "/dashboard/:path*",
     "/employees/:path*",
     "/attendance/:path*",
+    "/command-center/:path*",
     "/settings/:path*",
     "/login",
   ],

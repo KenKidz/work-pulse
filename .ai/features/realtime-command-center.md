@@ -567,7 +567,7 @@ attendance suite (the refactor is behavior-preserving).
 **Verify:** `make gen-api && make check` — API gates + OpenAPI drift green;
 web suite unaffected (its `vi.mock` of the client absorbs the new exports).
 
-### T5 — Web: `features/realtime` + `/command-center`
+### T5 — Web: `features/realtime` + `/command-center` · done 2026-10-01
 
 Load `ui-ux-pro-max` **and** `frontend-design` before building (AGENTS rule 15);
 load `shadcn` if anything touches `components/ui/`. Follow the presentation

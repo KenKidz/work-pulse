@@ -36,6 +36,22 @@ const HR: User = {
   role: "hr",
 };
 
+const MANAGER: User = {
+  ...ADMIN,
+  id: "01900000-0000-7000-8000-0000000000a3",
+  email: "manager@workpulse.test",
+  role: "manager",
+  employee_id: "01900000-0000-7000-8000-00000000a001",
+};
+
+const WORKER: User = {
+  ...ADMIN,
+  id: "01900000-0000-7000-8000-0000000000a4",
+  email: "worker@workpulse.test",
+  role: "employee",
+  employee_id: "01900000-0000-7000-8000-00000000a002",
+};
+
 beforeEach(() => {
   vi.clearAllMocks();
   mockUseAuth.mockReturnValue({ user: ADMIN });
@@ -57,10 +73,31 @@ describe("MobileNav", () => {
     expect(screen.getByRole("link", { name: "Dashboard" })).toHaveAttribute("href", "/dashboard");
     expect(screen.getByRole("link", { name: "Employees" })).toHaveAttribute("href", "/employees");
     expect(screen.getByRole("link", { name: "Attendance" })).toHaveAttribute("href", "/attendance");
+    expect(screen.getByRole("link", { name: "Command center" })).toHaveAttribute(
+      "href",
+      "/command-center",
+    );
     expect(screen.getByRole("link", { name: "Organization" })).toHaveAttribute(
       "href",
       "/settings/organization",
     );
+  });
+
+  it("shows the Command center destination to managers and hides it from employees", async () => {
+    const user = userEvent.setup();
+    mockUseAuth.mockReturnValue({ user: MANAGER });
+    const { unmount } = render(<MobileNav />);
+    await user.click(screen.getByRole("button", { name: "Open navigation menu" }));
+    expect(screen.getByRole("link", { name: "Command center" })).toHaveAttribute(
+      "href",
+      "/command-center",
+    );
+
+    unmount();
+    mockUseAuth.mockReturnValue({ user: WORKER });
+    render(<MobileNav />);
+    await user.click(screen.getByRole("button", { name: "Open navigation menu" }));
+    expect(screen.queryByRole("link", { name: "Command center" })).not.toBeInTheDocument();
   });
 
   it("shows the admin-only Users destination for admins", async () => {
@@ -120,6 +157,10 @@ describe("MainNav", () => {
     expect(screen.getByRole("link", { name: "Dashboard" })).toHaveAttribute("href", "/dashboard");
     expect(screen.getByRole("link", { name: "Employees" })).toHaveAttribute("href", "/employees");
     expect(screen.getByRole("link", { name: "Attendance" })).toHaveAttribute("href", "/attendance");
+    expect(screen.getByRole("link", { name: "Command center" })).toHaveAttribute(
+      "href",
+      "/command-center",
+    );
     expect(screen.getByRole("link", { name: "Organization" })).toHaveAttribute(
       "href",
       "/settings/organization",

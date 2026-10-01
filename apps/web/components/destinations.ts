@@ -2,6 +2,7 @@ import {
   Building2,
   CalendarClock,
   LayoutDashboard,
+  MonitorDot,
   UserCog,
   Users,
   type LucideIcon,
@@ -65,14 +66,28 @@ export type NavItem = {
 export const MANAGE_USER_ROLES: Role[] = ["admin", "super_admin"];
 
 /**
- * Every primary navigation destination — Dashboard, the Phase 1 surfaces and
- * the admin-only Users management — so the desktop nav and the mobile drawer
- * cannot drift. Role-restricted entries are filtered by `useAuth()` in the
- * navs; the API policy (`ensure_can_manage_users`) stays the authority.
+ * The roles that can watch the live command center — the single web-side
+ * source (mirrors the API's board policy): the nav entry hides it for
+ * everyone else and the page guard redirects, so the two cannot drift.
+ */
+export const COMMAND_CENTER_ROLES: Role[] = ["manager", "hr", "admin", "super_admin"];
+
+/**
+ * Every primary navigation destination — Dashboard, the Phase 1 surfaces,
+ * the live Command center and the admin-only Users management — so the
+ * desktop nav and the mobile drawer cannot drift. Role-restricted entries
+ * are filtered by `useAuth()` in the navs; the API policy
+ * (`ensure_can_manage_users`, `ensure_can_read_presence`) stays the authority.
  */
 export const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   ...DESTINATIONS.map(({ href, label, icon }) => ({ href, label, icon })),
+  {
+    href: "/command-center",
+    label: "Command center",
+    icon: MonitorDot,
+    roles: COMMAND_CENTER_ROLES,
+  },
   {
     href: "/settings/users",
     label: "Users",

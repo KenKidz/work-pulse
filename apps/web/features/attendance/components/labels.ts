@@ -1,8 +1,11 @@
 /**
  * Human-facing labels for pinned enums — wire values are never rendered.
  * Board copy explains the independent counts and the attendance data that is
- * not tracked yet.
+ * not tracked yet; the count-semantics strings are shared with the realtime
+ * command center through `lib/attendance-copy.ts` (ADR 0009).
  */
+
+import { absentCountHint, countsOverlapHint, onLeaveCountHint } from "@/lib/attendance-copy";
 
 import type { BoardAction, WorkMode } from "../types";
 
@@ -16,10 +19,8 @@ export const boardActionLabel: Record<BoardAction, string> = {
   checked_out: "checked out",
 };
 
-export const workModeHint =
-  "Counts overlap: someone can be on site or remote and also be late. These numbers don’t add to a total.";
+export const workModeHint = countsOverlapHint;
 
-export const absentHint =
-  "May include people on a rest day; individual rosters aren’t tracked yet.";
+export const absentHint = absentCountHint;
 
-export const onLeaveHint = "Leave isn’t tracked yet, so this stays at 0.";
+export const onLeaveHint = onLeaveCountHint;
