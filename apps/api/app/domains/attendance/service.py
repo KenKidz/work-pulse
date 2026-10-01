@@ -25,7 +25,10 @@ Rules implemented here (pinned in `.ai/features/attendance.md`):
   out-of-scope `employee_id` filter is a `404 employee_not_found` — existence
   is not leaked.
 - **Board counts are independent, not a partition** (a person may be `present`
-  and `late`): `absent` needs an expected shift, zero records for the date and
+  and `late`): each count is computed over each employee's **current** (newest)
+  record for the date — a re-check-in replaces its earlier record's
+  contribution instead of counting twice, so counts and the presence rows
+  always agree. `absent` needs an expected shift, zero records for the date and
   `now` past `start + grace` in the employee's location timezone; `on_leave` is
   always 0 in Phase 1.
 - **Shift scopes**: at most one shift per scope (shared indexes/checks in the
@@ -505,10 +508,14 @@ class AttendanceService:
 
         One code path behind `GET /attendance/board` and the realtime snapshot,
         so the two surfaces can never disagree (ADR 0009). Counts keep the
-        pinned record semantics (overlapping, not a partition); `rows` holds
-        one row per employee with a record for the workday — the newest record
-        wins — plus one `absent` row per currently-absent employee, so
-        `absent == len(absent rows)` by construction.
+        pinned overlapping semantics (not a partition) and are computed over
+        each employee's **current** record — the same newest-record basis the
+        rows use — so `counts == recount(rows)` by construction and a
+        re-check-in replaces its earlier record's contribution instead of
+        counting twice. `rows` holds one row per employee with a record for the
+        workday — the newest record wins — plus one `absent` row per
+        currently-absent employee, so `absent == len(absent rows)`; `activity`
+        still lists every transition (a re-check-in is a real event).
         """
         tenant_id = identity.tenant_id
         visible = await self._scoped_employees(identity)
@@ -523,6 +530,7 @@ class AttendanceService:
         timezones = {context.id: context.timezone for context in visible}
 
         rows: list[BoardPresenceRow] = []
+        current: list[AttendanceRecord] = []
         seen: set[UUID] = set()
         for record in records:
             # `for_workday` is newest-first: the first record per employee is
@@ -530,6 +538,7 @@ class AttendanceService:
             if record.employee_id in seen:
                 continue
             seen.add(record.employee_id)
+            current.append(record)
             rows.append(
                 _presence_row(
                     record,
@@ -545,19 +554,19 @@ class AttendanceService:
         counts = BoardCounts(
             present=sum(
                 1
-                for record in records
+                for record in current
                 if record.checked_out_at is None and record.work_mode == WorkMode.ONSITE
             ),
             remote=sum(
                 1
-                for record in records
+                for record in current
                 if record.checked_out_at is None and record.work_mode == WorkMode.REMOTE
             ),
-            late=sum(1 for record in records if record.late),
+            late=sum(1 for record in current if record.late),
             on_leave=0,  # Leave lands in Phase 3 — the field keeps the contract
             absent=len(absent_rows),
             checked_out=sum(
-                1 for record in records if record.checked_out_at is not None
+                1 for record in current if record.checked_out_at is not None
             ),
         )
 
@@ -590,6 +599,23 @@ class AttendanceService:
         """Live workforce board for one date — the wire mapping of `board_detail`."""
         detail = await self.board_detail(identity, board_date, now)
         return Board(date=detail.date, counts=detail.counts, activity=detail.activity)
+
+    async def visible_employee_scope(
+        self, identity: Identity
+    ) -> frozenset[UUID] | None:
+        """Employee ids the identity's board covers; `None` = tenant-wide.
+
+        The realtime stream filters deltas with exactly the board's scope
+        (manager: self + direct reports; unlinked manager: nobody;
+        hr/admin/super_admin: every employee), so the live wall and the board
+        can never disagree about who is visible. One shared implementation of
+        `_scoped_employees`, never a second scope rule.
+        """
+        if identity.role != Role.MANAGER:
+            return None
+        return frozenset(
+            context.id for context in await self._scoped_employees(identity)
+        )
 
     # --- shared internals ------------------------------------------------------
 

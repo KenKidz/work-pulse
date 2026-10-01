@@ -361,6 +361,79 @@ export interface PositionUpdate {
   description?: string | null;
 }
 
+export type PresenceRowStatus = typeof PresenceRowStatus[keyof typeof PresenceRowStatus];
+
+
+export const PresenceRowStatus = {
+  present: 'present',
+  remote: 'remote',
+  checked_out: 'checked_out',
+  absent: 'absent',
+  on_leave: 'on_leave',
+} as const;
+
+/**
+ * One employee's presence for the workday — the full-row upsert shape.
+ *
+ * `minutes_late` is recomputed from the record's shift at read/publish time
+ * (the stored `late` flag itself is immutable); `since` is `checked_in_at`
+ * while open, `checked_out_at` once closed, `null` for absent rows.
+ */
+export interface PresenceRow {
+  employee_id: string;
+  status: PresenceRowStatus;
+  late: boolean;
+  minutes_late?: number | null;
+  since?: string | null;
+  attendance_id?: string | null;
+}
+
+export type RealtimeActivityEntryAction = typeof RealtimeActivityEntryAction[keyof typeof RealtimeActivityEntryAction];
+
+
+export const RealtimeActivityEntryAction = {
+  checked_in: 'checked_in',
+  checked_out: 'checked_out',
+} as const;
+
+/**
+ * One recent attendance transition for the activity rail.
+ *
+ * Names are joined web-side from the employee data the web already holds.
+ */
+export interface RealtimeActivityEntry {
+  occurred_at: string;
+  employee_id: string;
+  action: RealtimeActivityEntryAction;
+}
+
+/**
+ * Independent counts — not a partition (a person can be present and late).
+ */
+export interface RealtimeBoardCounts {
+  present: number;
+  remote: number;
+  late: number;
+  on_leave: number;
+  absent: number;
+  checked_out: number;
+}
+
+/**
+ * The one board payload: REST `200` of `GET /realtime/board`.
+ *
+ * The `snapshot` frame is this body plus `type` (see
+ * `RealtimeSnapshotFrame`), so the first WS frame and the REST body can
+ * never drift. Rows are unordered (the client sorts); `presence` is
+ * uncapped, `activity` is newest-first capped 20.
+ */
+export interface RealtimeBoardSnapshot {
+  date: string;
+  counts: RealtimeBoardCounts;
+  presence: PresenceRow[];
+  activity: RealtimeActivityEntry[];
+}
+
 export interface ResetPasswordRequest {
   /** @minLength 10 */
   new_password: string;

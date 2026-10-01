@@ -42,11 +42,14 @@ Alternatives considered:
   client-supplied `location_id` outside the tenant is `404 location_not_found`;
   an archived location remains resolvable so lateness keeps working.
 - **Board counts overlap — they are not a partition.** A late employee appears
-  in `present`/`remote` **and** `late`; `checked_out` is any record for the date
-  with a close time; `on_leave` is always `0` until Leave lands (the field stays
-  so the contract never changes). `absent` counts active visible employees past
-  `start + grace` with no record at all for the date, and over-counts rest days
-  until rosters/Leave exist (Decision #7 — the board UI says so).
+  in `present`/`remote` **and** `late`; each count takes one contribution per
+  employee from their current (newest) record for the date, so a re-check-in
+  replaces its earlier record's contribution instead of counting twice (the
+  Phase-2 realtime projection recounts over exactly these rows); `on_leave` is
+  always `0` until Leave lands (the field stays so the contract never changes).
+  `absent` counts active visible employees past `start + grace` with no record
+  at all for the date, and over-counts rest days until rosters/Leave exist
+  (Decision #7 — the board UI says so).
 - **The board date defaults to the server's UTC date.** `?date=` is optional;
   the web always computes and sends an explicit date. There is no tenant-level
   timezone to read a "tenant today" from.

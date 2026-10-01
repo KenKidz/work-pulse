@@ -6,7 +6,7 @@ does the work.
 
 ## Now
 
-- [ ] Realtime Command Center (Phase 2, Redis + WebSocket board) — implementing: `.ai/features/realtime-command-center.md` (T1 done — WS board contract + remaining tech pins; T2 done — Redis infra: `redis` dep, compose services, `Settings.redis_url`, `shared/presence.py` ports, pub/sub adapters + bus tests; T3 done — attendance `board_detail` shared projection (presence rows + counts + activity) and best-effort presence publish on check-in/check-out; T4–T7 remain)
+- [ ] Realtime Command Center (Phase 2, Redis + WebSocket board) — implementing: `.ai/features/realtime-command-center.md` (T1 done — WS board contract + remaining tech pins; T2 done — Redis infra: `redis` dep, compose services, `Settings.redis_url`, `shared/presence.py` ports, pub/sub adapters + bus tests; T3 done — attendance `board_detail` shared projection (presence rows + counts + activity) and best-effort presence publish on check-in/check-out; T4 done — realtime domain (`PresenceState` + `RealtimeService`), `GET /realtime/board` + WS `/realtime/board` (close-before-accept denials, scope-filtered deltas), frames contract tests, `visible_employee_scope`, regenerated client; T4 review-hardened — short-lived WS sessions (no pinned pool connection), bounded scope refresh, board counts now one contribution per employee; T5–T7 remain)
 
 ## Later
 

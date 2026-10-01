@@ -175,11 +175,15 @@ payloads or audit `changes` values (`changes` says `"changed"`).
   client-supplied `location_id` that does not exist in the tenant → `404
   location_not_found` (reused; the id is never echoed).
 - **Board semantics** — counts are independent, **not** a partition (a person
-  can be in `present` and `late` at once; UI copy says so):
-  - `present` — open record for the date, `work_mode=onsite`
-  - `remote` — open record for the date, `work_mode=remote`
-  - `late` — any record for the date with `late=true` (open or closed)
-  - `checked_out` — any record for the date with `checked_out_at` set
+  can be in `present` and `late` at once; UI copy says so). Each count takes
+  one contribution per employee from their **current (newest)** record for the
+  date, so a re-check-in replaces its earlier record's contribution instead of
+  counting twice — and the Phase-2 realtime presence rows recount over exactly
+  the same basis:
+  - `present` — current record for the date is open, `work_mode=onsite`
+  - `remote` — current record for the date is open, `work_mode=remote`
+  - `late` — current record for the date has `late=true`
+  - `checked_out` — current record for the date has `checked_out_at` set
   - `on_leave` — always `0` in Phase 1 (field stays so the contract never
     changes)
   - `absent` — active employee in scope with an expected shift (location's,
@@ -386,11 +390,15 @@ deltas (they are contract surface; review here, not during the build):
   shift_time_invalid`. A shift may reference an archived location (lateness
   still works; ADR 0007 does not apply — no archive on shifts in Phase 1).
 - **Board semantics** — counts are independent, **not** a partition (a person
-  can be in `present` and `late` at once; UI copy says so):
-  - `present` — open record for the date, `work_mode=onsite`
-  - `remote` — open record for the date, `work_mode=remote`
-  - `late` — any record for the date with `late=true` (open or closed)
-  - `checked_out` — any record for the date with `checked_out_at` set
+  can be in `present` and `late` at once; UI copy says so). Each count takes
+  one contribution per employee from their **current (newest)** record for the
+  date, so a re-check-in replaces its earlier record's contribution instead of
+  counting twice — and the Phase-2 realtime presence rows recount over exactly
+  the same basis:
+  - `present` — current record for the date is open, `work_mode=onsite`
+  - `remote` — current record for the date is open, `work_mode=remote`
+  - `late` — current record for the date has `late=true`
+  - `checked_out` — current record for the date has `checked_out_at` set
   - `on_leave` — always `0` in Phase 1 (field stays so the contract never changes)
   - `absent` — active employee in scope with an expected shift (location's,
     else tenant default) **on the requested date**, with **no record at all**

@@ -389,7 +389,13 @@ in-process port as the projection's input; the frame protocol is unchanged.
   at read/publish time (the `late` flag itself is stored and immutable).
 - **Scope**: reuse `_scoped_employees` exactly (research confirmed: manager →
   self + direct reports; unlinked manager → nobody; others → tenant).
-  Out-of-scope facts are dropped server-side after a lazy visible-set refresh.
+  Out-of-scope facts are dropped server-side after a lazy visible-set refresh,
+  bounded to one refresh per ~60s event-time window per connection so a burst
+  of foreign facts never costs one scope query per fact.
+- **No request-scoped DB session on a socket**: the WS handshake and stream
+  read through short-lived sessions (one per snapshot/scope read), so a viewer
+  parked on Redis never pins a pooled PostgreSQL connection — the REST routes
+  keep their normal request-scoped session.
 - **WS denial**: close-before-accept (zero application frames); both denial
   cases surface as the single ASGI denial status **403** — verified in T1:
   uvicorn hardcodes 403 on the pre-accept close path in both WS
@@ -511,7 +517,7 @@ tests; `make check` unchanged elsewhere. No web impact.
 **Verify:** `make check-api` green — including the untouched existing
 attendance suite (the refactor is behavior-preserving).
 
-### T4 — Realtime domain + REST snapshot + WS endpoint + contract tests + regen
+### T4 — Realtime domain + REST snapshot + WS endpoint + contract tests + regen · done 2026-10-01
 
 **Changes**
 

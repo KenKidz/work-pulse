@@ -134,3 +134,48 @@ async def test_board_detail_rows_follow_the_manager_scope(
 
     assert {row.employee_id for row in detail.rows} == {ACTOR, REPORT}
     assert detail.counts.present == 2
+
+
+async def test_board_detail_counts_follow_the_current_record_per_employee(
+    service: AttendanceService,
+    attendance_repo: FakeAttendanceRepo,
+) -> None:
+    """A re-check-in replaces its earlier record's contribution (recount rule).
+
+    Counts must equal a recount of the presence rows, or the live wall's first
+    delta would contradict its own snapshot and the board (realtime spec
+    finding 2).
+    """
+    seed_employee(attendance_repo)  # ACTOR
+    await seed_record(
+        attendance_repo,
+        employee_id=ACTOR,
+        checked_in_at=datetime(2026, 9, 24, 2, 40, tzinfo=UTC),
+        checked_out_at=datetime(2026, 9, 24, 6, 0, tzinfo=UTC),
+        late=True,
+        duration_minutes=200,
+    )
+    current = await seed_record(
+        attendance_repo,
+        employee_id=ACTOR,
+        checked_in_at=datetime(2026, 9, 24, 8, 0, tzinfo=UTC),
+    )
+
+    detail = await service.board_detail(identity(), TODAY, NOW)
+
+    row = {row.employee_id: row for row in detail.rows}[ACTOR]
+    assert row.attendance_id == current.id  # newest record wins (pinned)
+    assert row.late is False
+    # One contribution per employee: the superseded late record never counts.
+    assert detail.counts.model_dump() == {
+        "present": 1,
+        "remote": 0,
+        "late": 0,
+        "on_leave": 0,
+        "absent": 0,
+        "checked_out": 0,
+    }
+    # Both transitions still reach the activity feed — a re-check-in is a fact.
+    actions = [entry.action.value for entry in detail.activity]
+    assert actions.count("checked_in") == 2
+    assert actions.count("checked_out") == 1

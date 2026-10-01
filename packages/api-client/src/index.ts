@@ -59,6 +59,7 @@ import type {
   PositionCreate,
   PositionListPage,
   PositionUpdate,
+  RealtimeBoardSnapshot,
   ResetPasswordRequest,
   Shift,
   ShiftCreate,
@@ -5121,4 +5122,128 @@ export const useUpdateShift = <TError = HTTPValidationError,
       > => {
       return useMutation(getUpdateShiftMutationOptions(options), queryClient);
     }
+
+export type getRealtimeBoardResponse200 = {
+  data: RealtimeBoardSnapshot
+  status: 200
+}
+
+export type getRealtimeBoardResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type getRealtimeBoardResponseSuccess = (getRealtimeBoardResponse200) & {
+  headers: Headers;
+};
+export type getRealtimeBoardResponseError = (getRealtimeBoardResponse422) & {
+  headers: Headers;
+};
+
+export type getRealtimeBoardResponse = (getRealtimeBoardResponseSuccess | getRealtimeBoardResponseError)
+
+export const getGetRealtimeBoardUrl = () => {
+
+
+
+
+  return `/api/v1/realtime/board`
+}
+
+/**
+ * The current workday's board — initial render and degraded mode.
+ *
+ * Serves from PostgreSQL only (the bus is never touched): a Redis outage
+ * degrades latency on the live stream, never this snapshot's correctness.
+ * @summary Get Realtime Board
+ */
+export const getRealtimeBoard = async ( options?: Parameters<typeof customFetch>[1]): Promise<getRealtimeBoardResponse> => {
+
+  return customFetch<getRealtimeBoardResponse>(getGetRealtimeBoardUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetRealtimeBoardQueryKey = () => {
+    return [
+    `/api/v1/realtime/board`
+    ] as const;
+    }
+
+
+export const getGetRealtimeBoardQueryOptions = <TData = Awaited<ReturnType<typeof getRealtimeBoard>>, TError = HTTPValidationError>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getRealtimeBoard>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetRealtimeBoardQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getRealtimeBoard>>> = ({ signal }) => getRealtimeBoard({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getRealtimeBoard>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetRealtimeBoardQueryResult = NonNullable<Awaited<ReturnType<typeof getRealtimeBoard>>>
+export type GetRealtimeBoardQueryError = HTTPValidationError
+
+
+export function useGetRealtimeBoard<TData = Awaited<ReturnType<typeof getRealtimeBoard>>, TError = HTTPValidationError>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getRealtimeBoard>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getRealtimeBoard>>,
+          TError,
+          Awaited<ReturnType<typeof getRealtimeBoard>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetRealtimeBoard<TData = Awaited<ReturnType<typeof getRealtimeBoard>>, TError = HTTPValidationError>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getRealtimeBoard>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getRealtimeBoard>>,
+          TError,
+          Awaited<ReturnType<typeof getRealtimeBoard>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetRealtimeBoard<TData = Awaited<ReturnType<typeof getRealtimeBoard>>, TError = HTTPValidationError>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getRealtimeBoard>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get Realtime Board
+ */
+
+export function useGetRealtimeBoard<TData = Awaited<ReturnType<typeof getRealtimeBoard>>, TError = HTTPValidationError>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getRealtimeBoard>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetRealtimeBoardQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 

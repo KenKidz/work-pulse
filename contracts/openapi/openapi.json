@@ -3082,6 +3082,56 @@
           }
         }
       }
+    },
+    "/api/v1/realtime/board": {
+      "get": {
+        "tags": [
+          "realtime"
+        ],
+        "summary": "Get Realtime Board",
+        "description": "The current workday's board \u2014 initial render and degraded mode.\n\nServes from PostgreSQL only (the bus is never touched): a Redis outage\ndegrades latency on the live stream, never this snapshot's correctness.",
+        "operationId": "getRealtimeBoard",
+        "parameters": [
+          {
+            "name": "wp_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Wp Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RealtimeBoardSnapshot"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -4486,6 +4536,177 @@
         },
         "type": "object",
         "title": "PositionUpdate"
+      },
+      "PresenceRow": {
+        "properties": {
+          "employee_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Employee Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "present",
+              "remote",
+              "checked_out",
+              "absent",
+              "on_leave"
+            ],
+            "title": "Status"
+          },
+          "late": {
+            "type": "boolean",
+            "title": "Late"
+          },
+          "minutes_late": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minutes Late"
+          },
+          "since": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Since"
+          },
+          "attendance_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attendance Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "employee_id",
+          "status",
+          "late"
+        ],
+        "title": "PresenceRow",
+        "description": "One employee's presence for the workday \u2014 the full-row upsert shape.\n\n`minutes_late` is recomputed from the record's shift at read/publish time\n(the stored `late` flag itself is immutable); `since` is `checked_in_at`\nwhile open, `checked_out_at` once closed, `null` for absent rows."
+      },
+      "RealtimeActivityEntry": {
+        "properties": {
+          "occurred_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Occurred At"
+          },
+          "employee_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Employee Id"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "checked_in",
+              "checked_out"
+            ],
+            "title": "Action"
+          }
+        },
+        "type": "object",
+        "required": [
+          "occurred_at",
+          "employee_id",
+          "action"
+        ],
+        "title": "RealtimeActivityEntry",
+        "description": "One recent attendance transition for the activity rail.\n\nNames are joined web-side from the employee data the web already holds."
+      },
+      "RealtimeBoardCounts": {
+        "properties": {
+          "present": {
+            "type": "integer",
+            "title": "Present"
+          },
+          "remote": {
+            "type": "integer",
+            "title": "Remote"
+          },
+          "late": {
+            "type": "integer",
+            "title": "Late"
+          },
+          "on_leave": {
+            "type": "integer",
+            "title": "On Leave"
+          },
+          "absent": {
+            "type": "integer",
+            "title": "Absent"
+          },
+          "checked_out": {
+            "type": "integer",
+            "title": "Checked Out"
+          }
+        },
+        "type": "object",
+        "required": [
+          "present",
+          "remote",
+          "late",
+          "on_leave",
+          "absent",
+          "checked_out"
+        ],
+        "title": "RealtimeBoardCounts",
+        "description": "Independent counts \u2014 not a partition (a person can be present and late)."
+      },
+      "RealtimeBoardSnapshot": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/RealtimeBoardCounts"
+          },
+          "presence": {
+            "items": {
+              "$ref": "#/components/schemas/PresenceRow"
+            },
+            "type": "array",
+            "title": "Presence"
+          },
+          "activity": {
+            "items": {
+              "$ref": "#/components/schemas/RealtimeActivityEntry"
+            },
+            "type": "array",
+            "title": "Activity"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "counts",
+          "presence",
+          "activity"
+        ],
+        "title": "RealtimeBoardSnapshot",
+        "description": "The one board payload: REST `200` of `GET /realtime/board`.\n\nThe `snapshot` frame is this body plus `type` (see\n`RealtimeSnapshotFrame`), so the first WS frame and the REST body can\nnever drift. Rows are unordered (the client sorts); `presence` is\nuncapped, `activity` is newest-first capped 20."
       },
       "ResetPasswordRequest": {
         "properties": {
