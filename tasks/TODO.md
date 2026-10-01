@@ -6,6 +6,8 @@ does the work.
 
 ## Now
 
+- [ ] Realtime Command Center (Phase 2, Redis + WebSocket board) — spec drafted with decisions resolved: `.ai/features/realtime-command-center.md`; next: `/plan`
+
 ## Later
 
 - [ ] Phase 2: Realtime Command Center (Redis + WebSocket)
