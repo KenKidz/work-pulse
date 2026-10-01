@@ -301,6 +301,30 @@ describe("CommandCenter", () => {
     expect(screen.getByText(/appear here within seconds/i)).toBeInTheDocument();
   });
 
+  it("scopes the connection live region to the state and announces the newest activity", async () => {
+    const { sockets } = renderCommandCenter();
+
+    act(() => sockets[0]!.emitOpen());
+    await screen.findByTestId("presence-table");
+
+    // The banner's live region is the state chip alone: "Updated" refreshes
+    // with every board patch and must not re-announce the whole strip.
+    const status = screen.getByTestId("live-status");
+    expect(status).toHaveTextContent("Live");
+    expect(status).not.toHaveTextContent(/Updated/);
+
+    // Arrivals get one concise sentence (the clock renders in the runner's zone).
+    const announcer = screen.getByTestId("live-activity-announcer");
+    expect(announcer).toHaveTextContent(/Wendy Worker checked in at \d{2}:\d{2}/);
+
+    act(() => sockets[0]!.emitFrame(UPSERT));
+    await waitFor(() =>
+      expect(screen.getByTestId("live-activity-announcer")).toHaveTextContent(
+        /Bob Brown checked in at \d{2}:\d{2}/,
+      ),
+    );
+  });
+
   it("patches counts, rows and the rail from a presence.upsert frame", async () => {
     const { sockets } = renderCommandCenter();
     await screen.findByTestId("presence-table");

@@ -22,9 +22,12 @@
   --accent: #dce8fb;
   --accent-foreground: #172b4d;
   --destructive: #b42318;
-  --success: #16845b;
+  --destructive-foreground: #ffffff;
+  /* Success/warning are darkened so 12–14px text keeps AA (4.5:1) on their
+     5–15% tints, not just on plain white. */
+  --success: #157a53;
   --success-foreground: #ffffff;
-  --warning: #a85d00;
+  --warning: #945200;
   --warning-foreground: #ffffff;
   --info: #1d4ed8;
   --info-foreground: #ffffff;
@@ -63,6 +66,7 @@
   --accent: #263c60;
   --accent-foreground: #e8eef9;
   --destructive: #ff8e86;
+  --destructive-foreground: #3a0d09;
   --success: #67d6a2;
   --success-foreground: #102d22;
   --warning: #ffc66d;
@@ -109,6 +113,7 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
   --color-warning: var(--warning);

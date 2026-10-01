@@ -3,7 +3,9 @@
 /**
  * Live activity rail — check-ins and check-outs pushed by `presence.upsert`
  * frames (plus the snapshot's recent history), newest first, capped at 20.
- * Names are joined client-side. Client leaf.
+ * Names are joined client-side. An `sr-only` polite status echoes the newest
+ * entry, so arrivals are announced without re-reading the whole list. Client
+ * leaf.
  *
  * Guide-rail geometry: rows grid as `3rem` time column + `gap-x-3` + a `0.75rem`
  * dot column, so the dot column's center sits at 4.125rem (3rem + 0.75rem +
@@ -29,6 +31,7 @@ export function LiveActivityRail({
   activity: RealtimeActivityEntry[];
   directory: EmployeeDirectory;
 }) {
+  const latest = activity.at(0);
   return (
     <Card data-testid="live-activity" className="gap-0 rounded-md border-border py-0 shadow-none">
       <CardHeader className="px-5 pt-5 pb-4">
@@ -36,6 +39,18 @@ export function LiveActivityRail({
         <CardDescription>Check-ins and check-outs, newest first.</CardDescription>
       </CardHeader>
       <CardContent className="px-5 pb-5">
+        {/* One concise sentence per event — the visible list is a snapshot of
+            the day, not a status message. */}
+        <p
+          role="status"
+          aria-atomic="true"
+          data-testid="live-activity-announcer"
+          className="sr-only"
+        >
+          {latest === undefined
+            ? ""
+            : `${employeeDisplayName(latest.employee_id, directory)} ${activityActionLabel[latest.action]} at ${formatClockTime(latest.occurred_at)}`}
+        </p>
         {activity.length === 0 ? (
           <EmptyState
             icon={Activity}
