@@ -84,15 +84,18 @@
   login/register.
 - Naming: files `kebab-case.ts(x)` for non-component modules, `PascalCase.tsx`
   for components.
-- UI quality: before building or restyling components/pages, load the
-  `ui-ux-pro-max` skill and follow its guidelines (layout, typography,
-  accessibility, interaction states). Applies to anything visual in `apps/web/`.
-- Visual design: for new UI surfaces or redesigns, also load the
-  `frontend-design` skill — deliberate aesthetic direction, typography and
-  detail work, not templated defaults.
-- UI review/audit: load the `web-design-guidelines` skill and run
-  `ui-ux-pro-max` accessibility searches (`--domain ux`, `--stack`) as the
-  checklist.
+- UI rulebook: for anything visual in `apps/web/`, load the project skill
+  `workpulse-ui` (`.kilo/skills/workpulse-ui/SKILL.md`) and follow it — design
+  identity (tokens, type, radius), presentation rules, realtime/live surfaces,
+  states, motion, copy, accessibility floor and pre-flight. It is the only UI
+  skill needed for product work: it distills `ui-ux-pro-max`, `frontend-design`,
+  `design-taste-frontend-v1` and `web-design-guidelines`, so those are not
+  loaded for routine UI.
+- Upstream escalation, only where `workpulse-ui` points there: one targeted
+  `ui-ux-pro-max` search for a concern it does not cover · `frontend-design` for
+  genuinely new art direction · `web-design-guidelines` + `ui-ux-pro-max
+  --domain ux` for a formal UI review/audit · `design-taste-frontend` (v2)
+  instead of it for marketing/landing surfaces.
 
 ### Presentation rules
 

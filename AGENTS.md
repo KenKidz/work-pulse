@@ -68,7 +68,8 @@ contracts/            versioned event schemas + generated OpenAPI
 database/postgres/    seeds and scripts
 tests/e2e/            cross-surface tests
 tasks/                TODO.md (backlog) · doc.md (original brief)
-.kilo/                agent config (/spec, /plan, /check commands; researcher, verifier agents)
+.kilo/                agent config (/spec, /plan, /check commands; researcher, verifier
+                      agents; workpulse-ui skill)
 ```
 
 ## CodeGraph
@@ -109,13 +110,19 @@ init` yourself.
 14. A spec is not `approved` while its `## Decisions needed` section is open —
    ask, do not guess.
 15. Frontend UI work (components, pages, styling in `apps/web/`) loads the
-    `ui-ux-pro-max` skill first and follows it for layout, accessibility and
-    visual quality — no generic AI-slop UI. New UI or visual redesigns also load
-    the `frontend-design` skill for intentional, non-templated art direction.
-    shadcn/ui work (components in `components/ui/`, adding/fixing primitives)
-    also loads the `shadcn` skill. UI review/audit work loads the
-    `web-design-guidelines` skill and uses `ui-ux-pro-max` accessibility
-    searches (`--domain ux`, `--stack`) as its checklist.
+    project skill `workpulse-ui` (`.kilo/skills/workpulse-ui/SKILL.md`) and
+    follows it: WorkPulse design identity, presentation rules, realtime/live
+    surfaces, states, motion, copy, accessibility floor and pre-flight. It is
+    the only UI skill required for product work — it already distills
+    `ui-ux-pro-max`, `frontend-design`, `design-taste-frontend-v1` and
+    `web-design-guidelines`, so those are not loaded for routine UI. shadcn/ui
+    work (components in `components/ui/`, adding/fixing primitives) also loads
+    the `shadcn` skill. Escalate to an upstream skill only where `workpulse-ui`
+    says to: one targeted `ui-ux-pro-max` search for a concern it does not
+    cover, `frontend-design` for genuinely new art direction,
+    `web-design-guidelines` + `ui-ux-pro-max --domain ux` for a formal UI
+    review/audit, and `design-taste-frontend` (v2) instead of it for
+    marketing/landing surfaces.
 
 ## Vibe-coding workflow
 
