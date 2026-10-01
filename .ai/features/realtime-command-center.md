@@ -1,6 +1,6 @@
 # Feature: Realtime Command Center
 
-- **Status:** draft
+- **Status:** approved
 - **Phase:** 2
 - **Size:** M
 - **Surfaces:** api+web
@@ -331,4 +331,346 @@ in-process port as the projection's input; the frame protocol is unchanged.
 
 ## Plan
 
-_Not planned yet._
+### Acceptance criteria → where they are satisfied
+
+| # | Acceptance criterion | Satisfied by |
+| --- | --- | --- |
+| 1 | REST snapshot matches `GET /attendance/board` semantics | T3 (`board_detail` shares `board()`'s code) + T4 (consistency test) |
+| 2 | Live `presence.upsert` ≤2s after check-in | T2 (bus) + T3 (publish hook) + T4 (stream) + T6 (e2e timing) |
+| 3 | employee/finance → 403 / upgrade rejected, zero frames | T4 (REST + WS tests), T6 (e2e denied) |
+| 4 | Missing/invalid cookie → 401, upgrade rejected before frames | T4 (REST 401 + WS denial tests), T6 (cookie-less WS) |
+| 5 | Tenant isolation (no cross-tenant frames/rows) | T2 (channel-per-tenant test) + T4 (snapshot + stream tests) |
+| 6 | Redis down → snapshot still correct from PostgreSQL | T2 (best-effort publish) + T3/T4 (snapshot path touches no Redis) |
+| 7 | Frames validate against `contracts/realtime/board.v1.json`, no PII | T1 (schemas) + T4 (contract tests) |
+| 8 | Unit tests use an injected clock | T3 + T4 unit tests |
+| 9 | Web renders snapshot (counts, rows with joined names, rail) + loading/empty | T5 |
+| 10 | Web: WS unreachable → REST snapshot + "live updates unavailable" + ~60s refresh | T5 |
+| 11 | Web: employee/finance → hidden nav + denied page state | T5 (+ `destinations.ts` roles) |
+| 12 | E2E: check-in flips the wall without reload, within 2s | T6 |
+| 13 | E2E: drop + reconnect resyncs from a fresh snapshot | T6 |
+
+### Design pins (fixed by the research of 2026-10-01)
+
+- **One shared projection.** `AttendanceService.board()` is refactored into
+  `board_detail()` (counts + per-employee rows + activity) with `board()` as a
+  thin wire mapping — the realtime snapshot and the attendance board can never
+  drift because they are one code path (criterion 1).
+- **PresenceState = live per-connection projection** (rows map + recount),
+  fed by per-tenant Redis pub/sub; **no Redis rows cache** — snapshot always
+  recomputes from PostgreSQL (criterion 6 holds trivially; cache deferred,
+  see Risks). Business rule 1's wording is adjusted in T1 accordingly.
+- **Frames carry the changed row + recounted `counts` over the connection's
+  known row set** (snapshot rows ∪ accepted upserts) — server-side derivation,
+  never client-side. Clock-driven absent onset is not pushed (decision 6).
+- **`minutes_late` is recomputed** from `record.shift_id` + `_shift_boundary`
+  at read/publish time (the `late` flag itself is stored and immutable).
+- **Scope**: reuse `_scoped_employees` exactly (research confirmed: manager →
+  self + direct reports; unlinked manager → nobody; others → tenant).
+  Out-of-scope facts are dropped server-side after a lazy visible-set refresh.
+- **WS denial**: close-before-accept (zero application frames); both denial
+  cases surface as the ASGI denial status (T1 verifies whether 401 vs 403 is
+  expressible on the upgrade; the distinction is carried by the REST codes).
+- **Heartbeat** = uvicorn's built-in WS ping/pong (`uvicorn[standard]`); no
+  application-level ping frames. No lifespan task needed: each connection
+  subscribes to the tenant channel itself (upgrade path: refcounted hub).
+- **No Postgres migration, no new domain events, no audit entries** (read-only
+  surface). Redis enters exactly where ADR 0006 phase-gated it.
+
+### T1 — Pin the WS protocol contracts + remaining technical details (docs only)
+
+**Changes**
+
+- `contracts/realtime/board.v1.json` — Draft 2020-12 JSON Schema (same dialect
+  as `contracts/events/attendance/*.v1.json`, `additionalProperties: false`):
+  `presence-row`, `board-snapshot`, and a `frame` union discriminated on
+  `type: "snapshot" | "presence.upsert"` — exactly the shapes pinned in API
+  contract above. Contract before producer/consumer.
+- `contracts/README.md` — one paragraph: `contracts/realtime/` holds versioned
+  WebSocket **projection** protocols (not the event catalog; same
+  additive-only / new-version-on-break rule; no PII).
+- Spec updates in this same change (pin-remaining-details precedent =
+  identity-access T1):
+  - Handshake denial mechanics: verify installed Starlette's close-before-accept
+    behavior; pin the real upgrade status (expected: a single denial status for
+    both cases, with 401-vs-403 observable via REST `GET /realtime/board`).
+  - PresenceState materialization wording (business rule 1): live projection +
+    channel frames; Redis rows cache explicitly deferred.
+  - `minutes_late` recompute rule (from `record.shift_id` at read time).
+  - Heartbeat = uvicorn built-in; subscription model = per-connection on
+    `realtime:tenant:{tenant_id}`.
+  - Surfaces & files fix: the repo has no `.env.example` — `Settings.redis_url`
+    carries the default instead.
+- `.ai/domain.md` ubiquitous language: Presence state loses `LATE` from the
+  status enum ("…with an orthogonal `late` flag, ADR 0009") — the one-line
+  wording fix business rule 5 commits to.
+
+**Verify:** `make check` green (docs + inert JSON only; research confirmed
+nothing globs `contracts/` outside `contracts/events/` and `openapi.json`).
+
+### T2 — Redis infrastructure (deps · compose · settings · ports · adapters)
+
+**Changes**
+
+- `uv add redis` in `apps/api` (justified: this spec; pre-agreed ADR 0006
+  phase gate — repo rule 10 satisfied).
+- `docker-compose.yml`: `redis` (redis:7-alpine, `6379:6379`, healthcheck) and
+  `redis-test` (`6380:6379`, healthcheck) — mirrors `postgres`/`postgres-test`.
+- `Makefile`: `redis-up` / `redis-test-up` targets
+  (`docker compose up -d --wait …`); `check-api: db-test-up redis-test-up`;
+  `check-e2e: db-up redis-up db-migrate db-seed`.
+- `apps/api/app/config.py`: `redis_url: str = "redis://localhost:6379/0"`.
+- `apps/api/app/shared/presence.py` — the port trio (copy the
+  `shared/audit.py` precedent): `PresenceFact` (pydantic: `tenant_id`,
+  `workday`, `employee_id`, `attendance_id`, `status: "present|remote|checked_out"`,
+  `late: bool`, `minutes_late: int | None`, `since: datetime`,
+  `reason: "checked_in|checked_out"`, `occurred_at`) ·
+  `PresencePublisher(Protocol)` (`async publish(fact) -> None`) ·
+  `PresenceStream(Protocol)` (`subscribe(tenant_id) -> AsyncIterator[PresenceFact]`).
+- `apps/api/app/infrastructure/redis/`:
+  `client.py` (lazy `get_redis()` / `dispose_redis()` — mirror
+  `infrastructure/postgres/engine.py`) · `presence.py`
+  (`RedisPresencePublisher`: JSON `PUBLISH` to `realtime:tenant:{tenant_id}`,
+  Redis errors logged with ids only and **swallowed** — a check-in never fails
+  because Redis is down) · `streams.py` (`RedisPresenceStream`: `pubsub`
+  subscribe adapter).
+- `apps/api/tests/conftest.py`: set `REDIS_URL` to the `redis-test` instance
+  beside the `DATABASE_URL` swap.
+- `apps/api/tests/integration/test_realtime_bus.py`: publish→subscribe
+  round-trip on `redis-test`; two tenants never cross channels; publisher
+  against a dead Redis endpoint does not raise.
+
+**Verify:** `make check-api` (ruff/pyright/pytest) green with the new bus
+tests; `make check` unchanged elsewhere. No web impact.
+
+### T3 — Attendance: shared board projection + presence publish hook
+
+**Changes** (attendance domain only + wiring)
+
+- `apps/api/app/domains/attendance/service.py`:
+  - Extract the row projection helper (`to_presence_row(record, shifts)` →
+    status from open/closed + `work_mode`, `late` from the record,
+    `minutes_late` recomputed via `_shift_boundary` when late and
+    `record.shift_id` resolves, `since` per the wire rule) — one function
+    shared by snapshot rows and delta facts.
+  - `board_detail(identity, board_date, now) -> BoardDetail` (date, counts,
+    rows — the `_absent_count` loop becomes `_absent_rows` and
+    `absent = len(rows)`, so rows and counts cannot disagree — plus activity).
+    `board()` becomes a thin mapping to the existing `Board` schema (wire
+    shape unchanged; every existing attendance test must pass untouched).
+  - Constructor gains `presence: PresencePublisher`. `check_in` (after
+    `_repo.add`, alongside `produced`) and `check_out` (after `_repo.close`)
+    build a `PresenceFact` — `check_in` reuses the freshly computed
+    `minutes_late`; `check_out` recomputes via the helper so a late flag's
+    minutes survive the row replace — and call
+    `await self._presence.publish(fact)` best-effort (failure logged, never
+    raised).
+- `apps/api/app/dependencies.py`: `get_attendance_service` wires
+  `presence=RedisPresencePublisher(get_redis())`.
+- Tests:
+  - `tests/unit/`: fact contents for on-time check-in, late check-in
+    (`minutes_late`), check-out (minutes preserved; injected clock only) —
+    recording fake; a raising fake proves check-in/check-out still succeed and
+    still return their `AttendanceMutation`.
+  - `tests/integration/test_attendance_api.py` (additions): `board()` output
+    unchanged; `counts == recount(rows)` and rows ⊇ every record for the date
+    + every absent employee (the projection invariants).
+
+**Verify:** `make check-api` green — including the untouched existing
+attendance suite (the refactor is behavior-preserving).
+
+### T4 — Realtime domain + REST snapshot + WS endpoint + contract tests + regen
+
+**Changes**
+
+- `apps/api/app/domains/realtime/`:
+  `models.py` (`PresenceState` dataclass — the connection-scoped hot state:
+  workday, rows map, counts; no ORM) · `schemas.py` (wire `PresenceStatus`,
+  `PresenceRow`, `RealtimeBoardSnapshot`, frame models — names pin the orval
+  type names) · `policies.py` (`ensure_can_read_presence`, BOARD_ROLES mirror
+  of attendance's board policy — domains don't import each other's internals)
+  · `service.py` (`RealtimeService`: `snapshot(identity, now)` maps
+  `board_detail` → wire; `stream(identity, now)` yields the `snapshot` frame
+  first, then `async for fact in bus.subscribe(tenant_id)` — in-scope fact →
+  row upsert + recount → `presence.upsert` frame; out-of-scope → lazy
+  visible-set refresh once, re-check, else drop; idempotent redelivery is
+  harmless by construction).
+- `apps/api/app/api/v1/realtime.py`:
+  `GET /realtime/board` (`operation_id="getRealtimeBoard"`,
+  response `RealtimeBoardSnapshot`, `_now()` pattern, policy guard) and
+  `@router.websocket("/realtime/board")` (identity dependency → policy →
+  close-before-accept on denial → `async for frame in service.stream(...):
+  await ws.send_text(frame)` with a concurrent receive to detect disconnect).
+  Register in `app/api/v1/__init__.py`; `RealtimeServiceDep` in
+  `dependencies.py`.
+- `make gen-api` → `contracts/openapi/openapi.json` +
+  `@workpulse/api-client` gains `useGetRealtimeBoard` / wire types (WS routes
+  are not in OpenAPI; the WS client is hand-written in T5).
+- Tests:
+  - `tests/integration/test_realtime_api.py`: snapshot == `GET /attendance/
+    board` at the same injected `_now` (criterion 1's "never disagree" test);
+    manager scope = self + direct reports rows **and** counts; unlinked
+    manager → empty; `employee`/`finance` → 403 `forbidden`;
+    `client_factory(None)` → 401 `unauthenticated`; tenant B's snapshot never
+    contains tenant A's rows; snapshot correct with a raising bus/publisher
+    fake (criterion 6).
+  - `tests/integration/test_realtime_ws.py` (starlette `TestClient`): denied
+    upgrades (no cookie → denial; employee-role override → denial) deliver
+    **zero frames** — both reject before any DB/session use so the shared test
+    session's loop is never touched (documented fixture note).
+  - `tests/unit/test_realtime_stream.py`: snapshot frame first; in-scope fact
+    → exactly one `presence.upsert` with recounted counts; out-of-scope fact
+    dropped after refresh; team-change re-inclusion; duplicate fact idempotent;
+    injected clock.
+  - `tests/contract/test_realtime_frames.py`: every produced frame validates
+    against `contracts/realtime/board.v1.json`; no PII-shaped keys (mirror
+    `test_attendance_events.py`); `test_openapi_drift.py` stays green.
+
+**Verify:** `make gen-api && make check` — API gates + OpenAPI drift green;
+web suite unaffected (its `vi.mock` of the client absorbs the new exports).
+
+### T5 — Web: `features/realtime` + `/command-center`
+
+Load `ui-ux-pro-max` **and** `frontend-design` before building (AGENTS rule 15);
+load `shadcn` if anything touches `components/ui/`. Follow the presentation
+rules (data-panel chrome, `containerLabel` + swipe hint, control language,
+`11`-unit touch targets, `font-mono` data labels).
+
+**Changes**
+
+- `apps/web/features/realtime/`:
+  `types.ts` (wire re-exports from `@workpulse/api-client`) · `api.ts`
+  (`realtimeBoardQueryKey` wrapping `getGetRealtimeBoardQueryKey()`) ·
+  `hooks/use-realtime-board.ts` (REST snapshot query with
+  `refetchInterval: 60_000` — decision 6's slow refresh — and `ApiError` →
+  message mapping) · `hooks/use-presence-socket.ts` (hand-written WS client:
+  URL derived from `NEXT_PUBLIC_API_URL` http→ws; auto-reconnect with backoff;
+  `snapshot`/`presence.upsert` frames applied via
+  `queryClient.setQueryData(realtimeBoardQueryKey, …)` so **server data stays
+  in the Query cache** per conventions — no shadow copies; connection status
+  is UI state; socket closed on unmount) · `labels.ts` (status → label maps;
+  wire values never rendered).
+- `apps/web/features/realtime/components/`: `CommandCenter.tsx` (`"use client"`
+  leaf) · `PresenceTable` (rows: status `Badge` (success/warning/destructive/
+  muted), `late` + `minutes_late`, `since` via `lib/datetime.ts`; data-panel
+  chrome; keyboard-scrollable with `containerLabel` + hint) · `LiveCounts`
+  (`BoardCountCards`-style `CountCell` tokens: present `text-success`, remote
+  `text-info`, late `text-warning`, absent `text-destructive`; overlapping-
+  counts copy) · `LiveActivityRail` (`ActivityFeed` patterns) ·
+  `LiveStatusBanner` (`Alert`: connecting / "live updates unavailable").
+- `apps/web/app/(dashboard)/command-center/page.tsx` — RSC shell
+  (`PageHeader` + `CommandCenter`).
+- `apps/web/components/destinations.ts` — nav entry `/command-center`,
+  `roles: ["manager", "hr", "admin", "super_admin"]` (both navs filter via
+  the shared catalog).
+- `apps/web/proxy.ts` — add `/command-center` to `DASHBOARD_ROOTS` + matcher.
+- Denied state mirrors `UsersTable`'s pattern (non-allowed role →
+  `router.replace("/dashboard")` + short notice).
+- `apps/web/tests/realtime/` (helpers mirroring `tests/attendance/helpers.tsx`;
+  scripted fake via an injectable WebSocket factory / `global.WebSocket` stub):
+  snapshot renders rows + counts + names joined from mocked employee data;
+  an upsert frame updates cache and counts; WS failure → banner + REST data
+  still rendered + refresh scheduled; denied role → redirect; loading/empty
+  states.
+
+**Verify:** `make check-web` (tsc + ESLint + Vitest); then `make check` green.
+
+### T6 — E2E: live flows + manager seed
+
+**Changes**
+
+- `database/postgres/seeds/` (extend `003_users.sql` or add `004`): a synthetic
+  manager employee (e.g. EMP-DEV02) + `manager@workpulse.test` (role `manager`,
+  linked; same dev password/hash) and an idempotent
+  `UPDATE employees SET manager_id = … WHERE id = …0021` so Wendy has a
+  manager — enabling a true manager-scoped wall (synthetic only; safe re-run).
+- `tests/e2e/command-center.spec.ts` (`test.describe.serial`; two-user pattern
+  via `browser.newContext()` + `uiLogin` per context — new to the suite;
+  `closeOpenRecords`-style cleanup so the worker starts checked out):
+  1. **Live** — manager watches `/command-center`, worker checks in on
+     `/attendance`: the row flips to present (late badge per shift rules)
+     without reload, measured **< 2s** after the check-in response (criterion
+     12).
+  2. **Reconnect** — close the page's socket from `page.evaluate`; the
+     "live updates unavailable" banner shows; a check-in made while
+     disconnected is visible after auto-reconnect + snapshot resync
+     (criterion 13).
+  3. **Denied** — `worker@`: no Command Center nav entry; direct goto renders
+     the denied state (criterion 11).
+  4. **Cookie-less WS** — `page.evaluate` opens the WS URL in a logged-out
+     context: connection rejected, no snapshot frame (criterion 4).
+
+**Verify:** `make check-e2e`, then full `make check` green (e2e is part of it
+since 2026-09-29).
+
+### T7 — Record: ADR + docs + status
+
+**Changes**
+
+- `.ai/decisions/0011-realtime-fanout-and-presence-projection.md` (Accepted):
+  Phase-2 fan-out = transient per-tenant Redis pub/sub with a per-connection
+  presence projection (no Redis rows cache; `minutes_late` recomputed from
+  `record.shift_id`; WS denial mechanics; uvicorn ping) and the consequence
+  that Phase 3's outbox + Kafka replaces the **input** to the same projection
+  and protocol without a protocol change. (Architecture rule: a technology is
+  adopted with a spec **and** an ADR.)
+- This spec: tick the acceptance criteria, `Status: done`.
+- `attendance.md` + `.ai/domain.md`: one-line consumer/wording notes for the
+  presence port and the LATE-flag fix.
+- `tasks/TODO.md`: Now → Done entry with a one-line summary;
+  `.ai/features/README.md` index → done; `AGENTS.md` quickstart table gains
+  `make redis-up` if the T2 targets warrant it.
+
+**Verify:** `make check` green; the chain spec → domain → API → protocol → UI
+→ test is walkable without searching the repo.
+
+### Test strategy
+
+| Layer | What is added | Gate | Failure case covered |
+| --- | --- | --- | --- |
+| Unit (`tests/unit`) | row projection (`minutes_late`, since), fact building, best-effort publish, `RealtimeService.stream` frame logic | `make check-api` | publisher raising does not break check-in; out-of-scope facts dropped; duplicate facts idempotent |
+| Integration (`tests/integration`, postgres-test + redis-test) | bus round-trip + channel isolation; `board_detail` invariants; REST snapshot roles/scope/tenancy; WS denials | `make check-api` | 401/403/denied upgrade (zero frames); cross-tenant invisibility (404/empty); dead-Redis publish and Redis-free snapshot |
+| Contract (`tests/contract`) | frames vs `contracts/realtime/board.v1.json`; no-PII keys; OpenAPI drift | `make check-api` | malformed/extra-key frames rejected by schema |
+| Web (`apps/web/tests/realtime`) | render states, cache updates from frames, banner/refresh, denied redirect | `make check-web` | WS unreachable (REST fallback visible); denied role |
+| E2E (`tests/e2e/command-center.spec.ts`) | two-user live flip <2s; reconnect resync; denied nav; cookie-less WS | `make check-e2e` (in `make check`) | dropped socket mid-session; unauthenticated socket |
+
+No Postgres migration, no `contracts/events/` changes, no audit assertions
+(read-only feature). All time-dependent tests use injected clocks
+(`monkeypatch _now` / service `now` args), per `.ai/testing.md` rule 5.
+
+### Risks · unknowns · ADR candidates
+
+1. **WS denial status (unknown → T1):** Starlette's close-before-accept may
+   hardcode one denial status (403) for both unauthenticated and forbidden —
+   the spec's 401/403-on-the-upgrade wording is then narrowed to "denied on
+   the upgrade; the 401/403 distinction lives on the REST route". Verified and
+   pinned in T1 before any code.
+2. **PresenceState materialization (ADR candidate → ADR 0011):** this plan
+   chooses the live per-connection projection over a Redis rows cache (fewer
+   staleness paths; snapshot = one PG computation, which ADR 0009 already
+   accepted). If snapshot latency under many concurrent viewers ever matters,
+   a read-through Redis cache with TTL is the known upgrade — one port swap.
+3. **`minutes_late` recompute drift:** recomputed from `record.shift_id` + the
+   shift's current `start_time`/`grace_minutes`; editing a shift after a late
+   check-in changes the displayed minutes (the `late` flag itself never
+   drifts). Accepted; a stored column is the fix if it ever matters.
+4. **Counts lag clock-driven transitions:** pushed counts recount the
+   connection's known rows, so `absent` onset lands at the next ~60s snapshot
+   refresh (decision 6). Visible as counts changing without a row flip — UI
+   copy should say the wall refreshes itself.
+5. **E2E timing assertion (<2s) flake risk:** measured after the check-in
+   response on a serial local run; if a slow machine flakes, degrade the
+   assertion to "visible without reload" + a logged delta rather than a hard
+   budget (say so when changing it).
+6. **Per-connection Redis subscriptions** (N viewers = N subscribers on one
+   channel): fine at this scale; a refcounted in-process hub is the known
+   upgrade path and would not change the protocol.
+7. **Seed addition (`manager@`)** touches shared dev seeds — re-run must stay
+   idempotent and `make check-e2e` must stay green for employees/attendance/
+   users suites (checked in T6).
+8. **TestClient + shared test session loop mismatch** — WS denial tests are
+   deliberately pre-DB; if a full in-process WS happy-path test is ever
+   wanted, add a per-loop session override (noted in T4).
+9. **Two-user e2e pattern is new** to the suite (one user per
+   `browser.newContext`, real UI login each); kept serial (`workers: 1`).
+10. Unlinked managers see nobody (existing `_scoped_employees` guard) —
+    realtime mirrors it exactly; covered by a test, no behavior change.

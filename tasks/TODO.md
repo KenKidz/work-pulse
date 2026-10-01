@@ -6,7 +6,7 @@ does the work.
 
 ## Now
 
-- [ ] Realtime Command Center (Phase 2, Redis + WebSocket board) — spec drafted with decisions resolved: `.ai/features/realtime-command-center.md`; next: `/plan`
+- [ ] Realtime Command Center (Phase 2, Redis + WebSocket board) — spec + plan approved: `.ai/features/realtime-command-center.md` (T1–T7 ready to implement)
 
 ## Later
 
