@@ -24,9 +24,9 @@
  * within a single run only).
  */
 
-import { expect, test, type BrowserContext, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
-import { API_URL, WORKER_EMAIL, WORKER_EMPLOYEE_ID, uiLogin } from './auth';
+import { WORKER_EMAIL, WORKER_EMPLOYEE_ID, closeOpenRecords, uiLogin } from './auth';
 
 /** Today in the employee's location timezone — the API's workday definition. */
 function workdayISO(): string {
@@ -48,29 +48,6 @@ async function openAttendance(page: Page, workday: string): Promise<void> {
   await expect(page.getByRole('heading', { name: 'Attendance', exact: true })).toBeVisible();
   await page.getByLabel('Date', { exact: true }).fill(workday);
   await expect(page.getByTestId('check-in-panel')).toBeVisible();
-}
-
-/**
- * Close any record the worker left open — regardless of workday. The UI's
- * open-record banner is date-scoped, but the API rejects a duplicate check-in
- * for any open record, so recovery goes through the API: an interrupted earlier
- * run may have crossed midnight in the employee's timezone.
- */
-async function closeOpenRecords(context: BrowserContext): Promise<void> {
-  const response = await context.request.get(
-    `${API_URL}/api/v1/attendance/records?page_size=100`,
-  );
-  expect(response.status(), await response.text()).toBe(200);
-  const { items } = (await response.json()) as {
-    items: { id: string; checked_out_at: string | null }[];
-  };
-  for (const record of items.filter((item) => item.checked_out_at === null)) {
-    const closed = await context.request.post(
-      `${API_URL}/api/v1/attendance/records/${record.id}/check-out`,
-      { data: {} },
-    );
-    expect(closed.status(), await closed.text()).toBe(200);
-  }
 }
 
 test.describe.serial('attendance', () => {

@@ -613,7 +613,7 @@ rules (data-panel chrome, `containerLabel` + swipe hint, control language,
 
 **Verify:** `make check-web` (tsc + ESLint + Vitest); then `make check` green.
 
-### T6 — E2E: live flows + manager seed
+### T6 — E2E: live flows + manager seed · done 2026-10-01
 
 **Changes**
 
