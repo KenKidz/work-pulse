@@ -1,6 +1,6 @@
 # Feature: Realtime Command Center
 
-- **Status:** implementing
+- **Status:** done
 - **Phase:** 2
 - **Size:** M
 - **Surfaces:** api+web
@@ -288,42 +288,42 @@ in-process port as the projection's input; the frame protocol is unchanged.
 
 ## Acceptance criteria
 
-- [ ] API: given an `hr` session, when `GET /api/v1/realtime/board` is called,
+- [x] API: given an `hr` session, when `GET /api/v1/realtime/board` is called,
   then `200` returns `date` = current workday with overlapping counts and
   presence rows that exactly match `GET /attendance/board` semantics (ADR 0009)
   for the same instant.
-- [ ] API (live): given a manager's open WS on `/api/v1/realtime/board`, when a
+- [x] API (live): given a manager's open WS on `/api/v1/realtime/board`, when a
   report checks in, then the socket receives one `presence.upsert` with the
   full row, fresh `counts` and `reason: "checked_in"` — visible on the wall
   within 2 seconds of the check-in response (the Phase-2 metric).
-- [ ] API (failure): given an `employee` or `finance` session, when they request
+- [x] API (failure): given an `employee` or `finance` session, when they request
   the snapshot or attempt the upgrade, then `403` (uniform `forbidden`) /
   rejected upgrade, and no board frame is ever delivered.
-- [ ] API (failure): given a missing or invalid `wp_session` cookie, then the
+- [x] API (failure): given a missing or invalid `wp_session` cookie, then the
   REST snapshot is `401` (`unauthenticated`) and the upgrade is rejected
   before any frame (single denial status on the upgrade — Pinned details).
-- [ ] API (tenant isolation): given sockets in two tenants, when tenant A
+- [x] API (tenant isolation): given sockets in two tenants, when tenant A
   checks in, then tenant B receives no frame, and each snapshot contains only
   its own tenant's rows (404/empty rules).
-- [ ] API (failure): given Redis is unreachable, when the snapshot is requested,
+- [x] API (failure): given Redis is unreachable, when the snapshot is requested,
   then it is still correct from PostgreSQL and no presence state is invented.
-- [ ] Contracts: every produced frame validates against
+- [x] Contracts: every produced frame validates against
   `contracts/realtime/board.v1.json`, and a test asserts no name/email/note or
   other PII field exists in any frame or snapshot.
-- [ ] Unit: the projection (workday, late, minutes_late, absent onset) uses an
+- [x] Unit: the projection (workday, late, minutes_late, absent onset) uses an
   injected clock — no wall-time assertions.
-- [ ] Web: given a manager opens `/command-center`, then live counts, the
+- [x] Web: given a manager opens `/command-center`, then live counts, the
   who-is-working rows (names joined from employee data) and the activity rail
   render from the snapshot, with loading and empty states.
-- [ ] Web (failure): given the WS cannot connect, then the page renders the REST
+- [x] Web (failure): given the WS cannot connect, then the page renders the REST
   snapshot with a visible "live updates unavailable" state and refreshes the
   snapshot about every 60s.
-- [ ] Web (denied): given an `employee`/`finance` login, then no command-center
+- [x] Web (denied): given an `employee`/`finance` login, then no command-center
   nav is shown and direct navigation renders the denied state.
-- [ ] E2E: an employee checks in while a manager watches `/command-center`, then
+- [x] E2E: an employee checks in while a manager watches `/command-center`, then
   the row flips to `present` (with `late` per the shift) without a reload,
   within 2 seconds.
-- [ ] E2E (edge): after the socket drops and reconnects, the wall resyncs from a
+- [x] E2E (edge): after the socket drops and reconnects, the wall resyncs from a
   fresh snapshot — a change made while disconnected is visible after reconnect.
 
 ## Decisions (PO, 2026-10-01)
@@ -641,7 +641,7 @@ rules (data-panel chrome, `containerLabel` + swipe hint, control language,
 **Verify:** `make check-e2e`, then full `make check` green (e2e is part of it
 since 2026-09-29).
 
-### T7 — Record: ADR + docs + status
+### T7 — Record: ADR + docs + status · done 2026-10-01
 
 **Changes**
 

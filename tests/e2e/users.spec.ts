@@ -42,6 +42,11 @@ test.describe.serial('users', () => {
     await dialog.getByRole('button', { name: 'Create user' }).click();
     await expect(dialog).toBeHidden();
 
+    // Filter to the fresh account before asserting: the table paginates at 20
+    // and each run leaves its deactivated synthetic user behind (no delete
+    // endpoint), so the unfiltered list eventually hides the new row on a
+    // later page — the test was wrong to assume page-1 visibility (rule 8).
+    await page.getByRole('textbox', { name: 'Search users' }).fill(NEW_EMAIL);
     const row = page.getByRole('row').filter({ hasText: NEW_EMAIL });
     await expect(row).toContainText('Active');
 

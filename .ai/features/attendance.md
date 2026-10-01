@@ -224,7 +224,10 @@ payloads or audit `changes` values (`changes` says `"changed"`).
 
 ## Events
 
-Contracts in Phase 1, published in Phase 3:
+Contracts in Phase 1, published in Phase 3 (from Phase 2, check-in/check-out
+also hand a `PresenceFact` to the realtime presence port
+(`app/shared/presence.py`) — best-effort, not the event bus; see
+`realtime-command-center.md` and ADR 0011):
 
 | `event_type` | Emitted when | Payload |
 | --- | --- | --- |

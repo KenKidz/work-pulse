@@ -103,7 +103,7 @@ Envelope and versioning rules: `contracts/README.md`,
              ▼
    PRESENT ──┬── check_out ──► CHECKED_OUT
    or REMOTE │
-   (LATE flag set at check-in if after shift start + grace; never cleared)
+   (`late` flag set at check-in if after shift start + grace; never cleared)
 ```
 
 **Leave request**
