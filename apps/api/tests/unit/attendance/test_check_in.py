@@ -27,7 +27,11 @@ from tests.unit.attendance.conftest import (
     seed_record,
     seed_shift,
 )
-from tests.unit.attendance.fakes import FakeAttendanceRepo, FakeShiftRepo
+from tests.unit.attendance.fakes import (
+    FakeAttendanceRepo,
+    FakePresencePublisher,
+    FakeShiftRepo,
+)
 from tests.unit.organizations.fakes import RecordingAuditWriter
 
 EARLY = datetime(2026, 9, 24, 1, 0, tzinfo=UTC)  # 08:00 in Asia/Ho_Chi_Minh
@@ -231,7 +235,12 @@ async def test_insert_backstop_still_rejects_the_second_check_in(
     repo = _RaceLostRepo()
     repo.employees = raced.employees
     repo.records = raced.records
-    service = AttendanceService(repo=repo, shifts=shift_repo, audit=audit)
+    service = AttendanceService(
+        repo=repo,
+        shifts=shift_repo,
+        audit=audit,
+        presence=FakePresencePublisher(),
+    )
 
     with pytest.raises(AttendanceAlreadyCheckedInError):
         await check_in(service)

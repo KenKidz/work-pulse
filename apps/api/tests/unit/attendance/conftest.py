@@ -26,7 +26,11 @@ from app.domains.employees.schemas import EmployeeStatus
 from app.domains.organizations.schemas import Location
 from app.domains.organizations.service import LocationService
 from app.shared.identity import Identity, Role
-from tests.unit.attendance.fakes import FakeAttendanceRepo, FakeShiftRepo
+from tests.unit.attendance.fakes import (
+    FakeAttendanceRepo,
+    FakePresencePublisher,
+    FakeShiftRepo,
+)
 from tests.unit.organizations.fakes import FakeLocationRepo, RecordingAuditWriter
 
 TENANT_A = UUID("00000000-0000-4000-8000-00000000000a")
@@ -85,12 +89,23 @@ def location_repo() -> FakeLocationRepo:
 
 
 @pytest.fixture
+def presence() -> FakePresencePublisher:
+    return FakePresencePublisher()
+
+
+@pytest.fixture
 def service(
     attendance_repo: FakeAttendanceRepo,
     shift_repo: FakeShiftRepo,
     audit: RecordingAuditWriter,
+    presence: FakePresencePublisher,
 ) -> AttendanceService:
-    return AttendanceService(repo=attendance_repo, shifts=shift_repo, audit=audit)
+    return AttendanceService(
+        repo=attendance_repo,
+        shifts=shift_repo,
+        audit=audit,
+        presence=presence,
+    )
 
 
 @pytest.fixture

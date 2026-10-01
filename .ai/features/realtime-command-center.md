@@ -475,7 +475,7 @@ accept/reject frame samples (extra keys, PII keys, bad discriminator, caps).
 **Verify:** `make check-api` (ruff/pyright/pytest) green with the new bus
 tests; `make check` unchanged elsewhere. No web impact.
 
-### T3 — Attendance: shared board projection + presence publish hook
+### T3 — Attendance: shared board projection + presence publish hook · done 2026-10-01
 
 **Changes** (attendance domain only + wiring)
 

@@ -9,10 +9,18 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1 import attendance as attendance_api
+from app.domains.attendance.service import AttendanceService
 from app.domains.employees.schemas import EmployeeStatus, EmploymentType
+from app.infrastructure.postgres.audit import PostgresAuditWriter
+from app.infrastructure.postgres.repositories.attendance import (
+    PostgresAttendanceRepository,
+    PostgresShiftRepository,
+)
 from app.infrastructure.postgres.repositories.employees import (
     PostgresEmployeeRepository,
 )
+from app.infrastructure.redis.client import get_redis
+from app.infrastructure.redis.presence import RedisPresencePublisher
 from tests.integration.conftest import (
     ACTOR,
     TENANT_A,
@@ -345,6 +353,143 @@ async def test_board_counts_independent_and_activity_newest_first(
         "checked_in",
     ]
     assert after_board["activity"][0]["employee_id"] == str(ACTOR)
+
+
+async def test_board_detail_matches_the_wire_board_and_counts_recount_rows(
+    client_factory: ClientFactory,
+    session: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """T3 projection invariants: one code path, counts == recall of rows.
+
+    The realtime snapshot maps `board_detail`; the REST board maps the same
+    detail — so their counts/activity must be identical, `absent` must equal
+    the number of absent rows, and rows must cover every recorded employee plus
+    every currently-absent employee (ADR 0009 semantics).
+    """
+    async with client_factory() as client:
+        refs = await create_org_refs(client)
+        grace = (
+            await client.post(
+                "/api/v1/employees",
+                json=employee_payload(
+                    refs,
+                    first_name="Grace",
+                    last_name="Hopper",
+                    email="grace@example.test",
+                ),
+            )
+        ).json()
+        absent = (
+            await client.post(
+                "/api/v1/employees",
+                json=employee_payload(
+                    refs,
+                    first_name="Ada",
+                    last_name="Absent",
+                    email="ada.absent@example.test",
+                ),
+            )
+        ).json()
+    await _seed_actor(session, refs)
+
+    clock = {"now": datetime(2026, 9, 24, 11, 0, tzinfo=UTC)}
+    monkeypatch.setattr(attendance_api, "_now", lambda: clock["now"])
+
+    async with client_factory() as admin:
+        shift = await admin.post(
+            "/api/v1/shifts",
+            json={
+                "name": "Always past",
+                "start_time": "00:00",
+                "end_time": "23:59",
+                "grace_minutes": 0,
+            },
+        )
+        assert shift.status_code == 201
+
+    async with client_factory() as client:
+        actor_record = (
+            await client.post(
+                "/api/v1/attendance/check-ins", json={"work_mode": "onsite"}
+            )
+        ).json()
+    async with client_factory(identity(employee_id=UUID(grace["id"]))) as other:
+        grace_record = (
+            await other.post(
+                "/api/v1/attendance/check-ins", json={"work_mode": "remote"}
+            )
+        ).json()
+
+    board_date = date.fromisoformat(actor_record["workday"])
+    async with client_factory() as admin:
+        wire = (
+            await admin.get(
+                "/api/v1/attendance/board", params={"date": board_date.isoformat()}
+            )
+        ).json()
+
+    service = AttendanceService(
+        repo=PostgresAttendanceRepository(session),
+        shifts=PostgresShiftRepository(session),
+        audit=PostgresAuditWriter(session),
+        presence=RedisPresencePublisher(get_redis()),
+    )
+    detail = await service.board_detail(identity(), board_date, clock["now"])
+
+    # Never disagree with the wire board: same projection, same instant.
+    assert detail.date == board_date
+    assert detail.counts.model_dump() == wire["counts"]
+    assert [entry.model_dump(mode="json") for entry in detail.activity] == (
+        wire["activity"]
+    )
+
+    # counts == recount(rows) — overlapping ADR 0009 counts, one record per
+    # employee in this fixture.
+    assert detail.counts.model_dump() == {
+        "present": sum(row.status == "present" for row in detail.rows),
+        "remote": sum(row.status == "remote" for row in detail.rows),
+        "late": sum(row.late for row in detail.rows),
+        "on_leave": sum(row.status == "on_leave" for row in detail.rows),
+        "absent": sum(row.status == "absent" for row in detail.rows),
+        "checked_out": sum(row.status == "checked_out" for row in detail.rows),
+    }
+
+    # Rows cover every employee with a record for the date + every absent one.
+    rows = {row.employee_id: row for row in detail.rows}
+    assert set(rows) == {
+        UUID(actor_record["employee_id"]),
+        UUID(grace_record["employee_id"]),
+        UUID(absent["id"]),
+    }
+    actor_row = rows[UUID(actor_record["employee_id"])]
+    assert actor_row.status == "present"
+    assert actor_row.late is True
+    assert actor_row.minutes_late == 660  # 11:00 past a 00:00 + 0-grace shift
+    assert actor_row.since == clock["now"]
+    assert actor_row.attendance_id == UUID(actor_record["id"])
+    grace_row = rows[UUID(grace_record["employee_id"])]
+    assert grace_row.status == "remote"
+    absent_row = rows[UUID(absent["id"])]
+    assert absent_row.status == "absent"
+    assert absent_row.since is None
+    assert absent_row.attendance_id is None
+
+    # A check-out flips the row and the late minutes survive the close.
+    clock["now"] = datetime(2026, 9, 24, 11, 30, tzinfo=UTC)
+    async with client_factory() as client:
+        closed = await client.post(
+            f"/api/v1/attendance/records/{actor_record['id']}/check-out", json={}
+        )
+        assert closed.status_code == 200
+    after = await service.board_detail(identity(), board_date, clock["now"])
+    closed_row = {row.employee_id: row for row in after.rows}[
+        UUID(actor_record["employee_id"])
+    ]
+    assert closed_row.status == "checked_out"
+    assert closed_row.since == clock["now"]
+    assert closed_row.late is True
+    assert closed_row.minutes_late == 660
 
 
 async def test_board_defaults_to_server_utc_date(

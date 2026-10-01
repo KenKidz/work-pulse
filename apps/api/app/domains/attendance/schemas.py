@@ -23,7 +23,7 @@ Semantics worth naming here (pinned in `.ai/features/attendance.md`):
 import re
 from datetime import date, datetime, time
 from enum import StrEnum
-from typing import Annotated, Any, Self
+from typing import Annotated, Any, Literal, Self
 from uuid import UUID
 
 from pydantic import (
@@ -48,6 +48,12 @@ class WorkMode(StrEnum):
 class BoardAction(StrEnum):
     CHECKED_IN = "checked_in"
     CHECKED_OUT = "checked_out"
+
+
+# Live presence vocabulary — one status plus the orthogonal `late` flag
+# (ADR 0009). `late` is never a status; `on_leave` is never populated until the
+# Leave context lands (the value keeps the contract stable).
+PresenceStatus = Literal["present", "remote", "checked_out", "absent", "on_leave"]
 
 
 def _require_hh_mm(value: Any) -> Any:
@@ -99,6 +105,24 @@ class Board(BaseModel):
     date: date
     counts: BoardCounts
     activity: list[BoardActivity]
+
+
+class BoardPresenceRow(BaseModel):
+    """One employee's presence for the workday — the shared projection row.
+
+    The realtime snapshot and deltas project onto this shape; identifiers and
+    state only, never names/notes (`.ai/security.md`). `late` is orthogonal to
+    `status`; `minutes_late` is recomputed from the record's shift at read time
+    (the stored flag itself is immutable), and `since` is `checked_in_at` while
+    the record is open / `checked_out_at` once closed / `null` for absent rows.
+    """
+
+    employee_id: UUID
+    status: PresenceStatus
+    late: bool
+    minutes_late: int | None = None
+    since: datetime | None = None
+    attendance_id: UUID | None = None
 
 
 class Shift(BaseModel):

@@ -34,14 +34,21 @@ Rules implemented here (pinned in `.ai/features/attendance.md`):
 - **Audit**: every check-in/check-out writes an entry with ids/flags only —
   note values are PII and never reach `changes`, logs or events.
 - **Events**: mutations build their T2 payloads (contracts exist in Phase 1,
-  the bus arrives in Phase 3) and return them on `AttendanceMutation`; nothing
-  is published here.
+  the domain-event bus arrives in Phase 3) and return them on
+  `AttendanceMutation` — they are never published from here.
+- **Presence projection**: `board_detail` is the one board code path — counts,
+  per-employee presence rows and the activity feed — behind both
+  `GET /attendance/board` and the Phase-2 realtime snapshot, so the two can
+  never disagree (`.ai/features/attendance.md` + realtime spec, T3). Check-in /
+  check-out additionally publish a `PresenceFact` through the best-effort
+  `PresencePublisher` port: the live wall sees captures in seconds, and a bus
+  failure never fails the write.
 """
 
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
@@ -75,6 +82,7 @@ from app.domains.attendance.schemas import (
     BoardAction,
     BoardActivity,
     BoardCounts,
+    BoardPresenceRow,
     CheckInRequest,
     CheckOutRequest,
     Shift,
@@ -88,9 +96,13 @@ from app.domains.employees.schemas import EmployeeStatus
 from app.domains.organizations.service import LocationService
 from app.shared.audit import AuditEntryCreate, AuditWriter
 from app.shared.identity import Identity, Role
+from app.shared.logging import get_logger
 from app.shared.pagination import PageParams
+from app.shared.presence import PresenceFact, PresencePublisher
 
 ACTIVITY_LIMIT = 20  # board feed cap (pinned)
+
+_log = get_logger("attendance.presence")
 
 
 def _ref(value: UUID | None) -> str | None:
@@ -124,6 +136,98 @@ def _expected_shift(shifts: Sequence[Shift], location_id: UUID) -> Shift | None:
     return default
 
 
+def _shift_boundary(shift: Shift, workday: date, timezone: ZoneInfo) -> datetime:
+    """`shift.start_time + grace_minutes` on `workday` in the location tz."""
+    start = datetime.combine(workday, shift.start_time, tzinfo=timezone)
+    return start + timedelta(minutes=shift.grace_minutes)
+
+
+def _presence_status(
+    record: AttendanceRecord,
+) -> Literal["present", "remote", "checked_out"]:
+    """Open/closed + work mode → the live status (never `absent`/`on_leave`)."""
+    if record.checked_out_at is not None:
+        return "checked_out"
+    if record.work_mode == WorkMode.REMOTE:
+        return "remote"
+    return "present"
+
+
+def _minutes_late(
+    record: AttendanceRecord, shift: Shift | None, timezone: ZoneInfo
+) -> int | None:
+    """Whole minutes past `shift.start + grace`, recomputed at read time.
+
+    `None` when the record is not `late` or its shift no longer resolves.
+    Recomputing (instead of storing) means an edit to the shift changes the
+    displayed minutes after a late check-in — accepted drift; the `late` flag
+    itself never changes (realtime spec, risk 3). Clamped at 0 so the wire
+    contract's `minimum: 0` always holds.
+    """
+    if not record.late or shift is None:
+        return None
+    boundary = _shift_boundary(shift, record.workday, timezone)
+    return max(0, int((record.checked_in_at - boundary).total_seconds() // 60))
+
+
+def _presence_row(
+    record: AttendanceRecord, shift: Shift | None, timezone: ZoneInfo
+) -> BoardPresenceRow:
+    """One employee's presence row from their (current) workday record.
+
+    The single row projection behind the REST board snapshot and the realtime
+    frames: `since` is `checked_in_at` while open and `checked_out_at` once
+    closed; `minutes_late` is recomputed from the record's shift at read time.
+    """
+    return BoardPresenceRow(
+        employee_id=record.employee_id,
+        status=_presence_status(record),
+        late=record.late,
+        minutes_late=_minutes_late(record, shift, timezone),
+        since=(
+            record.checked_out_at
+            if record.checked_out_at is not None
+            else record.checked_in_at
+        ),
+        attendance_id=record.id,
+    )
+
+
+def _absent_rows(
+    visible: Sequence[EmployeeContext],
+    records: Sequence[AttendanceRecord],
+    shifts: Sequence[Shift],
+    board_date: date,
+    now: datetime,
+) -> list[BoardPresenceRow]:
+    """Active employees past `shift.start + grace` with zero records.
+
+    Shifts resolve as the employee's location's shift, else the tenant
+    default, else none (never absent). Identifiers and state only.
+    """
+    recorded = {record.employee_id for record in records}
+    rows: list[BoardPresenceRow] = []
+    for context in visible:
+        if context.status != EmployeeStatus.ACTIVE or context.id in recorded:
+            continue
+        shift = _expected_shift(shifts, context.location_id)
+        if shift is None:
+            continue
+        boundary = _shift_boundary(shift, board_date, ZoneInfo(context.timezone))
+        if now > boundary:
+            rows.append(
+                BoardPresenceRow(
+                    employee_id=context.id,
+                    status="absent",
+                    late=False,
+                    minutes_late=None,
+                    since=None,
+                    attendance_id=None,
+                )
+            )
+    return rows
+
+
 @dataclass(frozen=True, slots=True)
 class AttendanceMutation:
     """A completed check-in/check-out plus the event payloads it produced.
@@ -137,16 +241,36 @@ class AttendanceMutation:
     events: tuple[dict[str, Any], ...]
 
 
+@dataclass(frozen=True, slots=True)
+class BoardDetail:
+    """The full board projection: counts + presence rows + activity feed.
+
+    One code path behind both `GET /attendance/board` (which maps to the wire
+    `Board`) and the realtime snapshot (which maps to its wire schema), so the
+    surfaces can never drift about workday, lateness or `absent` (ADR 0009).
+    `rows` holds one row per employee — the newest workday record wins — plus
+    one `absent` row per currently-absent employee; `activity` is the shared
+    transition feed (newest first, capped).
+    """
+
+    date: date
+    counts: BoardCounts
+    rows: list[BoardPresenceRow]
+    activity: list[BoardActivity]
+
+
 class AttendanceService:
     def __init__(
         self,
         repo: AttendanceRepository,
         shifts: ShiftRepository,
         audit: AuditWriter,
+        presence: PresencePublisher,
     ) -> None:
         self._repo = repo
         self._shifts = shifts
         self._audit = audit
+        self._presence = presence
 
     # --- captures ------------------------------------------------------------
 
@@ -173,12 +297,8 @@ class AttendanceService:
         workday = now.astimezone(location_timezone).date()
         shift = await self._resolve_shift(tenant_id, context.location_id)
         late = False
-        minutes_late = 0
         if shift is not None:
-            boundary = self._shift_boundary(shift, workday, location_timezone)
-            if now > boundary:
-                late = True
-                minutes_late = int((now - boundary).total_seconds() // 60)
+            late = now > _shift_boundary(shift, workday, location_timezone)
 
         record = await self._repo.add(
             tenant_id,
@@ -191,6 +311,12 @@ class AttendanceService:
             shift_id=shift.id if shift is not None else None,
             check_in_note=payload.check_in_note,
         )
+
+        # The one minutes-late rule (`_minutes_late`) on the persisted record,
+        # so the fact, the `attendance.late` event and the board rows share the
+        # math. `0` stands in for "not late"; the late event is only emitted
+        # when `late` is true, and then the value is the computed minutes.
+        minutes_late = _minutes_late(record, shift, location_timezone) or 0
 
         produced: list[dict[str, Any]] = [
             attendance_checked_in(
@@ -217,6 +343,22 @@ class AttendanceService:
                     minutes_late=minutes_late,
                 )
             )
+
+        await self._publish_presence(
+            PresenceFact(
+                tenant_id=tenant_id,
+                workday=record.workday,
+                employee_id=record.employee_id,
+                attendance_id=record.id,
+                status=_presence_status(record),
+                late=late,
+                # Set with `late` at check-in; `null` otherwise (wire rule).
+                minutes_late=minutes_late if late else None,
+                since=record.checked_in_at,
+                reason="checked_in",
+                occurred_at=now,
+            )
+        )
 
         await self._audit.write(
             AuditEntryCreate(
@@ -277,6 +419,30 @@ class AttendanceService:
             # A concurrent check-out closed it under us — never overwrite.
             raise AttendanceNotOpenError()
 
+        # The row's status flips to `checked_out`; recomputing `minutes_late`
+        # from the record's shift keeps a late check-in's minutes on the row.
+        # The shift is only resolved when it can matter (not-late rows never
+        # carry minutes), saving a SELECT on the common capture path.
+        shift = (
+            await self._shifts.get(tenant_id, closed.shift_id)
+            if closed.late and closed.shift_id is not None
+            else None
+        )
+        await self._publish_presence(
+            PresenceFact(
+                tenant_id=tenant_id,
+                workday=closed.workday,
+                employee_id=closed.employee_id,
+                attendance_id=closed.id,
+                status="checked_out",
+                late=closed.late,
+                minutes_late=_minutes_late(closed, shift, ZoneInfo(context.timezone)),
+                since=now,
+                reason="checked_out",
+                occurred_at=now,
+            )
+        )
+
         await self._audit.write(
             AuditEntryCreate(
                 tenant_id=tenant_id,
@@ -332,8 +498,18 @@ class AttendanceService:
         items, total = await self._repo.list(identity.tenant_id, filters, page)
         return AttendanceRecordListPage(items=list(items), page=page.make_page(total))
 
-    async def board(self, identity: Identity, board_date: date, now: datetime) -> Board:
-        """Live workforce board for one date, scoped to visible employees."""
+    async def board_detail(
+        self, identity: Identity, board_date: date, now: datetime
+    ) -> BoardDetail:
+        """The shared board projection: counts, presence rows, activity.
+
+        One code path behind `GET /attendance/board` and the realtime snapshot,
+        so the two surfaces can never disagree (ADR 0009). Counts keep the
+        pinned record semantics (overlapping, not a partition); `rows` holds
+        one row per employee with a record for the workday — the newest record
+        wins — plus one `absent` row per currently-absent employee, so
+        `absent == len(absent rows)` by construction.
+        """
         tenant_id = identity.tenant_id
         visible = await self._scoped_employees(identity)
         employee_ids = (
@@ -342,27 +518,47 @@ class AttendanceService:
             else None
         )
         records = await self._repo.for_workday(tenant_id, board_date, employee_ids)
+        shifts = await self._shifts.list(tenant_id)
+        shifts_by_id = {shift.id: shift for shift in shifts}
+        timezones = {context.id: context.timezone for context in visible}
 
-        present = sum(
-            1
-            for record in records
-            if record.checked_out_at is None and record.work_mode == WorkMode.ONSITE
-        )
-        remote = sum(
-            1
-            for record in records
-            if record.checked_out_at is None and record.work_mode == WorkMode.REMOTE
-        )
-        checked_out = sum(1 for record in records if record.checked_out_at is not None)
+        rows: list[BoardPresenceRow] = []
+        seen: set[UUID] = set()
+        for record in records:
+            # `for_workday` is newest-first: the first record per employee is
+            # their current presence row (a later re-check-in wins).
+            if record.employee_id in seen:
+                continue
+            seen.add(record.employee_id)
+            rows.append(
+                _presence_row(
+                    record,
+                    shifts_by_id.get(record.shift_id)
+                    if record.shift_id is not None
+                    else None,
+                    ZoneInfo(timezones[record.employee_id]),
+                )
+            )
+        absent_rows = _absent_rows(visible, records, shifts, board_date, now)
+        rows.extend(absent_rows)
+
         counts = BoardCounts(
-            present=present,
-            remote=remote,
+            present=sum(
+                1
+                for record in records
+                if record.checked_out_at is None and record.work_mode == WorkMode.ONSITE
+            ),
+            remote=sum(
+                1
+                for record in records
+                if record.checked_out_at is None and record.work_mode == WorkMode.REMOTE
+            ),
             late=sum(1 for record in records if record.late),
             on_leave=0,  # Leave lands in Phase 3 — the field keeps the contract
-            absent=await self._absent_count(
-                tenant_id, visible, records, board_date, now
+            absent=len(absent_rows),
+            checked_out=sum(
+                1 for record in records if record.checked_out_at is not None
             ),
-            checked_out=checked_out,
         )
 
         activity: list[BoardActivity] = []
@@ -383,7 +579,17 @@ class AttendanceService:
                     )
                 )
         activity.sort(key=lambda entry: entry.occurred_at, reverse=True)
-        return Board(date=board_date, counts=counts, activity=activity[:ACTIVITY_LIMIT])
+        return BoardDetail(
+            date=board_date,
+            counts=counts,
+            rows=rows,
+            activity=activity[:ACTIVITY_LIMIT],
+        )
+
+    async def board(self, identity: Identity, board_date: date, now: datetime) -> Board:
+        """Live workforce board for one date — the wire mapping of `board_detail`."""
+        detail = await self.board_detail(identity, board_date, now)
+        return Board(date=detail.date, counts=detail.counts, activity=detail.activity)
 
     # --- shared internals ------------------------------------------------------
 
@@ -427,44 +633,28 @@ class AttendanceService:
             )
         return await self._repo.visible_employees(identity.tenant_id)
 
-    async def _absent_count(
-        self,
-        tenant_id: UUID,
-        visible: Sequence[EmployeeContext],
-        records: Sequence[AttendanceRecord],
-        board_date: date,
-        now: datetime,
-    ) -> int:
-        """Active employees past `shift.start + grace` with zero records.
-
-        Shifts resolve as the employee's location's shift, else the tenant
-        default, else none (never absent). Counts employees, not records.
-        """
-        shifts = await self._shifts.list(tenant_id)
-        recorded = {record.employee_id for record in records}
-        absent = 0
-        for context in visible:
-            if context.status != EmployeeStatus.ACTIVE or context.id in recorded:
-                continue
-            shift = _expected_shift(shifts, context.location_id)
-            if shift is None:
-                continue
-            boundary = self._shift_boundary(
-                shift, board_date, ZoneInfo(context.timezone)
-            )
-            if now > boundary:
-                absent += 1
-        return absent
-
     async def _resolve_shift(self, tenant_id: UUID, location_id: UUID) -> Shift | None:
         """The location's shift, else the tenant default, else none (pinned)."""
         return _expected_shift(await self._shifts.list(tenant_id), location_id)
 
-    @staticmethod
-    def _shift_boundary(shift: Shift, workday: date, timezone: ZoneInfo) -> datetime:
-        """`shift.start_time + grace_minutes` on `workday` in the location tz."""
-        start = datetime.combine(workday, shift.start_time, tzinfo=timezone)
-        return start + timedelta(minutes=shift.grace_minutes)
+    async def _publish_presence(self, fact: PresenceFact) -> None:
+        """Best-effort live fan-out — a bus failure never fails the capture.
+
+        The port contract says publishers never raise; this guard keeps the
+        write path safe even if an adapter (or a future transport) violates it.
+        Failures log ids only — never names, notes or any other PII.
+        """
+        try:
+            await self._presence.publish(fact)
+        except Exception as exc:
+            _log.warning(
+                "presence_publish_failed",
+                tenant_id=str(fact.tenant_id),
+                employee_id=str(fact.employee_id),
+                attendance_id=str(fact.attendance_id),
+                reason=fact.reason,
+                error=type(exc).__name__,
+            )
 
 
 class ShiftService:

@@ -48,6 +48,8 @@ from app.infrastructure.postgres.repositories.organizations import (
     PostgresPositionRepository,
 )
 from app.infrastructure.postgres.session import get_session
+from app.infrastructure.redis.client import get_redis
+from app.infrastructure.redis.presence import RedisPresencePublisher
 from app.shared.identity import Identity
 
 SettingsDep = Annotated[Settings, Depends(get_settings)]
@@ -106,6 +108,9 @@ def get_attendance_service(session: SessionDep) -> AttendanceService:
         # repository the ShiftService uses (one adapter, one tenant scope).
         shifts=PostgresShiftRepository(session),
         audit=PostgresAuditWriter(session),
+        # Best-effort presence fan-out (Phase 2): the live wall sees captures
+        # in seconds; a Redis outage degrades latency, never the write.
+        presence=RedisPresencePublisher(get_redis()),
     )
 
 
