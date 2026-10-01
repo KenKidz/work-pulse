@@ -5,10 +5,12 @@
  * error state and the user stays on the page (spec AC13); success navigates
  * to the dashboard. Already-authenticated visitors (stale cookie) redirect
  * straight to the dashboard. Password managers and paste are welcome:
- * standard inputs with `autocomplete` hints, nothing blocks either.
+ * standard inputs with `autocomplete` hints, nothing blocks either, plus a
+ * show/hide toggle (WCAG accessible-authentication guidance).
  */
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { CircleAlert, Eye, EyeOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -40,6 +42,7 @@ export function LoginForm() {
   const login = useLogin();
   const currentUser = useCurrentUser();
   const [formError, setFormError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   const resolved = currentUser.data?.status === 200;
 
@@ -81,6 +84,7 @@ export function LoginForm() {
                   type="email"
                   placeholder="you@workpulse.test"
                   autoComplete="email"
+                  autoFocus
                 />
               </FormControl>
               <FormMessage />
@@ -93,9 +97,27 @@ export function LoginForm() {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Password</FormLabel>
-              <FormControl>
-                <Input {...field} type="password" autoComplete="current-password" />
-              </FormControl>
+              <div className="relative">
+                <FormControl>
+                  <Input
+                    {...field}
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
+                    className="pr-12"
+                  />
+                </FormControl>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-1/2 right-1 size-11 -translate-y-1/2 sm:size-9"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-pressed={showPassword}
+                  onClick={() => setShowPassword((visible) => !visible)}
+                >
+                  {showPassword ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
+                </Button>
+              </div>
               <FormMessage />
             </FormItem>
           )}
@@ -103,13 +125,14 @@ export function LoginForm() {
 
         {formError ? (
           <Alert variant="destructive">
+            <CircleAlert aria-hidden="true" />
             <AlertDescription>
               <p>{formError}</p>
             </AlertDescription>
           </Alert>
         ) : null}
 
-        <Button type="submit" className="w-full" disabled={login.isPending}>
+        <Button type="submit" className="w-full min-h-11" disabled={login.isPending}>
           {login.isPending ? "Signing in…" : "Sign in"}
         </Button>
       </form>

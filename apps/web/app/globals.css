@@ -147,6 +147,16 @@
   }
 }
 
+/* The one page-load moment: the login card's pulse trace draws itself once. */
+@keyframes pulse-draw {
+  from {
+    stroke-dashoffset: 1000;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
 /* Respect the user's motion preference across every micro-interaction. */
 @media (prefers-reduced-motion: reduce) {
   *,

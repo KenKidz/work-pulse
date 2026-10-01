@@ -109,6 +109,30 @@ describe("LoginForm", () => {
     expect(screen.getByLabelText("Email")).toBeInTheDocument();
   });
 
+  it("toggles password visibility without changing the value", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    const password = screen.getByLabelText("Password");
+    expect(password).toHaveAttribute("type", "password");
+
+    await user.type(password, "workpulse-dev");
+    await user.click(screen.getByRole("button", { name: "Show password" }));
+
+    expect(password).toHaveAttribute("type", "text");
+    const hide = screen.getByRole("button", { name: "Hide password" });
+    expect(hide).toHaveAttribute("aria-pressed", "true");
+
+    await user.click(hide);
+
+    expect(password).toHaveAttribute("type", "password");
+    expect(password).toHaveValue("workpulse-dev");
+    expect(screen.getByRole("button", { name: "Show password" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+  });
+
   it("blocks the submit on client validation", async () => {
     const user = userEvent.setup();
     renderForm();

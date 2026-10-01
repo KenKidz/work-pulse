@@ -27,7 +27,9 @@ export const WORKER_EMPLOYEE_ID = "00000000-0000-4000-8000-000000000021";
 export async function uiLogin(page: Page, email: string): Promise<void> {
   await page.goto("/login");
   await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill(SEEDED_PASSWORD);
+  // `exact: true` — the login page also has a "Show password" toggle whose
+  // accessible name substring-matches "Password".
+  await page.getByLabel("Password", { exact: true }).fill(SEEDED_PASSWORD);
   await page.getByRole("button", { name: "Sign in" }).click();
   await page.waitForURL(/\/dashboard$/);
 }

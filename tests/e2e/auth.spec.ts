@@ -31,7 +31,9 @@ test.describe.serial('auth', () => {
   }) => {
     await page.goto('/login');
     await page.getByLabel('Email').fill(ADMIN_EMAIL);
-    await page.getByLabel('Password').fill('not-the-password');
+    // `exact: true` — the login page also has a "Show password" toggle whose
+    // accessible name substring-matches "Password".
+    await page.getByLabel('Password', { exact: true }).fill('not-the-password');
     await page.getByRole('button', { name: 'Sign in' }).click();
 
     // Two `role="alert"` elements exist (the form's state + Next's route
