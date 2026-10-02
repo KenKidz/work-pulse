@@ -88,6 +88,9 @@ From `apps/web/app/globals.css`:
 - **Chart ramp:** `--chart-1..5` for any data viz.
 - **Theme:** `.dark` class + `next-themes` + `components/theme-toggle.tsx`. Both
   themes are first-class; work is not done until checked in both.
+- **Scrollbars are global:** one thin 8px treatment in `globals.css` — a 4px
+  `--input` pill thumb (≈3:1 in both themes), transparent track,
+  `--muted-foreground` on hover. Never restyle scrollbars per component.
 - **Restraint:** spend boldness in one place per surface, keep the rest quiet.
   Before finishing, remove one accessory.
 
@@ -255,6 +258,11 @@ Every data-fetching surface ships all of these; they are not follow-up work:
   while the static dot remains.
 - **Scroll regions are keyboard-reachable:** `tabIndex={0}` + `aria-label` +
   visible focus ring (built into `table.tsx`; apply the same to custom rails).
+- **Bound uncapped live panes.** A board with one row per employee (presence
+  rows, the activity feed) must scroll inside a fixed height — `max-h-[min(60dvh,
+  36rem)] overflow-y-auto` — never grow the page one row per employee. A
+  bounded `Table` pairs `containerClassName` with `TableHeader sticky` so the
+  column labels survive the scroll (`PresenceTable.tsx` is the exemplar).
 - **Effects clean up.** Sockets, timers and observers are torn down in the
   `useEffect` cleanup — a wall display runs for hours.
 - **Never drive continuous values through `useState`.** Mouse position, scroll

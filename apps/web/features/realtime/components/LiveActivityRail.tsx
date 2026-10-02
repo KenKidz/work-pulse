@@ -57,43 +57,57 @@ export function LiveActivityRail({
             message="Nothing yet today — the rail fills as people check in and out."
           />
         ) : (
-          <ol
-            aria-label="Live activity"
-            className="relative flex flex-col gap-1 before:absolute before:inset-y-4 before:left-[4.125rem] before:w-px before:bg-border before:content-['']"
+          /* Bounded feed: a check-in burst can fill the 20-entry cap and a
+             wall display must not grow a second page; the guide-rail line
+             lives on the list, so it spans the full scrollable height. */
+          <div
+            role="region"
+            aria-label="Live activity feed. Scroll for older entries."
+            tabIndex={0}
+            data-testid="live-activity-scroll"
+            className="max-h-[min(55dvh,32rem)] overflow-y-auto focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
-            {activity.map((entry) => {
-              const checkedIn = entry.action === "checked_in";
-              return (
-                <li
-                  key={`${entry.employee_id}-${entry.action}-${entry.occurred_at}`}
-                  className="grid grid-cols-[3rem_0.75rem_minmax(0,1fr)] items-center gap-x-3 py-2"
-                >
-                  <time
-                    dateTime={entry.occurred_at}
-                    className="text-right font-mono text-xs text-muted-foreground tabular-nums"
+            <ol
+              aria-label="Live activity"
+              className="relative flex flex-col gap-1 before:absolute before:inset-y-4 before:left-[4.125rem] before:w-px before:bg-border before:content-['']"
+            >
+              {activity.map((entry) => {
+                const checkedIn = entry.action === "checked_in";
+                return (
+                  <li
+                    key={`${entry.employee_id}-${entry.action}-${entry.occurred_at}`}
+                    className="grid grid-cols-[3rem_0.75rem_minmax(0,1fr)] items-center gap-x-3 py-2"
                   >
-                    {formatClockTime(entry.occurred_at)}
-                  </time>
-                  <span
-                    aria-hidden="true"
-                    className="relative z-10 mx-auto flex size-3 items-center justify-center rounded-full bg-card"
-                  >
+                    <time
+                      dateTime={entry.occurred_at}
+                      className="text-right font-mono text-xs text-muted-foreground tabular-nums"
+                    >
+                      {formatClockTime(entry.occurred_at)}
+                    </time>
                     <span
-                      className={cn("size-2 rounded-full", checkedIn ? "bg-success" : "bg-primary")}
-                    />
-                  </span>
-                  <span className="min-w-0 text-sm break-words">
-                    <span className="font-medium">
-                      {employeeDisplayName(entry.employee_id, directory)}
-                    </span>{" "}
-                    <span className="text-muted-foreground">
-                      {activityActionLabel[entry.action]}
+                      aria-hidden="true"
+                      className="relative z-10 mx-auto flex size-3 items-center justify-center rounded-full bg-card"
+                    >
+                      <span
+                        className={cn(
+                          "size-2 rounded-full",
+                          checkedIn ? "bg-success" : "bg-primary",
+                        )}
+                      />
                     </span>
-                  </span>
-                </li>
-              );
-            })}
-          </ol>
+                    <span className="min-w-0 text-sm break-words">
+                      <span className="font-medium">
+                        {employeeDisplayName(entry.employee_id, directory)}
+                      </span>{" "}
+                      <span className={cn(checkedIn ? "text-success" : "text-muted-foreground")}>
+                        {activityActionLabel[entry.action]}
+                      </span>
+                    </span>
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
         )}
       </CardContent>
     </Card>

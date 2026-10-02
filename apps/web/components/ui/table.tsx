@@ -6,9 +6,11 @@ import { cn } from "cn";
 type TableProps = React.ComponentProps<"table"> & {
   /** Make an overflowable table region keyboard reachable and named. */
   containerLabel?: string;
+  /** Extra classes for the scroll container, e.g. a bounded scroll region. */
+  containerClassName?: string;
 };
 
-function Table({ className, containerLabel, ...props }: TableProps) {
+function Table({ className, containerLabel, containerClassName, ...props }: TableProps) {
   return (
     <div
       data-slot="table-container"
@@ -19,6 +21,7 @@ function Table({ className, containerLabel, ...props }: TableProps) {
         "relative w-full overflow-x-auto",
         containerLabel &&
           "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+        containerClassName,
       )}
     >
       <table
@@ -30,8 +33,27 @@ function Table({ className, containerLabel, ...props }: TableProps) {
   );
 }
 
-function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
-  return <thead data-slot="table-header" className={cn("[&_tr]:border-b", className)} {...props} />;
+/**
+ * `sticky` pins the header inside a vertically bounded `Table` container. The
+ * cells carry the surface and the rule themselves so rows pass beneath them.
+ */
+function TableHeader({
+  className,
+  sticky = false,
+  ...props
+}: React.ComponentProps<"thead"> & { sticky?: boolean }) {
+  return (
+    <thead
+      data-slot="table-header"
+      className={cn(
+        "[&_tr]:border-b",
+        sticky &&
+          "[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:border-b [&_th]:border-border [&_th]:bg-card",
+        className,
+      )}
+      {...props}
+    />
+  );
 }
 
 function TableBody({ className, ...props }: React.ComponentProps<"tbody">) {

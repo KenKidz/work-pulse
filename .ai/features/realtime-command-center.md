@@ -678,6 +678,22 @@ since 2026-09-29).
 web tests); e2e selectors untouched (`presence-${status}` rows still live on
 the sm+ table; Playwright runs at desktop viewport).
 
+### UI refinement — bounded live panes · done 2026-10-02
+
+- A whole-tenant board carries one row per active employee, so with the
+  presence list uncapped the page grew a screen per hundred absent rows: the
+  table header scrolled away, the activity rail sat above a long empty column
+  (and, on phones, below the entire list). `PresenceTable` now bounds both row
+  views (`max-h-[min(60dvh,36rem)] overflow-y-auto`); its `sm+` table sticks the
+  header (`TableHeader sticky`), and the phone stack scrolls in its own
+  labelled region. `LiveActivityRail` bounds its feed the same way (the
+  guide-rail line lives on the list, so it spans the full scrollable height).
+  Presentation only — no contract, data, ordering, copy or test-id changes;
+  `components/ui/table.tsx` gains the opt-in `containerClassName` (extra
+  scroll-container classes) and `TableHeader sticky` props.
+- **Verify:** `pnpm run typecheck && pnpm run lint && pnpm run test` green;
+  screenshots reviewed at 375 / 1440 in both themes; e2e selectors unchanged.
+
 ### Test strategy
 
 | Layer | What is added | Gate | Failure case covered |

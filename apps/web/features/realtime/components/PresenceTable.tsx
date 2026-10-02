@@ -77,45 +77,54 @@ export function PresenceTable({
         </CardContent>
       ) : (
         <>
-          {/* Stacked rows on phones — the wall's glance surface, no sideways scroll. */}
-          <ul
-            aria-label="Presence"
-            data-testid="presence-table-mobile"
-            className="flex flex-col sm:hidden"
+          {/* Bounded panes: a whole-tenant wall can carry hundreds of rows, so
+              both views scroll inside a fixed height instead of turning the
+              page into one long strip — the table header sticks and the
+              activity rail stays within reach. Stacked rows on phones are the
+              wall's glance surface, no sideways scroll. */}
+          <div
+            role="region"
+            aria-label="Presence list. Scroll to see everyone."
+            tabIndex={0}
+            data-testid="presence-table-mobile-scroll"
+            className="max-h-[min(60dvh,36rem)] overflow-y-auto focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:hidden"
           >
-            {rows.map((row) => {
-              const code = employeeCode(row.employee_id, directory);
-              return (
-                <li
-                  key={row.employee_id}
-                  className="border-b border-border px-5 py-3 last:border-b-0"
-                >
-                  <div className="flex items-baseline justify-between gap-x-3">
-                    <span className="min-w-0 font-medium break-words">
-                      {employeeDisplayName(row.employee_id, directory)}
-                    </span>
-                    <SinceText since={row.since} />
-                  </div>
-                  <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <StatusBadge status={row.status} />
-                    {row.late ? <LateBadge row={row} /> : null}
-                    {code ? (
-                      <span className="ml-auto font-mono text-xs text-muted-foreground">
-                        {code}
+            <ul aria-label="Presence" data-testid="presence-table-mobile" className="flex flex-col">
+              {rows.map((row) => {
+                const code = employeeCode(row.employee_id, directory);
+                return (
+                  <li
+                    key={row.employee_id}
+                    className="border-b border-border px-5 py-3 last:border-b-0"
+                  >
+                    <div className="flex items-baseline justify-between gap-x-3">
+                      <span className="min-w-0 font-medium break-words">
+                        {employeeDisplayName(row.employee_id, directory)}
                       </span>
-                    ) : null}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+                      <SinceText since={row.since} />
+                    </div>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <StatusBadge status={row.status} />
+                      {row.late ? <LateBadge row={row} /> : null}
+                      {code ? (
+                        <span className="ml-auto font-mono text-xs text-muted-foreground">
+                          {code}
+                        </span>
+                      ) : null}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
 
           <div className="hidden sm:block" data-testid="presence-table-desktop">
             <Table
               aria-label="Presence"
-              containerLabel="Presence. Scroll horizontally to read all columns."
+              containerLabel="Presence. Scroll to read every row and column."
+              containerClassName="max-h-[min(60dvh,36rem)] overflow-y-auto"
             >
-              <TableHeader>
+              <TableHeader sticky>
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="pl-5">Employee</TableHead>
                   <TableHead>Status</TableHead>

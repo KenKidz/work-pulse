@@ -109,6 +109,14 @@
   (exemplar: `AttendanceRecordsTable.tsx:162-167`). Surfaces with a stacked
   mobile row rendering instead of an overflow table drop the hint
   (exemplar: `realtime/components/PresenceTable.tsx`).
+- **Bounded live lists:** an uncapped live board (command-center presence rows,
+  activity rail) bounds its scroll area — `max-h-[min(60dvh,36rem)]
+  overflow-y-auto` — instead of growing the page one row per employee. The
+  scroll region stays keyboard-reachable (`role="region"` + `aria-label` +
+  `tabIndex={0}` + focus outline; built into `table.tsx` through
+  `containerLabel`, replicated on custom rails). A bounded table passes
+  `containerClassName="max-h-… overflow-y-auto"` and `sticky` on `TableHeader`
+  (exemplar: `realtime/components/PresenceTable.tsx`).
 - **Row actions:** table actions use `className="min-h-11 sm:min-h-7"` on
   `size="xs"` buttons (exemplar: `ShiftsPanel.tsx:157-158`).
 - **Filter controls:** use `w-full sm:w-…` so controls stack below `sm`
@@ -132,6 +140,9 @@
   see Row actions), `size="icon"` + `size-11` on icon buttons (exemplar:
   `mobile-nav.tsx:38,52`). Never a fixed `h-…`/`size-…` fighting the `size`
   prop, and never a `rounded-*` override.
+- **Scrollbars:** the global thin treatment in `apps/web/app/globals.css`
+  (8px band, 4px `--input` pill thumb, transparent track) is the only one —
+  never per-surface `::-webkit-scrollbar` or `scrollbar-*` overrides.
 
 - shadcn/ui: load the `shadcn` skill when adding, updating or debugging
   components in `components/ui/` or composing shadcn primitives.
