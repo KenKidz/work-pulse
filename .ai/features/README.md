@@ -41,7 +41,7 @@ domain map in `.ai/domain.md` is their placeholder.
 | Realtime Command Center (WebSocket board) | 2 | M | done | `realtime-command-center.md` |
 | Leave (requests, approvals, balances, calendar) | 3 | M | planned | — |
 | Notifications (email/Slack delivery) | 3 | S | planned | — |
-| Event backbone (Kafka + outbox + workers) | 3 | L | planned | — |
+| Event backbone — transactional outbox + relay (Kafka) | 3 | L | draft | `outbox-relay.md` |
 | Payroll (simulated runs, timesheets, payslips) | 3–4 | L | planned | — |
 | Analytics & Reports (ClickHouse projections) | 4 | L | planned | — |
 | Recruitment (jobs, candidates, interviews) | 4+ | L | planned | — |

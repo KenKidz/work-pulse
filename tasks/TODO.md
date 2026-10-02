@@ -6,6 +6,8 @@ does the work.
 
 ## Now
 
+- [ ] Transactional outbox + relay · Phase 3 backbone — `.ai/features/outbox-relay.md` (draft, decisions resolved 2026-10-02, ready for `/plan`): `event_outbox` written in the same transaction by the 7 existing event builders, `workers/relay/` publishes to Kafka `workpulse.events` (key `data.employee_id`, at-least-once), `kafka` + `kafka-test` in `make check-api`
+
 ## Later
 
 - [ ] Phase 3: Kafka + transactional outbox + workers · Leave · Notifications
