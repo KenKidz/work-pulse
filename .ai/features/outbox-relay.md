@@ -1,6 +1,6 @@
 # Feature: Transactional outbox + relay
 
-- **Status:** approved
+- **Status:** done
 - **Phase:** 3
 - **Size:** L
 - **Surfaces:** api+web+events+workers (web surface untouched — no UI; the
@@ -196,47 +196,47 @@ Kafka message:
 
 ## Acceptance criteria
 
-- [ ] API (integration): given an authenticated check-in, when the request
+- [x] API (integration): given an authenticated check-in, when the request
       commits, then one `event_outbox` row holds the `attendance.checked_in`
       envelope and — when the check-in is late — a second row holds
       `attendance.late`, both committed in the same transaction as the
       attendance record and its audit entry.
-- [ ] API (integration — all producers): given each of the 7 catalogued
+- [x] API (integration — all producers): given each of the 7 catalogued
       transitions (`employee.created`/`updated`/`transferred`/`terminated`,
       `attendance.checked_in`/`checked_out`/`late`), when it commits, then
       exactly one outbox row per emitted envelope exists, stamped with the
       actor's `tenant_id`.
-- [ ] API (failure — atomicity): given a service call forced to fail after its
+- [x] API (failure — atomicity): given a service call forced to fail after its
       outbox append (stubbed audit writer raising), when the transaction rolls
       back, then neither the business row nor any outbox row survives.
-- [ ] API (failure — denied): given a denied-role mutation (`403`), when the
+- [x] API (failure — denied): given a denied-role mutation (`403`), when the
       request is rejected, then no outbox row is written; the existing
       denied-role tests stay green.
-- [ ] API (tenant isolation): given outbox rows written under two tenants, then
+- [x] API (tenant isolation): given outbox rows written under two tenants, then
       no row's `tenant_id` ever differs from its envelope's or the writing
       identity's, and every repository read is tenant-scoped (this feature adds
       no cross-tenant read surface).
-- [ ] Events (contract): given every persisted envelope, when validated, then
+- [x] Events (contract): given every persisted envelope, when validated, then
       it matches `event-envelope.v1.json` and its type's `v1` payload schema;
       the port rejects a non-envelope payload at write time (failure case).
-- [ ] Workers: given committed unpublished rows, when the relay runs against
+- [x] Workers: given committed unpublished rows, when the relay runs against
       `kafka-test`, then each envelope arrives on `workpulse.events` with
       `key = data.employee_id` and a `value` that parses to the stored envelope
       unchanged, and each row gets `published_at`.
-- [ ] Workers (ordering): given a late check-in emitting `checked_in` + `late`
+- [x] Workers (ordering): given a late check-in emitting `checked_in` + `late`
       in one transaction, when the relay publishes, then `checked_in` reaches
       the partition before `late`.
-- [ ] Workers (failure): given an unreachable broker, when the relay runs, then
+- [x] Workers (failure): given an unreachable broker, when the relay runs, then
       no row is marked published, `attempts` increments, `last_error` records
       the failure without echoing the payload, and API writes keep committing;
       once the broker returns, a later run publishes the same rows with
       unchanged `event_id`s.
-- [ ] Workers (crash window): given a publish that succeeded but whose row was
+- [x] Workers (crash window): given a publish that succeeded but whose row was
       not marked (crash between broker ack and `published_at`), when the relay
       re-runs, then the row is published again with the identical `event_id` —
       at-least-once proven.
-- [ ] Web: no web surface — `make check-web` stays green with zero web diffs.
-- [ ] Gate: `make check` green with the relay stopped — every existing e2e flow
+- [x] Web: no web surface — `make check-web` stays green with zero web diffs.
+- [x] Gate: `make check` green with the relay stopped — every existing e2e flow
       (check-in/out, employees, command center) passes without Kafka running,
       proving the write path never depends on the bus.
 

@@ -6,11 +6,10 @@ does the work.
 
 ## Now
 
-- [ ] Transactional outbox + relay · Phase 3 backbone — `.ai/features/outbox-relay.md` (draft, decisions resolved 2026-10-02, ready for `/plan`): `event_outbox` written in the same transaction by the 7 existing event builders, `workers/relay/` publishes to Kafka `workpulse.events` (key `data.employee_id`, at-least-once), `kafka` + `kafka-test` in `make check-api`
-
 ## Later
 
-- [ ] Phase 3: Kafka + transactional outbox + workers · Leave · Notifications
+- [ ] `make gen-api` reproducibility: orval 8.37.0 + prettier 3.9.9 regenerates `packages/api-client/src/index.ts` semantically identical but re-wraps 40 union type aliases differently than the committed file (formatting-only churn; the committed style predates the pinned prettier) — decide: add `formatter: "prettier"` to `orval.config.ts` and re-commit the churn, or pin the formatting behavior
+- [ ] Phase 3 (rest): Leave · Notifications and their consumer workers on the outbox/Kafka backbone, plus the ADR 0011 realtime consumer swap (≤2s metric re-proven through the relay hop)
 - [ ] Phase 4: ClickHouse analytics · Payroll (simulated, ADR 0003) · Recruitment · Performance · Documents
 - [ ] Phase 5: CDC / Debezium
 - [ ] Phase 6: OpenTelemetry / Prometheus / Grafana
@@ -19,6 +18,7 @@ does the work.
 
 ## Done
 
+- [x] Transactional outbox + relay built end-to-end (spec T1–T9, 2026-10-02 → 2026-10-16): `event_outbox` (migration 0005) commits in the same transaction as every business mutation — all 7 Phase-1 producers write through the `EventOutbox` port (the 4 `employees` builders got their first production call sites), `workers/relay/` publishes the stored envelopes verbatim to Kafka `workpulse.events` (key `data.employee_id`, at-least-once, stop-on-first-failure + backoff, payload-free `last_error`, graceful shutdown), `kafka` + `kafka-test` compose services with the throwaway broker wired into `make check-api` — real-broker proofs: unchanged payloads + `published_at`, per-employee ordering, dead-broker bookkeeping (API writes unaffected), crash-window duplicate `event_id`; transport pins in **ADR 0012**; realtime consumer swap stays ADR 0011's follow-up; `make check` green (548 API / 156 web / 18 e2e, relay stopped)
 - [x] Project UI skill (2026-10-01): `.kilo/skills/workpulse-ui/SKILL.md` — one WorkPulse product-UI rulebook distilled from `ui-ux-pro-max`, `frontend-design`, `design-taste-frontend-v1` and `web-design-guidelines`: design identity read off the real tokens, effective dials (variance 2–4 / motion 1–3 / density 6–8), layout + the actual three-tier z-index scale, dashboard hardening, typography ceiling (`PageHeader` `text-3xl`), control/table/dialog rules with verified exemplars, data + status semantics, states, realtime-surface patterns, motion, accessibility floor, copy, anti-slop tells, the upstream mandates that do not apply here, candidate upgrades (tactile press, skeleton primitive) and pre-flight. Root `AGENTS.md` rule 15 and `.ai/conventions.md` now name it the only required UI skill, with `shadcn` for `components/ui/` and the upstream skills as named escalations — docs only, no code changes
 - [x] Command-center mobile UI (2026-10-01): `PresenceTable` renders stacked presence rows on phones (name + `since`, status/late badges + code) instead of a swipeable 4-column table — every field visible at 390px — and the activity-rail guide line moved onto its dot column's center (`4.125rem`, was tangent to the dots at `3.75rem`); `sm+` table, test ids and API unchanged (`make check-web` green, 155 tests)
 - [x] Realtime Command Center built end-to-end (spec T1–T7, 2026-10-01): Phase 2's live wall — transient per-tenant Redis pub/sub fan-out (presence ports in `shared/presence.py`, best-effort publish after check-in/check-out), per-connection `PresenceState` projection over the shared `board_detail` (ADR 0009 semantics, one code path with `GET /attendance/board`), `GET /api/v1/realtime/board` snapshot + WS `/api/v1/realtime/board` stream (close-before-accept denials, scope-filtered full-row upserts), `contracts/realtime/board.v1.json` frame contract, web `/command-center` (live counts, who-is-working table, activity rail, 60s REST refresh + hand-written WS client), two-user e2e (live flip <2s, reconnect resync, denied, cookie-less) — fan-out + projection choices recorded in **ADR 0011**; `make check` green
