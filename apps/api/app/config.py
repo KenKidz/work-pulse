@@ -43,6 +43,17 @@ class Settings(BaseSettings):
     relay_backoff_base_seconds: float = 1.0
     relay_backoff_max_seconds: float = 30.0
 
+    # The realtime consumer (workers/realtime, ADR 0013): `workpulse.events` →
+    # presence facts on `realtime:tenant:{tenant_id}`. A stable group resumes
+    # its committed offsets on restart; a first start lands at the topic tip
+    # (`latest` — no history replay). `realtime_poll_seconds` is the `getmany`
+    # max wait (returns early on data), so the relay-poll + fetch-wait latency
+    # tail stays well inside the ≤2s wall metric under gate defaults.
+    realtime_consumer_group: str = "workpulse-realtime"
+    realtime_poll_seconds: float = 1.0
+    realtime_backoff_base_seconds: float = 1.0
+    realtime_backoff_max_seconds: float = 30.0
+
     # --- Identity: sessions (pinned in `.ai/features/identity-access.md`) ---
     # Absolute session lifetime; the `wp_session` cookie itself is a session
     # cookie (no Max-Age) — the server-side TTL is the authority.
