@@ -3,7 +3,7 @@
 API_DIR := apps/api
 WEB_DIR := apps/web
 
-.PHONY: help install db-up db-down db-test-up redis-up redis-test-up kafka-up kafka-test-up db-migrate db-seed dev-api dev-web check check-api check-web check-e2e gen-api format-web
+.PHONY: help install db-up db-down db-test-up redis-up redis-test-up kafka-up kafka-test-up db-migrate db-seed dev-api dev-web dev-relay check check-api check-web check-e2e gen-api format-web
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -48,12 +48,15 @@ dev-api: ## Run the FastAPI dev server on :8000
 dev-web: ## Run the Next.js dev server on :3000
 	cd $(WEB_DIR) && pnpm run dev
 
+dev-relay: ## Run the outbox relay (publishes outbox rows to Kafka, ADR 0012)
+	cd $(API_DIR) && PYTHONPATH="../..:." uv run python -m workers.relay.main
+
 check: check-api check-web check-e2e ## Run every gate — run before claiming done
 
 check-api: db-test-up redis-test-up kafka-test-up ## API gate: ruff + pyright + pytest (ADR 0006)
-	cd $(API_DIR) && uv run ruff check .
-	cd $(API_DIR) && uv run ruff format --check .
-	cd $(API_DIR) && uv run pyright
+	cd $(API_DIR) && uv run ruff check . ../../workers
+	cd $(API_DIR) && uv run ruff format --check . ../../workers
+	cd $(API_DIR) && uv run pyright . ../../workers
 	cd $(API_DIR) && uv run pytest
 
 check-web: ## Web gate: typecheck + ESLint + Vitest
