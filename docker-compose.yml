@@ -1,4 +1,4 @@
-# Local development infrastructure (PostgreSQL + Phase-2 Redis).
+# Local development infrastructure (PostgreSQL + Phase-2 Redis + Phase-3 Kafka).
 # The apps run natively via `make dev-api` / `make dev-web` — see the Makefile.
 
 services:
@@ -62,5 +62,76 @@ services:
       timeout: 3s
       retries: 10
 
+  # --- Phase 3: event transport (`make kafka-up`, ADR 0012) ---
+  # Single-node KRaft broker; the outbox relay publishes `workpulse.events`
+  # keyed by `data.employee_id`. Loopback only: the relay runs natively on
+  # the host, and v1 has no auth on the bus.
+
+  kafka:
+    image: apache/kafka:3.9.1
+    ports:
+      - "127.0.0.1:9092:9092"
+    environment:
+      # Explicit single-node KRaft settings (image defaults mirrored, so an
+      # image bump cannot silently move ports/roles).
+      CLUSTER_ID: tdRbhqiJR7-1XAqpVhXFtQ
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      # Bash TCP probe of the PLAINTEXT listener: a JVM CLI probe every 5s
+      # would keep booting a JVM for the container's whole lifetime; /dev/tcp
+      # exits 0 as soon as the broker accepts connections.
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/9092'"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  kafka-test:
+    image: apache/kafka:3.9.1
+    ports:
+      # Same port in and out of the container: the advertised
+      # `localhost:9093` is then correct for host-side tests AND for
+      # in-container clients (the healthcheck). The controller moves to a
+      # private port so it cannot collide with the broker's.
+      - "127.0.0.1:9093:9093"
+    environment:
+      CLUSTER_ID: gqyPCL89QVOEcQ-Kuoj7Ww
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9093,CONTROLLER://:19093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9093
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:19093
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    tmpfs:
+      # tmpfs mounts default to root ownership; the image runs as appuser (1000).
+      - /var/lib/kafka/data:uid=1000,gid=1000
+    healthcheck:
+      # See `kafka` — same TCP probe, on this service's PLAINTEXT port.
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/9093'"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
 volumes:
   postgres-data:
+  kafka-data:

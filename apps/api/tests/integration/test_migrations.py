@@ -28,6 +28,7 @@ FEATURE_TABLES = {
     "attendance_records",
     "users",
     "sessions",
+    "event_outbox",
 }
 
 

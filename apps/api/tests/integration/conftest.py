@@ -78,7 +78,7 @@ PINNED_USER_KEYS = {
 
 ALL_TABLES = (
     "audit_entries, departments, positions, locations, employees, employments, "
-    "shifts, attendance_records, users, sessions"
+    "shifts, attendance_records, users, sessions, event_outbox"
 )
 
 ClientFactory = Callable[..., AsyncClient]

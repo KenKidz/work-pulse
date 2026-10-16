@@ -1,7 +1,7 @@
 """Alembic environment — async engine, metadata from the app.
 
 Imports every model module so `Base.metadata` (and autogenerate) sees all
-tables: organizations models + the audit model.
+tables: domains models + the audit and outbox models.
 """
 
 import asyncio
@@ -15,6 +15,7 @@ import app.domains.employees.models  # noqa: F401
 import app.domains.identity.models  # noqa: F401
 import app.domains.organizations.models  # noqa: F401
 import app.infrastructure.postgres.models_audit  # noqa: F401
+import app.infrastructure.postgres.models_outbox  # noqa: F401
 from alembic import context
 from app.config import get_settings
 from app.infrastructure.postgres.base import Base

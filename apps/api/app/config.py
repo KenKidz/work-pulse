@@ -32,6 +32,17 @@ class Settings(BaseSettings):
     # `REDIS_URL` at the throwaway `redis-test` service on :6380.
     redis_url: str = "redis://localhost:6379/0"
 
+    # --- Phase 3: event transport (`make kafka-up`, ADR 0012) ---
+    # Outbox relay → Kafka: one topic, message key `data.employee_id`, value
+    # the stored envelope. (Tests use the throwaway `kafka-test` on :9093.)
+    kafka_bootstrap_servers: str = "localhost:9092"
+    kafka_events_topic: str = "workpulse.events"
+    kafka_events_topic_partitions: int = 1
+    relay_batch_size: int = 100
+    relay_poll_seconds: float = 1.0
+    relay_backoff_base_seconds: float = 1.0
+    relay_backoff_max_seconds: float = 30.0
+
     # --- Identity: sessions (pinned in `.ai/features/identity-access.md`) ---
     # Absolute session lifetime; the `wp_session` cookie itself is a session
     # cookie (no Max-Age) — the server-side TTL is the authority.
