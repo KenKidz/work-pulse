@@ -43,6 +43,7 @@ from tests.integration.conftest import (
     employee_payload,
     identity,
 )
+from tests.unit.outbox.fakes import RecordingEventOutbox
 
 B_ACTOR = UUID("00000000-0000-4000-8000-000000000012")
 
@@ -221,6 +222,8 @@ async def test_snapshot_matches_the_attendance_board_at_one_instant(
         shifts=PostgresShiftRepository(session),
         audit=PostgresAuditWriter(session),
         presence=RedisPresencePublisher(get_redis()),
+        # Board reads append nothing; the port is only required by the ctor.
+        outbox=RecordingEventOutbox(),
     )
     detail = await service.board_detail(identity(), board_date, CLOCK)
     assert [row.model_dump(mode="json") for row in detail.rows] == snapshot["presence"]
@@ -426,6 +429,7 @@ async def test_snapshot_is_served_with_a_dead_bus(
                 shifts=PostgresShiftRepository(session),
                 audit=PostgresAuditWriter(session),
                 presence=_RaisingPresencePublisher(),
+                outbox=RecordingEventOutbox(),
             ),
             stream=_ExplodingStream(),
         )

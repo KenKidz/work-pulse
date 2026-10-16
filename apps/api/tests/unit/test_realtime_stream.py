@@ -42,6 +42,7 @@ from tests.unit.attendance.fakes import (
     FakeShiftRepo,
 )
 from tests.unit.organizations.fakes import RecordingAuditWriter
+from tests.unit.outbox.fakes import RecordingEventOutbox
 
 ATTENDANCE = UUID("00000000-0000-4000-8000-0000000000a1")
 NEXT_DAY = TODAY + timedelta(days=1)
@@ -124,6 +125,7 @@ def harness() -> Harness:
         shifts=shifts,
         audit=RecordingAuditWriter(),
         presence=FakePresencePublisher(),
+        outbox=RecordingEventOutbox(),
     )
     return Harness(repo=repo, shifts=shifts, attendance=attendance, stream=stream)
 

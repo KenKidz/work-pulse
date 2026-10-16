@@ -29,6 +29,7 @@ from tests.integration.conftest import (
     employee_payload,
     identity,
 )
+from tests.unit.outbox.fakes import RecordingEventOutbox
 
 PINNED_RECORD_KEYS = {
     "id",
@@ -434,6 +435,8 @@ async def test_board_detail_matches_the_wire_board_and_counts_recount_rows(
         shifts=PostgresShiftRepository(session),
         audit=PostgresAuditWriter(session),
         presence=RedisPresencePublisher(get_redis()),
+        # Board reads append nothing; the port is only required by the ctor.
+        outbox=RecordingEventOutbox(),
     )
     detail = await service.board_detail(identity(), board_date, clock["now"])
 

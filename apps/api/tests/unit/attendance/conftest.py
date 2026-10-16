@@ -32,6 +32,7 @@ from tests.unit.attendance.fakes import (
     FakeShiftRepo,
 )
 from tests.unit.organizations.fakes import FakeLocationRepo, RecordingAuditWriter
+from tests.unit.outbox.fakes import RecordingEventOutbox
 
 TENANT_A = UUID("00000000-0000-4000-8000-00000000000a")
 TENANT_B = UUID("00000000-0000-4000-8000-00000000000b")
@@ -94,17 +95,24 @@ def presence() -> FakePresencePublisher:
 
 
 @pytest.fixture
+def outbox() -> RecordingEventOutbox:
+    return RecordingEventOutbox()
+
+
+@pytest.fixture
 def service(
     attendance_repo: FakeAttendanceRepo,
     shift_repo: FakeShiftRepo,
     audit: RecordingAuditWriter,
     presence: FakePresencePublisher,
+    outbox: RecordingEventOutbox,
 ) -> AttendanceService:
     return AttendanceService(
         repo=attendance_repo,
         shifts=shift_repo,
         audit=audit,
         presence=presence,
+        outbox=outbox,
     )
 
 

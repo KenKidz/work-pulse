@@ -24,6 +24,7 @@ from tests.unit.attendance.fakes import (
     RaisingPresencePublisher,
 )
 from tests.unit.organizations.fakes import RecordingAuditWriter
+from tests.unit.outbox.fakes import RecordingEventOutbox
 
 EARLY = datetime(2026, 9, 24, 2, 0, tzinfo=UTC)  # 09:00 in Asia/Ho_Chi_Minh
 LATE_30 = datetime(2026, 9, 24, 2, 40, tzinfo=UTC)  # 30 minutes past start+grace
@@ -160,7 +161,11 @@ async def test_a_raising_publisher_never_fails_a_capture(
     await seed_shift(shift_repo, start_time=time(9, 0), grace_minutes=10)
     publisher = RaisingPresencePublisher()
     service = AttendanceService(
-        repo=attendance_repo, shifts=shift_repo, audit=audit, presence=publisher
+        repo=attendance_repo,
+        shifts=shift_repo,
+        audit=audit,
+        presence=publisher,
+        outbox=RecordingEventOutbox(),
     )
 
     opened = await check_in(service, now=LATE_30)

@@ -33,6 +33,7 @@ from tests.unit.attendance.fakes import (
     FakeShiftRepo,
 )
 from tests.unit.organizations.fakes import RecordingAuditWriter
+from tests.unit.outbox.fakes import RecordingEventOutbox
 
 EARLY = datetime(2026, 9, 24, 1, 0, tzinfo=UTC)  # 08:00 in Asia/Ho_Chi_Minh
 BOUNDARY = datetime(2026, 9, 24, 2, 10, tzinfo=UTC)  # exactly start + grace
@@ -240,6 +241,7 @@ async def test_insert_backstop_still_rejects_the_second_check_in(
         shifts=shift_repo,
         audit=audit,
         presence=FakePresencePublisher(),
+        outbox=RecordingEventOutbox(),
     )
 
     with pytest.raises(AttendanceAlreadyCheckedInError):

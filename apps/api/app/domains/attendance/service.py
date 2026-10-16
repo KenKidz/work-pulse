@@ -36,9 +36,11 @@ Rules implemented here (pinned in `.ai/features/attendance.md`):
   tenant → `404 location_not_found`; archived locations stay referenceable.
 - **Audit**: every check-in/check-out writes an entry with ids/flags only —
   note values are PII and never reach `changes`, logs or events.
-- **Events**: mutations build their T2 payloads (contracts exist in Phase 1,
-  the domain-event bus arrives in Phase 3) and return them on
-  `AttendanceMutation` — they are never published from here.
+- **Events**: mutations build their v1 payloads and append them to the
+  transactional outbox in the same transaction (Phase 3, ADR 0012) — a
+  rolled-back capture leaves no event row — and still return them on
+  `AttendanceMutation`. Nothing is published from here; the relay moves
+  committed rows to Kafka at-least-once.
 - **Presence projection**: `board_detail` is the one board code path — counts,
   per-employee presence rows and the activity feed — behind both
   `GET /attendance/board` and the Phase-2 realtime snapshot, so the two can
@@ -100,6 +102,7 @@ from app.domains.organizations.service import LocationService
 from app.shared.audit import AuditEntryCreate, AuditWriter
 from app.shared.identity import Identity, Role
 from app.shared.logging import get_logger
+from app.shared.outbox import EventOutbox
 from app.shared.pagination import PageParams
 from app.shared.presence import PresenceFact, PresencePublisher
 
@@ -235,9 +238,9 @@ def _absent_rows(
 class AttendanceMutation:
     """A completed check-in/check-out plus the event payloads it produced.
 
-    Phase 1 builds but never publishes (contracts and builders land now, the
-    bus in Phase 3); returning them keeps the produced facts observable and is
-    exactly what Phase 3's outbox publisher will consume.
+    The service has already appended these envelopes to the transactional
+    outbox in the same transaction (Phase 3, ADR 0012); returning them keeps
+    the produced facts observable and the router-facing shape unchanged.
     """
 
     record: AttendanceRecord
@@ -269,11 +272,13 @@ class AttendanceService:
         shifts: ShiftRepository,
         audit: AuditWriter,
         presence: PresencePublisher,
+        outbox: EventOutbox,
     ) -> None:
         self._repo = repo
         self._shifts = shifts
         self._audit = audit
         self._presence = presence
+        self._outbox = outbox
 
     # --- captures ------------------------------------------------------------
 
@@ -346,6 +351,11 @@ class AttendanceService:
                     minutes_late=minutes_late,
                 )
             )
+
+        # One transaction (ADR 0012): the record, its audit entry and these
+        # envelopes commit together — a rolled-back capture leaves no event row.
+        for envelope in produced:
+            await self._outbox.append(envelope)
 
         await self._publish_presence(
             PresenceFact(
@@ -446,6 +456,21 @@ class AttendanceService:
             )
         )
 
+        produced: list[dict[str, Any]] = [
+            attendance_checked_out(
+                tenant_id=tenant_id,
+                actor_id=identity.actor_id,
+                occurred_at=now,
+                attendance_id=closed.id,
+                employee_id=closed.employee_id,
+                workday=closed.workday,
+                duration_minutes=duration_minutes,
+            )
+        ]
+        # Same transaction as the close and its audit entry (ADR 0012).
+        for envelope in produced:
+            await self._outbox.append(envelope)
+
         await self._audit.write(
             AuditEntryCreate(
                 tenant_id=tenant_id,
@@ -463,20 +488,7 @@ class AttendanceService:
                 },
             )
         )
-        return AttendanceMutation(
-            record=closed,
-            events=(
-                attendance_checked_out(
-                    tenant_id=tenant_id,
-                    actor_id=identity.actor_id,
-                    occurred_at=now,
-                    attendance_id=closed.id,
-                    employee_id=closed.employee_id,
-                    workday=closed.workday,
-                    duration_minutes=duration_minutes,
-                ),
-            ),
-        )
+        return AttendanceMutation(record=closed, events=tuple(produced))
 
     # --- reads ---------------------------------------------------------------
 

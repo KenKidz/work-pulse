@@ -3,8 +3,9 @@
 Providers for request-scoped resources live here. Routers receive them through
 their signatures; domains never construct infrastructure clients themselves.
 This module is the composition root: session → repositories → audit writer →
-usage port → domain services, plus the session-resolved identity dependency
-(`get_identity` / `IdentityDep`, ADR 0004's one validation point).
+usage port → outbox writer → domain services, plus the session-resolved
+identity dependency (`get_identity` / `IdentityDep`, ADR 0004's one validation
+point).
 
     from app.dependencies import DepartmentServiceDep, EmployeeServiceDep,
         IdentityDep, SessionDep, SettingsDep
@@ -37,6 +38,7 @@ from app.infrastructure.postgres.audit import PostgresAuditWriter
 from app.infrastructure.postgres.employee_link import PostgresEmployeeLink
 from app.infrastructure.postgres.employee_usage import PostgresEmployeeUsage
 from app.infrastructure.postgres.engine import get_session_factory
+from app.infrastructure.postgres.outbox import PostgresEventOutbox
 from app.infrastructure.postgres.repositories.attendance import (
     PostgresAttendanceRepository,
     PostgresShiftRepository,
@@ -113,6 +115,11 @@ def get_employee_service(session: SessionDep) -> EmployeeService:
     )
 
 
+def _utc_now() -> datetime:
+    """The outbox writer's injected clock (time is a parameter, conventions)."""
+    return datetime.now(UTC)
+
+
 def get_attendance_service(session: SessionDep) -> AttendanceService:
     return AttendanceService(
         repo=PostgresAttendanceRepository(session),
@@ -123,6 +130,10 @@ def get_attendance_service(session: SessionDep) -> AttendanceService:
         # Best-effort presence fan-out (Phase 2): the live wall sees captures
         # in seconds; a Redis outage degrades latency, never the write.
         presence=RedisPresencePublisher(get_redis()),
+        # The transactional outbox (ADR 0012): the same session, so the record,
+        # its audit entry and its event envelopes commit together — or not at
+        # all. The relay worker publishes committed rows to Kafka.
+        outbox=PostgresEventOutbox(session, clock=_utc_now),
     )
 
 

@@ -37,6 +37,7 @@ from tests.unit.attendance.fakes import (
     FakeShiftRepo,
 )
 from tests.unit.organizations.fakes import RecordingAuditWriter
+from tests.unit.outbox.fakes import RecordingEventOutbox
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 SCHEMA_PATH = REPO_ROOT / "contracts" / "realtime" / "board.v1.json"
@@ -107,6 +108,7 @@ async def _produced_frames() -> list[dict[str, Any]]:
         shifts=FakeShiftRepo(),
         audit=RecordingAuditWriter(),
         presence=FakePresencePublisher(),
+        outbox=RecordingEventOutbox(),
     )
     service = RealtimeService(attendance=attendance, stream=stream)
     return [json.loads(frame) async for frame in service.stream(identity(), NOW)]
