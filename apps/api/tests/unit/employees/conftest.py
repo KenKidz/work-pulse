@@ -28,6 +28,7 @@ from tests.unit.organizations.fakes import (
     FakePositionRepo,
     RecordingAuditWriter,
 )
+from tests.unit.outbox.fakes import RecordingEventOutbox
 
 TENANT_A = UUID("00000000-0000-4000-8000-00000000000a")
 TENANT_B = UUID("00000000-0000-4000-8000-00000000000b")
@@ -74,6 +75,11 @@ def audit() -> RecordingAuditWriter:
 
 
 @pytest.fixture
+def outbox() -> RecordingEventOutbox:
+    return RecordingEventOutbox()
+
+
+@pytest.fixture
 def repo() -> FakeEmployeeRepo:
     return FakeEmployeeRepo()
 
@@ -106,6 +112,7 @@ def service(
     employments: FakeEmploymentRepo,
     orgs: OrgWorld,
     audit: RecordingAuditWriter,
+    outbox: RecordingEventOutbox,
 ) -> EmployeeService:
     return EmployeeService(
         repo=repo,
@@ -114,6 +121,7 @@ def service(
         positions=orgs.positions,
         locations=orgs.locations,
         audit=audit,
+        outbox=outbox,
     )
 
 

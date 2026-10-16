@@ -31,6 +31,12 @@ from uuid import UUID
 
 from uuid_utils.compat import uuid7
 
+from app.domains.employees.events import (
+    employee_created,
+    employee_terminated,
+    employee_transferred,
+    employee_updated,
+)
 from app.domains.employees.exceptions import (
     EmployeeAlreadyTerminatedError,
     EmployeeCodeTakenError,
@@ -67,6 +73,7 @@ from app.domains.organizations.service import (
 )
 from app.shared.audit import AuditEntryCreate, AuditWriter
 from app.shared.identity import Identity, Role
+from app.shared.outbox import EventOutbox
 from app.shared.pagination import PageParams
 
 
@@ -84,6 +91,7 @@ class EmployeeService:
         positions: PositionService,
         locations: LocationService,
         audit: AuditWriter,
+        outbox: EventOutbox,
     ) -> None:
         self._repo = repo
         self._employments = employments
@@ -91,6 +99,7 @@ class EmployeeService:
         self._positions = positions
         self._locations = locations
         self._audit = audit
+        self._outbox = outbox
 
     # --- reads ---------------------------------------------------------------
 
@@ -206,6 +215,20 @@ class EmployeeService:
             employment_type=payload.employment_type,
             effective_from=payload.hired_at,
         )
+        # One transaction (ADR 0012): the row, its employment period, its
+        # audit entry and this envelope commit together — or not at all.
+        await self._outbox.append(
+            employee_created(
+                tenant_id=tenant_id,
+                actor_id=identity.actor_id,
+                occurred_at=now,
+                employee_id=created.id,
+                department_id=created.department_id,
+                position_id=created.position_id,
+                location_id=created.location_id,
+                employment_type=created.employment_type.value,
+            )
+        )
         await self._audit.write(
             AuditEntryCreate(
                 tenant_id=tenant_id,
@@ -252,6 +275,18 @@ class EmployeeService:
         if updated is None:  # pragma: no cover — lost race between get and update
             raise EmployeeNotFoundError()
 
+        # Append before the audit write (ADR 0012): a mutation whose event
+        # cannot be stored fails loudly and leaves nothing behind.
+        await self._outbox.append(
+            employee_updated(
+                tenant_id=tenant_id,
+                actor_id=identity.actor_id,
+                occurred_at=now,
+                employee_id=employee_id,
+                # Field names only, never the values (PII rule).
+                changed_fields=list(changes),
+            )
+        )
         await self._audit.write(
             AuditEntryCreate(
                 tenant_id=tenant_id,
@@ -357,6 +392,19 @@ class EmployeeService:
                 "new": _ref(new_manager_id),
             }
 
+        # Append before the audit write (ADR 0012): `from` is the closed
+        # assignment, `to` the newly opened one.
+        await self._outbox.append(
+            employee_transferred(
+                tenant_id=tenant_id,
+                actor_id=identity.actor_id,
+                occurred_at=now,
+                employee_id=employee_id,
+                from_department_id=employee.department_id,
+                to_department_id=department_id,
+                effective_from=effective_from,
+            )
+        )
         await self._audit.write(
             AuditEntryCreate(
                 tenant_id=tenant_id,
@@ -407,6 +455,17 @@ class EmployeeService:
         # Decision #4: terminating a manager unassigns their direct reports.
         cleared_report_ids = await self._repo.clear_manager(tenant_id, employee_id)
 
+        # Append before the audit write (ADR 0012). The `manager_cleared`
+        # audit entries below emit nothing — not in the event catalog.
+        await self._outbox.append(
+            employee_terminated(
+                tenant_id=tenant_id,
+                actor_id=identity.actor_id,
+                occurred_at=now,
+                employee_id=employee_id,
+                effective_date=payload.effective_date,
+            )
+        )
         await self._audit.write(
             AuditEntryCreate(
                 tenant_id=tenant_id,

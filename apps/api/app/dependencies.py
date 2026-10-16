@@ -112,6 +112,10 @@ def get_employee_service(session: SessionDep) -> EmployeeService:
             repo=PostgresLocationRepository(session), audit=audit
         ),
         audit=audit,
+        # The transactional outbox (ADR 0012): the same session, so the row,
+        # its audit entry and its event envelope commit together — or not at
+        # all. The relay worker publishes committed rows to Kafka.
+        outbox=PostgresEventOutbox(session, clock=_utc_now),
     )
 
 

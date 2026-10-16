@@ -17,6 +17,7 @@ global engine/pool is created and used inside one event loop.
 """
 
 from collections.abc import AsyncIterator, Callable, Iterator
+from datetime import UTC, datetime
 from pathlib import Path
 from uuid import UUID
 
@@ -41,6 +42,7 @@ from app.infrastructure.postgres.engine import (
     get_engine,
     get_session_factory,
 )
+from app.infrastructure.postgres.outbox import PostgresEventOutbox
 from app.infrastructure.postgres.repositories.employees import (
     PostgresEmployeeRepository,
     PostgresEmploymentRepository,
@@ -106,6 +108,11 @@ def identity(
 
 
 DEFAULT_IDENTITY = identity()
+
+
+def _utc_now() -> datetime:
+    """The outbox writer's injected clock (mirrors `app.dependencies`)."""
+    return datetime.now(UTC)
 
 
 def alembic_config(database_url: str) -> Config:
@@ -193,6 +200,7 @@ async def employee_service(session: AsyncSession) -> EmployeeService:
             repo=PostgresLocationRepository(session), audit=audit
         ),
         audit=audit,
+        outbox=PostgresEventOutbox(session, clock=_utc_now),
     )
 
 
