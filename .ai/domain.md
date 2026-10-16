@@ -80,7 +80,7 @@ where it actually flows on the bus.
 | `employee.terminated` | employment ends | 1 | 3 | Analytics, Identity |
 | `attendance.checked_in` | a check-in is recorded | 1 | 3 | Realtime, Analytics, Notifications |
 | `attendance.checked_out` | a check-out closes a record | 1 | 3 | Realtime, Analytics |
-| `attendance.late` | check-in lands after shift start + grace | 1 | 3 | Realtime, Notifications, Analytics |
+| `attendance.late` | check-in lands after shift start + grace | 1 | 3 | Notifications, Analytics |
 | `attendance.correction_requested` | an employee asks for a fix | 3 | 3 | Workflow, Notifications |
 | `leave.requested` | a leave request is submitted | 3 | 3 | Workflow, Notifications |
 | `leave.approved` / `leave.rejected` | a manager decides | 3 | 3 | Payroll, Notifications, Analytics |

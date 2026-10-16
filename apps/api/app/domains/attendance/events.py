@@ -56,8 +56,14 @@ def attendance_checked_in(
     workday: date,
     work_mode: str,
     late: bool,
+    minutes_late: int | None,
 ) -> dict[str, Any]:
-    """Envelope for `attendance.checked_in` — identifiers, date and flags only."""
+    """Envelope for `attendance.checked_in` — identifiers, date and flags only.
+
+    `minutes_late` is the board's whole minutes past shift start + grace when
+    `late` is true, `null` otherwise (ADR 0013's additive extension — the key
+    is always present so the realtime consumer stays stateless).
+    """
     return _envelope(
         "attendance.checked_in",
         tenant_id,
@@ -69,6 +75,7 @@ def attendance_checked_in(
             "workday": workday.isoformat(),
             "work_mode": work_mode,
             "late": late,
+            "minutes_late": minutes_late,
         },
     )
 
@@ -82,8 +89,16 @@ def attendance_checked_out(
     employee_id: UUID,
     workday: date,
     duration_minutes: int,
+    late: bool,
+    minutes_late: int | None,
 ) -> dict[str, Any]:
-    """Envelope for `attendance.checked_out` — derived duration, no times."""
+    """Envelope for `attendance.checked_out` — derived duration, no times.
+
+    `late` mirrors the closed record's immutable flag; `minutes_late` is
+    recomputed at emit time from the record's shift (`null` when not late or
+    the shift no longer resolves) — ADR 0013's additive extension, always
+    present.
+    """
     return _envelope(
         "attendance.checked_out",
         tenant_id,
@@ -94,6 +109,8 @@ def attendance_checked_out(
             "employee_id": str(employee_id),
             "workday": workday.isoformat(),
             "duration_minutes": duration_minutes,
+            "late": late,
+            "minutes_late": minutes_late,
         },
     )
 

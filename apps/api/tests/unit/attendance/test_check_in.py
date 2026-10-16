@@ -66,6 +66,8 @@ async def test_check_in_records_open_record_and_audit(
     ]
     assert mutation.events[0]["data"]["late"] is False
     assert mutation.events[0]["data"]["work_mode"] == "onsite"
+    # ADR 0013 wire rule: the extension key is present and null when not late.
+    assert mutation.events[0]["data"]["minutes_late"] is None
 
     assert [entry.action for entry in audit.entries] == ["attendance.checked_in"]
     entry = audit.entries[0]
@@ -112,6 +114,7 @@ async def test_check_in_past_boundary_is_late_with_minutes_and_late_event(
         "attendance.late",
     ]
     assert mutation.events[0]["data"]["late"] is True
+    assert mutation.events[0]["data"]["minutes_late"] == 30  # rides the fact too
     late_payload = mutation.events[1]["data"]
     assert late_payload["attendance_id"] == str(mutation.record.id)
     assert late_payload["employee_id"] == str(mutation.record.employee_id)

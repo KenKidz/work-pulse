@@ -72,6 +72,7 @@ BUILDER_CASES: list[tuple[str, Callable[[], dict[str, Any]]]] = [
             workday=WORKDAY,
             work_mode="onsite",
             late=False,
+            minutes_late=None,  # on-time → null (ADR 0013 wire rule)
         ),
     ),
     (
@@ -84,6 +85,8 @@ BUILDER_CASES: list[tuple[str, Callable[[], dict[str, Any]]]] = [
             employee_id=EMPLOYEE_ID,
             workday=WORKDAY,
             duration_minutes=492,
+            late=False,
+            minutes_late=None,
         ),
     ),
     (
@@ -191,6 +194,159 @@ def test_builder_event_type_matches_schema_file() -> None:
         assert event["version"] == int(version)
 
 
+def test_on_time_envelopes_carry_the_extension_keys_as_null() -> None:
+    """ADR 0013 wire rule — the new keys are always emitted, never omitted.
+
+    Not late → `minutes_late` null; the checked-out payload adds the record's
+    `late` flag (false here). The realtime consumer stays stateless: a missing
+    key never has to be distinguished from a null one.
+    """
+    checked_in = events.attendance_checked_in(
+        tenant_id=TENANT_ID,
+        actor_id=ACTOR_ID,
+        occurred_at=NOW,
+        attendance_id=ATTENDANCE_ID,
+        employee_id=EMPLOYEE_ID,
+        workday=WORKDAY,
+        work_mode="onsite",
+        late=False,
+        minutes_late=None,
+    )
+    assert checked_in["data"]["late"] is False
+    assert checked_in["data"]["minutes_late"] is None
+
+    checked_out = events.attendance_checked_out(
+        tenant_id=TENANT_ID,
+        actor_id=ACTOR_ID,
+        occurred_at=NOW,
+        attendance_id=ATTENDANCE_ID,
+        employee_id=EMPLOYEE_ID,
+        workday=WORKDAY,
+        duration_minutes=492,
+        late=False,
+        minutes_late=None,
+    )
+    assert checked_out["data"]["late"] is False
+    assert checked_out["data"]["minutes_late"] is None
+
+
+def test_late_extension_values_validate_against_the_schemas(
+    validators: dict[str, Draft202012Validator],
+) -> None:
+    """The filled branch (late = 17 minutes) conforms on both payloads."""
+    checked_in = events.attendance_checked_in(
+        tenant_id=TENANT_ID,
+        actor_id=ACTOR_ID,
+        occurred_at=NOW,
+        attendance_id=ATTENDANCE_ID,
+        employee_id=EMPLOYEE_ID,
+        workday=WORKDAY,
+        work_mode="remote",
+        late=True,
+        minutes_late=17,
+    )
+    validators["attendance-checked-in.v1.json"].validate(checked_in["data"])
+
+    checked_out = events.attendance_checked_out(
+        tenant_id=TENANT_ID,
+        actor_id=ACTOR_ID,
+        occurred_at=NOW,
+        attendance_id=ATTENDANCE_ID,
+        employee_id=EMPLOYEE_ID,
+        workday=WORKDAY,
+        duration_minutes=492,
+        late=True,
+        minutes_late=17,
+    )
+    validators["attendance-checked-out.v1.json"].validate(checked_out["data"])
+
+
+def test_pre_extension_payloads_still_validate(
+    validators: dict[str, Draft202012Validator],
+) -> None:
+    """The extension fields are optional: envelopes without them validate.
+
+    Pre-extension stored rows and topic messages (outbox rows, Kafka) must
+    stay valid — the fields being absent is expected, not an error (ADR 0013).
+    """
+    checked_in = events.attendance_checked_in(
+        tenant_id=TENANT_ID,
+        actor_id=ACTOR_ID,
+        occurred_at=NOW,
+        attendance_id=ATTENDANCE_ID,
+        employee_id=EMPLOYEE_ID,
+        workday=WORKDAY,
+        work_mode="onsite",
+        late=True,
+        minutes_late=17,
+    )
+    pre_extension = {
+        key: value for key, value in checked_in["data"].items() if key != "minutes_late"
+    }
+    validators["attendance-checked-in.v1.json"].validate(pre_extension)
+
+    checked_out = events.attendance_checked_out(
+        tenant_id=TENANT_ID,
+        actor_id=ACTOR_ID,
+        occurred_at=NOW,
+        attendance_id=ATTENDANCE_ID,
+        employee_id=EMPLOYEE_ID,
+        workday=WORKDAY,
+        duration_minutes=492,
+        late=True,
+        minutes_late=17,
+    )
+    pre_extension = {
+        key: value
+        for key, value in checked_out["data"].items()
+        if key not in ("late", "minutes_late")
+    }
+    validators["attendance-checked-out.v1.json"].validate(pre_extension)
+
+
+@pytest.mark.parametrize(
+    ("schema_file", "tampering"),
+    [
+        pytest.param(
+            "attendance-checked-in.v1.json",
+            {"minutes_late": -1},
+            id="checked-in-negative-minutes",
+        ),
+        pytest.param(
+            "attendance-checked-in.v1.json",
+            {"minutes_late": "17"},
+            id="checked-in-string-minutes",
+        ),
+        pytest.param(
+            "attendance-checked-out.v1.json",
+            {"late": "yes"},
+            id="checked-out-non-bool-late",
+        ),
+        pytest.param(
+            "attendance-checked-out.v1.json",
+            {"minutes_late": -1},
+            id="checked-out-negative-minutes",
+        ),
+        pytest.param(
+            "attendance-checked-out.v1.json",
+            {"minutes_late": "17"},
+            id="checked-out-string-minutes",
+        ),
+    ],
+)
+def test_extension_fields_reject_wrong_types(
+    validators: dict[str, Draft202012Validator],
+    schema_file: str,
+    tampering: dict[str, Any],
+) -> None:
+    """Optional does not mean lax: types and `minimum: 0` are enforced."""
+    build = dict(BUILDER_CASES)[schema_file]
+    tampered = {**build()["data"], **tampering}
+
+    with pytest.raises(ValidationError):
+        validators[schema_file].validate(tampered)
+
+
 def test_late_payload_is_identical_to_its_checked_in_fact() -> None:
     """The lateness event names the same record as the check-in it accompanies."""
     checked_in = events.attendance_checked_in(
@@ -202,6 +358,7 @@ def test_late_payload_is_identical_to_its_checked_in_fact() -> None:
         workday=WORKDAY,
         work_mode="remote",
         late=True,
+        minutes_late=17,
     )
     late = events.attendance_late(
         tenant_id=TENANT_ID,

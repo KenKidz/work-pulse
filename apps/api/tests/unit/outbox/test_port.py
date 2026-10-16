@@ -111,6 +111,7 @@ def _attendance_checked_in() -> dict[str, Any]:
         workday=WORKDAY,
         work_mode="onsite",
         late=True,
+        minutes_late=18,
     )
 
 
@@ -123,6 +124,8 @@ def _attendance_checked_out() -> dict[str, Any]:
         employee_id=EMPLOYEE_ID,
         workday=WORKDAY,
         duration_minutes=480,
+        late=True,
+        minutes_late=18,
     )
 
 

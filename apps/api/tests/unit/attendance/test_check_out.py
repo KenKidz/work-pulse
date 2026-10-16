@@ -1,6 +1,6 @@
 """Unit tests for `AttendanceService.check_out` — pinned rules and failures."""
 
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, time
 
 import pytest
 from uuid_utils.compat import uuid7
@@ -21,8 +21,9 @@ from tests.unit.attendance.conftest import (
     identity,
     seed_employee,
     seed_record,
+    seed_shift,
 )
-from tests.unit.attendance.fakes import FakeAttendanceRepo
+from tests.unit.attendance.fakes import FakeAttendanceRepo, FakeShiftRepo
 from tests.unit.organizations.fakes import RecordingAuditWriter
 
 EARLY = datetime(2026, 9, 24, 2, 0, tzinfo=UTC)  # 09:00 in Asia/Ho_Chi_Minh
@@ -56,6 +57,9 @@ async def test_check_out_closes_record_and_reports_duration(
     payload = mutation.events[0]["data"]
     assert payload["attendance_id"] == str(record.id)
     assert payload["duration_minutes"] == 510
+    # ADR 0013: the closed record's lateness rides the payload (null here).
+    assert payload["late"] is False
+    assert payload["minutes_late"] is None
 
     entry = audit.entries[-1]
     assert entry.action == "attendance.checked_out"
@@ -85,6 +89,34 @@ async def test_check_out_across_midnight_keeps_the_check_in_workday(
 
     assert mutation.record.workday == date(2026, 9, 24)  # never recomputed
     assert mutation.record.duration_minutes == 12
+
+
+async def test_late_check_out_payload_carries_late_and_minutes(
+    service: AttendanceService,
+    attendance_repo: FakeAttendanceRepo,
+    shift_repo: FakeShiftRepo,
+) -> None:
+    """ADR 0013 — the closed record's `late`/`minutes_late` ride the payload.
+
+    Check-in at 09:30 local against a 09:00 + 10-grace shift → 20 whole
+    minutes past the boundary; check-out recomputes it at emit time.
+    """
+    seed_employee(attendance_repo)
+    shift = await seed_shift(shift_repo, start_time=time(9, 0), grace_minutes=10)
+    record = await seed_record(
+        attendance_repo,
+        checked_in_at=datetime(2026, 9, 24, 2, 30, tzinfo=UTC),  # 09:30 local
+        late=True,
+        shift_id=shift.id,
+    )
+
+    mutation = await service.check_out(
+        identity(), record.id, CheckOutRequest(), EVENING
+    )
+
+    payload = mutation.events[0]["data"]
+    assert payload["late"] is True
+    assert payload["minutes_late"] == 20
 
 
 async def test_check_out_without_an_open_record_is_conflict(

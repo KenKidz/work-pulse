@@ -28,6 +28,11 @@
     "late": {
       "type": "boolean",
       "description": "Lateness flag set once at check-in and never cleared."
+    },
+    "minutes_late": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "description": "Whole minutes past shift start + grace when `late` is true — the value the board shows; `null` when not late. Optional (ADR 0013): pre-extension stored envelopes lack it."
     }
   }
 }

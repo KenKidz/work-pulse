@@ -47,6 +47,7 @@ def _late_check_in_pair() -> tuple[dict[str, Any], dict[str, Any]]:
         workday=WORKDAY,
         work_mode="onsite",
         late=True,
+        minutes_late=18,  # the same minutes the `late` envelope carries
     )
     late = attendance_events.attendance_late(
         tenant_id=TENANT_ID,

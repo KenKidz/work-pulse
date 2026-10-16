@@ -24,6 +24,15 @@
       "type": "integer",
       "minimum": 0,
       "description": "Whole minutes between check-in and check-out (floor)."
+    },
+    "late": {
+      "type": "boolean",
+      "description": "The closed record's immutable lateness flag, set once at check-in. Optional (ADR 0013): pre-extension stored envelopes lack it."
+    },
+    "minutes_late": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "description": "Whole minutes past shift start + grace for the closed record; `null` when not late or the shift no longer resolves. Optional (ADR 0013): pre-extension stored envelopes lack it."
     }
   }
 }

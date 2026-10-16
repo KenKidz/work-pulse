@@ -321,9 +321,10 @@ class AttendanceService:
         )
 
         # The one minutes-late rule (`_minutes_late`) on the persisted record,
-        # so the fact, the `attendance.late` event and the board rows share the
-        # math. `0` stands in for "not late"; the late event is only emitted
-        # when `late` is true, and then the value is the computed minutes.
+        # so the event payloads, the fact and the board rows share the math.
+        # `0` stands in for "not late"; the late event is only emitted when
+        # `late` is true, and then the value is the computed minutes. The
+        # checked-in payload nulls it when not late (ADR 0013's wire rule).
         minutes_late = _minutes_late(record, shift, location_timezone) or 0
 
         produced: list[dict[str, Any]] = [
@@ -336,6 +337,8 @@ class AttendanceService:
                 workday=record.workday,
                 work_mode=work_mode.value,
                 late=late,
+                # Set with `late` at check-in; `null` otherwise (wire rule).
+                minutes_late=minutes_late if late else None,
             )
         ]
         if late and shift is not None:
@@ -441,6 +444,7 @@ class AttendanceService:
             if closed.late and closed.shift_id is not None
             else None
         )
+        minutes_late = _minutes_late(closed, shift, ZoneInfo(context.timezone))
         await self._publish_presence(
             PresenceFact(
                 tenant_id=tenant_id,
@@ -449,7 +453,7 @@ class AttendanceService:
                 attendance_id=closed.id,
                 status="checked_out",
                 late=closed.late,
-                minutes_late=_minutes_late(closed, shift, ZoneInfo(context.timezone)),
+                minutes_late=minutes_late,
                 since=now,
                 reason="checked_out",
                 occurred_at=now,
@@ -465,6 +469,8 @@ class AttendanceService:
                 employee_id=closed.employee_id,
                 workday=closed.workday,
                 duration_minutes=duration_minutes,
+                late=closed.late,
+                minutes_late=minutes_late,
             )
         ]
         # Same transaction as the close and its audit entry (ADR 0012).
