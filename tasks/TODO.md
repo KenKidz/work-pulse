@@ -6,7 +6,7 @@ does the work.
 
 ## Now
 
-- [ ] Realtime consumer swap (`.ai/features/realtime-consumer.md`) — ADR 0011 follow-up: `attendance.*` events feed the wall through the ADR 0012 backbone (in-process presence publish removed), ≤2s metric re-proven through the relay hop — spec is `draft` with open decisions D1 (payload fidelity) and D2 (gate shape) before `/plan`
+- [ ] Realtime consumer swap (`.ai/features/realtime-consumer.md`) — ADR 0011 follow-up: `attendance.*` events feed the wall through the ADR 0012 backbone (in-process presence publish removed), ≤2s metric re-proven through the relay hop — spec `draft`, decisions D1/D2 answered 2026-10-16 (additive v1 payload fields; full-hop browser e2e); next: `/plan`
 
 ## Later
 

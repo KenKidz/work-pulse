@@ -35,18 +35,19 @@ until the wall's only input is `workpulse.events`.
   `RealtimeService`'s snapshot/stream logic, full-row idempotent upserts,
   recounted counts, scope filtering and the cross-workday forwarding rule are
   untouched. At most one delta per attendance transition (ADR 0011).
-- **Facts derive from the event alone (proposed).** `attendance.checked_in` →
+- **Facts derive from the event alone.** `attendance.checked_in` →
   one upsert (`status` from `work_mode`, `since`/`occurred_at` from the
   envelope's `occurred_at`, `late` + `minutes_late` from the payload);
   `attendance.checked_out` → one upsert (`status` `checked_out`, `late` +
-  `minutes_late` for the closed record). The consumer never reads PostgreSQL.
+  `minutes_late` for the closed record). The consumer never reads PostgreSQL
+  (D1).
 - **`attendance.late`, `employee.*` and every other event type produce no wall
   frames.** The `late` envelope remains the lateness fact for Notifications/
   Analytics; the checked-in fact carries the wall's minutes (see D1).
 - **Delivery to the wall stays transient, at-most-once.** Consumer, Redis or
   broker failures degrade latency only; missed deltas recover via the client's
   ~60s snapshot refresh and reconnect resync. PostgreSQL is the only truth.
-- **The consumer subscribes from `latest` (proposed).** The wall shows "what
+- **The consumer subscribes from `latest`.** The wall shows "what
   changed now", never history: a consumer start does not replay the topic into
   stale upserts, and downtime gaps close via snapshot refresh. Kafka-side
   delivery is at-least-once and harmless — a redelivered envelope produces an
@@ -78,9 +79,10 @@ until the wall's only input is `workpulse.events`.
   filter `attendance.checked_in`/`attendance.checked_out`, map envelope →
   `PresenceFact`, publish to the tenant channel; graceful shutdown; ids-only
   logs.
-- Gate: the ≤2s proof through the full hop (real relay + consumer +
-  kafka-test + redis-test + WS subscriber) per D2, plus consumer mapping,
-  idempotence, tenant-isolation and failure tests.
+- Gate: `check-e2e` starts the full hop (kafka-test + relay + realtime worker
+  + Redis) so the browser two-tab <2s test is re-proven through the relay
+  (D2); `check-api` keeps real-broker consumer proofs (mapping, idempotence,
+  tenant isolation, failures) against kafka-test + redis-test.
 - ADR 0013 recording the input swap and the payload extension — written before
   the consumer code (workflow rule 4); spec status and `tasks/TODO.md` ticked at
   record time.
@@ -123,7 +125,7 @@ None. The write path and every request/response shape are unchanged
 ## Events
 
 Envelope, topic and keying unchanged (v1 envelope, `workpulse.events`, key
-`data.employee_id`, ADR 0012). Payload changes (per D1 — proposed):
+`data.employee_id`, ADR 0012). Payload changes (per D1):
 
 - `attendance.checked_in` gains **`minutes_late`: integer ≥ 0 | null** — whole
   minutes past `shift.start_time + grace_minutes` when `late` is true (the same
@@ -209,31 +211,31 @@ Envelope, topic and keying unchanged (v1 envelope, `workpulse.events`, key
   are unchanged.
 - [ ] Gate: `make check` green in the check-e2e shape chosen by D2.
 
-## Decisions needed
+## Decisions (PO, 2026-10-16)
 
-1. **D1 — how `late`/`minutes_late` reach the wall.** A faithful `PresenceFact`
-   needs `minutes_late` at check-in and `late` + `minutes_late` at check-out;
-   today's payloads carry `late` on `checked_in` only and neither on
-   `checked_out`. Options: (a) **extend the v1 payloads additively** — builders
-   fill the new optional fields, schemas update in the same change, no version
-   bump (no external consumers exist; pre-extension rows stay valid); keeps the
-   consumer stateless and the frames exact; `attendance.late` keeps its
-   Notifications/Analytics audience but drops Realtime from `.ai/domain.md`'s
-   consumer list; (b) the consumer enriches from PostgreSQL (a read per event;
-   the event stops being the fact); (c) a v2 payload bump with dual-publish
-   (heavy while nothing consumes v1). **Proposed default: (a).**
-2. **D2 — where the ≤2s metric is re-proven.** Post-swap, the browser live-delta
-   test needs the full hop (Kafka + relay + realtime worker + Redis) in the e2e
-   harness, which outbox-relay deliberately kept Kafka-free. Options:
-   (a) **run the full hop in `check-e2e`** — the existing two-tab <2s test keeps
-   proving the metric on the real UI through the relay; the gate gains broker +
-   worker startup; (b) prove <2s through the hop as a real integration test
-   (kafka-test + redis-test + relay + consumer + WS client) in `check-api`, and
-   relax the browser test to the degradation contract (snapshot + reconnect
-   tests stay; the live-flip assertion moves down a layer) — lean gate, metric
-   proven at the process boundary; (c) both proofs. **Proposed default: (a)** —
-   the metric is a user-facing promise on a browser surface, and the repo has
-   precedent for real brokers in the gate (outbox-relay decision 4).
+1. **D1 — `late`/`minutes_late` reach the wall via additive v1 payload
+   extensions.** `attendance-checked-in.v1.json` gains optional `minutes_late`;
+   `attendance-checked-out.v1.json` gains optional `late` + `minutes_late`;
+   the builders fill them, schemas update in the same change, no version bump
+   (no external consumers exist and pre-extension rows stay valid because the
+   fields are optional). Rationale: the consumer stays stateless, the frames
+   stay exact, and "one fact, one event" (product goal 2) means the event must
+   carry the fact's fields. Rejected: DB enrichment (event stops being the
+   fact), degraded rows (WS would disagree with REST until refresh).
+   `.ai/domain.md`'s consumer list follows: `attendance.late` drops Realtime,
+   `checked_in`/`checked_out` gain it.
+2. **D2 — the ≤2s metric is re-proven in the browser e2e through the full
+   hop.** `check-e2e` starts kafka-test + the relay + the realtime worker; the
+   existing two-tab live-delta test in `tests/e2e/command-center.spec.ts` keeps
+   its <2s assertion, now measured through the relay hop. Rationale: the metric
+   is a user-facing promise on a browser surface and outbox-relay decision 1
+   asked for it "re-proven through the relay hop on its own"; the repo already
+   accepts real brokers in the gate (outbox-relay decision 4). Consequence
+   recorded: outbox-relay AC12's "e2e flows pass without Kafka" narrows to the
+   write path and snapshot/resync flows — the wall's live-delta spec now
+   requires the hop by design (writes and `GET /attendance/board` remain
+   bus-free). Rejected: integration-only proof (browser live path would lose
+   coverage), both proofs (gate cost).
 
 ## Plan
 
