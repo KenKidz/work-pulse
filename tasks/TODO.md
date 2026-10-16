@@ -6,6 +6,8 @@ does the work.
 
 ## Now
 
+- [ ] Realtime consumer swap (`.ai/features/realtime-consumer.md`) — ADR 0011 follow-up: `attendance.*` events feed the wall through the ADR 0012 backbone (in-process presence publish removed), ≤2s metric re-proven through the relay hop — spec is `draft` with open decisions D1 (payload fidelity) and D2 (gate shape) before `/plan`
+
 ## Later
 
 - [ ] `make gen-api` reproducibility: orval 8.37.0 + prettier 3.9.9 regenerates `packages/api-client/src/index.ts` semantically identical but re-wraps 40 union type aliases differently than the committed file (formatting-only churn; the committed style predates the pinned prettier) — decide: add `formatter: "prettier"` to `orval.config.ts` and re-commit the churn, or pin the formatting behavior
