@@ -112,6 +112,17 @@ class LeaveRepository(Protocol):
         """Tenant-scoped employee facts; `None` when the employee is unknown."""
         ...
 
+    async def lock_employee(self, tenant_id: UUID, employee_id: UUID) -> bool:
+        """Take the employee's row lock for the rest of the transaction.
+
+        Submit serializes per employee: the overlap check and the insert run
+        while this lock is held, so two concurrent submits cannot both pass
+        `find_overlapping` and insert overlapping ranges (the check-then-insert
+        race has no declarative constraint — the row lock is the backstop).
+        `False` when the employee row is not in the tenant.
+        """
+        ...
+
     async def visible_employee_ids(
         self, tenant_id: UUID, manager_id: UUID | None
     ) -> Sequence[UUID]:
