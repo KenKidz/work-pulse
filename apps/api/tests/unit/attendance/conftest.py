@@ -175,6 +175,18 @@ async def seed_location(
     return await repo.add(tenant_id, location_id, name, None, timezone)
 
 
+def seed_leave_coverage(
+    repo: FakeAttendanceRepo,
+    *,
+    tenant_id: UUID = TENANT_A,
+    employee_id: UUID = ACTOR,
+    workdays: tuple[date, ...] = (TODAY,),
+) -> None:
+    """Mark approved-leave coverage (what the adapter resolves from ranges)."""
+    for workday in workdays:
+        repo.leave_days.add((tenant_id, employee_id, workday))
+
+
 async def seed_record(
     repo: FakeAttendanceRepo,
     *,

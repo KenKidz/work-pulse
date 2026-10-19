@@ -10,7 +10,9 @@ constraint names are the explicit ones declared in
 
 The employee/location reads join `employees` with `locations`: the check-in
 workday/lateness judgement and the board's `absent` count both need the
-employee's location timezone.
+employee's location timezone. The leave-coverage reads join `leave_requests`
+(Leave spec T5, ADR 0014): attendance's port, this adapter's join — the
+attendance domain itself never imports leave internals.
 """
 
 from collections.abc import Sequence
@@ -31,6 +33,8 @@ from app.domains.attendance.repository import AttendanceFilters, EmployeeContext
 from app.domains.attendance.schemas import AttendanceRecord, Shift, WorkMode
 from app.domains.employees import models as employees_orm
 from app.domains.employees.schemas import EmployeeStatus
+from app.domains.leave import models as leave_orm
+from app.domains.leave.schemas import LeaveRequestStatus
 from app.domains.organizations import models as organizations_orm
 from app.shared.errors import WorkPulseError
 from app.shared.pagination import PageParams
@@ -216,6 +220,35 @@ class PostgresAttendanceRepository:
             employees_orm.Employee.tenant_id == tenant_id,
         )
         return contexts[0] if contexts else None
+
+    async def covers_leave(
+        self, tenant_id: UUID, employee_id: UUID, workday: date
+    ) -> bool:
+        stmt = (
+            select(leave_orm.LeaveRequest.id)
+            .where(*self._leave_coverage_conditions(tenant_id, workday))
+            .where(leave_orm.LeaveRequest.employee_id == employee_id)
+            .limit(1)
+        )
+        return (await self._session.execute(stmt)).first() is not None
+
+    async def leave_coverage(self, tenant_id: UUID, workday: date) -> set[UUID]:
+        stmt = (
+            select(leave_orm.LeaveRequest.employee_id)
+            .where(*self._leave_coverage_conditions(tenant_id, workday))
+            .distinct()
+        )
+        return set((await self._session.execute(stmt)).scalars())
+
+    @staticmethod
+    def _leave_coverage_conditions(tenant_id: UUID, workday: date) -> tuple[Any, ...]:
+        """Approved, tenant-scoped leave whose inclusive range covers the date."""
+        return (
+            leave_orm.LeaveRequest.tenant_id == tenant_id,
+            leave_orm.LeaveRequest.status == LeaveRequestStatus.APPROVED.value,
+            leave_orm.LeaveRequest.start_date <= workday,
+            leave_orm.LeaveRequest.end_date >= workday,
+        )
 
     async def visible_employees(
         self, tenant_id: UUID, *, manager_id: UUID | None = None

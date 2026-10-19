@@ -11,8 +11,8 @@ Semantics worth naming here (pinned in `.ai/features/realtime-command-center.md`
 - `date` is the current workday (the server's UTC date); a delta whose `date`
   differs from a client's snapshot makes the client refetch instead of patch.
 - Counts **overlap, they are not a partition** (ADR 0009): `late` co-occurs
-  with `present`/`remote`/`checked_out`; `on_leave` stays `0` until the Leave
-  context lands.
+  with `present`/`remote`/`checked_out`; `on_leave` reflects APPROVED-leave
+  coverage (ADR 0014).
 - Every push is a full-row idempotent upsert with fresh full counts — clients
   never derive counts and never patch partial rows.
 """
@@ -26,8 +26,8 @@ from pydantic import BaseModel
 from app.shared.presence import PresenceReason
 
 # Live presence vocabulary — one status plus the orthogonal `late` flag
-# (ADR 0009). `late` is never a status; `on_leave` is never populated until the
-# Leave context lands (the value keeps the contract stable).
+# (ADR 0009). `late` is never a status; `on_leave` is produced for employees
+# covered by APPROVED leave (ADR 0014).
 PresenceStatus = Literal["present", "remote", "checked_out", "absent", "on_leave"]
 
 
@@ -36,7 +36,7 @@ class PresenceRow(BaseModel):
 
     `minutes_late` is recomputed from the record's shift at read/publish time
     (the stored `late` flag itself is immutable); `since` is `checked_in_at`
-    while open, `checked_out_at` once closed, `null` for absent rows.
+    while open, `checked_out_at` once closed, `null` for absent/on_leave rows.
     """
 
     employee_id: UUID
@@ -53,7 +53,7 @@ class RealtimeBoardCounts(BaseModel):
     present: int
     remote: int
     late: int
-    on_leave: int  # always 0 in Phase 2 — the field keeps the contract stable
+    on_leave: int  # APPROVED-leave coverage for the date (ADR 0014)
     absent: int
     checked_out: int
 

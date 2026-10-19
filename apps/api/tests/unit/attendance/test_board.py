@@ -17,6 +17,7 @@ from tests.unit.attendance.conftest import (
     TODAY,
     identity,
     seed_employee,
+    seed_leave_coverage,
     seed_record,
     seed_shift,
 )
@@ -53,8 +54,25 @@ async def test_counts_are_independent_not_a_partition(
     assert board.counts.remote == 1
     assert board.counts.late == 1
     assert board.counts.checked_out == 1
-    assert board.counts.on_leave == 0  # always 0 until Leave lands (Phase 3)
+    assert board.counts.on_leave == 0  # no approved-leave coverage in the fixture
     assert board.counts.absent == 0  # everyone has a record for the date
+
+
+async def test_board_counts_approved_leave_coverage_as_on_leave(
+    service: AttendanceService,
+    attendance_repo: FakeAttendanceRepo,
+    shift_repo: FakeShiftRepo,
+) -> None:
+    seed_employee(attendance_repo)
+    await seed_shift(shift_repo)  # an expected shift would otherwise mean absent
+    seed_leave_coverage(attendance_repo)
+
+    board = await service.board(
+        identity(), TODAY, datetime(2026, 9, 24, 2, 11, tzinfo=UTC)
+    )
+
+    assert board.counts.on_leave == 1
+    assert board.counts.absent == 0  # covered employees are never absent (ADR 0014)
 
 
 async def test_absent_only_after_start_plus_grace_and_only_with_zero_records(

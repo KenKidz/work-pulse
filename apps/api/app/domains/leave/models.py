@@ -28,6 +28,7 @@ from sqlalchemy import (
     String,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 from uuid_utils.compat import uuid7
@@ -81,6 +82,19 @@ class LeaveRequest(Base):
             "employee_id",
             "status",
             "start_date",
+        ),
+        # Board coverage read (ADR 0014): `tenant_id = ? AND start_date <= d
+        # AND end_date >= d` over APPROVED rows only. `end_date` leads the
+        # range (a board date only looks at leave still running/future, not
+        # the tenant's whole history) and `employee_id` is included so the
+        # read is index-only.
+        Index(
+            "ix_leave_requests_approved_coverage",
+            "tenant_id",
+            "end_date",
+            "start_date",
+            postgresql_where=text("status = 'approved'"),
+            postgresql_include=["employee_id"],
         ),
     )
 

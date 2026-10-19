@@ -11,6 +11,7 @@ import pytest
 from app.domains.attendance.exceptions import (
     AttendanceAlreadyCheckedInError,
     EmployeeNotActiveError,
+    EmployeeOnLeaveError,
     InvalidWorkModeError,
 )
 from app.domains.attendance.schemas import AttendanceRecord, WorkMode
@@ -24,6 +25,7 @@ from tests.unit.attendance.conftest import (
     check_in,
     identity,
     seed_employee,
+    seed_leave_coverage,
     seed_record,
     seed_shift,
 )
@@ -197,6 +199,42 @@ async def test_terminated_employee_cannot_check_in(
 
     assert exc.value.code == "employee_not_active"
     assert exc.value.status_code == 409
+
+
+async def test_check_in_on_a_day_covered_by_approved_leave_is_rejected(
+    service: AttendanceService, attendance_repo: FakeAttendanceRepo
+) -> None:
+    """Leave spec decision 9 / ADR 0014: `ON_LEAVE` contradicts `PRESENT`."""
+    seed_employee(attendance_repo)
+    seed_leave_coverage(attendance_repo)  # covers TODAY
+
+    with pytest.raises(EmployeeOnLeaveError) as exc:
+        await check_in(service)
+
+    assert exc.value.code == "employee_on_leave"
+    assert exc.value.status_code == 409
+
+
+async def test_check_in_is_allowed_when_leave_covers_another_day(
+    service: AttendanceService, attendance_repo: FakeAttendanceRepo
+) -> None:
+    seed_employee(attendance_repo)
+    seed_leave_coverage(attendance_repo, workdays=(date(2026, 9, 25),))
+
+    mutation = await check_in(service, now=EARLY)
+
+    assert mutation.record.workday == TODAY
+
+
+async def test_not_active_wins_over_on_leave(
+    service: AttendanceService, attendance_repo: FakeAttendanceRepo
+) -> None:
+    """Pinned order: the status check fires immediately before coverage."""
+    seed_employee(attendance_repo, status=EmployeeStatus.TERMINATED)
+    seed_leave_coverage(attendance_repo)
+
+    with pytest.raises(EmployeeNotActiveError):
+        await check_in(service)
 
 
 class _RaceLostRepo(FakeAttendanceRepo):

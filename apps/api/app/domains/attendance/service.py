@@ -19,7 +19,8 @@ Rules implemented here (pinned in `.ai/features/attendance.md`):
   `409 attendance_already_checked_in`).
 - **Self-only capture**: check-in/check-out resolve the employee linked to the
   acting user (`identity.employee_id`); a non-active employee cannot check in
-  or out.
+  or out, and a workday covered by APPROVED leave refuses check-in
+  (`409 employee_on_leave`) while check-out stays allowed (ADR 0014).
 - **Visibility** (T1 role matrix): `employee`/`finance` see their own records;
   `manager` sees self + direct reports; `hr`/`admin`/`super_admin` see all. An
   out-of-scope `employee_id` filter is a `404 employee_not_found` — existence
@@ -29,8 +30,9 @@ Rules implemented here (pinned in `.ai/features/attendance.md`):
   record for the date — a re-check-in replaces its earlier record's
   contribution instead of counting twice, so counts and the presence rows
   always agree. `absent` needs an expected shift, zero records for the date and
-  `now` past `start + grace` in the employee's location timezone; `on_leave` is
-  always 0 in Phase 1.
+  `now` past `start + grace` in the employee's location timezone; an employee
+  covered by APPROVED leave is `on_leave` — one row, record-based counts and
+  `absent` excluded (ADR 0014).
 - **Shift scopes**: at most one shift per scope (shared indexes/checks in the
   repository) and a client-supplied `location_id` must exist in the actor's
   tenant → `404 location_not_found`; archived locations stay referenceable.
@@ -69,6 +71,7 @@ from app.domains.attendance.exceptions import (
     AttendanceNotOpenError,
     AttendanceRecordNotFoundError,
     EmployeeNotActiveError,
+    EmployeeOnLeaveError,
     InvalidWorkModeError,
     ShiftNotFoundError,
     ShiftScopeTakenError,
@@ -201,16 +204,23 @@ def _absent_rows(
     shifts: Sequence[Shift],
     board_date: date,
     now: datetime,
+    covered: set[UUID],
 ) -> list[BoardPresenceRow]:
     """Active employees past `shift.start + grace` with zero records.
 
     Shifts resolve as the employee's location's shift, else the tenant
-    default, else none (never absent). Identifiers and state only.
+    default, else none (never absent). Employees covered by APPROVED leave
+    are never absent — they render `on_leave` instead (ADR 0014). Identifiers
+    and state only.
     """
     recorded = {record.employee_id for record in records}
     rows: list[BoardPresenceRow] = []
     for context in visible:
-        if context.status != EmployeeStatus.ACTIVE or context.id in recorded:
+        if (
+            context.status != EmployeeStatus.ACTIVE
+            or context.id in recorded
+            or context.id in covered
+        ):
             continue
         shift = _expected_shift(shifts, context.location_id)
         if shift is None:
@@ -288,6 +298,14 @@ class AttendanceService:
             raise EmployeeNotFoundError()
         if context.status != EmployeeStatus.ACTIVE:
             raise EmployeeNotActiveError()
+        location_timezone = ZoneInfo(context.timezone)
+        workday = now.astimezone(location_timezone).date()
+        # Approved leave covering the workday blocks the capture, symmetric
+        # with `employee_not_active`: `ON_LEAVE` and `PRESENT` are
+        # contradictory presence states (leave spec decision 9, ADR 0014).
+        # Check-out stays allowed — closing an open record is always safe.
+        if await self._repo.covers_leave(tenant_id, context.id, workday):
+            raise EmployeeOnLeaveError()
         if await self._repo.open_for_employee(tenant_id, context.id) is not None:
             raise AttendanceAlreadyCheckedInError()
         try:
@@ -295,8 +313,6 @@ class AttendanceService:
         except ValueError:
             raise InvalidWorkModeError() from None
 
-        location_timezone = ZoneInfo(context.timezone)
-        workday = now.astimezone(location_timezone).date()
         shift = await self._resolve_shift(tenant_id, context.location_id)
         late = False
         if shift is not None:
@@ -495,9 +511,11 @@ class AttendanceService:
         rows use — so `counts == recount(rows)` by construction and a
         re-check-in replaces its earlier record's contribution instead of
         counting twice. `rows` holds one row per employee with a record for the
-        workday — the newest record wins — plus one `absent` row per
-        currently-absent employee, so `absent == len(absent rows)`; `activity`
-        still lists every transition (a re-check-in is a real event).
+        workday — the newest record wins — plus one `on_leave` row per visible
+        employee covered by APPROVED leave (overriding any same-day record,
+        ADR 0014) plus one `absent` row per currently-absent employee, so
+        `absent == len(absent rows)`; `activity` still lists every transition
+        (a re-check-in is a real event).
         """
         tenant_id = identity.tenant_id
         visible = await self._scoped_employees(identity)
@@ -510,6 +528,10 @@ class AttendanceService:
         shifts = await self._shifts.list(tenant_id)
         shifts_by_id = {shift.id: shift for shift in shifts}
         timezones = {context.id: context.timezone for context in visible}
+        # One coverage read per board call; the scope intersection keeps a
+        # manager's board to self + direct reports.
+        coverage = await self._repo.leave_coverage(tenant_id, board_date)
+        covered = {context.id for context in visible if context.id in coverage}
 
         rows: list[BoardPresenceRow] = []
         current: list[AttendanceRecord] = []
@@ -520,6 +542,11 @@ class AttendanceService:
             if record.employee_id in seen:
                 continue
             seen.add(record.employee_id)
+            if record.employee_id in covered:
+                # `on_leave` wins over the record (ADR 0014): it contributes no
+                # record-based count and its leave row is built below; the
+                # record itself stays in the history and the activity feed.
+                continue
             current.append(record)
             rows.append(
                 _presence_row(
@@ -530,7 +557,23 @@ class AttendanceService:
                     ZoneInfo(timezones[record.employee_id]),
                 )
             )
-        absent_rows = _absent_rows(visible, records, shifts, board_date, now)
+        # One `on_leave` row per covered visible employee — with or without a
+        # record — so `counts == recount(rows)` holds and a consumer delta for
+        # a record-less employee survives the next snapshot refresh (ADR 0014).
+        for context in visible:
+            if context.id not in covered:
+                continue
+            rows.append(
+                BoardPresenceRow(
+                    employee_id=context.id,
+                    status="on_leave",
+                    late=False,
+                    minutes_late=None,
+                    since=None,
+                    attendance_id=None,
+                )
+            )
+        absent_rows = _absent_rows(visible, records, shifts, board_date, now, covered)
         rows.extend(absent_rows)
 
         counts = BoardCounts(
@@ -545,7 +588,7 @@ class AttendanceService:
                 if record.checked_out_at is None and record.work_mode == WorkMode.REMOTE
             ),
             late=sum(1 for record in current if record.late),
-            on_leave=0,  # Leave lands in Phase 3 — the field keeps the contract
+            on_leave=len(covered),
             absent=len(absent_rows),
             checked_out=sum(
                 1 for record in current if record.checked_out_at is not None

@@ -34,7 +34,7 @@
         "on_leave": {
           "type": "integer",
           "minimum": 0,
-          "description": "Always 0 until the Leave context lands; the key stays so this contract never changes."
+          "description": "In-scope employees with APPROVED leave covering the workday. `on_leave` wins over a same-day attendance record (ADR 0014): covered employees are excluded from present/remote/late/checked_out and from absent."
         },
         "absent": {
           "type": "integer",
@@ -80,7 +80,7 @@
         },
         "attendance_id": {
           "type": ["string", "null"],
-          "description": "The workday's attendance record (UUIDv7 string); `null` for absent rows."
+          "description": "The workday's attendance record (UUIDv7 string); `null` for absent/on_leave rows."
         }
       }
     },
@@ -122,7 +122,7 @@
         "counts": { "$ref": "#/$defs/counts" },
         "presence": {
           "type": "array",
-          "description": "Every in-scope employee with a record for the workday, plus every in-scope employee currently counted absent. Uncapped, unordered.",
+          "description": "Every in-scope employee with a record for the workday, plus every in-scope employee with approved leave covering the workday and every in-scope employee currently counted absent. Uncapped, unordered.",
           "items": { "$ref": "#/$defs/presence-row" }
         },
         "activity": {
@@ -152,7 +152,7 @@
         "counts": { "$ref": "#/$defs/counts" },
         "presence": {
           "type": "array",
-          "description": "Every in-scope employee with a record for the workday, plus every in-scope employee currently counted absent. Uncapped, unordered.",
+          "description": "Every in-scope employee with a record for the workday, plus every in-scope employee with approved leave covering the workday and every in-scope employee currently counted absent. Uncapped, unordered.",
           "items": { "$ref": "#/$defs/presence-row" }
         },
         "activity": {

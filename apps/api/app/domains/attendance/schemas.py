@@ -51,8 +51,8 @@ class BoardAction(StrEnum):
 
 
 # Live presence vocabulary — one status plus the orthogonal `late` flag
-# (ADR 0009). `late` is never a status; `on_leave` is never populated until the
-# Leave context lands (the value keeps the contract stable).
+# (ADR 0009). `late` is never a status; `on_leave` is produced for employees
+# covered by APPROVED leave (ADR 0014).
 PresenceStatus = Literal["present", "remote", "checked_out", "absent", "on_leave"]
 
 
@@ -90,7 +90,7 @@ class BoardCounts(BaseModel):
     present: int
     remote: int
     late: int
-    on_leave: int  # always 0 in Phase 1 — the field keeps the contract stable
+    on_leave: int  # APPROVED-leave coverage for the date (ADR 0014)
     absent: int
     checked_out: int
 
@@ -114,7 +114,8 @@ class BoardPresenceRow(BaseModel):
     state only, never names/notes (`.ai/security.md`). `late` is orthogonal to
     `status`; `minutes_late` is recomputed from the record's shift at read time
     (the stored flag itself is immutable), and `since` is `checked_in_at` while
-    the record is open / `checked_out_at` once closed / `null` for absent rows.
+    the record is open / `checked_out_at` once closed / `null` for
+    absent/on_leave rows.
     """
 
     employee_id: UUID

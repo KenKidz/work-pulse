@@ -40,6 +40,14 @@ class EmployeeNotActiveError(WorkPulseError):
         super().__init__("Employee is not active")
 
 
+class EmployeeOnLeaveError(WorkPulseError):
+    status_code = 409
+    code = "employee_on_leave"
+
+    def __init__(self) -> None:
+        super().__init__("Employee is on approved leave")
+
+
 class ShiftNotFoundError(WorkPulseError):
     status_code = 404
     code = "shift_not_found"

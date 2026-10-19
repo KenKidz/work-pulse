@@ -11,6 +11,11 @@ current user's visibility scope into `employee_ids` (T1 role matrix) and only
 then calls `list`. `EmployeeContext` is the employer/location read attendance rules
 need — the employee row joined with their location's timezone, which the
 check-in workday/lateness judgement and the board's `absent` count depend on.
+
+`covers_leave`/`leave_coverage` are the Leave-context reads attendance rules
+need (Leave spec T5, ADR 0014): the adapter joins `leave_requests`
+(`status='approved'`, range covering the date) — the same cross-domain read
+pattern as `EmployeeContext`, so the domain never imports leave internals.
 """
 
 from collections.abc import Sequence
@@ -113,6 +118,26 @@ class AttendanceRepository(Protocol):
         self, tenant_id: UUID, *, manager_id: UUID | None = None
     ) -> Sequence[EmployeeContext]:
         """Board scope: all employees, or a manager's self + direct reports."""
+        ...
+
+    async def covers_leave(
+        self, tenant_id: UUID, employee_id: UUID, workday: date
+    ) -> bool:
+        """Whether the employee has APPROVED leave covering `workday`.
+
+        Only `APPROVED` blocks a check-in (`PENDING` never reaches the wall);
+        the inclusive range check is `start_date <= workday <= end_date`
+        (ADR 0014). A plain read — no leave internals cross the domain line.
+        """
+        ...
+
+    async def leave_coverage(self, tenant_id: UUID, workday: date) -> set[UUID]:
+        """Employee ids whose APPROVED leave covers `workday` (board read).
+
+        One tenant-scoped read per board call; the service intersects it with
+        the board's visible scope and `on_leave` wins over a same-day record
+        (ADR 0014).
+        """
         ...
 
 

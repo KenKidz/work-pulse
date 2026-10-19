@@ -18,6 +18,7 @@ from tests.unit.attendance.conftest import (
     TODAY,
     identity,
     seed_employee,
+    seed_leave_coverage,
     seed_record,
     seed_shift,
 )
@@ -134,6 +135,90 @@ async def test_board_detail_rows_follow_the_manager_scope(
 
     assert {row.employee_id for row in detail.rows} == {ACTOR, REPORT}
     assert detail.counts.present == 2
+
+
+async def test_board_detail_on_leave_row_overrides_a_same_day_record(
+    service: AttendanceService,
+    attendance_repo: FakeAttendanceRepo,
+    shift_repo: FakeShiftRepo,
+) -> None:
+    """ADR 0014: `on_leave` wins — one row, no record-based counts, history stays."""
+    seed_employee(attendance_repo)  # ACTOR
+    shift = await seed_shift(shift_repo, start_time=time(9, 0), grace_minutes=10)
+    await seed_record(
+        attendance_repo,
+        employee_id=ACTOR,
+        checked_in_at=datetime(2026, 9, 24, 2, 40, tzinfo=UTC),
+        late=True,
+        shift_id=shift.id,
+    )
+    seed_leave_coverage(attendance_repo)  # covers TODAY
+
+    detail = await service.board_detail(identity(), TODAY, NOW)
+
+    rows = {row.employee_id: row for row in detail.rows}
+    assert set(rows) == {ACTOR}  # exactly one row — the leave row, not the record
+    row = rows[ACTOR]
+    assert row.status == "on_leave"
+    assert row.late is False
+    assert row.minutes_late is None
+    assert row.since is None
+    assert row.attendance_id is None
+
+    # The record contributes no count; `counts == recount(rows)` still holds.
+    assert detail.counts.model_dump() == {
+        "present": 0,
+        "remote": 0,
+        "late": 0,
+        "on_leave": 1,
+        "absent": 0,
+        "checked_out": 0,
+    }
+    # The record stays in the history: its transition is still in the feed.
+    assert [entry.action.value for entry in detail.activity] == ["checked_in"]
+
+
+async def test_board_detail_on_leave_excludes_absent_and_renders_recordless_rows(
+    service: AttendanceService,
+    attendance_repo: FakeAttendanceRepo,
+    shift_repo: FakeShiftRepo,
+) -> None:
+    """A covered employee without a record is `on_leave`, never `absent`."""
+    seed_employee(attendance_repo)  # ACTOR — covered, no record
+    seed_employee(attendance_repo, employee_id=REPORT)  # same shift, not covered
+    await seed_shift(shift_repo, start_time=time(9, 0), grace_minutes=10)
+    seed_leave_coverage(attendance_repo)  # covers ACTOR on TODAY
+
+    after_grace = datetime(2026, 9, 24, 2, 11, tzinfo=UTC)  # 09:11 local
+    detail = await service.board_detail(identity(), TODAY, after_grace)
+
+    rows = {row.employee_id: row for row in detail.rows}
+    assert set(rows) == {ACTOR, REPORT}
+    covered = rows[ACTOR]
+    assert covered.status == "on_leave"
+    assert covered.since is None
+    assert covered.attendance_id is None
+    assert rows[REPORT].status == "absent"  # the control case is still absent
+    assert detail.counts.absent == 1
+    assert detail.counts.on_leave == 1
+
+
+async def test_board_detail_on_leave_rows_follow_the_manager_scope(
+    service: AttendanceService,
+    attendance_repo: FakeAttendanceRepo,
+) -> None:
+    seed_employee(attendance_repo, employee_id=ACTOR)  # the manager
+    seed_employee(attendance_repo, employee_id=REPORT, manager_id=ACTOR)
+    seed_employee(attendance_repo, employee_id=OTHER)  # not the manager's report
+    seed_leave_coverage(attendance_repo, employee_id=REPORT)
+    seed_leave_coverage(attendance_repo, employee_id=OTHER)
+
+    detail = await service.board_detail(identity(role=Role.MANAGER), TODAY, NOW)
+
+    rows = {row.employee_id: row for row in detail.rows}
+    assert set(rows) == {REPORT}  # OTHER is out of scope and never leaks
+    assert rows[REPORT].status == "on_leave"
+    assert detail.counts.on_leave == 1
 
 
 async def test_board_detail_counts_follow_the_current_record_per_employee(

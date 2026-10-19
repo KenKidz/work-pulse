@@ -4602,7 +4602,7 @@
           "late"
         ],
         "title": "PresenceRow",
-        "description": "One employee's presence for the workday \u2014 the full-row upsert shape.\n\n`minutes_late` is recomputed from the record's shift at read/publish time\n(the stored `late` flag itself is immutable); `since` is `checked_in_at`\nwhile open, `checked_out_at` once closed, `null` for absent rows."
+        "description": "One employee's presence for the workday \u2014 the full-row upsert shape.\n\n`minutes_late` is recomputed from the record's shift at read/publish time\n(the stored `late` flag itself is immutable); `since` is `checked_in_at`\nwhile open, `checked_out_at` once closed, `null` for absent/on_leave rows."
       },
       "RealtimeActivityEntry": {
         "properties": {

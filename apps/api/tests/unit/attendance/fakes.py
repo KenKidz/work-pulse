@@ -29,6 +29,9 @@ class FakeAttendanceRepo:
     def __init__(self) -> None:
         self.records: dict[tuple[UUID, UUID], AttendanceRecord] = {}
         self.employees: dict[tuple[UUID, UUID], EmployeeContext] = {}
+        # Approved-leave coverage: (tenant, employee, workday) triples. The
+        # real adapter joins `leave_requests`; the fake stores resolved days.
+        self.leave_days: set[tuple[UUID, UUID, date]] = set()
 
     def _tenant_records(self, tenant_id: UUID) -> list[AttendanceRecord]:
         return [
@@ -161,6 +164,18 @@ class FakeAttendanceRepo:
                 if context.id == manager_id or context.manager_id == manager_id
             ]
         return sorted(contexts, key=lambda context: context.id)
+
+    async def covers_leave(
+        self, tenant_id: UUID, employee_id: UUID, workday: date
+    ) -> bool:
+        return (tenant_id, employee_id, workday) in self.leave_days
+
+    async def leave_coverage(self, tenant_id: UUID, workday: date) -> set[UUID]:
+        return {
+            employee_id
+            for (row_tenant, employee_id, day) in self.leave_days
+            if row_tenant == tenant_id and day == workday
+        }
 
 
 class FakeShiftRepo:

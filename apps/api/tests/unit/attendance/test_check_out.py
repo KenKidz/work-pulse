@@ -21,6 +21,7 @@ from tests.unit.attendance.conftest import (
     check_in,
     identity,
     seed_employee,
+    seed_leave_coverage,
     seed_record,
     seed_shift,
 )
@@ -145,6 +146,26 @@ async def test_minutes_late_is_recomputed_from_the_records_shift(
     payload = mutation.events[0]["data"]
     assert payload["late"] is True  # the flag never drifts
     assert payload["minutes_late"] == 15  # boundary moved 9:10 → 9:25 (local)
+
+
+async def test_check_out_stays_allowed_on_a_leave_covered_day(
+    service: AttendanceService, attendance_repo: FakeAttendanceRepo
+) -> None:
+    """A leave approval arriving (or racing) mid-capture must not trap the record.
+
+    ADR 0014: check-in is blocked on covered workdays; closing an open record
+    is always safe — a capture that never closes is worse than a close on a
+    leave day.
+    """
+    seed_employee(attendance_repo)
+    opened = await check_in(service, now=EARLY)
+    seed_leave_coverage(attendance_repo)  # the approval lands after check-in
+
+    mutation = await service.check_out(
+        identity(), opened.record.id, CheckOutRequest(), EVENING
+    )
+
+    assert mutation.record.checked_out_at == EVENING
 
 
 async def test_check_out_without_an_open_record_is_conflict(
