@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workpulse.dev/contracts/events/leave/leave-rejected.v1.json",
+  "title": "WorkPulse leave.rejected v1",
+  "description": "A pending leave request was rejected; the balance is untouched and the live wall is unaffected. Identifiers, type code, dates and actor only — the reason and decision note are PII and never leave the database (`.ai/security.md`).",
+  "type": "object",
+  "required": [
+    "leave_request_id",
+    "employee_id",
+    "leave_type_code",
+    "start_date",
+    "end_date",
+    "decided_by"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "leave_request_id": {
+      "type": "string",
+      "description": "The rejected leave request (UUIDv7 string)."
+    },
+    "employee_id": {
+      "type": "string",
+      "description": "Employee the request belongs to (UUIDv7 string). Also the Kafka message key (ADR 0012)."
+    },
+    "leave_type_code": {
+      "type": "string",
+      "enum": ["annual", "sick", "unpaid"],
+      "description": "Seeded leave type code."
+    },
+    "start_date": {
+      "type": "string",
+      "format": "date",
+      "description": "First day of the leave range (inclusive, `YYYY-MM-DD`)."
+    },
+    "end_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Last day of the leave range (inclusive, `YYYY-MM-DD`)."
+    },
+    "decided_by": {
+      "type": "string",
+      "description": "Actor user id that rejected the request (ADR 0010 — never the requester)."
+    }
+  }
+}

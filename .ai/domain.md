@@ -84,6 +84,7 @@ where it actually flows on the bus.
 | `attendance.correction_requested` | an employee asks for a fix | 3 | 3 | Workflow, Notifications |
 | `leave.requested` | a leave request is submitted | 3 | 3 | Workflow, Notifications |
 | `leave.approved` / `leave.rejected` | a manager decides | 3 | 3 | Payroll, Notifications, Analytics |
+| `leave.withdrawn` | the requester withdraws a pending request | 3 | 3 | Workflow, Notifications |
 | `overtime.requested` / `overtime.approved` | overtime moves through approval | 3 | 3 | Payroll, Notifications |
 | `payroll.calculated` | a payroll run completes | 4 | 4 | Notifications, Analytics |
 | `payslip.issued` | a payslip becomes available | 4 | 4 | Notifications |

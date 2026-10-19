@@ -6,10 +6,12 @@ does the work.
 
 ## Now
 
+- [ ] Leave (`.ai/features/leave.md`, `Status: approved` 2026-10-19 — plan T1–T9 inside the spec) — build next: contract pin → event contracts → migration 0006 + domain → attendance coverage seam + board (ADR 0014) → routers + gen-api → consumer mapping → web leave page → e2e
+
 ## Later
 
 - [ ] `make gen-api` reproducibility: orval 8.37.0 + prettier 3.9.9 regenerates `packages/api-client/src/index.ts` semantically identical but re-wraps 40 union type aliases differently than the committed file (formatting-only churn; the committed style predates the pinned prettier) — decide: add `formatter: "prettier"` to `orval.config.ts` and re-commit the churn, or pin the formatting behavior
-- [ ] Phase 3 (rest): Leave · Notifications and their consumer workers on the outbox/Kafka backbone, plus the ADR 0011 realtime consumer swap (≤2s metric re-proven through the relay hop)
+- [ ] Phase 3 (rest): Notifications and their consumer workers on the outbox/Kafka backbone
 - [ ] Phase 4: ClickHouse analytics · Payroll (simulated, ADR 0003) · Recruitment · Performance · Documents
 - [ ] Phase 5: CDC / Debezium
 - [ ] Phase 6: OpenTelemetry / Prometheus / Grafana

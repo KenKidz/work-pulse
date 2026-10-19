@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workpulse.dev/contracts/events/leave/leave-approved.v1.json",
+  "title": "WorkPulse leave.approved v1",
+  "description": "A pending leave request was approved. The only leave transition that reaches the live wall (realtime consumer → `on_leave`). Identifiers, type code, dates and actor only — the reason and decision note are PII and never leave the database (`.ai/security.md`).",
+  "type": "object",
+  "required": [
+    "leave_request_id",
+    "employee_id",
+    "leave_type_code",
+    "start_date",
+    "end_date",
+    "days",
+    "decided_by"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "leave_request_id": {
+      "type": "string",
+      "description": "The approved leave request (UUIDv7 string)."
+    },
+    "employee_id": {
+      "type": "string",
+      "description": "Employee the request belongs to (UUIDv7 string). Also the Kafka message key (ADR 0012)."
+    },
+    "leave_type_code": {
+      "type": "string",
+      "enum": ["annual", "sick", "unpaid"],
+      "description": "Seeded leave type code; `annual`/`sick` deducted the balance on approval."
+    },
+    "start_date": {
+      "type": "string",
+      "format": "date",
+      "description": "First day of the leave range (inclusive, `YYYY-MM-DD`)."
+    },
+    "end_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Last day of the leave range (inclusive, `YYYY-MM-DD`)."
+    },
+    "days": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Whole inclusive calendar days in the range; `annual`/`sick` deducted this many days from the balance, `unpaid` deducted nothing."
+    },
+    "decided_by": {
+      "type": "string",
+      "description": "Actor user id that approved the request (ADR 0010 — never the requester)."
+    }
+  }
+}
