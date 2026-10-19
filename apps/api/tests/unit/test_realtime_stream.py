@@ -36,11 +36,7 @@ from tests.unit.attendance.conftest import (
     seed_employee,
     seed_record,
 )
-from tests.unit.attendance.fakes import (
-    FakeAttendanceRepo,
-    FakePresencePublisher,
-    FakeShiftRepo,
-)
+from tests.unit.attendance.fakes import FakeAttendanceRepo, FakeShiftRepo
 from tests.unit.organizations.fakes import RecordingAuditWriter
 from tests.unit.outbox.fakes import RecordingEventOutbox
 
@@ -124,7 +120,6 @@ def harness() -> Harness:
         repo=repo,
         shifts=shifts,
         audit=RecordingAuditWriter(),
-        presence=FakePresencePublisher(),
         outbox=RecordingEventOutbox(),
     )
     return Harness(repo=repo, shifts=shifts, attendance=attendance, stream=stream)

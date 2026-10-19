@@ -31,11 +31,7 @@ from tests.unit.attendance.conftest import (
     seed_employee,
     seed_record,
 )
-from tests.unit.attendance.fakes import (
-    FakeAttendanceRepo,
-    FakePresencePublisher,
-    FakeShiftRepo,
-)
+from tests.unit.attendance.fakes import FakeAttendanceRepo, FakeShiftRepo
 from tests.unit.organizations.fakes import RecordingAuditWriter
 from tests.unit.outbox.fakes import RecordingEventOutbox
 
@@ -107,7 +103,6 @@ async def _produced_frames() -> list[dict[str, Any]]:
         repo=repo,
         shifts=FakeShiftRepo(),
         audit=RecordingAuditWriter(),
-        presence=FakePresencePublisher(),
         outbox=RecordingEventOutbox(),
     )
     service = RealtimeService(attendance=attendance, stream=stream)

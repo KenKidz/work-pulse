@@ -1,6 +1,6 @@
 # Feature: Realtime consumer (the ADR 0011 input swap)
 
-- **Status:** approved
+- **Status:** done
 - **Phase:** 3
 - **Size:** M
 - **Surfaces:** api+events+workers (web surface untouched — no UI; the wall's
@@ -173,43 +173,43 @@ Envelope, topic and keying unchanged (v1 envelope, `workpulse.events`, key
 
 ## Acceptance criteria
 
-- [ ] Workers (mapping): given an `attendance.checked_in` envelope on
+- [x] Workers (mapping): given an `attendance.checked_in` envelope on
   `workpulse.events`, when the realtime consumer processes it, then exactly one
   `PresenceFact` reaches `realtime:tenant:{tenant_id}` with `status`
   `present`/`remote` from `work_mode`, `since` = envelope `occurred_at`,
   `reason` `checked_in`, and `late`/`minutes_late` as recorded — and no other
   frame for that transition.
-- [ ] Workers (check-out mapping): given `attendance.checked_out`, then one fact
+- [x] Workers (check-out mapping): given `attendance.checked_out`, then one fact
   with `status` `checked_out` and the closed record's `late`/`minutes_late`;
   the row equals the REST board row for that employee (failure case: a payload
   missing a required field is skipped with an ids-only log — never a crash,
   never a partial fact).
-- [ ] Workers (filtering): `attendance.late`, `employee.*` and unknown event
+- [x] Workers (filtering): `attendance.late`, `employee.*` and unknown event
   types produce no facts (at most one delta per transition).
-- [ ] API (swap): check-in and check-out commit with no presence publisher
+- [x] API (swap): check-in and check-out commit with no presence publisher
   wired — the outbox row is the only live-update output (the domain's publisher
   call sites are gone; producer-side presence tests move to consumer mapping
   tests).
-- [ ] Events (contract): the builders' envelopes validate against the updated v1
+- [x] Events (contract): the builders' envelopes validate against the updated v1
   schemas with the new fields filled; envelopes without the new fields still
   validate (optional); the persisted-envelope sweep (outbox-relay AC6) stays
   green; `.ai/domain.md`'s catalog consumer lists match the swap.
-- [ ] Integration (≤2s through the relay hop): given the relay and consumer
+- [x] Integration (≤2s through the relay hop): given the relay and consumer
   running against kafka-test + redis-test, when a check-in returns HTTP 201,
   then a WS subscriber receives the `presence.upsert` row **<2s** after the
   response, and the row equals the REST board row (late badge + minutes
   included).
-- [ ] Integration (idempotence): redelivering the same envelope produces an
+- [x] Integration (idempotence): redelivering the same envelope produces an
   identical upsert.
-- [ ] Integration (tenant isolation): a tenant-A envelope never appears on
+- [x] Integration (tenant isolation): a tenant-A envelope never appears on
   tenant B's channel or frames.
-- [ ] Integration (degradation): with relay and consumer stopped, check-in and
+- [x] Integration (degradation): with relay and consumer stopped, check-in and
   check-out still commit and `GET /attendance/board` is correct while no wall
   delta arrives; with the hop restored the next transition flows again.
-- [ ] E2E (web): zero web diffs; the command-center suite stays green, its live
+- [x] E2E (web): zero web diffs; the command-center suite stays green, its live
   <2s assertion runs through the full hop (D2) and the reconnect/snapshot tests
   are unchanged.
-- [ ] Gate: `make check` green in the check-e2e shape chosen by D2.
+- [x] Gate: `make check` green in the check-e2e shape chosen by D2.
 
 ## Decisions (PO, 2026-10-16)
 

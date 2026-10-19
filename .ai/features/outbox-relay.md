@@ -286,7 +286,7 @@ Kafka message:
 | AC9 | Unreachable broker: no row marked published, `attempts` increments, `last_error` records infra text without echoing payload, API writes keep committing; after recovery the same rows publish with unchanged `event_id`s | T7 (bookkeeping unit tests incl. no-payload-echo) + T8 (dead-bootstrap run, concurrent API write, then recovery run) |
 | AC10 | Crash between broker ack and `published_at` → re-run republishes the identical `event_id` (at-least-once) | T8 — `mark_published` fault-injected once after a real send, re-run consumes the same `event_id` twice |
 | AC11 | No web surface — `make check-web` green with zero web diffs | T9 — no `apps/web/` file is touched at any point |
-| AC12 | `make check` green with the relay stopped — e2e flows pass without Kafka, proving the write path never depends on the bus | T9 — `check-e2e` deliberately gains no Kafka dependency (Playwright starts only uvicorn + next dev); `check-api` uses `kafka-test` for relay proofs only |
+| AC12 | `make check` green with the relay stopped — e2e flows pass without Kafka, proving the write path never depends on the bus (narrowed by the realtime consumer, D2: the wall's live-delta e2e now runs through the hop; the write path and snapshot/resync flows remain bus-free) | T9 — `check-e2e` deliberately gains no Kafka dependency (Playwright starts only uvicorn + next dev); `check-api` uses `kafka-test` for relay proofs only |
 
 ### Repo research findings the plan relies on
 

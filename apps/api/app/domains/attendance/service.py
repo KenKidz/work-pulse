@@ -44,10 +44,10 @@ Rules implemented here (pinned in `.ai/features/attendance.md`):
 - **Presence projection**: `board_detail` is the one board code path — counts,
   per-employee presence rows and the activity feed — behind both
   `GET /attendance/board` and the Phase-2 realtime snapshot, so the two can
-  never disagree (`.ai/features/attendance.md` + realtime spec, T3). Check-in /
-  check-out additionally publish a `PresenceFact` through the best-effort
-  `PresencePublisher` port: the live wall sees captures in seconds, and a bus
-  failure never fails the write.
+  never disagree (`.ai/features/attendance.md` + realtime spec, T3). The
+  write path is bus-free: the wall's only live input is the realtime consumer
+  projecting these events off `workpulse.events` (ADR 0011/0013), so a Redis
+  or broker outage never touches a capture.
 """
 
 from collections.abc import Sequence
@@ -101,14 +101,10 @@ from app.domains.employees.schemas import EmployeeStatus
 from app.domains.organizations.service import LocationService
 from app.shared.audit import AuditEntryCreate, AuditWriter
 from app.shared.identity import Identity, Role
-from app.shared.logging import get_logger
 from app.shared.outbox import EventOutbox
 from app.shared.pagination import PageParams
-from app.shared.presence import PresenceFact, PresencePublisher
 
 ACTIVITY_LIMIT = 20  # board feed cap (pinned)
-
-_log = get_logger("attendance.presence")
 
 
 def _ref(value: UUID | None) -> str | None:
@@ -271,13 +267,11 @@ class AttendanceService:
         repo: AttendanceRepository,
         shifts: ShiftRepository,
         audit: AuditWriter,
-        presence: PresencePublisher,
         outbox: EventOutbox,
     ) -> None:
         self._repo = repo
         self._shifts = shifts
         self._audit = audit
-        self._presence = presence
         self._outbox = outbox
 
     # --- captures ------------------------------------------------------------
@@ -321,10 +315,10 @@ class AttendanceService:
         )
 
         # The one minutes-late rule (`_minutes_late`) on the persisted record,
-        # so the event payloads, the fact and the board rows share the math.
-        # `0` stands in for "not late"; the late event is only emitted when
-        # `late` is true, and then the value is the computed minutes. The
-        # checked-in payload nulls it when not late (ADR 0013's wire rule).
+        # so the event payloads and the board rows share the math. `0` stands
+        # in for "not late"; the late event is only emitted when `late` is
+        # true, and then the value is the computed minutes. The checked-in
+        # payload nulls it when not late (ADR 0013's wire rule).
         minutes_late = _minutes_late(record, shift, location_timezone) or 0
 
         produced: list[dict[str, Any]] = [
@@ -359,22 +353,6 @@ class AttendanceService:
         # envelopes commit together — a rolled-back capture leaves no event row.
         for envelope in produced:
             await self._outbox.append(envelope)
-
-        await self._publish_presence(
-            PresenceFact(
-                tenant_id=tenant_id,
-                workday=record.workday,
-                employee_id=record.employee_id,
-                attendance_id=record.id,
-                status=_presence_status(record),
-                late=late,
-                # Set with `late` at check-in; `null` otherwise (wire rule).
-                minutes_late=minutes_late if late else None,
-                since=record.checked_in_at,
-                reason="checked_in",
-                occurred_at=now,
-            )
-        )
 
         await self._audit.write(
             AuditEntryCreate(
@@ -435,9 +413,9 @@ class AttendanceService:
             # A concurrent check-out closed it under us — never overwrite.
             raise AttendanceNotOpenError()
 
-        # The row's status flips to `checked_out`; recomputing `minutes_late`
-        # from the record's shift keeps a late check-in's minutes on the row.
-        # The shift is only resolved when it can matter (not-late rows never
+        # Recomputing `minutes_late` at emit time from the record's shift keeps
+        # a late check-in's minutes on the checked-out payload (ADR 0013). The
+        # shift is only resolved when it can matter (not-late records never
         # carry minutes), saving a SELECT on the common capture path.
         shift = (
             await self._shifts.get(tenant_id, closed.shift_id)
@@ -445,20 +423,6 @@ class AttendanceService:
             else None
         )
         minutes_late = _minutes_late(closed, shift, ZoneInfo(context.timezone))
-        await self._publish_presence(
-            PresenceFact(
-                tenant_id=tenant_id,
-                workday=closed.workday,
-                employee_id=closed.employee_id,
-                attendance_id=closed.id,
-                status="checked_out",
-                late=closed.late,
-                minutes_late=minutes_late,
-                since=now,
-                reason="checked_out",
-                occurred_at=now,
-            )
-        )
 
         produced: list[dict[str, Any]] = [
             attendance_checked_out(
@@ -680,25 +644,6 @@ class AttendanceService:
     async def _resolve_shift(self, tenant_id: UUID, location_id: UUID) -> Shift | None:
         """The location's shift, else the tenant default, else none (pinned)."""
         return _expected_shift(await self._shifts.list(tenant_id), location_id)
-
-    async def _publish_presence(self, fact: PresenceFact) -> None:
-        """Best-effort live fan-out — a bus failure never fails the capture.
-
-        The port contract says publishers never raise; this guard keeps the
-        write path safe even if an adapter (or a future transport) violates it.
-        Failures log ids only — never names, notes or any other PII.
-        """
-        try:
-            await self._presence.publish(fact)
-        except Exception as exc:
-            _log.warning(
-                "presence_publish_failed",
-                tenant_id=str(fact.tenant_id),
-                employee_id=str(fact.employee_id),
-                attendance_id=str(fact.attendance_id),
-                reason=fact.reason,
-                error=type(exc).__name__,
-            )
 
 
 class ShiftService:

@@ -29,8 +29,6 @@ from app.infrastructure.postgres.repositories.attendance import (
 from app.infrastructure.postgres.repositories.employees import (
     PostgresEmployeeRepository,
 )
-from app.infrastructure.redis.client import get_redis
-from app.infrastructure.redis.presence import RedisPresencePublisher
 from app.main import app
 from app.shared.identity import Role
 from app.shared.presence import PresenceFact
@@ -81,13 +79,6 @@ class _ExplodingStream:
 
     def subscribe(self, tenant_id: UUID) -> AsyncIterator[PresenceFact]:
         raise AssertionError("the snapshot must not touch the realtime bus")
-
-
-class _RaisingPresencePublisher:
-    """Violates the best-effort port contract; the read path is unaffected."""
-
-    async def publish(self, fact: PresenceFact) -> None:
-        raise RuntimeError("bus unavailable")
 
 
 async def _seed_employee(
@@ -221,7 +212,6 @@ async def test_snapshot_matches_the_attendance_board_at_one_instant(
         repo=PostgresAttendanceRepository(session),
         shifts=PostgresShiftRepository(session),
         audit=PostgresAuditWriter(session),
-        presence=RedisPresencePublisher(get_redis()),
         # Board reads append nothing; the port is only required by the ctor.
         outbox=RecordingEventOutbox(),
     )
@@ -428,7 +418,6 @@ async def test_snapshot_is_served_with_a_dead_bus(
                 repo=PostgresAttendanceRepository(session),
                 shifts=PostgresShiftRepository(session),
                 audit=PostgresAuditWriter(session),
-                presence=_RaisingPresencePublisher(),
                 outbox=RecordingEventOutbox(),
             ),
             stream=_ExplodingStream(),

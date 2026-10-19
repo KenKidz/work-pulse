@@ -20,11 +20,7 @@ from tests.unit.attendance.conftest import (
     seed_record,
     seed_shift,
 )
-from tests.unit.attendance.fakes import (
-    FakeAttendanceRepo,
-    FakePresencePublisher,
-    FakeShiftRepo,
-)
+from tests.unit.attendance.fakes import FakeAttendanceRepo, FakeShiftRepo
 from tests.unit.organizations.fakes import RecordingAuditWriter
 from tests.unit.outbox.fakes import RecordingEventOutbox
 
@@ -95,18 +91,16 @@ async def test_rejected_check_in_appends_nothing(
     assert outbox.envelopes == []
 
 
-async def test_outbox_failure_propagates_before_presence_and_audit(
+async def test_outbox_failure_propagates_before_audit(
     attendance_repo: FakeAttendanceRepo,
     shift_repo: FakeShiftRepo,
     audit: RecordingAuditWriter,
-    presence: FakePresencePublisher,
 ) -> None:
     """An append failure is never swallowed: the capture fails loudly.
 
     The service must not catch outbox errors (the real adapter's failure has
     to roll the request transaction back), and the append must precede the
-    presence publish and the audit write — neither may run for a capture whose
-    event was never stored.
+    audit write — it may not run for a capture whose event was never stored.
     """
     seed_employee(attendance_repo)
     failing = RecordingEventOutbox(error=RuntimeError("outbox unavailable"))
@@ -114,7 +108,6 @@ async def test_outbox_failure_propagates_before_presence_and_audit(
         repo=attendance_repo,
         shifts=shift_repo,
         audit=audit,
-        presence=presence,
         outbox=failing,
     )
 
@@ -122,5 +115,4 @@ async def test_outbox_failure_propagates_before_presence_and_audit(
         await check_in(service)
 
     assert [env["event_type"] for env in failing.envelopes] == ["attendance.checked_in"]
-    assert presence.facts == []
     assert audit.entries == []

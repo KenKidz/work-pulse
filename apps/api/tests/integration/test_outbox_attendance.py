@@ -210,9 +210,9 @@ async def test_failed_mutation_rolls_back_record_and_outbox_row(
 ) -> None:
     """AC3 (service half) through the production session lifecycle.
 
-    The audit writer raises after the record, the outbox row and the presence
-    fact were produced; the `get_session` teardown (`athrow` — what FastAPI
-    does when the handler raises) rolls all of it back.
+    The audit writer raises after the record and its outbox row were produced;
+    the `get_session` teardown (`athrow` — what FastAPI does when the handler
+    raises) rolls all of it back.
     """
     lifecycle = cast(AsyncGenerator[AsyncSession, None], get_session())
     db_session = await anext(lifecycle)

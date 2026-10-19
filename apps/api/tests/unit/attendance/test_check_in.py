@@ -27,11 +27,7 @@ from tests.unit.attendance.conftest import (
     seed_record,
     seed_shift,
 )
-from tests.unit.attendance.fakes import (
-    FakeAttendanceRepo,
-    FakePresencePublisher,
-    FakeShiftRepo,
-)
+from tests.unit.attendance.fakes import FakeAttendanceRepo, FakeShiftRepo
 from tests.unit.organizations.fakes import RecordingAuditWriter
 from tests.unit.outbox.fakes import RecordingEventOutbox
 
@@ -243,7 +239,6 @@ async def test_insert_backstop_still_rejects_the_second_check_in(
         repo=repo,
         shifts=shift_repo,
         audit=audit,
-        presence=FakePresencePublisher(),
         outbox=RecordingEventOutbox(),
     )
 

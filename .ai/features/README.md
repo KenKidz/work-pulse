@@ -42,7 +42,7 @@ domain map in `.ai/domain.md` is their placeholder.
 | Leave (requests, approvals, balances, calendar) | 3 | M | planned | — |
 | Notifications (email/Slack delivery) | 3 | S | planned | — |
 | Event backbone — transactional outbox + relay (Kafka) | 3 | L | done | `outbox-relay.md` |
-| Realtime consumer swap (events → wall deltas, ADR 0011) | 3 | M | approved | `realtime-consumer.md` |
+| Realtime consumer swap (events → wall deltas, ADR 0011) | 3 | M | done | `realtime-consumer.md` |
 | Payroll (simulated runs, timesheets, payslips) | 3–4 | L | planned | — |
 | Analytics & Reports (ClickHouse projections) | 4 | L | planned | — |
 | Recruitment (jobs, candidates, interviews) | 4+ | L | planned | — |

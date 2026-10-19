@@ -58,7 +58,6 @@ from app.infrastructure.postgres.repositories.organizations import (
 )
 from app.infrastructure.postgres.session import get_session
 from app.infrastructure.redis.client import get_redis
-from app.infrastructure.redis.presence import RedisPresencePublisher
 from app.infrastructure.redis.streams import RedisPresenceStream
 from app.shared.errors import UnauthenticatedError
 from app.shared.identity import Identity
@@ -131,12 +130,11 @@ def get_attendance_service(session: SessionDep) -> AttendanceService:
         # repository the ShiftService uses (one adapter, one tenant scope).
         shifts=PostgresShiftRepository(session),
         audit=PostgresAuditWriter(session),
-        # Best-effort presence fan-out (Phase 2): the live wall sees captures
-        # in seconds; a Redis outage degrades latency, never the write.
-        presence=RedisPresencePublisher(get_redis()),
         # The transactional outbox (ADR 0012): the same session, so the record,
         # its audit entry and its event envelopes commit together — or not at
-        # all. The relay worker publishes committed rows to Kafka.
+        # all. The relay worker publishes committed rows to Kafka; the realtime
+        # consumer projects `attendance.*` back onto the wall (ADR 0013) — the
+        # write path itself stays bus-free.
         outbox=PostgresEventOutbox(session, clock=_utc_now),
     )
 

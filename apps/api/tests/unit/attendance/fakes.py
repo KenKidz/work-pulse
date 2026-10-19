@@ -20,31 +20,9 @@ from app.domains.attendance.exceptions import (
 from app.domains.attendance.repository import AttendanceFilters, EmployeeContext
 from app.domains.attendance.schemas import AttendanceRecord, Shift, WorkMode
 from app.shared.pagination import PageParams
-from app.shared.presence import PresenceFact
 
 CREATED_AT = datetime(2026, 9, 1, 0, 0, tzinfo=UTC)
 UPDATED_AT = datetime(2026, 9, 1, 0, 0, tzinfo=UTC)
-
-
-class FakePresencePublisher:
-    """Records published presence facts (no I/O, no bus)."""
-
-    def __init__(self) -> None:
-        self.facts: list[PresenceFact] = []
-
-    async def publish(self, fact: PresenceFact) -> None:
-        self.facts.append(fact)
-
-
-class RaisingPresencePublisher:
-    """Violates the port contract on purpose: captures must still succeed."""
-
-    def __init__(self) -> None:
-        self.calls = 0
-
-    async def publish(self, fact: PresenceFact) -> None:
-        self.calls += 1
-        raise RuntimeError("bus unavailable")
 
 
 class FakeAttendanceRepo:

@@ -16,6 +16,7 @@ from app.domains.employees.schemas import EmployeeStatus
 from tests.unit.attendance.conftest import (
     NOW,
     REPORT,
+    TENANT_A,
     TODAY,
     check_in,
     identity,
@@ -27,6 +28,7 @@ from tests.unit.attendance.fakes import FakeAttendanceRepo, FakeShiftRepo
 from tests.unit.organizations.fakes import RecordingAuditWriter
 
 EARLY = datetime(2026, 9, 24, 2, 0, tzinfo=UTC)  # 09:00 in Asia/Ho_Chi_Minh
+LATE_30 = datetime(2026, 9, 24, 2, 40, tzinfo=UTC)  # 30 past start + grace
 EVENING = datetime(2026, 9, 24, 10, 30, tzinfo=UTC)  # 17:30 — 510 minutes later
 
 
@@ -117,6 +119,32 @@ async def test_late_check_out_payload_carries_late_and_minutes(
     payload = mutation.events[0]["data"]
     assert payload["late"] is True
     assert payload["minutes_late"] == 20
+
+
+async def test_minutes_late_is_recomputed_from_the_records_shift(
+    service: AttendanceService,
+    attendance_repo: FakeAttendanceRepo,
+    shift_repo: FakeShiftRepo,
+) -> None:
+    """A shift edit after a late check-in changes the emitted minutes.
+
+    The `late` flag is stored and never drifts; `minutes_late` is recomputed
+    at emit time — the same rule the board rows apply at read time — so the
+    consumer's fact carries the recomputed value.
+    """
+    seed_employee(attendance_repo)
+    shift = await seed_shift(shift_repo, start_time=time(9, 0), grace_minutes=10)
+    opened = await check_in(service, now=LATE_30)
+    assert opened.events[0]["data"]["minutes_late"] == 30
+
+    await shift_repo.update(TENANT_A, shift.id, start_time=time(9, 15))
+    mutation = await service.check_out(
+        identity(), opened.record.id, CheckOutRequest(), EVENING
+    )
+
+    payload = mutation.events[0]["data"]
+    assert payload["late"] is True  # the flag never drifts
+    assert payload["minutes_late"] == 15  # boundary moved 9:10 → 9:25 (local)
 
 
 async def test_check_out_without_an_open_record_is_conflict(

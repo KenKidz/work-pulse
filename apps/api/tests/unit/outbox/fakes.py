@@ -12,9 +12,9 @@ from typing import Any
 class RecordingEventOutbox:
     """Records appended envelopes in order; optional raise hook.
 
-    The hook lets a test simulate an adapter failure at the append call (mirrors
-    `RaisingPresencePublisher`): the envelope is recorded first, then the
-    configured error propagates to the caller.
+    The hook lets a test simulate an adapter failure at the append call: the
+    envelope is recorded first, then the configured error propagates to the
+    caller.
     """
 
     def __init__(self, *, error: Exception | None = None) -> None:

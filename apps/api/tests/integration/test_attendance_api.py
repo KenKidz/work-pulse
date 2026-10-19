@@ -19,8 +19,6 @@ from app.infrastructure.postgres.repositories.attendance import (
 from app.infrastructure.postgres.repositories.employees import (
     PostgresEmployeeRepository,
 )
-from app.infrastructure.redis.client import get_redis
-from app.infrastructure.redis.presence import RedisPresencePublisher
 from tests.integration.conftest import (
     ACTOR,
     TENANT_A,
@@ -434,7 +432,6 @@ async def test_board_detail_matches_the_wire_board_and_counts_recount_rows(
         repo=PostgresAttendanceRepository(session),
         shifts=PostgresShiftRepository(session),
         audit=PostgresAuditWriter(session),
-        presence=RedisPresencePublisher(get_redis()),
         # Board reads append nothing; the port is only required by the ctor.
         outbox=RecordingEventOutbox(),
     )
