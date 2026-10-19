@@ -516,9 +516,9 @@ Verify: full `make check` green (608+ API / 156+ web / 18+ e2e as the baseline).
    extensions. The alternative (record wins) would force the stateless consumer
    to know record state and guarantees snapshot/delta disagreement — rejected.
 2. **Entitlement default numbers are fixture data, not product semantics** —
-   proposed `annual` default 12 days, `sick` 6, `unpaid` 0
+   `annual` default 12 days, `sick` 6, `unpaid` 0
    (`counts_against_balance=false`), stored in `leave_types.default_entitlement_days`
-   per tenant. Confirm or adjust at T3; no code depends on the values.
+   per tenant and confirmed at T3; no code depends on the values.
 3. **Wall self-heal at range/day boundaries** — a fact only fires at approval;
    when a range ends (or the day rolls), the connection-local row heals on the
    next 60s REST refetch or snapshot reconnect (existing semantics). Accepted

@@ -79,6 +79,7 @@ PINNED_USER_KEYS = {
 }
 
 ALL_TABLES = (
+    "leave_balances, leave_requests, leave_types, "
     "audit_entries, departments, positions, locations, employees, employments, "
     "shifts, attendance_records, users, sessions, event_outbox"
 )
