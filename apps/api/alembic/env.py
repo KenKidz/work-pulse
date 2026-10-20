@@ -16,6 +16,7 @@ import app.domains.identity.models  # noqa: F401
 import app.domains.leave.models  # noqa: F401
 import app.domains.organizations.models  # noqa: F401
 import app.infrastructure.postgres.models_audit  # noqa: F401
+import app.infrastructure.postgres.models_notifications  # noqa: F401
 import app.infrastructure.postgres.models_outbox  # noqa: F401
 from alembic import context
 from app.config import get_settings

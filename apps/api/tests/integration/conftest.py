@@ -30,6 +30,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from alembic import command
 from app.dependencies import get_identity
 from app.domains.employees.service import EmployeeService
+from app.domains.notifications.service import NotificationService
 from app.domains.organizations.service import (
     DepartmentService,
     LocationService,
@@ -43,9 +44,15 @@ from app.infrastructure.postgres.engine import (
     get_session_factory,
 )
 from app.infrastructure.postgres.outbox import PostgresEventOutbox
+from app.infrastructure.postgres.recipient_directory import (
+    PostgresRecipientDirectory,
+)
 from app.infrastructure.postgres.repositories.employees import (
     PostgresEmployeeRepository,
     PostgresEmploymentRepository,
+)
+from app.infrastructure.postgres.repositories.notifications import (
+    PostgresNotificationRepository,
 )
 from app.infrastructure.postgres.repositories.organizations import (
     PostgresDepartmentRepository,
@@ -57,6 +64,11 @@ from app.infrastructure.redis.client import dispose_redis
 from app.main import app
 from app.shared.identity import Identity, Role
 from tests.conftest import TEST_DATABASE_URL
+from tests.unit.notifications.fakes import (
+    RecordingEmailSender,
+    RecordingSlackSender,
+    RecordingSleeper,
+)
 
 API_DIR = Path(__file__).resolve().parents[2]
 
@@ -79,6 +91,7 @@ PINNED_USER_KEYS = {
 }
 
 ALL_TABLES = (
+    "notification_deliveries, notifications, "
     "leave_balances, leave_requests, leave_types, "
     "audit_entries, departments, positions, locations, employees, employments, "
     "shifts, attendance_records, users, sessions, event_outbox"
@@ -202,6 +215,48 @@ async def employee_service(session: AsyncSession) -> EmployeeService:
         ),
         audit=audit,
         outbox=PostgresEventOutbox(session, clock=_utc_now),
+    )
+
+
+@pytest.fixture
+async def notification_repository(
+    session: AsyncSession,
+) -> PostgresNotificationRepository:
+    return PostgresNotificationRepository(session)
+
+
+@pytest.fixture
+async def recipient_directory(session: AsyncSession) -> PostgresRecipientDirectory:
+    return PostgresRecipientDirectory(session)
+
+
+@pytest.fixture
+def email_sender() -> RecordingEmailSender:
+    """Deterministic email fake — providers are never hit in tests."""
+    return RecordingEmailSender()
+
+
+@pytest.fixture
+def slack_sender() -> RecordingSlackSender:
+    """Deterministic Slack fake — providers are never hit in tests."""
+    return RecordingSlackSender()
+
+
+@pytest.fixture
+async def notification_service(
+    session: AsyncSession,
+    notification_repository: PostgresNotificationRepository,
+    email_sender: RecordingEmailSender,
+    slack_sender: RecordingSlackSender,
+) -> NotificationService:
+    """The real delivery service over Postgres, with fake channels and no waits."""
+    return NotificationService(
+        repo=notification_repository,
+        email_sender=email_sender,
+        slack_sender=slack_sender,
+        commit=session.commit,
+        sleep=RecordingSleeper(),
+        backoff_base_seconds=0.0,
     )
 
 

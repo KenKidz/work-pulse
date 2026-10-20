@@ -29,6 +29,8 @@ FEATURE_TABLES = {
     "users",
     "sessions",
     "event_outbox",
+    "notifications",
+    "notification_deliveries",
 }
 
 
