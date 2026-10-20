@@ -162,14 +162,16 @@ describe("AttendanceBoard", () => {
     expect(feed).toHaveTextContent("checked out");
   });
 
-  it("documents the pinned copy: overlapping counts, absent over-count, on_leave zero", async () => {
+  it("documents the pinned copy: overlapping counts, absent over-count, on_leave semantics", async () => {
     renderBoard();
 
     expect(
       await screen.findByText(/counts overlap: someone can be on site or remote and also be late/i),
     ).toBeInTheDocument();
     expect(screen.getByText(/may include people on a rest day/i)).toBeInTheDocument();
-    expect(screen.getByText(/leave isn’t tracked yet, so this stays at 0/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/on leave counts approved leave and is excluded from absent/i),
+    ).toBeInTheDocument();
   });
 
   it("sends the explicit board date plus filters to every query", async () => {

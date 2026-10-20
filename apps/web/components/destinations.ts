@@ -1,6 +1,7 @@
 import {
   Building2,
   CalendarClock,
+  CalendarDays,
   LayoutDashboard,
   MonitorDot,
   UserCog,
@@ -82,6 +83,7 @@ export const COMMAND_CENTER_ROLES: Role[] = ["manager", "hr", "admin", "super_ad
 export const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   ...DESTINATIONS.map(({ href, label, icon }) => ({ href, label, icon })),
+  { href: "/leave", label: "Leave", icon: CalendarDays },
   {
     href: "/command-center",
     label: "Command center",

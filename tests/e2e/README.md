@@ -32,3 +32,15 @@ unpublished rows: both would race the gate's own relay/consumer and make the
   visible 409 error state (attendance AC12). The browser logs in as the seeded
   worker user (linked to the synthetic seeded employee) — real sessions
   replaced the dev-identity headers in the Phase 2 swap (ADR 0004).
+- `leave.spec.ts` — the worker submits an unpaid request covering the wall's
+  UTC workday → "My requests" shows it PENDING, and the same form renders the
+  `409 leave_overlaps` for a second overlapping range; the manager approves it
+  from the team inbox while a second page watches the wall, which flips the
+  worker to `on_leave` and out of `absent` within 2s without a reload (leave
+  T9 / ADR 0014).
+
+`full-hop.sh` resets only the seeded worker's leave requests and balances
+before Playwright starts: an approved request is terminal (there is no
+cancel/delete API) and repeats would otherwise hit `409 leave_overlaps` on the
+wall date the live assertion needs. Types stay — the service provisions them
+per tenant.

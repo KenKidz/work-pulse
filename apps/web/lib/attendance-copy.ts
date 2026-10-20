@@ -13,5 +13,5 @@ export const countsOverlapHint =
 export const absentCountHint =
   "May include people on a rest day; individual rosters aren’t tracked yet.";
 
-/** The Leave context has not landed — the field stays in the contract. */
-export const onLeaveCountHint = "Leave isn’t tracked yet, so this stays at 0.";
+/** Approved leave is now real and wins over a same-day attendance record. */
+export const onLeaveCountHint = "On leave counts approved leave and is excluded from absent.";

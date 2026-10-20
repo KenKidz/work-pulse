@@ -166,8 +166,62 @@ PY
   fi
 }
 
+# The leave spec needs the seeded worker free to request a range covering the
+# wall's UTC workday: an approved request is terminal (no cancel/delete API),
+# so a repeat run would otherwise hit `409 leave_overlaps` on that date. Reset
+# only the seeded worker's synthetic leave fixtures (`.ai/testing.md` rule 6 —
+# synthetic data only). Types stay: the service provisions them per tenant.
+reset_leave_fixtures() {
+  if ! (
+    cd "$API_DIR" || exit 1
+    PYTHONPATH="../..:." "$PYTHON" - <<'PY'
+import asyncio
+from uuid import UUID
+
+from sqlalchemy import delete
+
+from app.domains.leave.models import LeaveBalance, LeaveRequest
+from app.infrastructure.postgres.engine import (
+    dispose_engine,
+    get_session_factory,
+)
+
+WORKER_EMPLOYEE_ID = UUID("00000000-0000-4000-8000-000000000021")
+
+
+async def reset() -> None:
+    async with get_session_factory()() as session:
+        await session.execute(
+            delete(LeaveRequest).where(
+                LeaveRequest.employee_id == WORKER_EMPLOYEE_ID
+            )
+        )
+        await session.execute(
+            delete(LeaveBalance).where(
+                LeaveBalance.employee_id == WORKER_EMPLOYEE_ID
+            )
+        )
+        await session.commit()
+
+
+async def main() -> None:
+    try:
+        await reset()
+    finally:
+        await dispose_engine()
+
+
+asyncio.run(main())
+PY
+  ); then
+    echo "full-hop: could not reset the seeded worker's leave fixtures" >&2
+    exit 1
+  fi
+}
+
 assert_no_other_workers
 assert_dev_outbox_is_clean
+reset_leave_fixtures
 
 # Both workers run inside the apps/api uv environment, reading the same
 # settings/.env as uvicorn; only the broker is overridden (kafka-test).

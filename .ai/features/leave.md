@@ -1,6 +1,6 @@
 # Feature: Leave
 
-- **Status:** approved
+- **Status:** done
 - **Phase:** 3
 - **Size:** M
 - **Surfaces:** api+web+events+workers
@@ -209,24 +209,24 @@ No reason or note text — identifiers, dates and state only.
 
 ## Acceptance criteria
 
-- [ ] API: submitting a request returns `201` in `PENDING` with the correct inclusive `days`, and the balance is untouched.
-- [ ] API: approving a request moves it to `APPROVED`, deducts `days` from the right `(leave_type, year)` balance, writes an audit entry and produces a valid `leave.approved` envelope.
-- [ ] API: rejecting leaves the balance untouched and produces `leave.rejected`.
-- [ ] API: withdrawing own `PENDING` request → `WITHDRAWN` + `leave.withdrawn`.
-- [ ] API (failure): an overlapping `PENDING`/`APPROVED` range → `409 leave_overlaps`.
-- [ ] API (failure): approving/rejecting a non-`PENDING` request → `409 leave_not_pending`.
-- [ ] API (failure): days beyond the remaining balance → `409 leave_insufficient_balance`; `unpaid` bypasses the check.
-- [ ] API (failure): a `sick` request starting more than 7 days in the past (or any `annual`/`unpaid` request starting before today) → `409 leave_start_too_old`.
-- [ ] API (failure): check-in on a workday covered by `APPROVED` leave → `409 employee_on_leave`.
-- [ ] API (failure): a terminated employee submitting → `409 employee_not_active`.
-- [ ] API (denied role): an `Employee`-role approve attempt → `403`; self-approval → `403` even for HR/Admin.
-- [ ] API (tenant isolation): tenant B sees none of tenant A's requests or balances (assert `404`/empty).
-- [ ] Contracts: the four `leave.*` v1 schemas exist, validate produced payloads, and contain no `reason`/`decision_note` text.
-- [ ] Unit tests use an injected clock — no wall-time assertions (date rules take `now` as a parameter).
-- [ ] Workers: a `leave.approved` envelope through relay → consumer flips the employee's board bucket to `on_leave` and removes them from `absent` within 2s; other event types remain filtered.
-- [ ] Web: an employee submits a request from the leave page and sees it in "My requests" as `PENDING`.
-- [ ] Web: a manager sees their team's pending requests and can approve/reject; a self-approval attempt shows the error state.
-- [ ] E2E: request → approve → the live board shows the employee `on_leave` (and out of `absent`) without a manual refresh.
+- [x] API: submitting a request returns `201` in `PENDING` with the correct inclusive `days`, and the balance is untouched.
+- [x] API: approving a request moves it to `APPROVED`, deducts `days` from the right `(leave_type, year)` balance, writes an audit entry and produces a valid `leave.approved` envelope.
+- [x] API: rejecting leaves the balance untouched and produces `leave.rejected`.
+- [x] API: withdrawing own `PENDING` request → `WITHDRAWN` + `leave.withdrawn`.
+- [x] API (failure): an overlapping `PENDING`/`APPROVED` range → `409 leave_overlaps`.
+- [x] API (failure): approving/rejecting a non-`PENDING` request → `409 leave_not_pending`.
+- [x] API (failure): days beyond the remaining balance → `409 leave_insufficient_balance`; `unpaid` bypasses the check.
+- [x] API (failure): a `sick` request starting more than 7 days in the past (or any `annual`/`unpaid` request starting before today) → `409 leave_start_too_old`.
+- [x] API (failure): check-in on a workday covered by `APPROVED` leave → `409 employee_on_leave`.
+- [x] API (failure): a terminated employee submitting → `409 employee_not_active`.
+- [x] API (denied role): an `Employee`-role approve attempt → `403`; self-approval → `403` even for HR/Admin.
+- [x] API (tenant isolation): tenant B sees none of tenant A's requests or balances (assert `404`/empty).
+- [x] Contracts: the four `leave.*` v1 schemas exist, validate produced payloads, and contain no `reason`/`decision_note` text.
+- [x] Unit tests use an injected clock — no wall-time assertions (date rules take `now` as a parameter).
+- [x] Workers: a `leave.approved` envelope through relay → consumer flips the employee's board bucket to `on_leave` and removes them from `absent` within 2s; other event types remain filtered.
+- [x] Web: an employee submits a request from the leave page and sees it in "My requests" as `PENDING`.
+- [x] Web: a manager sees their team's pending requests and can approve/reject; a self-approval attempt shows the error state.
+- [x] E2E: request → approve → the live board shows the employee `on_leave` (and out of `absent`) without a manual refresh.
 
 ## Decisions (PO, 2026-10-19)
 
