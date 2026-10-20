@@ -29,6 +29,9 @@ export type {
 /** Server → client frame: the whole board, first after every handshake. */
 export type RealtimeSnapshotFrame = RealtimeBoardSnapshot & { type: "snapshot" };
 
+/** Presence reasons; activity is attendance-only (leave never enters the rail). */
+export type RealtimePresenceReason = RealtimeActivityEntryAction | "leave_approved";
+
 /** Server → client frame: one full-row idempotent upsert plus fresh counts. */
 export type RealtimePresenceUpsertFrame = {
   type: "presence.upsert";
@@ -36,7 +39,7 @@ export type RealtimePresenceUpsertFrame = {
   counts: RealtimeBoardCounts;
   row: PresenceRow;
   occurred_at: string;
-  reason: RealtimeActivityEntryAction;
+  reason: RealtimePresenceReason;
 };
 
 export type RealtimeFrame = RealtimeSnapshotFrame | RealtimePresenceUpsertFrame;

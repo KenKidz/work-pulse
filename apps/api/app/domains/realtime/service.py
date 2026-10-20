@@ -169,7 +169,10 @@ class RealtimeService:
                 ).model_dump_json()
                 continue
 
-            state.upsert(row)
+            # `upsert` returns the applied row: after an approval, a later
+            # attendance transition keeps the `on_leave` row (ADR 0014) while
+            # still carrying its own reason/occurred_at for the activity rail.
+            row = state.upsert(row)
             yield RealtimePresenceUpsertFrame(
                 date=state.workday,
                 counts=state.counts,

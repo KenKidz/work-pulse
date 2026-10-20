@@ -7,9 +7,14 @@ with the write path's presence publish re-home here (the ADR 0013 swap).
 
 The failure taxonomy: a missing or invalid fact-required field maps to `None`
 with `is_realtime_envelope` still `True` (the consumer's skip signal), a
-filtered event (`attendance.late`, `employee.*`, other versions) maps to
-`None` with `is_realtime_envelope` `False` (silent), pre-extension payloads
-default `null`/`false`, and nothing ever raises.
+filtered event (`attendance.late`, `employee.*`, other versions, leave outside
+the consume date) maps to `None` with `is_realtime_envelope` `False` (silent),
+pre-extension payloads default `null`/`false`, and nothing ever raises.
+
+Leave (T7, ADR 0014): a v1 `leave.approved` maps to an `on_leave` fact only
+when its inclusive range covers the injected consume date. The fact has no
+attendance identity and no `since`; other `leave.*` events never reach the
+wall.
 """
 
 from datetime import UTC, date, datetime
@@ -23,12 +28,19 @@ from app.domains.attendance.events import (
     attendance_checked_out,
     attendance_late,
 )
+from app.domains.leave.events import (
+    leave_approved,
+    leave_rejected,
+    leave_requested,
+    leave_withdrawn,
+)
 from workers.realtime.mapping import is_realtime_envelope, map_envelope
 
 TENANT = UUID("00000000-0000-4000-8000-00000000000a")
 ACTOR = UUID("00000000-0000-4000-8000-000000000031")
 EMPLOYEE = UUID("00000000-0000-4000-8000-000000000007")
 ATTENDANCE = UUID("00000000-0000-4000-8000-0000000000a1")
+LEAVE_REQUEST = UUID("00000000-0000-4000-8000-0000000000e1")
 NOW = datetime(2026, 10, 16, 8, 0, tzinfo=UTC)
 WORKDAY = date(2026, 10, 16)
 
@@ -277,3 +289,145 @@ def test_mapping_never_raises_on_hostile_shapes() -> None:
 
     for envelope in hostile:
         assert map_envelope(envelope) is None
+
+
+# --- leave (ADR 0014) ---------------------------------------------------------
+
+
+def _leave(
+    *,
+    start_date: date = WORKDAY,
+    end_date: date = WORKDAY,
+) -> dict[str, Any]:
+    return leave_approved(
+        tenant_id=TENANT,
+        actor_id=ACTOR,
+        occurred_at=NOW,
+        leave_request_id=LEAVE_REQUEST,
+        employee_id=EMPLOYEE,
+        leave_type_code="annual",
+        start_date=start_date,
+        end_date=end_date,
+        days=(end_date - start_date).days + 1,
+        decided_by=ACTOR,
+    )
+
+
+def test_leave_approved_covering_today_maps_to_the_on_leave_fact() -> None:
+    envelope = _leave(start_date=WORKDAY, end_date=WORKDAY)
+
+    fact = map_envelope(envelope, today=WORKDAY)
+
+    assert fact is not None
+    assert fact.tenant_id == TENANT
+    assert fact.workday == WORKDAY  # the consume date, never the event date
+    assert fact.employee_id == EMPLOYEE
+    assert fact.attendance_id is None
+    assert fact.status == "on_leave"
+    assert fact.late is False
+    assert fact.minutes_late is None
+    assert fact.since is None
+    assert fact.reason == "leave_approved"
+    assert fact.occurred_at == NOW
+    assert is_realtime_envelope(envelope, today=WORKDAY) is True
+
+
+def test_leave_window_is_inclusive_at_both_boundaries() -> None:
+    envelope = _leave(start_date=date(2026, 10, 14), end_date=date(2026, 10, 18))
+
+    for day in (date(2026, 10, 14), WORKDAY, date(2026, 10, 18)):
+        fact = map_envelope(envelope, today=day)
+        assert fact is not None
+        assert fact.workday == day
+        assert fact.status == "on_leave"
+
+
+@pytest.mark.parametrize(
+    ("start_date", "end_date"),
+    [
+        (date(2026, 10, 10), date(2026, 10, 15)),  # ended yesterday
+        (date(2026, 10, 17), date(2026, 10, 20)),  # starts tomorrow
+    ],
+)
+def test_leave_outside_the_consume_date_is_silently_filtered(
+    start_date: date, end_date: date
+) -> None:
+    envelope = _leave(start_date=start_date, end_date=end_date)
+
+    assert map_envelope(envelope, today=WORKDAY) is None
+    assert is_realtime_envelope(envelope, today=WORKDAY) is False  # no skip log
+
+
+@pytest.mark.parametrize("event_name", ["requested", "rejected", "withdrawn"])
+def test_other_leave_events_never_reach_the_wall(event_name: str) -> None:
+    builders = {
+        "requested": lambda: leave_requested(
+            tenant_id=TENANT,
+            actor_id=ACTOR,
+            occurred_at=NOW,
+            leave_request_id=LEAVE_REQUEST,
+            employee_id=EMPLOYEE,
+            leave_type_code="annual",
+            start_date=WORKDAY,
+            end_date=WORKDAY,
+            days=1,
+        ),
+        "rejected": lambda: leave_rejected(
+            tenant_id=TENANT,
+            actor_id=ACTOR,
+            occurred_at=NOW,
+            leave_request_id=LEAVE_REQUEST,
+            employee_id=EMPLOYEE,
+            leave_type_code="annual",
+            start_date=WORKDAY,
+            end_date=WORKDAY,
+            decided_by=ACTOR,
+        ),
+        "withdrawn": lambda: leave_withdrawn(
+            tenant_id=TENANT,
+            actor_id=ACTOR,
+            occurred_at=NOW,
+            leave_request_id=LEAVE_REQUEST,
+            employee_id=EMPLOYEE,
+            start_date=WORKDAY,
+            end_date=WORKDAY,
+        ),
+    }
+    envelope = builders[event_name]()
+
+    assert map_envelope(envelope, today=WORKDAY) is None
+    assert is_realtime_envelope(envelope, today=WORKDAY) is False
+
+
+@pytest.mark.parametrize("missing", ["start_date", "end_date"])
+def test_malformed_leave_window_is_filtered(missing: str) -> None:
+    envelope = _leave()
+    del envelope["data"][missing]
+
+    assert map_envelope(envelope, today=WORKDAY) is None
+    assert is_realtime_envelope(envelope, today=WORKDAY) is False
+
+
+def test_leave_without_an_employee_is_a_skipped_none() -> None:
+    envelope = _leave()
+    del envelope["data"]["employee_id"]
+
+    assert map_envelope(envelope, today=WORKDAY) is None
+    assert is_realtime_envelope(envelope, today=WORKDAY) is True
+
+
+def test_leave_with_an_invalid_occurred_at_is_a_skipped_none() -> None:
+    envelope = _leave()
+    envelope["occurred_at"] = "not-a-time"
+
+    assert map_envelope(envelope, today=WORKDAY) is None
+    assert is_realtime_envelope(envelope, today=WORKDAY) is True  # ours — log
+
+
+@pytest.mark.parametrize("version", [2, "1", None])
+def test_leave_other_versions_are_filtered(version: Any) -> None:
+    envelope = _leave()
+    envelope["version"] = version
+
+    assert map_envelope(envelope, today=WORKDAY) is None
+    assert is_realtime_envelope(envelope, today=WORKDAY) is False

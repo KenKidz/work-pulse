@@ -16,6 +16,9 @@ export default defineConfig({
       client: "react-query",
       httpClient: "fetch",
       mode: "split",
+      // Pin orval's formatter so regeneration is byte-stable against the
+      // committed client (the standing `make gen-api` churn TODO).
+      formatter: "prettier",
       override: {
         // All HTTP goes through our single transport: base URL + ApiError mapping.
         mutator: {

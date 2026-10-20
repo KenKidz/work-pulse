@@ -172,7 +172,9 @@ function parseFrame(raw: string): RealtimeFrame | null {
       isRecord(value.row) &&
       typeof value.row.employee_id === "string" &&
       typeof value.occurred_at === "string" &&
-      (value.reason === "checked_in" || value.reason === "checked_out")
+      (value.reason === "checked_in" ||
+        value.reason === "checked_out" ||
+        value.reason === "leave_approved")
     ) {
       return value as unknown as RealtimePresenceUpsertFrame;
     }
@@ -207,6 +209,21 @@ function applyFrame(queryClient: QueryClient, frame: RealtimeFrame): void {
   if (current === undefined || current.data.date !== frame.date) {
     // No snapshot to patch against, or the workday rolled under us: resync.
     void invalidateRealtimeBoard(queryClient);
+    return;
+  }
+
+  if (frame.reason === "leave_approved") {
+    // An approved leave changes presence (the row and the recounted buckets)
+    // but is not an attendance transition: the activity rail stays untouched
+    // (ADR 0014, board contract activity enum).
+    queryClient.setQueryData(realtimeBoardQueryKey, {
+      ...current,
+      data: {
+        ...current.data,
+        counts: frame.counts,
+        presence: upsertRow(current.data.presence, frame.row),
+      },
+    } satisfies BoardResponse);
     return;
   }
 

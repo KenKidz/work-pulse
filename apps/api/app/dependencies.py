@@ -28,6 +28,7 @@ from app.domains.employees.service import EmployeeService
 from app.domains.identity.credentials import SESSION_COOKIE_NAME
 from app.domains.identity.schemas import User
 from app.domains.identity.service import AuthService, UserService
+from app.domains.leave.service import LeaveService
 from app.domains.organizations.service import (
     DepartmentService,
     LocationService,
@@ -51,6 +52,7 @@ from app.infrastructure.postgres.repositories.identity import (
     PostgresSessionRepository,
     PostgresUserRepository,
 )
+from app.infrastructure.postgres.repositories.leave import PostgresLeaveRepository
 from app.infrastructure.postgres.repositories.organizations import (
     PostgresDepartmentRepository,
     PostgresLocationRepository,
@@ -135,6 +137,16 @@ def get_attendance_service(session: SessionDep) -> AttendanceService:
         # all. The relay worker publishes committed rows to Kafka; the realtime
         # consumer projects `attendance.*` back onto the wall (ADR 0013) — the
         # write path itself stays bus-free.
+        outbox=PostgresEventOutbox(session, clock=_utc_now),
+    )
+
+
+def get_leave_service(session: SessionDep) -> LeaveService:
+    return LeaveService(
+        repo=PostgresLeaveRepository(session),
+        audit=PostgresAuditWriter(session),
+        # Same session, same transaction: the request row, its audit entry and
+        # its event envelope commit together or not at all (ADR 0012).
         outbox=PostgresEventOutbox(session, clock=_utc_now),
     )
 
@@ -228,6 +240,7 @@ PositionServiceDep = Annotated[PositionService, Depends(get_position_service)]
 LocationServiceDep = Annotated[LocationService, Depends(get_location_service)]
 EmployeeServiceDep = Annotated[EmployeeService, Depends(get_employee_service)]
 AttendanceServiceDep = Annotated[AttendanceService, Depends(get_attendance_service)]
+LeaveServiceDep = Annotated[LeaveService, Depends(get_leave_service)]
 ShiftServiceDep = Annotated[ShiftService, Depends(get_shift_service)]
 RealtimeServiceDep = Annotated[RealtimeService, Depends(get_realtime_service)]
 RealtimeStreamServiceDep = Annotated[

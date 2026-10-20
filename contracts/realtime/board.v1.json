@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://workpulse.dev/contracts/realtime/board.v1.json",
   "title": "WorkPulse realtime board v1",
-  "description": "WebSocket projection protocol for the Realtime Command Center board: the server→client `snapshot` and `presence.upsert` frames (no client→server frames in v1). This is a projection of already-recorded attendance facts, not a domain fact — it is not part of the event catalog and carries no envelope (`.ai/features/realtime-command-center.md`). Identifiers and state only — no names, emails, notes or any PII (`.ai/security.md`). Validate a WS message against the root — a union discriminated on `type`; validate a REST `GET /api/v1/realtime/board` body against `#/$defs/board-snapshot`, which is exactly the `snapshot` frame's body.",
+  "description": "WebSocket projection protocol for the Realtime Command Center board: the server→client `snapshot` and `presence.upsert` frames (no client→server frames in v1). This is a projection of already-recorded attendance and approved-leave facts, not a domain fact — it is not part of the event catalog and carries no envelope (`.ai/features/realtime-command-center.md`). Identifiers and state only — no names, emails, notes or any PII (`.ai/security.md`). Validate a WS message against the root — a union discriminated on `type`; validate a REST `GET /api/v1/realtime/board` body against `#/$defs/board-snapshot`, which is exactly the `snapshot` frame's body.",
   "type": "object",
   "oneOf": [
     { "$ref": "#/$defs/snapshot-frame" },
@@ -165,7 +165,7 @@
     },
     "presence-upsert-frame": {
       "title": "RealtimePresenceUpsertFrame",
-      "description": "One attendance transition (check-in / check-out) projected to every in-scope viewer: the changed row as a full-row idempotent upsert, plus fresh full counts over the connection's known rows — never client-side derivation. Transient, at-most-once delivery: missed deltas are recovered by resyncing a snapshot on reconnect (durable replay is Phase 3's outbox + Kafka, feeding this same protocol).",
+      "description": "One presence transition projected to every in-scope viewer: the changed row as a full-row idempotent upsert, plus fresh full counts over the connection's known rows — never client-side derivation. Sources are an attendance check-in/check-out or an APPROVED leave covering the consume date (ADR 0014). Transient, at-most-once delivery: missed deltas are recovered by resyncing a snapshot on reconnect (durable replay is Phase 3's outbox + Kafka, feeding this same protocol).",
       "type": "object",
       "required": ["type", "date", "counts", "row", "occurred_at", "reason"],
       "additionalProperties": false,
@@ -188,8 +188,8 @@
         },
         "reason": {
           "type": "string",
-          "enum": ["checked_in", "checked_out"],
-          "description": "Which attendance transition caused the upsert. At most one delta per transition; lateness is carried on the row, never as its own frame."
+          "enum": ["checked_in", "checked_out", "leave_approved"],
+          "description": "Which transition caused the upsert. `leave_approved` carries an on_leave row (no attendance_id/since, late=false) and fires only when the approved range covers the consume date (ADR 0014). A check-out arriving after such an approval keeps the on_leave row (presence is canonical) while still recording the transition in the activity rail. At most one delta per transition; lateness is carried on the row, never as its own frame."
         }
       }
     }

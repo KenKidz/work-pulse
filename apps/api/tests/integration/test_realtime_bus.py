@@ -8,6 +8,7 @@ check-in must never fail because the bus is down).
 
 import asyncio
 import contextlib
+import json
 from collections.abc import AsyncGenerator
 from datetime import UTC, date, datetime
 from uuid import UUID
@@ -123,3 +124,30 @@ async def test_publish_to_dead_redis_is_swallowed() -> None:
     finally:
         with contextlib.suppress(Exception):
             await dead.aclose()
+
+
+async def test_unknown_presence_fact_is_skipped_and_the_subscription_continues() -> (
+    None
+):
+    """A newer worker's reason must not tear down an older reader's socket."""
+    publisher = RedisPresencePublisher(get_redis())
+    stream = RedisPresenceStream(get_redis())
+    subscription = stream.subscribe(TENANT_A)
+    received_task = asyncio.ensure_future(subscription.__anext__())
+    try:
+        await _wait_subscribed(tenant_channel(TENANT_A))
+
+        # A fact shape/reason this reader does not know yet.
+        future = _fact(status="on_leave", reason="leave_approved").model_dump(
+            mode="json"
+        )
+        future["reason"] = "future_reason"
+        await get_redis().publish(tenant_channel(TENANT_A), json.dumps(future))
+
+        valid = _fact(status="remote", reason="checked_in")
+        await publisher.publish(valid)
+        received = await asyncio.wait_for(received_task, timeout=5)
+    finally:
+        await _shutdown(subscription, received_task)
+
+    assert received == valid

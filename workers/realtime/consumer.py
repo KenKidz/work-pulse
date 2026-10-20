@@ -26,7 +26,8 @@ drive this exact loop with in-memory stubs — no broker, no Redis
 
 import asyncio
 import json
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
+from datetime import UTC, date, datetime
 from typing import Any, Protocol
 
 from app.shared.logging import get_logger
@@ -40,6 +41,11 @@ _log = get_logger("realtime.consumer")
 # failures (~9 h at the 30 s cap) and would kill the loop mid-outage, exactly
 # when it must keep retrying.
 _MAX_BACKOFF_EXPONENT = 32
+
+
+def _utc_today() -> date:
+    """The consume date used to window leave events (server UTC)."""
+    return datetime.now(UTC).date()
 
 
 class KafkaMessage(Protocol):
@@ -69,6 +75,7 @@ class RealtimeConsumer:
         poll_seconds: float,
         backoff_base: float,
         backoff_max: float,
+        today: Callable[[], date] = _utc_today,
     ) -> None:
         if poll_seconds <= 0:
             raise ValueError("poll_seconds must be > 0")
@@ -79,6 +86,9 @@ class RealtimeConsumer:
         self._poll_seconds = poll_seconds
         self._backoff_base = backoff_base
         self._backoff_max = backoff_max
+        # Injected consume-date clock: `leave.approved` is windowed to the day
+        # the consumer is projecting, never the event's own date (ADR 0014).
+        self._today = today
         self._stopping = asyncio.Event()
         # Set once the first fetch round completes: the consumer has joined
         # its group and pinned its `latest` position — readiness for the
@@ -140,8 +150,9 @@ class RealtimeConsumer:
         envelope = _parse(value)
         if envelope is None:
             return None
-        fact = map_envelope(envelope)
-        if fact is None and is_realtime_envelope(envelope):
+        today = self._today()
+        fact = map_envelope(envelope, today=today)
+        if fact is None and is_realtime_envelope(envelope, today=today):
             # Ours but not fact-shaped (missing/invalid field): a skip, never
             # a partial fact, never a crash. The event id and an error
             # category only — the payload itself is never echoed.

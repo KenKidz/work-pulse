@@ -212,3 +212,62 @@ def test_schema_is_a_union_discriminated_on_type(schema: dict[str, Any]) -> None
     )
     assert snapshot["properties"]["type"]["const"] == "snapshot"
     assert upsert["properties"]["type"]["const"] == "presence.upsert"
+
+
+def test_leave_approved_is_an_additive_reason_enum_value(
+    schema: dict[str, Any],
+) -> None:
+    """ADR 0014 extends the upsert reason additively; no other shape changes."""
+    upsert = schema["$defs"]["presence-upsert-frame"]
+    assert upsert["properties"]["reason"]["enum"] == [
+        "checked_in",
+        "checked_out",
+        "leave_approved",
+    ]
+    assert upsert["properties"]["row"]["$ref"] == "#/$defs/presence-row"
+    # Activity stays an attendance-only vocabulary.
+    assert schema["$defs"]["activity-entry"]["properties"]["action"]["enum"] == [
+        "checked_in",
+        "checked_out",
+    ]
+
+
+async def test_an_on_leave_delta_validates_and_counts(
+    validator: Draft202012Validator,
+) -> None:
+    repo = FakeAttendanceRepo()
+    seed_employee(repo, employee_id=ACTOR)
+    leave = PresenceFact(
+        tenant_id=TENANT_A,
+        workday=TODAY,
+        employee_id=ACTOR,
+        attendance_id=None,
+        status="on_leave",
+        late=False,
+        minutes_late=None,
+        since=None,
+        reason="leave_approved",
+        occurred_at=NOW,
+    )
+    attendance = AttendanceService(
+        repo=repo,
+        shifts=FakeShiftRepo(),
+        audit=RecordingAuditWriter(),
+        outbox=RecordingEventOutbox(),
+    )
+    service = RealtimeService(attendance=attendance, stream=_ScriptedStream([leave]))
+
+    frames = [json.loads(frame) async for frame in service.stream(identity(), NOW)]
+    snapshot, upsert = frames
+
+    assert snapshot["counts"]["on_leave"] == 0
+    assert set(upsert["row"]) == ROW_KEYS
+    assert upsert["row"]["status"] == "on_leave"
+    assert upsert["row"]["attendance_id"] is None
+    assert upsert["row"]["since"] is None
+    assert upsert["row"]["late"] is False
+    assert upsert["row"]["minutes_late"] is None
+    assert upsert["reason"] == "leave_approved"
+    assert upsert["counts"]["on_leave"] == 1
+    assert upsert["counts"]["absent"] == 0
+    validator.validate(upsert)

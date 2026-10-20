@@ -20,7 +20,7 @@ import time
 from collections.abc import AsyncGenerator, AsyncIterator
 from contextlib import aclosing, asynccontextmanager, suppress
 from dataclasses import dataclass
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import Any, cast
 from uuid import UUID, uuid4
 
@@ -31,11 +31,18 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1 import attendance as attendance_api
+from app.api.v1 import leave as leave_api
 from app.api.v1 import realtime as realtime_api
 from app.config import get_settings
 from app.dependencies import ShortLivedAttendanceBoard
 from app.domains.attendance.events import attendance_checked_out
 from app.domains.employees.schemas import EmployeeStatus, EmploymentType
+from app.domains.leave.events import (
+    leave_approved,
+    leave_rejected,
+    leave_requested,
+    leave_withdrawn,
+)
 from app.domains.realtime.service import RealtimeService
 from app.infrastructure.postgres.engine import get_session_factory
 from app.infrastructure.postgres.models_outbox import EventOutboxRow
@@ -49,6 +56,7 @@ from app.infrastructure.redis import (
     get_redis,
     tenant_channel,
 )
+from app.shared.identity import Role
 from app.shared.presence import PresenceFact
 from tests.conftest import TEST_KAFKA_BOOTSTRAP_SERVERS
 from tests.integration.conftest import (
@@ -73,6 +81,7 @@ SHIFT_PAYLOAD = {
 }
 CLOCK = datetime(2026, 9, 24, 11, 0, tzinfo=UTC)
 LATE_MINUTES = 660  # 00:00 + 0 grace → 11:00
+HR_EMPLOYEE = UUID("00000000-0000-4000-8000-0000000000f1")
 
 
 def _utc_now() -> datetime:
@@ -582,3 +591,207 @@ async def test_bad_topic_messages_never_stall_the_consumer(
 
     assert fact.attendance_id == UUID(record["id"])
     assert fact.reason == "checked_in"
+
+
+# --- leave approval through the hop (T7, ADR 0014) ----------------------------
+
+
+async def _seed_leave_request(
+    client_factory: ClientFactory, *, now: datetime
+) -> dict[str, Any]:
+    """Submit one annual day for the actor and commit it before the hop.
+
+    The request's `leave.requested` envelope is written but unpublished; the
+    consumer starts at the topic tip so only events published after the hop is
+    live can reach it. The approval therefore proves the mapped transition.
+    """
+    async with client_factory(identity(role=Role.EMPLOYEE)) as employee:
+        types = (await employee.get("/api/v1/leave/types")).json()
+        annual = next(row for row in types if row["code"] == "annual")
+        response = await employee.post(
+            "/api/v1/leave/requests",
+            json={
+                "leave_type_id": annual["id"],
+                "start_date": now.date().isoformat(),
+                "end_date": now.date().isoformat(),
+            },
+        )
+    assert response.status_code == 201
+    return response.json()
+
+
+async def _approve_leave(
+    client_factory: ClientFactory, request_id: str
+) -> dict[str, Any]:
+    async with client_factory(identity(role=Role.HR, employee_id=HR_EMPLOYEE)) as hr:
+        response = await hr.post(
+            f"/api/v1/leave/requests/{request_id}/approve", json={}
+        )
+    assert response.status_code == 200
+    return response.json()
+
+
+async def _board_counts(client_factory: ClientFactory) -> dict[str, Any]:
+    """The REST board counts for the current workday."""
+    async with client_factory() as admin:
+        response = await admin.get("/api/v1/attendance/board")
+    assert response.status_code == 200
+    return response.json()["counts"]
+
+
+async def test_leave_approval_reaches_the_wall_under_2s(
+    client_factory: ClientFactory,
+    session: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """AC: approve → `on_leave` fact ≤2s, row ≡ the REST board, absent corrected."""
+    now = datetime.now(UTC)
+    monkeypatch.setattr(leave_api, "_now", lambda: now)
+    await _seed_world(client_factory, session, late=True)
+    request = await _seed_leave_request(client_factory, now=now)
+    await session.commit()
+
+    before = await _board_counts(client_factory)
+    assert before["on_leave"] == 0
+    assert before["absent"] == 1  # the always-on shift has started, no record
+
+    async with _hop(), FactFeed(TENANT_A) as feed:
+        approved = await _approve_leave(client_factory, request["id"])
+        started = time.monotonic()
+        await session.commit()
+        fact = await feed.next()
+        elapsed = time.monotonic() - started
+
+    assert elapsed < 2.0, f"leave delta took {elapsed:.3f}s (> 2s)"
+    assert fact.tenant_id == TENANT_A
+    assert fact.employee_id == ACTOR
+    assert fact.workday == now.date()
+    assert fact.status == "on_leave"
+    assert fact.reason == "leave_approved"
+    assert fact.attendance_id is None
+    assert fact.since is None
+    assert fact.late is False
+    assert fact.minutes_late is None
+    assert approved["status"] == "approved"
+
+    rest_row = await _rest_row(client_factory)
+    assert rest_row["status"] == "on_leave"
+    assert rest_row["attendance_id"] is None
+    assert rest_row["since"] is None
+    after = await _board_counts(client_factory)
+    assert after["on_leave"] == 1
+    assert after["absent"] == 0
+
+
+async def test_out_of_window_and_other_leave_events_are_filtered(
+    client_factory: ClientFactory,
+    session: AsyncSession,
+) -> None:
+    """Future/past approvals and non-approved transitions never reach the wall."""
+    today = datetime.now(UTC).date()
+    await _seed_world(client_factory, session)
+    await session.commit()
+
+    covering = leave_approved(
+        tenant_id=TENANT_A,
+        actor_id=UUID("00000000-0000-4000-8000-000000000031"),
+        occurred_at=CLOCK,
+        leave_request_id=UUID("00000000-0000-4000-8000-0000000000e1"),
+        employee_id=ACTOR,
+        leave_type_code="annual",
+        start_date=today,
+        end_date=today,
+        days=1,
+        decided_by=UUID("00000000-0000-4000-8000-000000000031"),
+    )
+    ended = {
+        **covering,
+        "data": {
+            **covering["data"],
+            "start_date": (today - timedelta(days=2)).isoformat(),
+            "end_date": (today - timedelta(days=1)).isoformat(),
+        },
+    }
+    future = {
+        **covering,
+        "data": {
+            **covering["data"],
+            "start_date": (today + timedelta(days=1)).isoformat(),
+            "end_date": (today + timedelta(days=2)).isoformat(),
+        },
+    }
+    requested = leave_requested(
+        tenant_id=TENANT_A,
+        actor_id=UUID("00000000-0000-4000-8000-000000000031"),
+        occurred_at=CLOCK,
+        leave_request_id=UUID("00000000-0000-4000-8000-0000000000e2"),
+        employee_id=ACTOR,
+        leave_type_code="annual",
+        start_date=today,
+        end_date=today,
+        days=1,
+    )
+    rejected = leave_rejected(
+        tenant_id=TENANT_A,
+        actor_id=UUID("00000000-0000-4000-8000-000000000031"),
+        occurred_at=CLOCK,
+        leave_request_id=UUID("00000000-0000-4000-8000-0000000000e3"),
+        employee_id=ACTOR,
+        leave_type_code="annual",
+        start_date=today,
+        end_date=today,
+        decided_by=UUID("00000000-0000-4000-8000-000000000031"),
+    )
+    withdrawn = leave_withdrawn(
+        tenant_id=TENANT_A,
+        actor_id=UUID("00000000-0000-4000-8000-000000000031"),
+        occurred_at=CLOCK,
+        leave_request_id=UUID("00000000-0000-4000-8000-0000000000e4"),
+        employee_id=ACTOR,
+        start_date=today,
+        end_date=today,
+    )
+
+    async with _hop() as hop, FactFeed(TENANT_A) as feed:
+        for envelope in (ended, future, requested, rejected, withdrawn):
+            await hop.publish(envelope)
+        await feed.expect_none(window=1.5)
+
+        # The feed is live: the covering approval (only) becomes one fact.
+        await hop.publish(covering)
+        fact = await feed.next()
+
+    assert fact.status == "on_leave"
+    assert fact.reason == "leave_approved"
+    assert fact.employee_id == ACTOR
+
+
+async def test_leave_redelivery_upserts_identically(
+    client_factory: ClientFactory,
+    session: AsyncSession,
+) -> None:
+    """At-least-once redelivery of `leave.approved` maps to the same fact."""
+    today = datetime.now(UTC).date()
+    await _seed_world(client_factory, session)
+    await session.commit()
+    envelope = leave_approved(
+        tenant_id=TENANT_A,
+        actor_id=UUID("00000000-0000-4000-8000-000000000031"),
+        occurred_at=CLOCK,
+        leave_request_id=UUID("00000000-0000-4000-8000-0000000000e5"),
+        employee_id=ACTOR,
+        leave_type_code="annual",
+        start_date=today,
+        end_date=today,
+        days=1,
+        decided_by=UUID("00000000-0000-4000-8000-000000000031"),
+    )
+
+    async with _hop() as hop, FactFeed(TENANT_A) as feed:
+        await hop.publish(envelope)
+        await hop.publish(envelope)
+        first = await feed.next()
+        second = await feed.next()
+
+    assert first == second
+    assert first.status == "on_leave"

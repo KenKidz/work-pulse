@@ -11,12 +11,11 @@ export interface ArchiveRequest {
   reason?: string | null;
 }
 
-export type WorkMode = typeof WorkMode[keyof typeof WorkMode];
-
+export type WorkMode = (typeof WorkMode)[keyof typeof WorkMode];
 
 export const WorkMode = {
-  onsite: 'onsite',
-  remote: 'remote',
+  onsite: "onsite",
+  remote: "remote",
 } as const;
 
 export interface AttendanceRecord {
@@ -62,12 +61,11 @@ export interface BoardCounts {
   checked_out: number;
 }
 
-export type BoardAction = typeof BoardAction[keyof typeof BoardAction];
-
+export type BoardAction = (typeof BoardAction)[keyof typeof BoardAction];
 
 export const BoardAction = {
-  checked_in: 'checked_in',
-  checked_out: 'checked_out',
+  checked_in: "checked_in",
+  checked_out: "checked_out",
 } as const;
 
 export interface BoardActivity {
@@ -97,31 +95,31 @@ export interface CheckOutRequest {
   check_out_note?: string | null;
 }
 
-export type EmploymentType = typeof EmploymentType[keyof typeof EmploymentType];
-
+export type EmploymentType =
+  (typeof EmploymentType)[keyof typeof EmploymentType];
 
 export const EmploymentType = {
-  full_time: 'full_time',
-  part_time: 'part_time',
-  contract: 'contract',
-  intern: 'intern',
+  full_time: "full_time",
+  part_time: "part_time",
+  contract: "contract",
+  intern: "intern",
 } as const;
 
 export interface CreateEmployee {
   /**
-     * @minLength 1
-     * @maxLength 200
-     */
+   * @minLength 1
+   * @maxLength 200
+   */
   first_name: string;
   /**
-     * @minLength 1
-     * @maxLength 200
-     */
+   * @minLength 1
+   * @maxLength 200
+   */
   last_name: string;
   /**
-     * @minLength 3
-     * @maxLength 320
-     */
+   * @minLength 3
+   * @maxLength 320
+   */
   email: string;
   phone?: string | null;
   department_id: string;
@@ -136,23 +134,22 @@ export interface CreateEmployee {
 /**
  * The six pinned Phase 1 roles (`.ai/security.md`).
  */
-export type Role = typeof Role[keyof typeof Role];
-
+export type Role = (typeof Role)[keyof typeof Role];
 
 export const Role = {
-  employee: 'employee',
-  manager: 'manager',
-  hr: 'hr',
-  finance: 'finance',
-  admin: 'admin',
-  super_admin: 'super_admin',
+  employee: "employee",
+  manager: "manager",
+  hr: "hr",
+  finance: "finance",
+  admin: "admin",
+  super_admin: "super_admin",
 } as const;
 
 export interface CreateUser {
   /**
-     * @minLength 3
-     * @maxLength 320
-     */
+   * @minLength 3
+   * @maxLength 320
+   */
   email: string;
   /** @minLength 10 */
   password: string;
@@ -172,9 +169,9 @@ export interface Department {
 
 export interface DepartmentCreate {
   /**
-     * @minLength 1
-     * @maxLength 200
-     */
+   * @minLength 1
+   * @maxLength 200
+   */
   name: string;
   parent_department_id?: string | null;
 }
@@ -189,13 +186,13 @@ export interface DepartmentUpdate {
   parent_department_id?: string | null;
 }
 
-export type EmployeeStatus = typeof EmployeeStatus[keyof typeof EmployeeStatus];
-
+export type EmployeeStatus =
+  (typeof EmployeeStatus)[keyof typeof EmployeeStatus];
 
 export const EmployeeStatus = {
-  active: 'active',
-  on_leave: 'on_leave',
-  terminated: 'terminated',
+  active: "active",
+  on_leave: "on_leave",
+  terminated: "terminated",
 } as const;
 
 export interface Employee {
@@ -291,6 +288,85 @@ export interface HTTPValidationError {
   detail?: ValidationError[];
 }
 
+export interface LeaveBalance {
+  tenant_id: string;
+  employee_id: string;
+  leave_type_id: string;
+  year: number;
+  entitlement_days: number;
+  used_days: number;
+  /** Entitlement minus usage — never negative (DB-checked). */
+  readonly remaining_days: number;
+}
+
+/**
+ * Optional decision note — 1..500 characters when provided (PII).
+ */
+export interface LeaveDecision {
+  decision_note?: string | null;
+}
+
+export type LeaveTypeCode = (typeof LeaveTypeCode)[keyof typeof LeaveTypeCode];
+
+export const LeaveTypeCode = {
+  annual: "annual",
+  sick: "sick",
+  unpaid: "unpaid",
+} as const;
+
+export type LeaveRequestStatus =
+  (typeof LeaveRequestStatus)[keyof typeof LeaveRequestStatus];
+
+export const LeaveRequestStatus = {
+  pending: "pending",
+  approved: "approved",
+  rejected: "rejected",
+  withdrawn: "withdrawn",
+} as const;
+
+export interface LeaveRequest {
+  id: string;
+  tenant_id: string;
+  employee_id: string;
+  leave_type_id: string;
+  leave_type_code: LeaveTypeCode;
+  start_date: string;
+  end_date: string;
+  days: number;
+  status: LeaveRequestStatus;
+  reason?: string | null;
+  decision_note?: string | null;
+  decided_by?: string | null;
+  decided_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Submit a request — always for the caller's linked employee.
+ */
+export interface LeaveRequestCreate {
+  leave_type_id: string;
+  start_date: string;
+  end_date: string;
+  reason?: string | null;
+}
+
+export interface LeaveRequestListPage {
+  items: LeaveRequest[];
+  page: Page;
+}
+
+/**
+ * Seeded leave type — the pinned wire shape (four fields, no defaults).
+ */
+export interface LeaveType {
+  id: string;
+  code: LeaveTypeCode;
+  name: string;
+  counts_against_balance: boolean;
+}
+
 export interface Location {
   id: string;
   tenant_id: string;
@@ -304,15 +380,15 @@ export interface Location {
 
 export interface LocationCreate {
   /**
-     * @minLength 1
-     * @maxLength 200
-     */
+   * @minLength 1
+   * @maxLength 200
+   */
   name: string;
   address?: string | null;
   /**
-     * @minLength 1
-     * @maxLength 100
-     */
+   * @minLength 1
+   * @maxLength 100
+   */
   timezone: string;
 }
 
@@ -344,9 +420,9 @@ export interface Position {
 
 export interface PositionCreate {
   /**
-     * @minLength 1
-     * @maxLength 200
-     */
+   * @minLength 1
+   * @maxLength 200
+   */
   title: string;
   description?: string | null;
 }
@@ -361,15 +437,15 @@ export interface PositionUpdate {
   description?: string | null;
 }
 
-export type PresenceRowStatus = typeof PresenceRowStatus[keyof typeof PresenceRowStatus];
-
+export type PresenceRowStatus =
+  (typeof PresenceRowStatus)[keyof typeof PresenceRowStatus];
 
 export const PresenceRowStatus = {
-  present: 'present',
-  remote: 'remote',
-  checked_out: 'checked_out',
-  absent: 'absent',
-  on_leave: 'on_leave',
+  present: "present",
+  remote: "remote",
+  checked_out: "checked_out",
+  absent: "absent",
+  on_leave: "on_leave",
 } as const;
 
 /**
@@ -377,7 +453,7 @@ export const PresenceRowStatus = {
  *
  * `minutes_late` is recomputed from the record's shift at read/publish time
  * (the stored `late` flag itself is immutable); `since` is `checked_in_at`
- * while open, `checked_out_at` once closed, `null` for absent rows.
+ * while open, `checked_out_at` once closed, `null` for absent/on_leave rows.
  */
 export interface PresenceRow {
   employee_id: string;
@@ -388,12 +464,12 @@ export interface PresenceRow {
   attendance_id?: string | null;
 }
 
-export type RealtimeActivityEntryAction = typeof RealtimeActivityEntryAction[keyof typeof RealtimeActivityEntryAction];
-
+export type RealtimeActivityEntryAction =
+  (typeof RealtimeActivityEntryAction)[keyof typeof RealtimeActivityEntryAction];
 
 export const RealtimeActivityEntryAction = {
-  checked_in: 'checked_in',
-  checked_out: 'checked_out',
+  checked_in: "checked_in",
+  checked_out: "checked_out",
 } as const;
 
 /**
@@ -453,9 +529,9 @@ export interface Shift {
 
 export interface ShiftCreate {
   /**
-     * @minLength 1
-     * @maxLength 200
-     */
+   * @minLength 1
+   * @maxLength 200
+   */
   name: string;
   start_time: string;
   end_time: string;
@@ -475,9 +551,9 @@ export interface ShiftUpdate {
 export interface TerminationRequest {
   effective_date: string;
   /**
-     * @minLength 1
-     * @maxLength 500
-     */
+   * @minLength 1
+   * @maxLength 500
+   */
   reason: string;
 }
 
@@ -519,59 +595,72 @@ export interface UserListPage {
   page: Page;
 }
 
-export type HealthzHealthzGet200 = {[key: string]: string};
+export type HealthzHealthzGet200 = { [key: string]: string };
 
 export type ListUsersParams = {
-q?: string | null;
-role?: Role | null;
-active?: boolean | null;
-page?: number;
-page_size?: number;
+  q?: string | null;
+  role?: Role | null;
+  active?: boolean | null;
+  page?: number;
+  page_size?: number;
 };
 
 export type ListDepartmentsParams = {
-q?: string | null;
-parent_id?: string | null;
-include_archived?: boolean;
-page?: number;
-page_size?: number;
+  q?: string | null;
+  parent_id?: string | null;
+  include_archived?: boolean;
+  page?: number;
+  page_size?: number;
 };
 
 export type ListPositionsParams = {
-q?: string | null;
-include_archived?: boolean;
-page?: number;
-page_size?: number;
+  q?: string | null;
+  include_archived?: boolean;
+  page?: number;
+  page_size?: number;
 };
 
 export type ListLocationsParams = {
-q?: string | null;
-include_archived?: boolean;
-page?: number;
-page_size?: number;
+  q?: string | null;
+  include_archived?: boolean;
+  page?: number;
+  page_size?: number;
 };
 
 export type ListEmployeesParams = {
-q?: string | null;
-department_id?: string | null;
-position_id?: string | null;
-location_id?: string | null;
-status?: EmployeeStatus | null;
-manager_id?: string | null;
-page?: number;
-page_size?: number;
+  q?: string | null;
+  department_id?: string | null;
+  position_id?: string | null;
+  location_id?: string | null;
+  status?: EmployeeStatus | null;
+  manager_id?: string | null;
+  page?: number;
+  page_size?: number;
 };
 
 export type ListAttendanceRecordsParams = {
-employee_id?: string | null;
-from?: string | null;
-to?: string | null;
-late?: boolean | null;
-page?: number;
-page_size?: number;
+  employee_id?: string | null;
+  from?: string | null;
+  to?: string | null;
+  late?: boolean | null;
+  page?: number;
+  page_size?: number;
 };
 
 export type GetAttendanceBoardParams = {
-date?: string | null;
+  date?: string | null;
 };
 
+export type ListLeaveRequestsParams = {
+  employee_id?: string | null;
+  status?: LeaveRequestStatus | null;
+  from?: string | null;
+  to?: string | null;
+  page?: number;
+  page_size?: number;
+};
+
+export type ListLeaveBalancesParams = {
+  employee_id?: string | null;
+  year?: number | null;
+};

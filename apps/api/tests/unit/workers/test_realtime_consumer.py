@@ -23,6 +23,7 @@ import pytest
 import structlog
 
 from app.domains.attendance.events import attendance_checked_in, attendance_late
+from app.domains.leave.events import leave_approved
 from app.shared.presence import PresenceFact, PresencePublisher
 from workers.realtime.consumer import EventSource, RealtimeConsumer
 
@@ -31,6 +32,7 @@ ACTOR = UUID("00000000-0000-4000-8000-000000000031")
 EMPLOYEE_A = UUID("00000000-0000-4000-8000-000000000001")
 EMPLOYEE_B = UUID("00000000-0000-4000-8000-000000000002")
 ATTENDANCE = UUID("00000000-0000-4000-8000-0000000000a1")
+LEAVE_REQUEST = UUID("00000000-0000-4000-8000-0000000000e1")
 NOW = datetime(2026, 10, 16, 8, 0, tzinfo=UTC)
 WORKDAY = date(2026, 10, 16)
 # A leak test value: it must never appear in a log line (ids-only contract).
@@ -132,14 +134,16 @@ def _consumer(
     poll_seconds: float = 0.001,
     backoff_base: float = 0.5,
     backoff_max: float = 8.0,
+    today: Callable[[], date] | None = None,
 ) -> RealtimeConsumer:
-    return RealtimeConsumer(
-        source,
-        publisher,
-        poll_seconds=poll_seconds,
-        backoff_base=backoff_base,
-        backoff_max=backoff_max,
-    )
+    options: dict[str, Any] = {
+        "poll_seconds": poll_seconds,
+        "backoff_base": backoff_base,
+        "backoff_max": backoff_max,
+    }
+    if today is not None:
+        options["today"] = today
+    return RealtimeConsumer(source, publisher, **options)
 
 
 def _record_pauses(
@@ -375,3 +379,43 @@ def test_non_positive_poll_seconds_is_rejected() -> None:
 def test_invalid_backoff_configuration_is_rejected() -> None:
     with pytest.raises(ValueError):
         _consumer(StubSource(), RecordingPublisher(), backoff_base=2.0, backoff_max=1.0)
+
+
+# --- leave window -------------------------------------------------------------
+
+
+def _leave_bytes(*, start: date, end: date) -> bytes:
+    envelope = leave_approved(
+        tenant_id=TENANT,
+        actor_id=ACTOR,
+        occurred_at=NOW,
+        leave_request_id=LEAVE_REQUEST,
+        employee_id=EMPLOYEE_A,
+        leave_type_code="annual",
+        start_date=start,
+        end_date=end,
+        days=(end - start).days + 1,
+        decided_by=ACTOR,
+    )
+    return json.dumps(envelope).encode("utf-8")
+
+
+async def test_leave_window_uses_the_injected_consume_date() -> None:
+    covering = _leave_bytes(start=WORKDAY, end=WORKDAY)
+    ended = _leave_bytes(start=date(2026, 10, 14), end=date(2026, 10, 15))
+    future = _leave_bytes(start=date(2026, 10, 17), end=date(2026, 10, 19))
+    source = StubSource([[covering, ended, future]])
+    publisher = RecordingPublisher()
+    consumer = _consumer(source, publisher, today=lambda: WORKDAY)
+    source.on_drained = consumer.stop
+
+    await consumer.run()
+
+    assert len(publisher.facts) == 1
+    fact = publisher.facts[0]
+    assert fact.employee_id == EMPLOYEE_A
+    assert fact.status == "on_leave"
+    assert fact.reason == "leave_approved"
+    assert fact.workday == WORKDAY
+    assert fact.attendance_id is None and fact.since is None
+    assert source.commits == 3  # filtered messages still advance the offset

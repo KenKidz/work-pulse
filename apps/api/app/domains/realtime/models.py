@@ -54,7 +54,22 @@ class PresenceState:
         rows = {row.employee_id: row for row in snapshot.presence}
         return cls(workday=snapshot.date, rows=rows, counts=snapshot.counts)
 
-    def upsert(self, row: PresenceRow) -> None:
-        """Full-row idempotent upsert + recount (redelivery is harmless)."""
+    def upsert(self, row: PresenceRow) -> PresenceRow:
+        """Full-row idempotent upsert + recount; returns the applied row.
+
+        `on_leave` is canonical for the workday (ADR 0014): an attendance
+        transition arriving after an approval — a permitted check-out of an
+        already-open record — must not replace the leave row, or the delta
+        would disagree with the REST snapshot. The applied (preserved) row is
+        returned so the caller forwards a frame that still matches the state.
+        """
+        existing = self.rows.get(row.employee_id)
+        if (
+            existing is not None
+            and existing.status == "on_leave"
+            and row.status != "on_leave"
+        ):
+            return existing
         self.rows[row.employee_id] = row
         self.counts = _recount(self.rows)
+        return row

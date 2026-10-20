@@ -57,7 +57,8 @@ def _fact(
     reason: PresenceReason = "checked_in",
     late: bool = False,
     minutes_late: int | None = None,
-    since: datetime = NOW,
+    since: datetime | None = NOW,
+    attendance_id: UUID | None = ATTENDANCE,
     occurred_at: datetime = NOW,
 ) -> PresenceFact:
     """One synthetic fact — identifiers and state only, deterministic clock."""
@@ -65,7 +66,7 @@ def _fact(
         tenant_id=TENANT_A,
         workday=workday,
         employee_id=employee_id,
-        attendance_id=ATTENDANCE,
+        attendance_id=attendance_id,
         status=status,
         late=late,
         minutes_late=minutes_late,
@@ -348,3 +349,80 @@ async def test_delta_counts_do_not_jump_after_a_re_check_in(harness: Harness) ->
         "absent": 0,
         "checked_out": 0,
     }
+
+
+async def test_a_leave_fact_displaces_the_same_day_present_row(
+    harness: Harness,
+) -> None:
+    """ADR 0014: `on_leave` wins over a record; one row, recounted buckets."""
+    seed_employee(harness.repo, employee_id=ACTOR)
+    await seed_record(harness.repo, employee_id=ACTOR)
+    harness.stream.facts = [
+        _fact(
+            employee_id=ACTOR,
+            status="on_leave",
+            reason="leave_approved",
+            attendance_id=None,
+            since=None,
+        )
+    ]
+
+    frames = await _frames(harness.service())
+
+    snapshot, delta = frames
+    assert snapshot["counts"]["present"] == 1
+    assert delta["reason"] == "leave_approved"
+    assert delta["row"] == {
+        "employee_id": str(ACTOR),
+        "status": "on_leave",
+        "late": False,
+        "minutes_late": None,
+        "since": None,
+        "attendance_id": None,
+    }
+    assert delta["counts"] == {
+        "present": 0,
+        "remote": 0,
+        "late": 0,
+        "on_leave": 1,
+        "absent": 0,
+        "checked_out": 0,
+    }
+
+
+async def test_on_leave_row_survives_a_later_check_out(harness: Harness) -> None:
+    """ADR 0014: a permitted check-out must not replace the leave row.
+
+    The frame still carries `checked_out` as its reason (so the activity rail
+    records the transition), but the applied row and counts stay on leave —
+    the same row the REST snapshot renders.
+    """
+    seed_employee(harness.repo, employee_id=ACTOR)
+    await seed_record(harness.repo, employee_id=ACTOR)
+    leave_fact = _fact(
+        employee_id=ACTOR,
+        status="on_leave",
+        reason="leave_approved",
+        attendance_id=None,
+        since=None,
+    )
+    checkout_fact = _fact(
+        employee_id=ACTOR,
+        status="checked_out",
+        reason="checked_out",
+    )
+    harness.stream.facts = [leave_fact, checkout_fact]
+
+    frames = await _frames(harness.service())
+
+    snapshot, leave_delta, checkout_delta = frames
+    assert snapshot["counts"]["present"] == 1
+    assert leave_delta["row"]["status"] == "on_leave"
+    assert checkout_delta["reason"] == "checked_out"
+    assert checkout_delta["row"] == leave_delta["row"]
+    assert checkout_delta["row"]["status"] == "on_leave"
+    assert checkout_delta["row"]["attendance_id"] is None
+    assert checkout_delta["counts"] == leave_delta["counts"]
+    assert checkout_delta["counts"]["on_leave"] == 1
+    assert checkout_delta["counts"]["present"] == 0
+    assert checkout_delta["counts"]["checked_out"] == 0

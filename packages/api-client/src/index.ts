@@ -41,9 +41,17 @@ import type {
   GetAttendanceBoardParams,
   HTTPValidationError,
   HealthzHealthzGet200,
+  LeaveBalance,
+  LeaveDecision,
+  LeaveRequest,
+  LeaveRequestCreate,
+  LeaveRequestListPage,
+  LeaveType,
   ListAttendanceRecordsParams,
   ListDepartmentsParams,
   ListEmployeesParams,
+  ListLeaveBalancesParams,
+  ListLeaveRequestsParams,
   ListLocationsParams,
   ListPositionsParams,
   ListUsersParams,
@@ -514,8 +522,7 @@ export type getCurrentUserResponseError = getCurrentUserResponse422 & {
 };
 
 export type getCurrentUserResponse =
-  | getCurrentUserResponseSuccess
-  | getCurrentUserResponseError;
+  getCurrentUserResponseSuccess | getCurrentUserResponseError;
 
 export const getGetCurrentUserUrl = () => {
   return `/api/v1/auth/me`;
@@ -671,8 +678,7 @@ export type changePasswordResponseError = changePasswordResponse422 & {
 };
 
 export type changePasswordResponse =
-  | changePasswordResponseSuccess
-  | changePasswordResponseError;
+  changePasswordResponseSuccess | changePasswordResponseError;
 
 export const getChangePasswordUrl = () => {
   return `/api/v1/auth/password`;
@@ -809,8 +815,7 @@ export type listUsersResponseError = listUsersResponse422 & {
 };
 
 export type listUsersResponse =
-  | listUsersResponseSuccess
-  | listUsersResponseError;
+  listUsersResponseSuccess | listUsersResponseError;
 
 export const getListUsersUrl = (params?: ListUsersParams) => {
   const normalizedParams = new URLSearchParams();
@@ -986,8 +991,7 @@ export type createUserResponseError = createUserResponse422 & {
 };
 
 export type createUserResponse =
-  | createUserResponseSuccess
-  | createUserResponseError;
+  createUserResponseSuccess | createUserResponseError;
 
 export const getCreateUserUrl = () => {
   return `/api/v1/users`;
@@ -1287,8 +1291,7 @@ export type updateUserResponseError = updateUserResponse422 & {
 };
 
 export type updateUserResponse =
-  | updateUserResponseSuccess
-  | updateUserResponseError;
+  updateUserResponseSuccess | updateUserResponseError;
 
 export const getUpdateUserUrl = (id: string) => {
   return `/api/v1/users/${id}`;
@@ -1425,8 +1428,7 @@ export type activateUserResponseError = activateUserResponse422 & {
 };
 
 export type activateUserResponse =
-  | activateUserResponseSuccess
-  | activateUserResponseError;
+  activateUserResponseSuccess | activateUserResponseError;
 
 export const getActivateUserUrl = (id: string) => {
   return `/api/v1/users/${id}/activate`;
@@ -1537,8 +1539,7 @@ export type deactivateUserResponseError = deactivateUserResponse422 & {
 };
 
 export type deactivateUserResponse =
-  | deactivateUserResponseSuccess
-  | deactivateUserResponseError;
+  deactivateUserResponseSuccess | deactivateUserResponseError;
 
 export const getDeactivateUserUrl = (id: string) => {
   return `/api/v1/users/${id}/deactivate`;
@@ -1649,8 +1650,7 @@ export type resetUserPasswordResponseError = resetUserPasswordResponse422 & {
 };
 
 export type resetUserPasswordResponse =
-  | resetUserPasswordResponseSuccess
-  | resetUserPasswordResponseError;
+  resetUserPasswordResponseSuccess | resetUserPasswordResponseError;
 
 export const getResetUserPasswordUrl = (id: string) => {
   return `/api/v1/users/${id}/password`;
@@ -1792,8 +1792,7 @@ export type listDepartmentsResponseError = listDepartmentsResponse422 & {
 };
 
 export type listDepartmentsResponse =
-  | listDepartmentsResponseSuccess
-  | listDepartmentsResponseError;
+  listDepartmentsResponseSuccess | listDepartmentsResponseError;
 
 export const getListDepartmentsUrl = (params?: ListDepartmentsParams) => {
   const normalizedParams = new URLSearchParams();
@@ -1988,8 +1987,7 @@ export type createDepartmentResponseError = createDepartmentResponse422 & {
 };
 
 export type createDepartmentResponse =
-  | createDepartmentResponseSuccess
-  | createDepartmentResponseError;
+  createDepartmentResponseSuccess | createDepartmentResponseError;
 
 export const getCreateDepartmentUrl = () => {
   return `/api/v1/departments`;
@@ -2126,8 +2124,7 @@ export type getDepartmentResponseError = getDepartmentResponse422 & {
 };
 
 export type getDepartmentResponse =
-  | getDepartmentResponseSuccess
-  | getDepartmentResponseError;
+  getDepartmentResponseSuccess | getDepartmentResponseError;
 
 export const getGetDepartmentUrl = (id: string) => {
   return `/api/v1/departments/${id}`;
@@ -2295,8 +2292,7 @@ export type updateDepartmentResponseError = updateDepartmentResponse422 & {
 };
 
 export type updateDepartmentResponse =
-  | updateDepartmentResponseSuccess
-  | updateDepartmentResponseError;
+  updateDepartmentResponseSuccess | updateDepartmentResponseError;
 
 export const getUpdateDepartmentUrl = (id: string) => {
   return `/api/v1/departments/${id}`;
@@ -2437,8 +2433,7 @@ export type archiveDepartmentResponseError = archiveDepartmentResponse422 & {
 };
 
 export type archiveDepartmentResponse =
-  | archiveDepartmentResponseSuccess
-  | archiveDepartmentResponseError;
+  archiveDepartmentResponseSuccess | archiveDepartmentResponseError;
 
 export const getArchiveDepartmentUrl = (id: string) => {
   return `/api/v1/departments/${id}/archive`;
@@ -2579,8 +2574,7 @@ export type restoreDepartmentResponseError = restoreDepartmentResponse422 & {
 };
 
 export type restoreDepartmentResponse =
-  | restoreDepartmentResponseSuccess
-  | restoreDepartmentResponseError;
+  restoreDepartmentResponseSuccess | restoreDepartmentResponseError;
 
 export const getRestoreDepartmentUrl = (id: string) => {
   return `/api/v1/departments/${id}/restore`;
@@ -2691,8 +2685,7 @@ export type listPositionsResponseError = listPositionsResponse422 & {
 };
 
 export type listPositionsResponse =
-  | listPositionsResponseSuccess
-  | listPositionsResponseError;
+  listPositionsResponseSuccess | listPositionsResponseError;
 
 export const getListPositionsUrl = (params?: ListPositionsParams) => {
   const normalizedParams = new URLSearchParams();
@@ -2867,8 +2860,7 @@ export type createPositionResponseError = createPositionResponse422 & {
 };
 
 export type createPositionResponse =
-  | createPositionResponseSuccess
-  | createPositionResponseError;
+  createPositionResponseSuccess | createPositionResponseError;
 
 export const getCreatePositionUrl = () => {
   return `/api/v1/positions`;
@@ -3004,8 +2996,7 @@ export type getPositionResponseError = getPositionResponse422 & {
 };
 
 export type getPositionResponse =
-  | getPositionResponseSuccess
-  | getPositionResponseError;
+  getPositionResponseSuccess | getPositionResponseError;
 
 export const getGetPositionUrl = (id: string) => {
   return `/api/v1/positions/${id}`;
@@ -3173,8 +3164,7 @@ export type updatePositionResponseError = updatePositionResponse422 & {
 };
 
 export type updatePositionResponse =
-  | updatePositionResponseSuccess
-  | updatePositionResponseError;
+  updatePositionResponseSuccess | updatePositionResponseError;
 
 export const getUpdatePositionUrl = (id: string) => {
   return `/api/v1/positions/${id}`;
@@ -3314,8 +3304,7 @@ export type archivePositionResponseError = archivePositionResponse422 & {
 };
 
 export type archivePositionResponse =
-  | archivePositionResponseSuccess
-  | archivePositionResponseError;
+  archivePositionResponseSuccess | archivePositionResponseError;
 
 export const getArchivePositionUrl = (id: string) => {
   return `/api/v1/positions/${id}/archive`;
@@ -3455,8 +3444,7 @@ export type restorePositionResponseError = restorePositionResponse422 & {
 };
 
 export type restorePositionResponse =
-  | restorePositionResponseSuccess
-  | restorePositionResponseError;
+  restorePositionResponseSuccess | restorePositionResponseError;
 
 export const getRestorePositionUrl = (id: string) => {
   return `/api/v1/positions/${id}/restore`;
@@ -3566,8 +3554,7 @@ export type listLocationsResponseError = listLocationsResponse422 & {
 };
 
 export type listLocationsResponse =
-  | listLocationsResponseSuccess
-  | listLocationsResponseError;
+  listLocationsResponseSuccess | listLocationsResponseError;
 
 export const getListLocationsUrl = (params?: ListLocationsParams) => {
   const normalizedParams = new URLSearchParams();
@@ -3742,8 +3729,7 @@ export type createLocationResponseError = createLocationResponse422 & {
 };
 
 export type createLocationResponse =
-  | createLocationResponseSuccess
-  | createLocationResponseError;
+  createLocationResponseSuccess | createLocationResponseError;
 
 export const getCreateLocationUrl = () => {
   return `/api/v1/locations`;
@@ -3879,8 +3865,7 @@ export type getLocationResponseError = getLocationResponse422 & {
 };
 
 export type getLocationResponse =
-  | getLocationResponseSuccess
-  | getLocationResponseError;
+  getLocationResponseSuccess | getLocationResponseError;
 
 export const getGetLocationUrl = (id: string) => {
   return `/api/v1/locations/${id}`;
@@ -4048,8 +4033,7 @@ export type updateLocationResponseError = updateLocationResponse422 & {
 };
 
 export type updateLocationResponse =
-  | updateLocationResponseSuccess
-  | updateLocationResponseError;
+  updateLocationResponseSuccess | updateLocationResponseError;
 
 export const getUpdateLocationUrl = (id: string) => {
   return `/api/v1/locations/${id}`;
@@ -4189,8 +4173,7 @@ export type archiveLocationResponseError = archiveLocationResponse422 & {
 };
 
 export type archiveLocationResponse =
-  | archiveLocationResponseSuccess
-  | archiveLocationResponseError;
+  archiveLocationResponseSuccess | archiveLocationResponseError;
 
 export const getArchiveLocationUrl = (id: string) => {
   return `/api/v1/locations/${id}/archive`;
@@ -4330,8 +4313,7 @@ export type restoreLocationResponseError = restoreLocationResponse422 & {
 };
 
 export type restoreLocationResponse =
-  | restoreLocationResponseSuccess
-  | restoreLocationResponseError;
+  restoreLocationResponseSuccess | restoreLocationResponseError;
 
 export const getRestoreLocationUrl = (id: string) => {
   return `/api/v1/locations/${id}/restore`;
@@ -4441,8 +4423,7 @@ export type listEmployeesResponseError = listEmployeesResponse422 & {
 };
 
 export type listEmployeesResponse =
-  | listEmployeesResponseSuccess
-  | listEmployeesResponseError;
+  listEmployeesResponseSuccess | listEmployeesResponseError;
 
 export const getListEmployeesUrl = (params?: ListEmployeesParams) => {
   const normalizedParams = new URLSearchParams();
@@ -4617,8 +4598,7 @@ export type createEmployeeResponseError = createEmployeeResponse422 & {
 };
 
 export type createEmployeeResponse =
-  | createEmployeeResponseSuccess
-  | createEmployeeResponseError;
+  createEmployeeResponseSuccess | createEmployeeResponseError;
 
 export const getCreateEmployeeUrl = () => {
   return `/api/v1/employees`;
@@ -4755,8 +4735,7 @@ export type getCurrentEmployeeResponseError = getCurrentEmployeeResponse422 & {
 };
 
 export type getCurrentEmployeeResponse =
-  | getCurrentEmployeeResponseSuccess
-  | getCurrentEmployeeResponseError;
+  getCurrentEmployeeResponseSuccess | getCurrentEmployeeResponseError;
 
 export const getGetCurrentEmployeeUrl = () => {
   return `/api/v1/employees/me`;
@@ -4931,8 +4910,7 @@ export type getEmployeeResponseError = getEmployeeResponse422 & {
 };
 
 export type getEmployeeResponse =
-  | getEmployeeResponseSuccess
-  | getEmployeeResponseError;
+  getEmployeeResponseSuccess | getEmployeeResponseError;
 
 export const getGetEmployeeUrl = (id: string) => {
   return `/api/v1/employees/${id}`;
@@ -5100,8 +5078,7 @@ export type updateEmployeeResponseError = updateEmployeeResponse422 & {
 };
 
 export type updateEmployeeResponse =
-  | updateEmployeeResponseSuccess
-  | updateEmployeeResponseError;
+  updateEmployeeResponseSuccess | updateEmployeeResponseError;
 
 export const getUpdateEmployeeUrl = (id: string) => {
   return `/api/v1/employees/${id}`;
@@ -5241,8 +5218,7 @@ export type transferEmployeeResponseError = transferEmployeeResponse422 & {
 };
 
 export type transferEmployeeResponse =
-  | transferEmployeeResponseSuccess
-  | transferEmployeeResponseError;
+  transferEmployeeResponseSuccess | transferEmployeeResponseError;
 
 export const getTransferEmployeeUrl = (id: string) => {
   return `/api/v1/employees/${id}/transfers`;
@@ -5383,8 +5359,7 @@ export type terminateEmployeeResponseError = terminateEmployeeResponse422 & {
 };
 
 export type terminateEmployeeResponse =
-  | terminateEmployeeResponseSuccess
-  | terminateEmployeeResponseError;
+  terminateEmployeeResponseSuccess | terminateEmployeeResponseError;
 
 export const getTerminateEmployeeUrl = (id: string) => {
   return `/api/v1/employees/${id}/termination`;
@@ -5525,8 +5500,7 @@ export type listEmploymentsResponseError = listEmploymentsResponse422 & {
 };
 
 export type listEmploymentsResponse =
-  | listEmploymentsResponseSuccess
-  | listEmploymentsResponseError;
+  listEmploymentsResponseSuccess | listEmploymentsResponseError;
 
 export const getListEmploymentsUrl = (id: string) => {
   return `/api/v1/employees/${id}/employments`;
@@ -5983,8 +5957,7 @@ export type listAttendanceRecordsResponseError =
   };
 
 export type listAttendanceRecordsResponse =
-  | listAttendanceRecordsResponseSuccess
-  | listAttendanceRecordsResponseError;
+  listAttendanceRecordsResponseSuccess | listAttendanceRecordsResponseError;
 
 export const getListAttendanceRecordsUrl = (
   params?: ListAttendanceRecordsParams,
@@ -6190,8 +6163,7 @@ export type getAttendanceBoardResponseError = getAttendanceBoardResponse422 & {
 };
 
 export type getAttendanceBoardResponse =
-  | getAttendanceBoardResponseSuccess
-  | getAttendanceBoardResponseError;
+  getAttendanceBoardResponseSuccess | getAttendanceBoardResponseError;
 
 export const getGetAttendanceBoardUrl = (params?: GetAttendanceBoardParams) => {
   const normalizedParams = new URLSearchParams();
@@ -6393,8 +6365,7 @@ export type listShiftsResponseError = listShiftsResponse422 & {
 };
 
 export type listShiftsResponse =
-  | listShiftsResponseSuccess
-  | listShiftsResponseError;
+  listShiftsResponseSuccess | listShiftsResponseError;
 
 export const getListShiftsUrl = () => {
   return `/api/v1/shifts`;
@@ -6550,8 +6521,7 @@ export type createShiftResponseError = createShiftResponse422 & {
 };
 
 export type createShiftResponse =
-  | createShiftResponseSuccess
-  | createShiftResponseError;
+  createShiftResponseSuccess | createShiftResponseError;
 
 export const getCreateShiftUrl = () => {
   return `/api/v1/shifts`;
@@ -6687,8 +6657,7 @@ export type updateShiftResponseError = updateShiftResponse422 & {
 };
 
 export type updateShiftResponse =
-  | updateShiftResponseSuccess
-  | updateShiftResponseError;
+  updateShiftResponseSuccess | updateShiftResponseError;
 
 export const getUpdateShiftUrl = (id: string) => {
   return `/api/v1/shifts/${id}`;
@@ -6807,6 +6776,1313 @@ export const useUpdateShift = <
   return useMutation(getUpdateShiftMutationOptions(options), queryClient);
 };
 
+export type createLeaveRequestResponse201 = {
+  data: LeaveRequest;
+  status: 201;
+};
+
+export type createLeaveRequestResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type createLeaveRequestResponseSuccess =
+  createLeaveRequestResponse201 & {
+    headers: Headers;
+  };
+export type createLeaveRequestResponseError = createLeaveRequestResponse422 & {
+  headers: Headers;
+};
+
+export type createLeaveRequestResponse =
+  createLeaveRequestResponseSuccess | createLeaveRequestResponseError;
+
+export const getCreateLeaveRequestUrl = () => {
+  return `/api/v1/leave/requests`;
+};
+
+/**
+ * Submit a request for the actor's employee link — always `PENDING`.
+ * @summary Create Leave Request
+ */
+export const createLeaveRequest = async (
+  leaveRequestCreate: LeaveRequestCreate,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<createLeaveRequestResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return customFetch<createLeaveRequestResponse>(getCreateLeaveRequestUrl(), {
+    ...options,
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...getHeaders(options?.headers),
+    },
+    body: JSON.stringify(leaveRequestCreate),
+  });
+};
+
+export const getCreateLeaveRequestMutationKey = () =>
+  ["createLeaveRequest"] as const;
+
+export const getCreateLeaveRequestMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createLeaveRequest>>,
+    TError,
+    CreateLeaveRequestMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createLeaveRequest>>,
+  TError,
+  CreateLeaveRequestMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateLeaveRequestMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createLeaveRequest>>,
+    CreateLeaveRequestMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createLeaveRequest(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateLeaveRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createLeaveRequest>>
+>;
+export type CreateLeaveRequestMutationBody = LeaveRequestCreate;
+export type CreateLeaveRequestMutationError = HTTPValidationError;
+export type CreateLeaveRequestMutationVariables = { data: LeaveRequestCreate };
+
+/**
+ * @summary Create Leave Request
+ */
+export const useCreateLeaveRequest = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createLeaveRequest>>,
+      TError,
+      CreateLeaveRequestMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createLeaveRequest>>,
+  TError,
+  CreateLeaveRequestMutationVariables,
+  TContext
+> => {
+  return useMutation(
+    getCreateLeaveRequestMutationOptions(options),
+    queryClient,
+  );
+};
+
+export type listLeaveRequestsResponse200 = {
+  data: LeaveRequestListPage;
+  status: 200;
+};
+
+export type listLeaveRequestsResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type listLeaveRequestsResponseSuccess = listLeaveRequestsResponse200 & {
+  headers: Headers;
+};
+export type listLeaveRequestsResponseError = listLeaveRequestsResponse422 & {
+  headers: Headers;
+};
+
+export type listLeaveRequestsResponse =
+  listLeaveRequestsResponseSuccess | listLeaveRequestsResponseError;
+
+export const getListLeaveRequestsUrl = (params?: ListLeaveRequestsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/leave/requests?${stringifiedParams}`
+    : `/api/v1/leave/requests`;
+};
+
+/**
+ * Requests scoped to the actor's visibility (## Roles & access).
+ * @summary List Leave Requests
+ */
+export const listLeaveRequests = async (
+  params?: ListLeaveRequestsParams,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<listLeaveRequestsResponse> => {
+  return customFetch<listLeaveRequestsResponse>(
+    getListLeaveRequestsUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListLeaveRequestsQueryKey = (
+  params?: ListLeaveRequestsParams,
+) => {
+  return [`/api/v1/leave/requests`, ...(params ? [params] : [])] as const;
+};
+
+export const getListLeaveRequestsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listLeaveRequests>>,
+  TError = HTTPValidationError,
+>(
+  params?: ListLeaveRequestsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listLeaveRequests>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListLeaveRequestsQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listLeaveRequests>>
+  > = ({ signal }) => listLeaveRequests(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listLeaveRequests>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListLeaveRequestsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listLeaveRequests>>
+>;
+export type ListLeaveRequestsQueryError = HTTPValidationError;
+
+export function useListLeaveRequests<
+  TData = Awaited<ReturnType<typeof listLeaveRequests>>,
+  TError = HTTPValidationError,
+>(
+  params: undefined | ListLeaveRequestsParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listLeaveRequests>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listLeaveRequests>>,
+          TError,
+          Awaited<ReturnType<typeof listLeaveRequests>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useListLeaveRequests<
+  TData = Awaited<ReturnType<typeof listLeaveRequests>>,
+  TError = HTTPValidationError,
+>(
+  params?: ListLeaveRequestsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listLeaveRequests>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listLeaveRequests>>,
+          TError,
+          Awaited<ReturnType<typeof listLeaveRequests>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useListLeaveRequests<
+  TData = Awaited<ReturnType<typeof listLeaveRequests>>,
+  TError = HTTPValidationError,
+>(
+  params?: ListLeaveRequestsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listLeaveRequests>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary List Leave Requests
+ */
+
+export function useListLeaveRequests<
+  TData = Awaited<ReturnType<typeof listLeaveRequests>>,
+  TError = HTTPValidationError,
+>(
+  params?: ListLeaveRequestsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listLeaveRequests>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getListLeaveRequestsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export type getLeaveRequestResponse200 = {
+  data: LeaveRequest;
+  status: 200;
+};
+
+export type getLeaveRequestResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type getLeaveRequestResponseSuccess = getLeaveRequestResponse200 & {
+  headers: Headers;
+};
+export type getLeaveRequestResponseError = getLeaveRequestResponse422 & {
+  headers: Headers;
+};
+
+export type getLeaveRequestResponse =
+  getLeaveRequestResponseSuccess | getLeaveRequestResponseError;
+
+export const getGetLeaveRequestUrl = (id: string) => {
+  return `/api/v1/leave/requests/${id}`;
+};
+
+/**
+ * Request detail; unknown, cross-tenant and out-of-scope ids are `404`.
+ * @summary Get Leave Request
+ */
+export const getLeaveRequest = async (
+  id: string,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<getLeaveRequestResponse> => {
+  return customFetch<getLeaveRequestResponse>(getGetLeaveRequestUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetLeaveRequestQueryKey = (id: string) => {
+  return [`/api/v1/leave/requests/${id}`] as const;
+};
+
+export const getGetLeaveRequestQueryOptions = <
+  TData = Awaited<ReturnType<typeof getLeaveRequest>>,
+  TError = HTTPValidationError,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getLeaveRequest>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetLeaveRequestQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getLeaveRequest>>> = ({
+    signal,
+  }) => getLeaveRequest(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getLeaveRequest>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetLeaveRequestQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getLeaveRequest>>
+>;
+export type GetLeaveRequestQueryError = HTTPValidationError;
+
+export function useGetLeaveRequest<
+  TData = Awaited<ReturnType<typeof getLeaveRequest>>,
+  TError = HTTPValidationError,
+>(
+  id: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getLeaveRequest>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getLeaveRequest>>,
+          TError,
+          Awaited<ReturnType<typeof getLeaveRequest>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetLeaveRequest<
+  TData = Awaited<ReturnType<typeof getLeaveRequest>>,
+  TError = HTTPValidationError,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getLeaveRequest>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getLeaveRequest>>,
+          TError,
+          Awaited<ReturnType<typeof getLeaveRequest>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetLeaveRequest<
+  TData = Awaited<ReturnType<typeof getLeaveRequest>>,
+  TError = HTTPValidationError,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getLeaveRequest>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary Get Leave Request
+ */
+
+export function useGetLeaveRequest<
+  TData = Awaited<ReturnType<typeof getLeaveRequest>>,
+  TError = HTTPValidationError,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getLeaveRequest>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetLeaveRequestQueryOptions(id, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export type approveLeaveRequestResponse200 = {
+  data: LeaveRequest;
+  status: 200;
+};
+
+export type approveLeaveRequestResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type approveLeaveRequestResponseSuccess =
+  approveLeaveRequestResponse200 & {
+    headers: Headers;
+  };
+export type approveLeaveRequestResponseError =
+  approveLeaveRequestResponse422 & {
+    headers: Headers;
+  };
+
+export type approveLeaveRequestResponse =
+  approveLeaveRequestResponseSuccess | approveLeaveRequestResponseError;
+
+export const getApproveLeaveRequestUrl = (id: string) => {
+  return `/api/v1/leave/requests/${id}/approve`;
+};
+
+/**
+ * Approve a pending request, deducting its balance in one transaction.
+ * @summary Approve Leave Request
+ */
+export const approveLeaveRequest = async (
+  id: string,
+  leaveDecision: LeaveDecision,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<approveLeaveRequestResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return customFetch<approveLeaveRequestResponse>(
+    getApproveLeaveRequestUrl(id),
+    {
+      ...options,
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...getHeaders(options?.headers),
+      },
+      body: JSON.stringify(leaveDecision),
+    },
+  );
+};
+
+export const getApproveLeaveRequestMutationKey = () =>
+  ["approveLeaveRequest"] as const;
+
+export const getApproveLeaveRequestMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof approveLeaveRequest>>,
+    TError,
+    ApproveLeaveRequestMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof approveLeaveRequest>>,
+  TError,
+  ApproveLeaveRequestMutationVariables,
+  TContext
+> => {
+  const mutationKey = getApproveLeaveRequestMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof approveLeaveRequest>>,
+    ApproveLeaveRequestMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return approveLeaveRequest(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ApproveLeaveRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof approveLeaveRequest>>
+>;
+export type ApproveLeaveRequestMutationBody = LeaveDecision;
+export type ApproveLeaveRequestMutationError = HTTPValidationError;
+export type ApproveLeaveRequestMutationVariables = {
+  id: string;
+  data: LeaveDecision;
+};
+
+/**
+ * @summary Approve Leave Request
+ */
+export const useApproveLeaveRequest = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof approveLeaveRequest>>,
+      TError,
+      ApproveLeaveRequestMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof approveLeaveRequest>>,
+  TError,
+  ApproveLeaveRequestMutationVariables,
+  TContext
+> => {
+  return useMutation(
+    getApproveLeaveRequestMutationOptions(options),
+    queryClient,
+  );
+};
+
+export type rejectLeaveRequestResponse200 = {
+  data: LeaveRequest;
+  status: 200;
+};
+
+export type rejectLeaveRequestResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type rejectLeaveRequestResponseSuccess =
+  rejectLeaveRequestResponse200 & {
+    headers: Headers;
+  };
+export type rejectLeaveRequestResponseError = rejectLeaveRequestResponse422 & {
+  headers: Headers;
+};
+
+export type rejectLeaveRequestResponse =
+  rejectLeaveRequestResponseSuccess | rejectLeaveRequestResponseError;
+
+export const getRejectLeaveRequestUrl = (id: string) => {
+  return `/api/v1/leave/requests/${id}/reject`;
+};
+
+/**
+ * Reject a pending request — the balance is never touched.
+ * @summary Reject Leave Request
+ */
+export const rejectLeaveRequest = async (
+  id: string,
+  leaveDecision: LeaveDecision,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<rejectLeaveRequestResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return customFetch<rejectLeaveRequestResponse>(getRejectLeaveRequestUrl(id), {
+    ...options,
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...getHeaders(options?.headers),
+    },
+    body: JSON.stringify(leaveDecision),
+  });
+};
+
+export const getRejectLeaveRequestMutationKey = () =>
+  ["rejectLeaveRequest"] as const;
+
+export const getRejectLeaveRequestMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof rejectLeaveRequest>>,
+    TError,
+    RejectLeaveRequestMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof rejectLeaveRequest>>,
+  TError,
+  RejectLeaveRequestMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRejectLeaveRequestMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof rejectLeaveRequest>>,
+    RejectLeaveRequestMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return rejectLeaveRequest(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RejectLeaveRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof rejectLeaveRequest>>
+>;
+export type RejectLeaveRequestMutationBody = LeaveDecision;
+export type RejectLeaveRequestMutationError = HTTPValidationError;
+export type RejectLeaveRequestMutationVariables = {
+  id: string;
+  data: LeaveDecision;
+};
+
+/**
+ * @summary Reject Leave Request
+ */
+export const useRejectLeaveRequest = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof rejectLeaveRequest>>,
+      TError,
+      RejectLeaveRequestMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof rejectLeaveRequest>>,
+  TError,
+  RejectLeaveRequestMutationVariables,
+  TContext
+> => {
+  return useMutation(
+    getRejectLeaveRequestMutationOptions(options),
+    queryClient,
+  );
+};
+
+export type withdrawLeaveRequestResponse200 = {
+  data: LeaveRequest;
+  status: 200;
+};
+
+export type withdrawLeaveRequestResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type withdrawLeaveRequestResponseSuccess =
+  withdrawLeaveRequestResponse200 & {
+    headers: Headers;
+  };
+export type withdrawLeaveRequestResponseError =
+  withdrawLeaveRequestResponse422 & {
+    headers: Headers;
+  };
+
+export type withdrawLeaveRequestResponse =
+  withdrawLeaveRequestResponseSuccess | withdrawLeaveRequestResponseError;
+
+export const getWithdrawLeaveRequestUrl = (id: string) => {
+  return `/api/v1/leave/requests/${id}/withdraw`;
+};
+
+/**
+ * Withdraw the actor's own `PENDING` request — no balance to restore.
+ * @summary Withdraw Leave Request
+ */
+export const withdrawLeaveRequest = async (
+  id: string,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<withdrawLeaveRequestResponse> => {
+  return customFetch<withdrawLeaveRequestResponse>(
+    getWithdrawLeaveRequestUrl(id),
+    {
+      ...options,
+      method: "POST",
+    },
+  );
+};
+
+export const getWithdrawLeaveRequestMutationKey = () =>
+  ["withdrawLeaveRequest"] as const;
+
+export const getWithdrawLeaveRequestMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof withdrawLeaveRequest>>,
+    TError,
+    WithdrawLeaveRequestMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof withdrawLeaveRequest>>,
+  TError,
+  WithdrawLeaveRequestMutationVariables,
+  TContext
+> => {
+  const mutationKey = getWithdrawLeaveRequestMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof withdrawLeaveRequest>>,
+    WithdrawLeaveRequestMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return withdrawLeaveRequest(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type WithdrawLeaveRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof withdrawLeaveRequest>>
+>;
+
+export type WithdrawLeaveRequestMutationError = HTTPValidationError;
+export type WithdrawLeaveRequestMutationVariables = { id: string };
+
+/**
+ * @summary Withdraw Leave Request
+ */
+export const useWithdrawLeaveRequest = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof withdrawLeaveRequest>>,
+      TError,
+      WithdrawLeaveRequestMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof withdrawLeaveRequest>>,
+  TError,
+  WithdrawLeaveRequestMutationVariables,
+  TContext
+> => {
+  return useMutation(
+    getWithdrawLeaveRequestMutationOptions(options),
+    queryClient,
+  );
+};
+
+export type listLeaveTypesResponse200 = {
+  data: LeaveType[];
+  status: 200;
+};
+
+export type listLeaveTypesResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type listLeaveTypesResponseSuccess = listLeaveTypesResponse200 & {
+  headers: Headers;
+};
+export type listLeaveTypesResponseError = listLeaveTypesResponse422 & {
+  headers: Headers;
+};
+
+export type listLeaveTypesResponse =
+  listLeaveTypesResponseSuccess | listLeaveTypesResponseError;
+
+export const getListLeaveTypesUrl = () => {
+  return `/api/v1/leave/types`;
+};
+
+/**
+ * Seeded reference data, provisioned idempotently for the tenant.
+ * @summary List Leave Types
+ */
+export const listLeaveTypes = async (
+  options?: Parameters<typeof customFetch>[1],
+): Promise<listLeaveTypesResponse> => {
+  return customFetch<listLeaveTypesResponse>(getListLeaveTypesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListLeaveTypesQueryKey = () => {
+  return [`/api/v1/leave/types`] as const;
+};
+
+export const getListLeaveTypesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listLeaveTypes>>,
+  TError = HTTPValidationError,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<Awaited<ReturnType<typeof listLeaveTypes>>, TError, TData>
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListLeaveTypesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listLeaveTypes>>> = ({
+    signal,
+  }) => listLeaveTypes({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listLeaveTypes>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListLeaveTypesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listLeaveTypes>>
+>;
+export type ListLeaveTypesQueryError = HTTPValidationError;
+
+export function useListLeaveTypes<
+  TData = Awaited<ReturnType<typeof listLeaveTypes>>,
+  TError = HTTPValidationError,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listLeaveTypes>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listLeaveTypes>>,
+          TError,
+          Awaited<ReturnType<typeof listLeaveTypes>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useListLeaveTypes<
+  TData = Awaited<ReturnType<typeof listLeaveTypes>>,
+  TError = HTTPValidationError,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listLeaveTypes>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listLeaveTypes>>,
+          TError,
+          Awaited<ReturnType<typeof listLeaveTypes>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useListLeaveTypes<
+  TData = Awaited<ReturnType<typeof listLeaveTypes>>,
+  TError = HTTPValidationError,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listLeaveTypes>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary List Leave Types
+ */
+
+export function useListLeaveTypes<
+  TData = Awaited<ReturnType<typeof listLeaveTypes>>,
+  TError = HTTPValidationError,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listLeaveTypes>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getListLeaveTypesQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export type listLeaveBalancesResponse200 = {
+  data: LeaveBalance[];
+  status: 200;
+};
+
+export type listLeaveBalancesResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type listLeaveBalancesResponseSuccess = listLeaveBalancesResponse200 & {
+  headers: Headers;
+};
+export type listLeaveBalancesResponseError = listLeaveBalancesResponse422 & {
+  headers: Headers;
+};
+
+export type listLeaveBalancesResponse =
+  listLeaveBalancesResponseSuccess | listLeaveBalancesResponseError;
+
+export const getListLeaveBalancesUrl = (params?: ListLeaveBalancesParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/leave/balances?${stringifiedParams}`
+    : `/api/v1/leave/balances`;
+};
+
+/**
+ * Balances in the actor's visibility scope, optionally by year.
+ * @summary List Leave Balances
+ */
+export const listLeaveBalances = async (
+  params?: ListLeaveBalancesParams,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<listLeaveBalancesResponse> => {
+  return customFetch<listLeaveBalancesResponse>(
+    getListLeaveBalancesUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListLeaveBalancesQueryKey = (
+  params?: ListLeaveBalancesParams,
+) => {
+  return [`/api/v1/leave/balances`, ...(params ? [params] : [])] as const;
+};
+
+export const getListLeaveBalancesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listLeaveBalances>>,
+  TError = HTTPValidationError,
+>(
+  params?: ListLeaveBalancesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listLeaveBalances>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListLeaveBalancesQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listLeaveBalances>>
+  > = ({ signal }) => listLeaveBalances(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listLeaveBalances>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListLeaveBalancesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listLeaveBalances>>
+>;
+export type ListLeaveBalancesQueryError = HTTPValidationError;
+
+export function useListLeaveBalances<
+  TData = Awaited<ReturnType<typeof listLeaveBalances>>,
+  TError = HTTPValidationError,
+>(
+  params: undefined | ListLeaveBalancesParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listLeaveBalances>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listLeaveBalances>>,
+          TError,
+          Awaited<ReturnType<typeof listLeaveBalances>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useListLeaveBalances<
+  TData = Awaited<ReturnType<typeof listLeaveBalances>>,
+  TError = HTTPValidationError,
+>(
+  params?: ListLeaveBalancesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listLeaveBalances>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listLeaveBalances>>,
+          TError,
+          Awaited<ReturnType<typeof listLeaveBalances>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useListLeaveBalances<
+  TData = Awaited<ReturnType<typeof listLeaveBalances>>,
+  TError = HTTPValidationError,
+>(
+  params?: ListLeaveBalancesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listLeaveBalances>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary List Leave Balances
+ */
+
+export function useListLeaveBalances<
+  TData = Awaited<ReturnType<typeof listLeaveBalances>>,
+  TError = HTTPValidationError,
+>(
+  params?: ListLeaveBalancesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listLeaveBalances>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getListLeaveBalancesQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
 export type getRealtimeBoardResponse200 = {
   data: RealtimeBoardSnapshot;
   status: 200;
@@ -6825,8 +8101,7 @@ export type getRealtimeBoardResponseError = getRealtimeBoardResponse422 & {
 };
 
 export type getRealtimeBoardResponse =
-  | getRealtimeBoardResponseSuccess
-  | getRealtimeBoardResponseError;
+  getRealtimeBoardResponseSuccess | getRealtimeBoardResponseError;
 
 export const getGetRealtimeBoardUrl = () => {
   return `/api/v1/realtime/board`;

@@ -82,7 +82,10 @@ Alternatives considered:
    `employee_not_active` check (symmetric with it, same workday computed in
    the location timezone). Closing an open record is always safe: an employee
    can be approved while their record is open, and a capture that never
-   closes is worse than a close on a leave day.
+   closes is worse than a close on a leave day. That later check-out is still
+   forwarded for the activity rail, but the connection's `on_leave` row and
+   counts are preserved — an attendance transition never replaces the leave
+   row while the approval covers the workday.
 5. **Windowed `leave.approved` mapping (T7).** The consumer maps
    `leave.approved` to an on-leave fact **only when the envelope's
    `[start_date, end_date]` covers the consume date** (else `None`, like
@@ -122,3 +125,9 @@ Alternatives considered:
 - The coverage read is deliberately *not* status-filtered: a terminated
   employee with an approved range covering the date still renders
   `on_leave`, matching what the consumer's windowed mapping would push.
+- **Rollout order:** deploy API readers before the realtime worker. The
+  pre-leave `PresenceFact` model rejects `leave_approved` and the null
+  `attendance_id`/`since` of a leave fact, so a worker-first rolling deploy
+  would make old API pods fail while decoding. Readers from this change skip
+  unknown facts (the subscription survives), but pods that have not received
+  the reader change still require the API-first order.

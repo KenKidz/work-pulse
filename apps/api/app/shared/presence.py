@@ -16,27 +16,33 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-# A fact is only ever produced by a check-in or a check-out: `checked_out`
-# replaces the row status at close; `present`/`remote` follow the work mode.
-PresenceStatus = Literal["present", "remote", "checked_out"]
-PresenceReason = Literal["checked_in", "checked_out"]
+# A fact is produced by a check-in/check-out or by an approved leave covering
+# the consume date (ADR 0014): `checked_out` replaces the row status at close;
+# `present`/`remote` follow the work mode; `on_leave` wins over a same-day
+# record and carries no attendance identity.
+PresenceStatus = Literal["present", "remote", "checked_out", "on_leave"]
+PresenceReason = Literal["checked_in", "checked_out", "leave_approved"]
 
 
 class PresenceFact(BaseModel):
-    """One attendance transition, projected onto the live board.
+    """One presence transition, projected onto the live board.
 
-    Full-row semantics: consumers upsert `PresenceRow`-shaped state, so
-    redelivery is harmless (at-most-once transport, idempotent payload).
+    Attendance transitions carry a record id and `since`; the approved-leave
+    fact carries neither (ADR 0014). Full-row semantics: consumers upsert
+    `PresenceRow`-shaped state, so redelivery is harmless (at-most-once
+    transport, idempotent payload).
     """
 
     tenant_id: UUID
     workday: date
     employee_id: UUID
-    attendance_id: UUID
+    # `None` for the leave fact: an on-leave row has no attendance record and
+    # no presence timestamp (ADR 0014).
+    attendance_id: UUID | None = None
     status: PresenceStatus
     late: bool
     minutes_late: int | None
-    since: datetime
+    since: datetime | None = None
     reason: PresenceReason
     occurred_at: datetime
 

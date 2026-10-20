@@ -149,6 +149,74 @@ describe("usePresenceSocket", () => {
     });
   });
 
+  it("applies a leave approval row without touching the activity rail", () => {
+    const existingActivity = [
+      {
+        occurred_at: "2026-10-01T07:00:00Z",
+        employee_id: WORKER_ID,
+        action: "checked_in" as const,
+      },
+    ];
+    const { sockets, queryClient } = setup({
+      data: board({ activity: existingActivity }),
+    });
+
+    act(() =>
+      sockets[0]!.emitFrame({
+        type: "presence.upsert",
+        date: "2026-10-01",
+        counts: { present: 0, remote: 0, late: 0, on_leave: 1, absent: 0, checked_out: 0 },
+        row: { ...row(WORKER_ID, "on_leave"), since: null, attendance_id: null },
+        occurred_at: "2026-10-01T09:30:00Z",
+        reason: "leave_approved",
+      }),
+    );
+
+    const data = cached(queryClient)!.data;
+    expect(data.counts.on_leave).toBe(1);
+    expect(data.presence[0]).toMatchObject({
+      status: "on_leave",
+      since: null,
+      attendance_id: null,
+    });
+    // Leave changes presence, never the attendance activity rail (ADR 0014).
+    expect(data.activity).toEqual(existingActivity);
+  });
+
+  it("keeps an on_leave row when a later check-out is forwarded", () => {
+    const leaveRow = {
+      ...row(WORKER_ID, "on_leave"),
+      since: null,
+      attendance_id: null,
+    };
+    const { sockets, queryClient } = setup({
+      data: board({
+        counts: { present: 0, remote: 0, late: 0, on_leave: 1, absent: 0, checked_out: 0 },
+        presence: [leaveRow],
+      }),
+    });
+
+    act(() =>
+      sockets[0]!.emitFrame({
+        type: "presence.upsert",
+        date: "2026-10-01",
+        counts: { present: 0, remote: 0, late: 0, on_leave: 1, absent: 0, checked_out: 0 },
+        row: leaveRow,
+        occurred_at: "2026-10-01T17:00:00Z",
+        reason: "checked_out",
+      }),
+    );
+
+    const data = cached(queryClient)!.data;
+    expect(data.presence[0]?.status).toBe("on_leave");
+    // The transition still reaches the attendance activity rail.
+    expect(data.activity[0]).toEqual({
+      occurred_at: "2026-10-01T17:00:00Z",
+      employee_id: WORKER_ID,
+      action: "checked_out",
+    });
+  });
+
   it("deduplicates redelivered upserts and caps the rail at 20", () => {
     const activity = Array.from({ length: 20 }, (_, index) => ({
       occurred_at: `2026-10-01T07:${String(index).padStart(2, "0")}:00Z`,

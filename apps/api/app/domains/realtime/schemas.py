@@ -30,6 +30,11 @@ from app.shared.presence import PresenceReason
 # covered by APPROVED leave (ADR 0014).
 PresenceStatus = Literal["present", "remote", "checked_out", "absent", "on_leave"]
 
+# Activity is attendance-only: leave approvals change presence, not activity
+# (ADR 0014). Keep the wire enum pinned even though `PresenceReason` gained
+# `leave_approved` for presence facts.
+RealtimeActivityAction = Literal["checked_in", "checked_out"]
+
 
 class PresenceRow(BaseModel):
     """One employee's presence for the workday — the full-row upsert shape.
@@ -66,7 +71,7 @@ class RealtimeActivityEntry(BaseModel):
 
     occurred_at: datetime
     employee_id: UUID
-    action: PresenceReason
+    action: RealtimeActivityAction
 
 
 class RealtimeBoardSnapshot(BaseModel):
