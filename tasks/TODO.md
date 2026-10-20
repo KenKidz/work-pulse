@@ -6,7 +6,7 @@ does the work.
 
 ## Now
 
-No active feature — pick the next item from Later.
+- [ ] Notifications (`.ai/features/notifications.md`, approved 2026-10-20 — planned): implement per the spec's `## Plan` — delivery worker consuming `leave.*` + `attendance.late`, email via Resend + Slack per-tenant channel, `Notification`/`Delivery` rows on the outbox/Kafka backbone. Order: ADR 0015 + domain seam line → domain core → persistence (`0008_*`) → settings/adapters → `workers/notifications/` → real-broker proofs.
 
 ## Later
 

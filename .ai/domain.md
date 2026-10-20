@@ -43,7 +43,11 @@ Rules:
 - Contexts integrate through **services** (Phase 1–2) and **events** (Phase 3+).
   Never through another context's tables.
 - **Analytics & Reports** and **Notifications** are pure consumers: they must be
-  rebuildable from the event stream without touching OLTP.
+  rebuildable from the event stream without touching OLTP. For **Notifications**
+  that means the `Notification`/`Delivery` rows (`.ai/features/notifications.md`)
+  — recipient and content enrichment is a read-only reference lookup through
+  ports (events carry no PII, `.ai/security.md`), never a projection input and
+  never another context's tables directly.
 
 ## Ubiquitous language
 
