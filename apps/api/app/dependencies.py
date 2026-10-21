@@ -35,12 +35,17 @@ from app.domains.organizations.service import (
     LocationService,
     PositionService,
 )
+from app.domains.payroll.repository import AttendanceHoursPort, LeaveDaysPort
 from app.domains.realtime.service import RealtimeService
 from app.infrastructure.postgres.audit import PostgresAuditWriter
 from app.infrastructure.postgres.employee_link import PostgresEmployeeLink
 from app.infrastructure.postgres.employee_usage import PostgresEmployeeUsage
 from app.infrastructure.postgres.engine import get_session_factory
 from app.infrastructure.postgres.outbox import PostgresEventOutbox
+from app.infrastructure.postgres.payroll_facts import (
+    PostgresAttendanceHoursPort,
+    PostgresLeaveDaysPort,
+)
 from app.infrastructure.postgres.repositories.attendance import (
     PostgresAttendanceRepository,
     PostgresShiftRepository,
@@ -155,6 +160,20 @@ def get_leave_service(session: SessionDep) -> LeaveService:
     )
 
 
+def get_attendance_hours_port(session: SessionDep) -> AttendanceHoursPort:
+    """Payroll's closed-attendance read seam (ADR 0018).
+
+    The `OvertimeHoursPort` adapter is wired with the overtime feature (P0);
+    no payroll code may query a table that feature has not created yet.
+    """
+    return PostgresAttendanceHoursPort(session)
+
+
+def get_leave_days_port(session: SessionDep) -> LeaveDaysPort:
+    """Payroll's approved-leave coverage seam (ADR 0018)."""
+    return PostgresLeaveDaysPort(session)
+
+
 def get_notification_inbox_service(session: SessionDep) -> NotificationInboxService:
     """The caller's own inbox — read state only, tenant- and recipient-scoped.
 
@@ -258,6 +277,10 @@ LeaveServiceDep = Annotated[LeaveService, Depends(get_leave_service)]
 NotificationInboxServiceDep = Annotated[
     NotificationInboxService, Depends(get_notification_inbox_service)
 ]
+AttendanceHoursPortDep = Annotated[
+    AttendanceHoursPort, Depends(get_attendance_hours_port)
+]
+LeaveDaysPortDep = Annotated[LeaveDaysPort, Depends(get_leave_days_port)]
 ShiftServiceDep = Annotated[ShiftService, Depends(get_shift_service)]
 RealtimeServiceDep = Annotated[RealtimeService, Depends(get_realtime_service)]
 RealtimeStreamServiceDep = Annotated[

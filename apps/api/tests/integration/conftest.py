@@ -91,6 +91,8 @@ PINNED_USER_KEYS = {
 }
 
 ALL_TABLES = (
+    "payslip_deduction_lines, payslips, payroll_timesheets, payroll_bonuses, "
+    "payroll_runs, salary_records, payroll_deduction_lines, payroll_configs, "
     "notification_deliveries, notifications, "
     "leave_balances, leave_requests, leave_types, "
     "audit_entries, departments, positions, locations, employees, employments, "

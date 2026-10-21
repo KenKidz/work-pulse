@@ -31,6 +31,14 @@ FEATURE_TABLES = {
     "event_outbox",
     "notifications",
     "notification_deliveries",
+    "payroll_configs",
+    "payroll_deduction_lines",
+    "salary_records",
+    "payroll_runs",
+    "payroll_bonuses",
+    "payroll_timesheets",
+    "payslips",
+    "payslip_deduction_lines",
 }
 
 
