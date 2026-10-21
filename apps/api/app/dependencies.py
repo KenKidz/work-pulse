@@ -35,7 +35,12 @@ from app.domains.organizations.service import (
     LocationService,
     PositionService,
 )
-from app.domains.payroll.repository import AttendanceHoursPort, LeaveDaysPort
+from app.domains.payroll.repository import (
+    AttendanceHoursPort,
+    LeaveDaysPort,
+    NoOvertimeHoursPort,
+    OvertimeHoursPort,
+)
 from app.domains.payroll.service import PayrollService
 from app.domains.realtime.service import RealtimeService
 from app.infrastructure.postgres.audit import PostgresAuditWriter
@@ -162,25 +167,42 @@ def get_leave_service(session: SessionDep) -> LeaveService:
     )
 
 
-def get_payroll_service(session: SessionDep) -> PayrollService:
-    """Config/deduction/salary use cases (T5).
+def get_payroll_service(
+    session: SessionDep,
+    overtime: "OvertimeHoursPortDep",
+    attendance: "AttendanceHoursPortDep",
+    leave_days: "LeaveDaysPortDep",
+) -> PayrollService:
+    """Config, inputs, run lifecycle and calculation (T5–T7).
 
-    Run lifecycle and calculation providers grow here with T6/T7 (the outbox
-    and seam ports join then); this concern is read/write of payroll inputs
-    only, which emits no domain events — its mutations are audited.
+    The outbox shares the request session, so a lifecycle transition, its
+    audit entry and its event envelopes commit together (ADR 0012). The seam
+    ports are payroll-owned protocols (ADR 0018); the attendance/leave
+    adapters do the cross-context joins, and the overtime placeholder returns
+    no rows until `overtime.md` (P0) lands.
     """
     return PayrollService(
         repo=PostgresPayrollRepository(session),
         audit=PostgresAuditWriter(session),
+        outbox=PostgresEventOutbox(session, clock=_utc_now),
+        overtime=overtime,
+        attendance=attendance,
+        leave_days=leave_days,
     )
 
 
-def get_attendance_hours_port(session: SessionDep) -> AttendanceHoursPort:
-    """Payroll's closed-attendance read seam (ADR 0018).
+def get_overtime_hours_port() -> OvertimeHoursPort:
+    """Payroll's HR-verified overtime seam (ADR 0018).
 
-    The `OvertimeHoursPort` adapter is wired with the overtime feature (P0);
-    no payroll code may query a table that feature has not created yet.
+    The real Postgres adapter is wired with the overtime feature (P0); until
+    then no rows are verified, so payroll's overtime term is `0.00` and no
+    table that feature has not created yet is queried.
     """
+    return NoOvertimeHoursPort()
+
+
+def get_attendance_hours_port(session: SessionDep) -> AttendanceHoursPort:
+    """Payroll's closed-attendance read seam (ADR 0018)."""
     return PostgresAttendanceHoursPort(session)
 
 
@@ -293,6 +315,7 @@ PayrollServiceDep = Annotated[PayrollService, Depends(get_payroll_service)]
 NotificationInboxServiceDep = Annotated[
     NotificationInboxService, Depends(get_notification_inbox_service)
 ]
+OvertimeHoursPortDep = Annotated[OvertimeHoursPort, Depends(get_overtime_hours_port)]
 AttendanceHoursPortDep = Annotated[
     AttendanceHoursPort, Depends(get_attendance_hours_port)
 ]

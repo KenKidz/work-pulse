@@ -40,25 +40,34 @@ class PostgresEventOutbox:
         self._clock = clock
 
     async def append(self, envelope: dict[str, Any]) -> None:
-        try:
-            validated = EventEnvelope.model_validate(envelope)
-        except ValidationError:
-            # Generic message, `from None`: pydantic's detail embeds the input
-            # payload, which must never reach logs or error surfaces
-            # (`.ai/security.md`).
-            raise InvalidEnvelopeError() from None
+        await self.append_many([envelope])
 
-        self._session.add(
-            EventOutboxRow(
-                id=uuid7(),
-                event_id=validated.event_id,
-                tenant_id=validated.tenant_id,
-                event_type=validated.event_type,
-                payload=envelope,
-                occurred_at=validated.occurred_at,
-                created_at=self._clock(),
+    async def append_many(self, envelopes: Sequence[dict[str, Any]]) -> None:
+        """Validate and add the whole batch, then flush exactly once."""
+        if not envelopes:
+            return
+        rows: list[EventOutboxRow] = []
+        for envelope in envelopes:
+            try:
+                validated = EventEnvelope.model_validate(envelope)
+            except ValidationError:
+                # Generic message, `from None`: pydantic's detail embeds the
+                # input payload, which must never reach logs or error surfaces
+                # (`.ai/security.md`).
+                raise InvalidEnvelopeError() from None
+
+            rows.append(
+                EventOutboxRow(
+                    id=uuid7(),
+                    event_id=validated.event_id,
+                    tenant_id=validated.tenant_id,
+                    event_type=validated.event_type,
+                    payload=envelope,
+                    occurred_at=validated.occurred_at,
+                    created_at=self._clock(),
+                )
             )
-        )
+        self._session.add_all(rows)
         await self._session.flush()
 
 

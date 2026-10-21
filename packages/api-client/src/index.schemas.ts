@@ -80,6 +80,13 @@ export interface Board {
   activity: BoardActivity[];
 }
 
+export interface BonusCreate {
+  employee_id: string;
+  /** @minimum 0.01 */
+  amount: number;
+  note?: string | null;
+}
+
 export interface ChangePasswordRequest {
   current_password: string;
   /** @minLength 10 */
@@ -455,6 +462,19 @@ export interface NotificationUnreadCount {
 }
 
 /**
+ * A per-run, per-employee bonus entry (amount and note are PII).
+ */
+export interface PayrollBonus {
+  id: string;
+  run_id: string;
+  employee_id: string;
+  amount: number;
+  note?: string | null;
+  created_by: string;
+  created_at: string;
+}
+
+/**
  * One tenant payroll configuration (single currency).
  */
 export interface PayrollConfig {
@@ -522,6 +542,76 @@ export interface PayrollDeductionUpdate {
   kind?: PayrollDeductionKind | null;
   value?: number | null;
   active?: boolean | null;
+}
+
+/**
+ * Pinned run lifecycle (`queued → calculating → calculated → finalized`).
+ */
+export type PayrollRunStatus =
+  (typeof PayrollRunStatus)[keyof typeof PayrollRunStatus];
+
+export const PayrollRunStatus = {
+  queued: "queued",
+  calculating: "calculating",
+  calculated: "calculated",
+  finalized: "finalized",
+  failed: "failed",
+} as const;
+
+/**
+ * Stable run-summary skip reasons (v1 has exactly one).
+ */
+export type PayrollRunSkipReason =
+  (typeof PayrollRunSkipReason)[keyof typeof PayrollRunSkipReason];
+
+export const PayrollRunSkipReason = {
+  no_salary: "no_salary",
+} as const;
+
+/**
+ * One employee omitted from a run, with the stable reason.
+ */
+export interface PayrollRunSkip {
+  employee_id: string;
+  reason: PayrollRunSkipReason;
+}
+
+/**
+ * Run totals, the sum of payslip lines rounded per line (ADR 0017).
+ */
+export interface PayrollRunTotals {
+  base: number;
+  overtime_pay: number;
+  bonuses: number;
+  deductions: number;
+  net: number;
+}
+
+/**
+ * A monthly run attempt and its PII-free summary.
+ */
+export interface PayrollRun {
+  id: string;
+  /** @pattern ^[0-9]{4}-(0[1-9]|1[0-2])$ */
+  period: string;
+  status: PayrollRunStatus;
+  employee_count: number;
+  skipped_count: number;
+  skipped?: PayrollRunSkip[];
+  totals?: PayrollRunTotals | null;
+  failed_code?: string | null;
+  calculated_at?: string | null;
+  finalized_at?: string | null;
+  supersedes_run_id?: string | null;
+  superseded_by_run_id?: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PayrollRunCreate {
+  /** @pattern ^[0-9]{4}-(0[1-9]|1[0-2])$ */
+  period: string;
 }
 
 export interface Position {

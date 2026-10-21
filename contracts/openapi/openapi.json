@@ -4330,6 +4330,256 @@
         }
       }
     },
+    "/api/v1/payroll/runs": {
+      "post": {
+        "tags": [
+          "payroll"
+        ],
+        "summary": "Create Payroll Run",
+        "description": "Queue a run for a closed month (Finance/Admin/Super Admin).",
+        "operationId": "createPayrollRun",
+        "parameters": [
+          {
+            "name": "wp_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Wp Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PayrollRunCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayrollRun"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payroll/runs/{id}/recalculate": {
+      "post": {
+        "tags": [
+          "payroll"
+        ],
+        "summary": "Recalculate Payroll Run",
+        "description": "Re-queue a calculated/failed run; finalized runs are immutable.",
+        "operationId": "recalculatePayrollRun",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "wp_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Wp Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayrollRun"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payroll/runs/{id}/finalize": {
+      "post": {
+        "tags": [
+          "payroll"
+        ],
+        "summary": "Finalize Payroll Run",
+        "description": "Issue payslips and flip counted overtime exactly once.",
+        "operationId": "finalizePayrollRun",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "wp_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Wp Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayrollRun"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payroll/runs/{id}/bonuses": {
+      "post": {
+        "tags": [
+          "payroll"
+        ],
+        "summary": "Create Run Bonus",
+        "description": "Add a bonus for an employee in the calculated run.",
+        "operationId": "createRunBonus",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "wp_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Wp Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BonusCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayrollBonus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/realtime/board": {
       "get": {
         "tags": [
@@ -4628,6 +4878,40 @@
         ],
         "title": "BoardCounts",
         "description": "Independent counts \u2014 not a partition (a person can be present and late)."
+      },
+      "BonusCreate": {
+        "properties": {
+          "employee_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Employee Id"
+          },
+          "amount": {
+            "type": "number",
+            "minimum": 0.01,
+            "title": "Amount"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "employee_id",
+          "amount"
+        ],
+        "title": "BonusCreate"
       },
       "ChangePasswordRequest": {
         "properties": {
@@ -6039,6 +6323,61 @@
         "title": "Page",
         "description": "Pagination metadata returned with every list response."
       },
+      "PayrollBonus": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "run_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Run Id"
+          },
+          "employee_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Employee Id"
+          },
+          "amount": {
+            "type": "number",
+            "title": "Amount"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "created_by": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Created By"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "run_id",
+          "employee_id",
+          "amount",
+          "created_by",
+          "created_at"
+        ],
+        "title": "PayrollBonus",
+        "description": "A per-run, per-employee bonus entry (amount and note are PII)."
+      },
       "PayrollConfig": {
         "properties": {
           "tenant_id": {
@@ -6270,6 +6609,223 @@
         "type": "object",
         "title": "PayrollDeductionUpdate",
         "description": "Partial update; `code` is immutable once created."
+      },
+      "PayrollRun": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "period": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])$",
+            "title": "Period"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PayrollRunStatus"
+          },
+          "employee_count": {
+            "type": "integer",
+            "title": "Employee Count"
+          },
+          "skipped_count": {
+            "type": "integer",
+            "title": "Skipped Count"
+          },
+          "skipped": {
+            "items": {
+              "$ref": "#/components/schemas/PayrollRunSkip"
+            },
+            "type": "array",
+            "title": "Skipped"
+          },
+          "totals": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PayrollRunTotals"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "failed_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failed Code"
+          },
+          "calculated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calculated At"
+          },
+          "finalized_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finalized At"
+          },
+          "supersedes_run_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supersedes Run Id"
+          },
+          "superseded_by_run_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Superseded By Run Id"
+          },
+          "created_by": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Created By"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "period",
+          "status",
+          "employee_count",
+          "skipped_count",
+          "created_by",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "PayrollRun",
+        "description": "A monthly run attempt and its PII-free summary."
+      },
+      "PayrollRunCreate": {
+        "properties": {
+          "period": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])$",
+            "title": "Period"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "period"
+        ],
+        "title": "PayrollRunCreate"
+      },
+      "PayrollRunSkip": {
+        "properties": {
+          "employee_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Employee Id"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/PayrollRunSkipReason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "employee_id",
+          "reason"
+        ],
+        "title": "PayrollRunSkip",
+        "description": "One employee omitted from a run, with the stable reason."
+      },
+      "PayrollRunSkipReason": {
+        "type": "string",
+        "enum": [
+          "no_salary"
+        ],
+        "title": "PayrollRunSkipReason",
+        "description": "Stable run-summary skip reasons (v1 has exactly one)."
+      },
+      "PayrollRunStatus": {
+        "type": "string",
+        "enum": [
+          "queued",
+          "calculating",
+          "calculated",
+          "finalized",
+          "failed"
+        ],
+        "title": "PayrollRunStatus",
+        "description": "Pinned run lifecycle (`queued \u2192 calculating \u2192 calculated \u2192 finalized`)."
+      },
+      "PayrollRunTotals": {
+        "properties": {
+          "base": {
+            "type": "number",
+            "title": "Base"
+          },
+          "overtime_pay": {
+            "type": "number",
+            "title": "Overtime Pay"
+          },
+          "bonuses": {
+            "type": "number",
+            "title": "Bonuses"
+          },
+          "deductions": {
+            "type": "number",
+            "title": "Deductions"
+          },
+          "net": {
+            "type": "number",
+            "title": "Net"
+          }
+        },
+        "type": "object",
+        "required": [
+          "base",
+          "overtime_pay",
+          "bonuses",
+          "deductions",
+          "net"
+        ],
+        "title": "PayrollRunTotals",
+        "description": "Run totals, the sum of payslip lines rounded per line (ADR 0017)."
       },
       "Position": {
         "properties": {

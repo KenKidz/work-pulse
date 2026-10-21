@@ -6,6 +6,7 @@ a service handed the transactional outbox without a database or a bus
 (`.ai/testing.md`: these tests pass with every container stopped).
 """
 
+from collections.abc import Sequence
 from typing import Any
 
 
@@ -22,6 +23,9 @@ class RecordingEventOutbox:
         self.error = error
 
     async def append(self, envelope: dict[str, Any]) -> None:
-        self.envelopes.append(envelope)
+        await self.append_many([envelope])
+
+    async def append_many(self, envelopes: Sequence[dict[str, Any]]) -> None:
+        self.envelopes.extend(envelopes)
         if self.error is not None:
             raise self.error

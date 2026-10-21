@@ -26,7 +26,7 @@ from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import func, select, update
+from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,12 +34,18 @@ from uuid_utils.compat import uuid7
 
 from app.domains.employees import models as employees_orm
 from app.domains.payroll import models as orm
+from app.domains.payroll.calculation import CalculatedPayslip
 from app.domains.payroll.exceptions import (
     PayrollDeductionCodeTakenError,
     PayrollPeriodOpenError,
     SalaryEffectiveDateTakenError,
 )
-from app.domains.payroll.repository import PayrollRunFilters
+from app.domains.payroll.repository import (
+    IssuedPayslipRef,
+    OvertimeHoursRow,
+    PayrollRunFilters,
+    RunTimesheet,
+)
 from app.domains.payroll.schemas import (
     PayrollBonus,
     PayrollConfig,
@@ -102,6 +108,32 @@ def _run(row: orm.PayrollRun) -> PayrollRun:
         created_at=row.created_at,
         updated_at=row.updated_at,
     )
+
+
+def _encode_overtime_rows(rows: Sequence[OvertimeHoursRow]) -> list[dict[str, str]]:
+    """JSON-safe handles; hours stay strings so the Decimal value is exact."""
+    return [
+        {
+            "overtime_id": str(row.overtime_id),
+            "employee_id": str(row.employee_id),
+            "hours": str(row.hours),
+        }
+        for row in rows
+    ]
+
+
+def _decode_overtime_rows(value: Any) -> list[OvertimeHoursRow]:
+    """Stored JSONB handles → the port's row type (empty on legacy rows)."""
+    if not isinstance(value, list):
+        return []
+    return [
+        OvertimeHoursRow(
+            overtime_id=UUID(str(item["overtime_id"])),
+            employee_id=UUID(str(item["employee_id"])),
+            hours=Decimal(str(item["hours"])),
+        )
+        for item in value
+    ]
 
 
 def _run_values(changes: Mapping[str, Any]) -> dict[str, Any]:
@@ -395,6 +427,26 @@ class PostgresPayrollRepository:
         )
         return (await self._session.execute(stmt.limit(1))).first() is not None
 
+    async def list_salary_history(
+        self, tenant_id: UUID, employee_ids: Sequence[UUID]
+    ) -> Sequence[Salary]:
+        if not employee_ids:
+            return []
+        stmt = (
+            select(orm.SalaryRecord)
+            .where(
+                orm.SalaryRecord.tenant_id == tenant_id,
+                orm.SalaryRecord.employee_id.in_(employee_ids),
+            )
+            .order_by(
+                orm.SalaryRecord.employee_id.asc(),
+                orm.SalaryRecord.effective_from.asc(),
+                orm.SalaryRecord.id.asc(),
+            )
+        )
+        rows = (await self._session.execute(stmt)).scalars()
+        return [Salary.model_validate(row) for row in rows]
+
     async def employee_exists(self, tenant_id: UUID, employee_id: UUID) -> bool:
         stmt = select(employees_orm.Employee.id).where(
             employees_orm.Employee.tenant_id == tenant_id,
@@ -442,6 +494,19 @@ class PostgresPayrollRepository:
         stmt = select(orm.PayrollRun).where(
             orm.PayrollRun.tenant_id == tenant_id,
             orm.PayrollRun.id == run_id,
+        )
+        row = (await self._session.execute(stmt)).scalar_one_or_none()
+        return _run(row) if row is not None else None
+
+    async def lock_run(self, tenant_id: UUID, run_id: UUID) -> PayrollRun | None:
+        """Read the run under `FOR UPDATE` before a decision + insert."""
+        stmt = (
+            select(orm.PayrollRun)
+            .where(
+                orm.PayrollRun.tenant_id == tenant_id,
+                orm.PayrollRun.id == run_id,
+            )
+            .with_for_update()
         )
         row = (await self._session.execute(stmt)).scalar_one_or_none()
         return _run(row) if row is not None else None
@@ -508,6 +573,27 @@ class PostgresPayrollRepository:
         )
         row = (await self._session.execute(stmt)).scalar_one_or_none()
         return _run(row) if row is not None else None
+
+    async def list_employees_in_scope(
+        self, tenant_id: UUID, period_start: date, period_end: date
+    ) -> Sequence[UUID]:
+        stmt = (
+            select(employees_orm.Employee.id)
+            .where(
+                employees_orm.Employee.tenant_id == tenant_id,
+                employees_orm.Employee.hired_at <= period_end,
+                or_(
+                    employees_orm.Employee.terminated_at.is_(None),
+                    employees_orm.Employee.terminated_at >= period_start,
+                ),
+            )
+            .order_by(employees_orm.Employee.id.asc())
+        )
+        return list((await self._session.execute(stmt)).scalars())
+
+    async def tenant_id_for_run(self, run_id: UUID) -> UUID | None:
+        stmt = select(orm.PayrollRun.tenant_id).where(orm.PayrollRun.id == run_id)
+        return (await self._session.execute(stmt.limit(1))).scalar_one_or_none()
 
     async def update_run(
         self, tenant_id: UUID, run_id: UUID, **changes: Any
@@ -610,6 +696,177 @@ class PostgresPayrollRepository:
             orm.Payslip.employee_id == employee_id,
         )
         return (await self._session.execute(stmt.limit(1))).first() is not None
+
+    # --- calculation results ------------------------------------------------
+
+    async def replace_run_results(
+        self,
+        tenant_id: UUID,
+        run_id: UUID,
+        *,
+        timesheets: Sequence[RunTimesheet],
+        payslips: Sequence[CalculatedPayslip],
+        now: datetime,
+    ) -> bool:
+        """Delete the previous result set, then write the new one.
+
+        The run row is locked and must still be `CALCULATING`: a duplicated job
+        pass that lost the claim can never replace a calculated/finalized
+        payslip set. A savepoint makes a failed replacement leave the previous
+        provisional set intact; the service can then persist `failed` without
+        half-written payslips. All statements share the caller's transaction.
+        """
+        locked = (
+            await self._session.execute(
+                select(orm.PayrollRun.id)
+                .where(
+                    orm.PayrollRun.tenant_id == tenant_id,
+                    orm.PayrollRun.id == run_id,
+                    orm.PayrollRun.status == PayrollRunStatus.CALCULATING.value,
+                )
+                .with_for_update()
+            )
+        ).scalar_one_or_none()
+        if locked is None:
+            return False
+
+        async with self._session.begin_nested():
+            existing_ids = list(
+                (
+                    await self._session.execute(
+                        select(orm.Payslip.id).where(
+                            orm.Payslip.tenant_id == tenant_id,
+                            orm.Payslip.run_id == run_id,
+                        )
+                    )
+                ).scalars()
+            )
+            if existing_ids:
+                await self._session.execute(
+                    delete(orm.PayslipDeductionLine).where(
+                        orm.PayslipDeductionLine.tenant_id == tenant_id,
+                        orm.PayslipDeductionLine.payslip_id.in_(existing_ids),
+                    )
+                )
+            await self._session.execute(
+                delete(orm.Payslip).where(
+                    orm.Payslip.tenant_id == tenant_id,
+                    orm.Payslip.run_id == run_id,
+                )
+            )
+            await self._session.execute(
+                delete(orm.PayrollTimesheet).where(
+                    orm.PayrollTimesheet.tenant_id == tenant_id,
+                    orm.PayrollTimesheet.run_id == run_id,
+                )
+            )
+
+            for result in timesheets:
+                timesheet = result.timesheet
+                self._session.add(
+                    orm.PayrollTimesheet(
+                        id=uuid7(),
+                        tenant_id=tenant_id,
+                        run_id=run_id,
+                        employee_id=timesheet.employee_id,
+                        period=timesheet.period,
+                        worked_hours=timesheet.worked_hours,
+                        overtime_hours=timesheet.overtime_hours,
+                        overtime_rows=_encode_overtime_rows(result.overtime_rows),
+                        leave_days=timesheet.leave_days,
+                        attendance_days=timesheet.attendance_days,
+                        created_at=now,
+                    )
+                )
+
+            for calculated in payslips:
+                payslip_id = uuid7()
+                self._session.add(
+                    orm.Payslip(
+                        id=payslip_id,
+                        tenant_id=tenant_id,
+                        run_id=run_id,
+                        employee_id=calculated.employee_id,
+                        period=calculated.period,
+                        status=PayslipStatus.PROVISIONAL.value,
+                        base=calculated.base,
+                        overtime_pay=calculated.overtime_pay,
+                        bonuses=calculated.bonuses,
+                        net=calculated.net,
+                        created_at=now,
+                        updated_at=now,
+                    )
+                )
+                for line in calculated.deductions:
+                    self._session.add(
+                        orm.PayslipDeductionLine(
+                            id=uuid7(),
+                            tenant_id=tenant_id,
+                            payslip_id=payslip_id,
+                            code=line.code,
+                            name=line.name,
+                            kind=line.kind.value,
+                            value=line.value,
+                            amount=line.amount,
+                            created_at=now,
+                        )
+                    )
+            await self._session.flush()
+        return True
+
+    async def list_run_overtime_rows(
+        self, tenant_id: UUID, run_id: UUID
+    ) -> Sequence[OvertimeHoursRow]:
+        stmt = (
+            select(orm.PayrollTimesheet.overtime_rows)
+            .where(
+                orm.PayrollTimesheet.tenant_id == tenant_id,
+                orm.PayrollTimesheet.run_id == run_id,
+            )
+            .order_by(orm.PayrollTimesheet.employee_id.asc())
+        )
+        rows = (await self._session.execute(stmt)).scalars()
+        return [row for payload in rows for row in _decode_overtime_rows(payload)]
+
+    async def mark_payslips_issued(
+        self, tenant_id: UUID, run_id: UUID, now: datetime
+    ) -> Sequence[IssuedPayslipRef]:
+        stmt = (
+            update(orm.Payslip)
+            .where(
+                orm.Payslip.tenant_id == tenant_id,
+                orm.Payslip.run_id == run_id,
+                orm.Payslip.status == PayslipStatus.PROVISIONAL.value,
+            )
+            .values(
+                status=PayslipStatus.ISSUED.value,
+                issued_at=now,
+                updated_at=now,
+            )
+            .returning(orm.Payslip.id, orm.Payslip.employee_id)
+        )
+        rows = list((await self._session.execute(stmt)).all())
+        refs = [
+            IssuedPayslipRef(payslip_id=payslip_id, employee_id=employee_id)
+            for payslip_id, employee_id in rows
+        ]
+        return sorted(refs, key=lambda ref: str(ref.employee_id))
+
+    async def supersede_payslips(
+        self, tenant_id: UUID, run_id: UUID, now: datetime
+    ) -> int:
+        stmt = (
+            update(orm.Payslip)
+            .where(
+                orm.Payslip.tenant_id == tenant_id,
+                orm.Payslip.run_id == run_id,
+                orm.Payslip.status == PayslipStatus.ISSUED.value,
+            )
+            .values(status=PayslipStatus.SUPERSEDED.value, updated_at=now)
+            .returning(orm.Payslip.id)
+        )
+        rows = (await self._session.execute(stmt)).scalars()
+        return len(list(rows))
 
     # --- results ------------------------------------------------------------
 

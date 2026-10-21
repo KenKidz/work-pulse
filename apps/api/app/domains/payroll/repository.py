@@ -33,6 +33,7 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
+from app.domains.payroll.calculation import CalculatedPayslip
 from app.domains.payroll.schemas import (
     PayrollBonus,
     PayrollConfig,
@@ -52,6 +53,27 @@ class PayrollRunFilters(BaseModel):
 
     period: str | None = None
     status: PayrollRunStatus | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class RunTimesheet:
+    """A timesheet row plus the overtime handles the calculation consumed.
+
+    `overtime_rows` is persisted beside the aggregated `overtime_hours` so the
+    finalize flip marks exactly the rows this run paid (ADR 0018 decision 2/3)
+    — never a row verified after the calculation.
+    """
+
+    timesheet: Timesheet
+    overtime_rows: Sequence["OvertimeHoursRow"] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class IssuedPayslipRef:
+    """The two fields finalize needs to emit one `payslip.issued` event."""
+
+    payslip_id: UUID
+    employee_id: UUID
 
 
 class PayrollRepository(Protocol):
@@ -172,6 +194,16 @@ class PayrollRepository(Protocol):
         """Whether this employee already has a record on the date."""
         ...
 
+    async def list_salary_history(
+        self, tenant_id: UUID, employee_ids: Sequence[UUID]
+    ) -> Sequence[Salary]:
+        """Every salary record of the given employees (calculation input).
+
+        The deterministic effective-date pick is the calculator's job; the
+        adapter only tenant-scopes and orders by employee/effective date.
+        """
+        ...
+
     async def employee_exists(self, tenant_id: UUID, employee_id: UUID) -> bool:
         """Tenant-scoped employee existence for salary/bonus targets."""
         ...
@@ -193,6 +225,14 @@ class PayrollRepository(Protocol):
 
     async def get_run(self, tenant_id: UUID, run_id: UUID) -> PayrollRun | None: ...
 
+    async def lock_run(self, tenant_id: UUID, run_id: UUID) -> PayrollRun | None:
+        """Read a run under `FOR UPDATE` for a decision + insert race guard.
+
+        `create_bonus` uses this so a concurrent finalize cannot commit between
+        the status check and the bonus insert (terminal immutability).
+        """
+        ...
+
     async def list_runs(
         self, tenant_id: UUID, filters: PayrollRunFilters, page: PageParams
     ) -> tuple[Sequence[PayrollRun], int]:
@@ -209,6 +249,27 @@ class PayrollRepository(Protocol):
         self, tenant_id: UUID, period: str
     ) -> PayrollRun | None:
         """The finalized run this period's correction run would supersede."""
+        ...
+
+    async def list_employees_in_scope(
+        self, tenant_id: UUID, period_start: date, period_end: date
+    ) -> Sequence[UUID]:
+        """Employees whose employment overlaps the inclusive month.
+
+        `hired_at <= period_end` and (`terminated_at` null or `>= period_start`)
+        — a mid-period hire/termination is in scope and gets the full base (no
+        proration, PO Decision 5). Status is not filtered: a terminated
+        employee whose last day is inside the month is still paid for it.
+        """
+        ...
+
+    async def tenant_id_for_run(self, run_id: UUID) -> UUID | None:
+        """Worker-only cross-tenant lookup (the calculation job has no identity).
+
+        Every other method takes `tenant_id` explicitly; this one exists so
+        `calculate_run(run_id, now)` can resolve the tenant of a queued run
+        before entering the tenant-scoped repository.
+        """
         ...
 
     async def update_run(
@@ -262,6 +323,50 @@ class PayrollRepository(Protocol):
         self, tenant_id: UUID, run_id: UUID, employee_id: UUID
     ) -> bool:
         """Whether the employee is in the run (`payroll_employee_not_in_run`)."""
+        ...
+
+    async def replace_run_results(
+        self,
+        tenant_id: UUID,
+        run_id: UUID,
+        *,
+        timesheets: Sequence[RunTimesheet],
+        payslips: Sequence[CalculatedPayslip],
+        now: datetime,
+    ) -> bool:
+        """Atomically replace a run's timesheets and provisional payslips.
+
+        A recalculation deletes the previous result set and writes the new one
+        in the same transaction; the `(run, employee)` uniques are the
+        duplicate-pass backstop. Payslip ids are persistence-owned (the
+        calculation core has none).
+
+        Returns `False` without writing when the run is no longer
+        `CALCULATING`: a duplicate/re-delivered pass that lost the claim must
+        never replace a calculated or finalized result set.
+        """
+        ...
+
+    async def list_run_overtime_rows(
+        self, tenant_id: UUID, run_id: UUID
+    ) -> Sequence["OvertimeHoursRow"]:
+        """The overtime handles this run's calculation consumed (finalize flip)."""
+        ...
+
+    async def mark_payslips_issued(
+        self, tenant_id: UUID, run_id: UUID, now: datetime
+    ) -> Sequence[IssuedPayslipRef]:
+        """Flip every provisional payslip of the run to `issued`.
+
+        Returns only the identifiers finalize needs for events — not the full
+        payslips with every deduction line.
+        """
+        ...
+
+    async def supersede_payslips(
+        self, tenant_id: UUID, run_id: UUID, now: datetime
+    ) -> int:
+        """Mark a finalized run's issued payslips `superseded`; return the count."""
         ...
 
     async def list_run_timesheets(
@@ -363,3 +468,49 @@ class LeaveDaysPort(Protocol):
         id is present, zero by default.
         """
         ...
+
+
+class NoOvertimeHoursPort:
+    """P0 placeholder: overtime has no domain yet, so nothing is verified.
+
+    Wired in `app/dependencies.py` until `overtime.md` lands. Returning no
+    rows makes payroll's overtime term `0.00` (the plan's pre-P0 behaviour);
+    `mark_included` would report zero flips, so a non-empty handle set could
+    never silently pass finalize.
+    """
+
+    async def verified_hours(
+        self, tenant_id: UUID, period: str
+    ) -> Sequence[OvertimeHoursRow]:
+        return ()
+
+    async def mark_included(
+        self,
+        tenant_id: UUID,
+        rows: Sequence[OvertimeHoursRow],
+        run_id: UUID,
+    ) -> int:
+        return 0
+
+
+class NoAttendanceHoursPort:
+    """Zero-valued attendance seam for callers that do not supply the adapter."""
+
+    async def worked_hours(
+        self, tenant_id: UUID, employee_ids: Sequence[UUID], period: str
+    ) -> Mapping[UUID, Decimal]:
+        return {employee_id: Decimal("0.00") for employee_id in employee_ids}
+
+    async def attendance_days(
+        self, tenant_id: UUID, employee_ids: Sequence[UUID], period: str
+    ) -> Mapping[UUID, int]:
+        return {employee_id: 0 for employee_id in employee_ids}
+
+
+class NoLeaveDaysPort:
+    """Zero-valued approved-leave seam for callers without the adapter."""
+
+    async def approved_leave_days(
+        self, tenant_id: UUID, employee_ids: Sequence[UUID], period: str
+    ) -> Mapping[UUID, int]:
+        return {employee_id: 0 for employee_id in employee_ids}

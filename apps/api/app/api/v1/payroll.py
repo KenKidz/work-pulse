@@ -1,8 +1,8 @@
-"""Payroll routes (T5): configuration, deduction lines and salary records.
+"""Payroll routes (T5/T6): config, inputs, run lifecycle and bonuses.
 
-The remaining payroll routes (run lifecycle, bonuses, queries, own payslips)
-land with T6/T9. Routers stay thin: identity → policy (inside the service) →
-service, with `now` read at this edge only. operationIds are pinned in
+Query endpoints (run lists/details, timesheets, payslips, own payslips) land
+with T9. Routers stay thin: identity → policy (inside the service) → service,
+with `now` read at this edge only. operationIds are pinned in
 `.ai/features/payroll.md` and drive the orval-generated web hooks.
 """
 
@@ -13,11 +13,15 @@ from fastapi import APIRouter, Query
 
 from app.dependencies import IdentityDep, PayrollServiceDep
 from app.domains.payroll.schemas import (
+    BonusCreate,
+    PayrollBonus,
     PayrollConfig,
     PayrollConfigUpdate,
     PayrollDeduction,
     PayrollDeductionCreate,
     PayrollDeductionUpdate,
+    PayrollRun,
+    PayrollRunCreate,
     Salary,
     SalaryCreate,
     SalaryListPage,
@@ -139,3 +143,65 @@ async def create_salary(
 ) -> Salary:
     """Append a salary record; currency comes from tenant config."""
     return await service.create_salary(identity, payload, _now())
+
+
+# --- run lifecycle -----------------------------------------------------------
+
+
+@router.post(
+    "/payroll/runs",
+    response_model=PayrollRun,
+    operation_id="createPayrollRun",
+    status_code=201,
+)
+async def create_payroll_run(
+    payload: PayrollRunCreate,
+    identity: IdentityDep,
+    service: PayrollServiceDep,
+) -> PayrollRun:
+    """Queue a run for a closed month (Finance/Admin/Super Admin)."""
+    return await service.create_run(identity, payload, _now())
+
+
+@router.post(
+    "/payroll/runs/{id}/recalculate",
+    response_model=PayrollRun,
+    operation_id="recalculatePayrollRun",
+)
+async def recalculate_payroll_run(
+    id: UUID,
+    identity: IdentityDep,
+    service: PayrollServiceDep,
+) -> PayrollRun:
+    """Re-queue a calculated/failed run; finalized runs are immutable."""
+    return await service.recalculate_run(identity, id, _now())
+
+
+@router.post(
+    "/payroll/runs/{id}/finalize",
+    response_model=PayrollRun,
+    operation_id="finalizePayrollRun",
+)
+async def finalize_payroll_run(
+    id: UUID,
+    identity: IdentityDep,
+    service: PayrollServiceDep,
+) -> PayrollRun:
+    """Issue payslips and flip counted overtime exactly once."""
+    return await service.finalize_run(identity, id, _now())
+
+
+@router.post(
+    "/payroll/runs/{id}/bonuses",
+    response_model=PayrollBonus,
+    operation_id="createRunBonus",
+    status_code=201,
+)
+async def create_run_bonus(
+    id: UUID,
+    payload: BonusCreate,
+    identity: IdentityDep,
+    service: PayrollServiceDep,
+) -> PayrollBonus:
+    """Add a bonus for an employee in the calculated run."""
+    return await service.create_bonus(identity, id, payload, _now())

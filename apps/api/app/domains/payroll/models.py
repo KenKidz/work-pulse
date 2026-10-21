@@ -33,6 +33,7 @@ Tables:
 
 from datetime import date, datetime
 from decimal import Decimal
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import (
@@ -308,6 +309,12 @@ class PayrollTimesheet(Base):
     period: Mapped[str] = mapped_column(String(7), nullable=False)
     worked_hours: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     overtime_hours: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
+    # The overtime row handles this run consumed: `[{overtime_id, employee_id,
+    # hours}]` (identifiers + hours, PII-free). Finalize flips exactly these,
+    # never rows verified after the calculation (ADR 0018 decision 2/3).
+    overtime_rows: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
     leave_days: Mapped[int] = mapped_column(Integer, nullable=False)
     attendance_days: Mapped[int] = mapped_column(Integer, nullable=False)
     created_at: Mapped[datetime] = mapped_column(

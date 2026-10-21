@@ -66,6 +66,20 @@ class PayrollEmployeeNotInRunError(WorkPulseError):
         super().__init__("Employee is not part of this payroll run")
 
 
+class PayrollRunStaleError(WorkPulseError):
+    """A counted overtime row changed between calculation and finalize.
+
+    Finalize fails and rolls back rather than issuing a payslip for hours it
+    cannot mark included; the run must be recalculated (ADR 0018).
+    """
+
+    status_code = 409
+    code = "payroll_run_stale"
+
+    def __init__(self) -> None:
+        super().__init__("Payroll run inputs changed; recalculate before finalizing")
+
+
 class SalaryEffectiveDateTakenError(WorkPulseError):
     """One salary record per employee per effective date (append-only)."""
 

@@ -28,7 +28,12 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from alembic import command
-from app.dependencies import get_identity
+from app.dependencies import (
+    get_attendance_hours_port,
+    get_identity,
+    get_leave_days_port,
+    get_overtime_hours_port,
+)
 from app.domains.employees.service import EmployeeService
 from app.domains.notifications.service import NotificationService
 from app.domains.organizations.service import (
@@ -36,6 +41,7 @@ from app.domains.organizations.service import (
     LocationService,
     PositionService,
 )
+from app.domains.payroll.service import PayrollService
 from app.infrastructure.postgres.audit import PostgresAuditWriter
 from app.infrastructure.postgres.employee_usage import PostgresEmployeeUsage
 from app.infrastructure.postgres.engine import (
@@ -59,6 +65,9 @@ from app.infrastructure.postgres.repositories.organizations import (
     PostgresLocationRepository,
     PostgresPositionRepository,
 )
+from app.infrastructure.postgres.repositories.payroll import (
+    PostgresPayrollRepository,
+)
 from app.infrastructure.postgres.session import get_session
 from app.infrastructure.redis.client import dispose_redis
 from app.main import app
@@ -68,6 +77,11 @@ from tests.unit.notifications.fakes import (
     RecordingEmailSender,
     RecordingSlackSender,
     RecordingSleeper,
+)
+from tests.unit.payroll.fakes import (
+    FakeAttendanceHoursPort,
+    FakeLeaveDaysPort,
+    FakeOvertimeHoursPort,
 )
 
 API_DIR = Path(__file__).resolve().parents[2]
@@ -259,6 +273,66 @@ async def notification_service(
         commit=session.commit,
         sleep=RecordingSleeper(),
         backoff_base_seconds=0.0,
+    )
+
+
+@pytest.fixture
+def payroll_overtime() -> FakeOvertimeHoursPort:
+    """Overtime seam fake — payroll is tested before `overtime.md` (P0)."""
+    return FakeOvertimeHoursPort()
+
+
+@pytest.fixture
+def payroll_attendance() -> FakeAttendanceHoursPort:
+    return FakeAttendanceHoursPort()
+
+
+@pytest.fixture
+def payroll_leave_days() -> FakeLeaveDaysPort:
+    return FakeLeaveDaysPort()
+
+
+@pytest.fixture
+def payroll_seams(
+    payroll_overtime: FakeOvertimeHoursPort,
+    payroll_attendance: FakeAttendanceHoursPort,
+    payroll_leave_days: FakeLeaveDaysPort,
+) -> Iterator[
+    tuple[
+        FakeOvertimeHoursPort,
+        FakeAttendanceHoursPort,
+        FakeLeaveDaysPort,
+    ]
+]:
+    """Override the API's payroll seam ports with deterministic fakes.
+
+    The real attendance/leave adapters are exercised by their own suites; T6/T7
+    need controlled time facts and no overtime table yet (ADR 0018 decision 7).
+    """
+    app.dependency_overrides[get_overtime_hours_port] = lambda: payroll_overtime
+    app.dependency_overrides[get_attendance_hours_port] = lambda: payroll_attendance
+    app.dependency_overrides[get_leave_days_port] = lambda: payroll_leave_days
+    yield payroll_overtime, payroll_attendance, payroll_leave_days
+    app.dependency_overrides.pop(get_overtime_hours_port, None)
+    app.dependency_overrides.pop(get_attendance_hours_port, None)
+    app.dependency_overrides.pop(get_leave_days_port, None)
+
+
+@pytest.fixture
+async def payroll_service(
+    session: AsyncSession,
+    payroll_overtime: FakeOvertimeHoursPort,
+    payroll_attendance: FakeAttendanceHoursPort,
+    payroll_leave_days: FakeLeaveDaysPort,
+) -> PayrollService:
+    """The real service over the test Postgres session, with fake seam ports."""
+    return PayrollService(
+        repo=PostgresPayrollRepository(session),
+        audit=PostgresAuditWriter(session),
+        outbox=PostgresEventOutbox(session, clock=_utc_now),
+        overtime=payroll_overtime,
+        attendance=payroll_attendance,
+        leave_days=payroll_leave_days,
     )
 
 

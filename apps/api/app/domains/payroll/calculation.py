@@ -106,6 +106,16 @@ class CalculationResult(BaseModel):
     skipped: list[PayrollRunSkip]
 
 
+def period_start(period: str) -> date:
+    """The first calendar day of a `YYYY-MM` period (PO Decision 2)."""
+    try:
+        year_text, month_text = period.split("-", 1)
+        year, month = int(year_text), int(month_text)
+        return date(year, month, 1)
+    except (ValueError, TypeError):
+        raise ValueError(f"Invalid payroll period: {period!r}") from None
+
+
 def period_end(period: str) -> date:
     """The last calendar day of a `YYYY-MM` period (PO Decision 2)."""
     try:

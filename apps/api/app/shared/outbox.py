@@ -10,7 +10,7 @@ Envelopes are stored and published verbatim: `event_id` and `occurred_at` are
 the domain builder's (carrying the injected clock), never re-stamped.
 """
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import Any, Protocol
 from uuid import UUID
 
@@ -97,3 +97,11 @@ class EventOutbox(Protocol):
     """
 
     async def append(self, envelope: dict[str, Any]) -> None: ...
+
+    async def append_many(self, envelopes: Sequence[dict[str, Any]]) -> None:
+        """Append a batch in one write and one flush (finalize fan-out).
+
+        Every envelope passes the same write-time gate; either the whole batch
+        is added or an invalid envelope fails the caller's transaction.
+        """
+        ...

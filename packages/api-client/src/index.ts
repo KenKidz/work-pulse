@@ -25,6 +25,7 @@ import type {
   AttendanceRecord,
   AttendanceRecordListPage,
   Board,
+  BonusCreate,
   ChangePasswordRequest,
   CheckInRequest,
   CheckOutRequest,
@@ -64,11 +65,14 @@ import type {
   LoginRequest,
   NotificationListPage,
   NotificationUnreadCount,
+  PayrollBonus,
   PayrollConfig,
   PayrollConfigUpdate,
   PayrollDeduction,
   PayrollDeductionCreate,
   PayrollDeductionUpdate,
+  PayrollRun,
+  PayrollRunCreate,
   Position,
   PositionCreate,
   PositionListPage,
@@ -9824,6 +9828,518 @@ export const useCreateSalary = <
   TContext
 > => {
   return useMutation(getCreateSalaryMutationOptions(options), queryClient);
+};
+
+export type createPayrollRunResponse201 = {
+  data: PayrollRun;
+  status: 201;
+};
+
+export type createPayrollRunResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type createPayrollRunResponseSuccess = createPayrollRunResponse201 & {
+  headers: Headers;
+};
+export type createPayrollRunResponseError = createPayrollRunResponse422 & {
+  headers: Headers;
+};
+
+export type createPayrollRunResponse =
+  createPayrollRunResponseSuccess | createPayrollRunResponseError;
+
+export const getCreatePayrollRunUrl = () => {
+  return `/api/v1/payroll/runs`;
+};
+
+/**
+ * Queue a run for a closed month (Finance/Admin/Super Admin).
+ * @summary Create Payroll Run
+ */
+export const createPayrollRun = async (
+  payrollRunCreate: PayrollRunCreate,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<createPayrollRunResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return customFetch<createPayrollRunResponse>(getCreatePayrollRunUrl(), {
+    ...options,
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...getHeaders(options?.headers),
+    },
+    body: JSON.stringify(payrollRunCreate),
+  });
+};
+
+export const getCreatePayrollRunMutationKey = () =>
+  ["createPayrollRun"] as const;
+
+export const getCreatePayrollRunMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createPayrollRun>>,
+    TError,
+    CreatePayrollRunMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createPayrollRun>>,
+  TError,
+  CreatePayrollRunMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreatePayrollRunMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createPayrollRun>>,
+    CreatePayrollRunMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createPayrollRun(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreatePayrollRunMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createPayrollRun>>
+>;
+export type CreatePayrollRunMutationBody = PayrollRunCreate;
+export type CreatePayrollRunMutationError = HTTPValidationError;
+export type CreatePayrollRunMutationVariables = { data: PayrollRunCreate };
+
+/**
+ * @summary Create Payroll Run
+ */
+export const useCreatePayrollRun = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createPayrollRun>>,
+      TError,
+      CreatePayrollRunMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createPayrollRun>>,
+  TError,
+  CreatePayrollRunMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreatePayrollRunMutationOptions(options), queryClient);
+};
+
+export type recalculatePayrollRunResponse200 = {
+  data: PayrollRun;
+  status: 200;
+};
+
+export type recalculatePayrollRunResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type recalculatePayrollRunResponseSuccess =
+  recalculatePayrollRunResponse200 & {
+    headers: Headers;
+  };
+export type recalculatePayrollRunResponseError =
+  recalculatePayrollRunResponse422 & {
+    headers: Headers;
+  };
+
+export type recalculatePayrollRunResponse =
+  recalculatePayrollRunResponseSuccess | recalculatePayrollRunResponseError;
+
+export const getRecalculatePayrollRunUrl = (id: string) => {
+  return `/api/v1/payroll/runs/${id}/recalculate`;
+};
+
+/**
+ * Re-queue a calculated/failed run; finalized runs are immutable.
+ * @summary Recalculate Payroll Run
+ */
+export const recalculatePayrollRun = async (
+  id: string,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<recalculatePayrollRunResponse> => {
+  return customFetch<recalculatePayrollRunResponse>(
+    getRecalculatePayrollRunUrl(id),
+    {
+      ...options,
+      method: "POST",
+    },
+  );
+};
+
+export const getRecalculatePayrollRunMutationKey = () =>
+  ["recalculatePayrollRun"] as const;
+
+export const getRecalculatePayrollRunMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof recalculatePayrollRun>>,
+    TError,
+    RecalculatePayrollRunMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof recalculatePayrollRun>>,
+  TError,
+  RecalculatePayrollRunMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRecalculatePayrollRunMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof recalculatePayrollRun>>,
+    RecalculatePayrollRunMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return recalculatePayrollRun(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RecalculatePayrollRunMutationResult = NonNullable<
+  Awaited<ReturnType<typeof recalculatePayrollRun>>
+>;
+
+export type RecalculatePayrollRunMutationError = HTTPValidationError;
+export type RecalculatePayrollRunMutationVariables = { id: string };
+
+/**
+ * @summary Recalculate Payroll Run
+ */
+export const useRecalculatePayrollRun = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof recalculatePayrollRun>>,
+      TError,
+      RecalculatePayrollRunMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof recalculatePayrollRun>>,
+  TError,
+  RecalculatePayrollRunMutationVariables,
+  TContext
+> => {
+  return useMutation(
+    getRecalculatePayrollRunMutationOptions(options),
+    queryClient,
+  );
+};
+
+export type finalizePayrollRunResponse200 = {
+  data: PayrollRun;
+  status: 200;
+};
+
+export type finalizePayrollRunResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type finalizePayrollRunResponseSuccess =
+  finalizePayrollRunResponse200 & {
+    headers: Headers;
+  };
+export type finalizePayrollRunResponseError = finalizePayrollRunResponse422 & {
+  headers: Headers;
+};
+
+export type finalizePayrollRunResponse =
+  finalizePayrollRunResponseSuccess | finalizePayrollRunResponseError;
+
+export const getFinalizePayrollRunUrl = (id: string) => {
+  return `/api/v1/payroll/runs/${id}/finalize`;
+};
+
+/**
+ * Issue payslips and flip counted overtime exactly once.
+ * @summary Finalize Payroll Run
+ */
+export const finalizePayrollRun = async (
+  id: string,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<finalizePayrollRunResponse> => {
+  return customFetch<finalizePayrollRunResponse>(getFinalizePayrollRunUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getFinalizePayrollRunMutationKey = () =>
+  ["finalizePayrollRun"] as const;
+
+export const getFinalizePayrollRunMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof finalizePayrollRun>>,
+    TError,
+    FinalizePayrollRunMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof finalizePayrollRun>>,
+  TError,
+  FinalizePayrollRunMutationVariables,
+  TContext
+> => {
+  const mutationKey = getFinalizePayrollRunMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof finalizePayrollRun>>,
+    FinalizePayrollRunMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return finalizePayrollRun(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type FinalizePayrollRunMutationResult = NonNullable<
+  Awaited<ReturnType<typeof finalizePayrollRun>>
+>;
+
+export type FinalizePayrollRunMutationError = HTTPValidationError;
+export type FinalizePayrollRunMutationVariables = { id: string };
+
+/**
+ * @summary Finalize Payroll Run
+ */
+export const useFinalizePayrollRun = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof finalizePayrollRun>>,
+      TError,
+      FinalizePayrollRunMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof finalizePayrollRun>>,
+  TError,
+  FinalizePayrollRunMutationVariables,
+  TContext
+> => {
+  return useMutation(
+    getFinalizePayrollRunMutationOptions(options),
+    queryClient,
+  );
+};
+
+export type createRunBonusResponse201 = {
+  data: PayrollBonus;
+  status: 201;
+};
+
+export type createRunBonusResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type createRunBonusResponseSuccess = createRunBonusResponse201 & {
+  headers: Headers;
+};
+export type createRunBonusResponseError = createRunBonusResponse422 & {
+  headers: Headers;
+};
+
+export type createRunBonusResponse =
+  createRunBonusResponseSuccess | createRunBonusResponseError;
+
+export const getCreateRunBonusUrl = (id: string) => {
+  return `/api/v1/payroll/runs/${id}/bonuses`;
+};
+
+/**
+ * Add a bonus for an employee in the calculated run.
+ * @summary Create Run Bonus
+ */
+export const createRunBonus = async (
+  id: string,
+  bonusCreate: BonusCreate,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<createRunBonusResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return customFetch<createRunBonusResponse>(getCreateRunBonusUrl(id), {
+    ...options,
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...getHeaders(options?.headers),
+    },
+    body: JSON.stringify(bonusCreate),
+  });
+};
+
+export const getCreateRunBonusMutationKey = () => ["createRunBonus"] as const;
+
+export const getCreateRunBonusMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createRunBonus>>,
+    TError,
+    CreateRunBonusMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createRunBonus>>,
+  TError,
+  CreateRunBonusMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateRunBonusMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createRunBonus>>,
+    CreateRunBonusMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return createRunBonus(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateRunBonusMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createRunBonus>>
+>;
+export type CreateRunBonusMutationBody = BonusCreate;
+export type CreateRunBonusMutationError = HTTPValidationError;
+export type CreateRunBonusMutationVariables = { id: string; data: BonusCreate };
+
+/**
+ * @summary Create Run Bonus
+ */
+export const useCreateRunBonus = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createRunBonus>>,
+      TError,
+      CreateRunBonusMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createRunBonus>>,
+  TError,
+  CreateRunBonusMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateRunBonusMutationOptions(options), queryClient);
 };
 
 export type getRealtimeBoardResponse200 = {

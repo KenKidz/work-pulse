@@ -12,9 +12,14 @@ from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
+from uuid_utils.compat import uuid7
+
+from app.domains.payroll.calculation import CalculatedPayslip
 from app.domains.payroll.repository import (
+    IssuedPayslipRef,
     OvertimeHoursRow,
     PayrollRunFilters,
+    RunTimesheet,
 )
 from app.domains.payroll.schemas import (
     PayrollBonus,
@@ -24,6 +29,8 @@ from app.domains.payroll.schemas import (
     PayrollRun,
     PayrollRunStatus,
     Payslip,
+    PayslipDeductionLine,
+    PayslipStatus,
     Salary,
     Timesheet,
 )
@@ -45,7 +52,28 @@ class FakePayrollRepository:
         self.payslips: dict[tuple[UUID, UUID], Payslip] = {}
         # Timesheet has no id/run on the wire; store it by its natural key.
         self.timesheets: dict[tuple[UUID, UUID, UUID], Timesheet] = {}
+        # The overtime handles each run consumed (finalize flip input).
+        self.overtime_handles: dict[
+            tuple[UUID, UUID, UUID], tuple[OvertimeHoursRow, ...]
+        ] = {}
         self.employees: set[tuple[UUID, UUID]] = set()
+        self.employee_periods: dict[tuple[UUID, UUID], tuple[date, date | None]] = {}
+        self.locked_runs: list[tuple[UUID, UUID]] = []
+
+    def add_employee(
+        self,
+        tenant_id: UUID,
+        employee_id: UUID,
+        *,
+        hired_at: date = date(2020, 1, 1),
+        terminated_at: date | None = None,
+    ) -> None:
+        """Register an employee's employment window for the scope query."""
+        self.employees.add((tenant_id, employee_id))
+        self.employee_periods[(tenant_id, employee_id)] = (
+            hired_at,
+            terminated_at,
+        )
 
     # --- configuration ------------------------------------------------------
 
@@ -227,6 +255,20 @@ class FakePayrollRepository:
             if row_tenant == tenant_id
         )
 
+    async def list_salary_history(
+        self, tenant_id: UUID, employee_ids: Sequence[UUID]
+    ) -> Sequence[Salary]:
+        wanted = set(employee_ids)
+        rows = [
+            row
+            for (row_tenant, _), row in self.salaries.items()
+            if row_tenant == tenant_id and row.employee_id in wanted
+        ]
+        return sorted(
+            rows,
+            key=lambda row: (str(row.employee_id), row.effective_from, str(row.id)),
+        )
+
     async def employee_exists(self, tenant_id: UUID, employee_id: UUID) -> bool:
         return (tenant_id, employee_id) in self.employees
 
@@ -263,6 +305,10 @@ class FakePayrollRepository:
         return row
 
     async def get_run(self, tenant_id: UUID, run_id: UUID) -> PayrollRun | None:
+        return self.runs.get((tenant_id, run_id))
+
+    async def lock_run(self, tenant_id: UUID, run_id: UUID) -> PayrollRun | None:
+        self.locked_runs.append((tenant_id, run_id))
         return self.runs.get((tenant_id, run_id))
 
     async def list_runs(
@@ -314,6 +360,35 @@ class FakePayrollRepository:
             ),
         )
 
+    async def list_employees_in_scope(
+        self, tenant_id: UUID, period_start: date, period_end: date
+    ) -> Sequence[UUID]:
+        candidates = {
+            employee_id
+            for row_tenant, employee_id in self.employees
+            if row_tenant == tenant_id
+        } | {
+            employee_id
+            for row_tenant, employee_id in self.employee_periods
+            if row_tenant == tenant_id
+        }
+        in_scope: list[UUID] = []
+        for employee_id in candidates:
+            hired_at, terminated_at = self.employee_periods.get(
+                (tenant_id, employee_id), (date.min, None)
+            )
+            if hired_at <= period_end and (
+                terminated_at is None or terminated_at >= period_start
+            ):
+                in_scope.append(employee_id)
+        return sorted(in_scope, key=str)
+
+    async def tenant_id_for_run(self, run_id: UUID) -> UUID | None:
+        for (tenant_id, stored_run_id), _ in self.runs.items():
+            if stored_run_id == run_id:
+                return tenant_id
+        return None
+
     async def update_run(
         self, tenant_id: UUID, run_id: UUID, **changes: Any
     ) -> PayrollRun | None:
@@ -321,7 +396,8 @@ class FakePayrollRepository:
         row = self.runs.get(key)
         if row is None:
             return None
-        updated = row.model_copy(update={**changes, "updated_at": UPDATED_AT})
+        values = {"updated_at": UPDATED_AT, **changes}
+        updated = row.model_copy(update=values)
         self.runs[key] = updated
         return updated
 
@@ -390,6 +466,112 @@ class FakePayrollRepository:
             if row_tenant == tenant_id
         )
 
+    # --- calculation results ------------------------------------------------
+
+    async def replace_run_results(
+        self,
+        tenant_id: UUID,
+        run_id: UUID,
+        *,
+        timesheets: Sequence[RunTimesheet],
+        payslips: Sequence[CalculatedPayslip],
+        now: datetime,
+    ) -> bool:
+        run = self.runs.get((tenant_id, run_id))
+        if run is None or run.status is not PayrollRunStatus.CALCULATING:
+            return False
+        for key, row in list(self.payslips.items()):
+            if key[0] == tenant_id and row.run_id == run_id:
+                del self.payslips[key]
+        for key in list(self.timesheets):
+            if key[0] == tenant_id and key[1] == run_id:
+                del self.timesheets[key]
+        for key in list(self.overtime_handles):
+            if key[0] == tenant_id and key[1] == run_id:
+                del self.overtime_handles[key]
+
+        for result in timesheets:
+            timesheet = result.timesheet
+            key = (tenant_id, run_id, timesheet.employee_id)
+            self.timesheets[key] = timesheet
+            self.overtime_handles[key] = tuple(result.overtime_rows)
+
+        for calculated in payslips:
+            payslip_id = uuid7()
+            self.payslips[(tenant_id, payslip_id)] = Payslip(
+                id=payslip_id,
+                run_id=run_id,
+                employee_id=calculated.employee_id,
+                period=calculated.period,
+                status=PayslipStatus.PROVISIONAL,
+                base=calculated.base,
+                overtime_pay=calculated.overtime_pay,
+                bonuses=calculated.bonuses,
+                deductions=[
+                    PayslipDeductionLine(
+                        code=line.code,
+                        name=line.name,
+                        kind=line.kind,
+                        value=line.value,
+                        amount=line.amount,
+                    )
+                    for line in calculated.deductions
+                ],
+                net=calculated.net,
+                issued_at=None,
+            )
+        return True
+
+    async def list_run_overtime_rows(
+        self, tenant_id: UUID, run_id: UUID
+    ) -> Sequence[OvertimeHoursRow]:
+        return [
+            row
+            for (row_tenant, stored_run_id, _), rows in self.overtime_handles.items()
+            if row_tenant == tenant_id and stored_run_id == run_id
+            for row in rows
+        ]
+
+    async def mark_payslips_issued(
+        self, tenant_id: UUID, run_id: UUID, now: datetime
+    ) -> Sequence[IssuedPayslipRef]:
+        issued: list[IssuedPayslipRef] = []
+        for key, row in list(self.payslips.items()):
+            if (
+                key[0] == tenant_id
+                and row.run_id == run_id
+                and row.status is PayslipStatus.PROVISIONAL
+            ):
+                self.payslips[key] = row.model_copy(
+                    update={
+                        "status": PayslipStatus.ISSUED,
+                        "issued_at": now,
+                    }
+                )
+                issued.append(
+                    IssuedPayslipRef(
+                        payslip_id=row.id,
+                        employee_id=row.employee_id,
+                    )
+                )
+        return sorted(issued, key=lambda ref: str(ref.employee_id))
+
+    async def supersede_payslips(
+        self, tenant_id: UUID, run_id: UUID, now: datetime
+    ) -> int:
+        count = 0
+        for key, row in list(self.payslips.items()):
+            if (
+                key[0] == tenant_id
+                and row.run_id == run_id
+                and row.status is PayslipStatus.ISSUED
+            ):
+                self.payslips[key] = row.model_copy(
+                    update={"status": PayslipStatus.SUPERSEDED}
+                )
+                count += 1
+        return count
+
     async def list_run_timesheets(
         self, tenant_id: UUID, run_id: UUID, page: PageParams
     ) -> tuple[Sequence[Timesheet], int]:
@@ -433,10 +615,13 @@ class FakePayrollRepository:
 class FakeOvertimeHoursPort:
     """Deterministic overtime seam: verified rows plus the guarded flip."""
 
-    def __init__(self) -> None:
+    def __init__(self, *, error: Exception | None = None) -> None:
         self.rows: dict[tuple[UUID, str], list[OvertimeHoursRow]] = {}
         self.included: set[UUID] = set()
         self.mark_calls: list[tuple[UUID, tuple[UUID, ...], UUID]] = []
+        # Failure injection: `verified_hours` raises, or the flip stops short.
+        self.error = error
+        self.flip_limit: int | None = None
 
     def add(
         self,
@@ -456,6 +641,8 @@ class FakeOvertimeHoursPort:
     async def verified_hours(
         self, tenant_id: UUID, period: str
     ) -> Sequence[OvertimeHoursRow]:
+        if self.error is not None:
+            raise self.error
         return [
             row
             for row in self.rows.get((tenant_id, period), [])
@@ -474,6 +661,8 @@ class FakeOvertimeHoursPort:
         flipped = 0
         for row in rows:
             if row.overtime_id in self.included:
+                continue
+            if self.flip_limit is not None and flipped >= self.flip_limit:
                 continue
             self.included.add(row.overtime_id)
             flipped += 1
