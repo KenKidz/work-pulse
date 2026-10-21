@@ -408,6 +408,52 @@ export interface LoginRequest {
   password: string;
 }
 
+/**
+ * The five v1 trigger kinds of the pinned trigger map (ADR 0015).
+ */
+export type NotificationKind =
+  (typeof NotificationKind)[keyof typeof NotificationKind];
+
+export const NotificationKind = {
+  leave_requested: "leave_requested",
+  leave_approved: "leave_approved",
+  leave_rejected: "leave_rejected",
+  leave_withdrawn: "leave_withdrawn",
+  attendance_late: "attendance_late",
+} as const;
+
+/**
+ * One inbox row — the stored message of record plus its read state.
+ *
+ * Built by explicit mapping from `Notification`; the worker's projection
+ * fields `event_id`/`event_type` and the row's `recipient_*` snapshot are
+ * deliberately absent, as is every delivery field (rule 6).
+ */
+export interface NotificationItem {
+  id: string;
+  tenant_id: string;
+  kind: NotificationKind;
+  subject: string;
+  body: string;
+  created_at: string;
+  read_at?: string | null;
+}
+
+/**
+ * Paged inbox response, newest first (house `Page` envelope).
+ */
+export interface NotificationListPage {
+  items: NotificationItem[];
+  page: Page;
+}
+
+/**
+ * The caller's own unread total — the header badge's only input.
+ */
+export interface NotificationUnreadCount {
+  unread_count: number;
+}
+
 export interface Position {
   id: string;
   tenant_id: string;
@@ -663,4 +709,9 @@ export type ListLeaveRequestsParams = {
 export type ListLeaveBalancesParams = {
   employee_id?: string | null;
   year?: number | null;
+};
+
+export type ListNotificationsParams = {
+  page?: number;
+  page_size?: number;
 };

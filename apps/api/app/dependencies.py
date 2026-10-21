@@ -29,6 +29,7 @@ from app.domains.identity.credentials import SESSION_COOKIE_NAME
 from app.domains.identity.schemas import User
 from app.domains.identity.service import AuthService, UserService
 from app.domains.leave.service import LeaveService
+from app.domains.notifications.service import NotificationInboxService
 from app.domains.organizations.service import (
     DepartmentService,
     LocationService,
@@ -53,6 +54,9 @@ from app.infrastructure.postgres.repositories.identity import (
     PostgresUserRepository,
 )
 from app.infrastructure.postgres.repositories.leave import PostgresLeaveRepository
+from app.infrastructure.postgres.repositories.notifications import (
+    PostgresNotificationRepository,
+)
 from app.infrastructure.postgres.repositories.organizations import (
     PostgresDepartmentRepository,
     PostgresLocationRepository,
@@ -151,6 +155,16 @@ def get_leave_service(session: SessionDep) -> LeaveService:
     )
 
 
+def get_notification_inbox_service(session: SessionDep) -> NotificationInboxService:
+    """The caller's own inbox — read state only, tenant- and recipient-scoped.
+
+    Deliberately wired without an `AuditWriter` or the transactional outbox:
+    read-state mutations change no business fact and emit no event
+    (`.ai/features/notification-inbox.md` rule 7).
+    """
+    return NotificationInboxService(PostgresNotificationRepository(session))
+
+
 def get_shift_service(session: SessionDep) -> ShiftService:
     audit = PostgresAuditWriter(session)
     return ShiftService(
@@ -241,6 +255,9 @@ LocationServiceDep = Annotated[LocationService, Depends(get_location_service)]
 EmployeeServiceDep = Annotated[EmployeeService, Depends(get_employee_service)]
 AttendanceServiceDep = Annotated[AttendanceService, Depends(get_attendance_service)]
 LeaveServiceDep = Annotated[LeaveService, Depends(get_leave_service)]
+NotificationInboxServiceDep = Annotated[
+    NotificationInboxService, Depends(get_notification_inbox_service)
+]
 ShiftServiceDep = Annotated[ShiftService, Depends(get_shift_service)]
 RealtimeServiceDep = Annotated[RealtimeService, Depends(get_realtime_service)]
 RealtimeStreamServiceDep = Annotated[

@@ -11,6 +11,7 @@ from app.api.v1 import (
     auth,
     employees,
     leave,
+    notifications,
     organizations,
     realtime,
     users,
@@ -24,4 +25,5 @@ api_router.include_router(employees.router, tags=["employees"])
 api_router.include_router(attendance.router, tags=["attendance"])
 api_router.include_router(attendance.shifts_router, tags=["shifts"])
 api_router.include_router(leave.router, tags=["leave"])
+api_router.include_router(notifications.router, tags=["notifications"])
 api_router.include_router(realtime.router, tags=["realtime"])
