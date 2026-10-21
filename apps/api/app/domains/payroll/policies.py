@@ -65,6 +65,17 @@ def ensure_can_view_payroll(identity: Identity) -> None:
         raise PayrollNotFoundError()
 
 
+def ensure_can_view_provisional_payslip(identity: Identity) -> None:
+    """Provisional payslips are company-wide review material until issuance.
+
+    Employees and managers only ever see issued/superseded payslips; a
+    provisional own payslip is indistinguishable from an unknown id (`404`) so
+    no draft amounts leak before finalize.
+    """
+    if identity.role not in PAYROLL_VIEW_ROLES:
+        raise PayslipNotFoundError()
+
+
 def ensure_can_view_payslip(identity: Identity, employee_id: UUID) -> None:
     """Own payslip, or any payslip for the company-wide view roles.
 

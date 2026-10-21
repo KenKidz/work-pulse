@@ -614,6 +614,53 @@ export interface PayrollRunCreate {
   period: string;
 }
 
+export interface PayrollRunListPage {
+  items: PayrollRun[];
+  page: Page;
+}
+
+export type PayslipStatus = (typeof PayslipStatus)[keyof typeof PayslipStatus];
+
+export const PayslipStatus = {
+  provisional: "provisional",
+  issued: "issued",
+  superseded: "superseded",
+} as const;
+
+/**
+ * One inspectable deduction line; `value` is the rule, `amount` the result.
+ */
+export interface PayslipDeductionLine {
+  code: string;
+  name: string;
+  kind: PayrollDeductionKind;
+  value: number;
+  amount: number;
+}
+
+/**
+ * One employee's calculated pay for a run; `net` may be negative.
+ */
+export interface Payslip {
+  id: string;
+  run_id: string;
+  employee_id: string;
+  /** @pattern ^[0-9]{4}-(0[1-9]|1[0-2])$ */
+  period: string;
+  status: PayslipStatus;
+  base: number;
+  overtime_pay: number;
+  bonuses: number;
+  deductions?: PayslipDeductionLine[];
+  net: number;
+  issued_at?: string | null;
+}
+
+export interface PayslipListPage {
+  items: Payslip[];
+  page: Page;
+}
+
 export interface Position {
   id: string;
   tenant_id: string;
@@ -789,6 +836,24 @@ export interface TerminationRequest {
   reason: string;
 }
 
+/**
+ * Informational time facts for one employee in one run (no proration).
+ */
+export interface Timesheet {
+  employee_id: string;
+  /** @pattern ^[0-9]{4}-(0[1-9]|1[0-2])$ */
+  period: string;
+  worked_hours: number;
+  overtime_hours: number;
+  leave_days: number;
+  attendance_days: number;
+}
+
+export interface TimesheetListPage {
+  items: Timesheet[];
+  page: Page;
+}
+
 export interface TransferRequest {
   department_id: string;
   position_id?: string | null;
@@ -904,6 +969,28 @@ export type ListNotificationsParams = {
 
 export type ListSalariesParams = {
   employee_id?: string | null;
+  page?: number;
+  page_size?: number;
+};
+
+export type ListPayrollRunsParams = {
+  period?: string | null;
+  status?: PayrollRunStatus | null;
+  page?: number;
+  page_size?: number;
+};
+
+export type ListRunTimesheetsParams = {
+  page?: number;
+  page_size?: number;
+};
+
+export type ListRunPayslipsParams = {
+  page?: number;
+  page_size?: number;
+};
+
+export type ListMyPayslipsParams = {
   page?: number;
   page_size?: number;
 };

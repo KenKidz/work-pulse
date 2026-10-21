@@ -4388,6 +4388,107 @@
             }
           }
         }
+      },
+      "get": {
+        "tags": [
+          "payroll"
+        ],
+        "summary": "List Payroll Runs",
+        "description": "Paged run history, newest period first (HR+).",
+        "operationId": "listPayrollRuns",
+        "parameters": [
+          {
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Period"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/PayrollRunStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "title": "Page Size"
+            }
+          },
+          {
+            "name": "wp_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Wp Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayrollRunListPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/payroll/runs/{id}/recalculate": {
@@ -4563,6 +4664,356 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PayrollBonus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payroll/runs/{id}": {
+      "get": {
+        "tags": [
+          "payroll"
+        ],
+        "summary": "Get Payroll Run",
+        "description": "One run and its PII-free summary.",
+        "operationId": "getPayrollRun",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "wp_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Wp Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayrollRun"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payroll/runs/{id}/timesheets": {
+      "get": {
+        "tags": [
+          "payroll"
+        ],
+        "summary": "List Run Timesheets",
+        "description": "Informational worked/overtime/leave facts for the run's scope.",
+        "operationId": "listRunTimesheets",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "title": "Page Size"
+            }
+          },
+          {
+            "name": "wp_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Wp Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimesheetListPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payroll/runs/{id}/payslips": {
+      "get": {
+        "tags": [
+          "payroll"
+        ],
+        "summary": "List Run Payslips",
+        "description": "Every payslip of one run (provisional, issued and superseded).",
+        "operationId": "listRunPayslips",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "title": "Page Size"
+            }
+          },
+          {
+            "name": "wp_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Wp Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayslipListPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payroll/payslips": {
+      "get": {
+        "tags": [
+          "payroll"
+        ],
+        "summary": "List My Payslips",
+        "description": "The caller's own payslips, every role (issued + superseded).",
+        "operationId": "listMyPayslips",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "title": "Page Size"
+            }
+          },
+          {
+            "name": "wp_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Wp Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayslipListPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payroll/payslips/{id}": {
+      "get": {
+        "tags": [
+          "payroll"
+        ],
+        "summary": "Get Payslip",
+        "description": "Own payslip, or any payslip for HR/Finance/Admin/Super Admin.",
+        "operationId": "getPayslip",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "wp_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Wp Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Payslip"
                 }
               }
             }
@@ -6754,6 +7205,26 @@
         ],
         "title": "PayrollRunCreate"
       },
+      "PayrollRunListPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PayrollRun"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "page": {
+            "$ref": "#/components/schemas/Page"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "page"
+        ],
+        "title": "PayrollRunListPage"
+      },
       "PayrollRunSkip": {
         "properties": {
           "employee_id": {
@@ -6826,6 +7297,144 @@
         ],
         "title": "PayrollRunTotals",
         "description": "Run totals, the sum of payslip lines rounded per line (ADR 0017)."
+      },
+      "Payslip": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "run_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Run Id"
+          },
+          "employee_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Employee Id"
+          },
+          "period": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])$",
+            "title": "Period"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PayslipStatus"
+          },
+          "base": {
+            "type": "number",
+            "title": "Base"
+          },
+          "overtime_pay": {
+            "type": "number",
+            "title": "Overtime Pay"
+          },
+          "bonuses": {
+            "type": "number",
+            "title": "Bonuses"
+          },
+          "deductions": {
+            "items": {
+              "$ref": "#/components/schemas/PayslipDeductionLine"
+            },
+            "type": "array",
+            "title": "Deductions"
+          },
+          "net": {
+            "type": "number",
+            "title": "Net"
+          },
+          "issued_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issued At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "run_id",
+          "employee_id",
+          "period",
+          "status",
+          "base",
+          "overtime_pay",
+          "bonuses",
+          "net"
+        ],
+        "title": "Payslip",
+        "description": "One employee's calculated pay for a run; `net` may be negative."
+      },
+      "PayslipDeductionLine": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/PayrollDeductionKind"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value"
+          },
+          "amount": {
+            "type": "number",
+            "title": "Amount"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "name",
+          "kind",
+          "value",
+          "amount"
+        ],
+        "title": "PayslipDeductionLine",
+        "description": "One inspectable deduction line; `value` is the rule, `amount` the result."
+      },
+      "PayslipListPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Payslip"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "page": {
+            "$ref": "#/components/schemas/Page"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "page"
+        ],
+        "title": "PayslipListPage"
+      },
+      "PayslipStatus": {
+        "type": "string",
+        "enum": [
+          "provisional",
+          "issued",
+          "superseded"
+        ],
+        "title": "PayslipStatus"
       },
       "Position": {
         "properties": {
@@ -7458,6 +8067,67 @@
           "reason"
         ],
         "title": "TerminationRequest"
+      },
+      "Timesheet": {
+        "properties": {
+          "employee_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Employee Id"
+          },
+          "period": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])$",
+            "title": "Period"
+          },
+          "worked_hours": {
+            "type": "number",
+            "title": "Worked Hours"
+          },
+          "overtime_hours": {
+            "type": "number",
+            "title": "Overtime Hours"
+          },
+          "leave_days": {
+            "type": "integer",
+            "title": "Leave Days"
+          },
+          "attendance_days": {
+            "type": "integer",
+            "title": "Attendance Days"
+          }
+        },
+        "type": "object",
+        "required": [
+          "employee_id",
+          "period",
+          "worked_hours",
+          "overtime_hours",
+          "leave_days",
+          "attendance_days"
+        ],
+        "title": "Timesheet",
+        "description": "Informational time facts for one employee in one run (no proration)."
+      },
+      "TimesheetListPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Timesheet"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "page": {
+            "$ref": "#/components/schemas/Page"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "page"
+        ],
+        "title": "TimesheetListPage"
       },
       "TransferRequest": {
         "properties": {

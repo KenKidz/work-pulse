@@ -197,6 +197,15 @@ class PayrollRun(Base):
         ),
         Index("ix_payroll_runs_tenant_period", "tenant_id", "period"),
         Index("ix_payroll_runs_tenant_status", "tenant_id", "status"),
+        # The T8 worker's cross-tenant poll: `status = 'queued'` ordered by
+        # insertion. A partial index keeps the once-per-second scan cheap as
+        # run history grows (mirrored in migration 0013).
+        Index(
+            "ix_payroll_runs_queued",
+            "created_at",
+            "id",
+            postgresql_where=text("status = 'queued'"),
+        ),
         CheckConstraint(_PERIOD_CHECK, name="period_valid"),
         CheckConstraint(_RUN_STATUS_CHECK, name="status_valid"),
         CheckConstraint("employee_count >= 0", name="employee_count_nonnegative"),

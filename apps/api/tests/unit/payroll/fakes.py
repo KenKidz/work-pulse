@@ -389,6 +389,15 @@ class FakePayrollRepository:
                 return tenant_id
         return None
 
+    async def queued_run_ids(self, limit: int) -> Sequence[UUID]:
+        queued = [
+            (row.created_at, str(run_id), run_id)
+            for (_tenant_id, run_id), row in self.runs.items()
+            if row.status is PayrollRunStatus.QUEUED
+        ]
+        queued.sort()
+        return [run_id for _, _, run_id in queued[:limit]]
+
     async def update_run(
         self, tenant_id: UUID, run_id: UUID, **changes: Any
     ) -> PayrollRun | None:
@@ -597,12 +606,19 @@ class FakePayrollRepository:
         return rows[page.offset : page.offset + page.limit], total
 
     async def list_employee_payslips(
-        self, tenant_id: UUID, employee_id: UUID, page: PageParams
+        self,
+        tenant_id: UUID,
+        employee_id: UUID,
+        page: PageParams,
+        *,
+        statuses: Sequence[PayslipStatus] | None = None,
     ) -> tuple[Sequence[Payslip], int]:
         rows = [
             row
             for (row_tenant, _), row in self.payslips.items()
-            if row_tenant == tenant_id and row.employee_id == employee_id
+            if row_tenant == tenant_id
+            and row.employee_id == employee_id
+            and (statuses is None or row.status in statuses)
         ]
         rows.sort(key=lambda row: (row.period, str(row.id)), reverse=True)
         total = len(rows)

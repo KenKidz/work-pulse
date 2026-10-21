@@ -64,12 +64,16 @@ from app.domains.payroll.exceptions import (
     PayrollRunNotCalculatedError,
     PayrollRunNotFoundError,
     PayrollRunStaleError,
+    PayslipNotFoundError,
     SalaryEffectiveDateTakenError,
 )
 from app.domains.payroll.policies import (
     ensure_can_configure,
     ensure_can_run,
     ensure_can_view_payroll,
+    ensure_can_view_payslip,
+    ensure_can_view_provisional_payslip,
+    ensure_can_view_runs,
 )
 from app.domains.payroll.repository import (
     AttendanceHoursPort,
@@ -80,6 +84,7 @@ from app.domains.payroll.repository import (
     OvertimeHoursPort,
     OvertimeHoursRow,
     PayrollRepository,
+    PayrollRunFilters,
     RunTimesheet,
 )
 from app.domains.payroll.schemas import (
@@ -92,13 +97,18 @@ from app.domains.payroll.schemas import (
     PayrollDeductionUpdate,
     PayrollRun,
     PayrollRunCreate,
+    PayrollRunListPage,
     PayrollRunSkip,
     PayrollRunStatus,
     PayrollRunTotals,
+    Payslip,
+    PayslipListPage,
+    PayslipStatus,
     Salary,
     SalaryCreate,
     SalaryListPage,
     Timesheet,
+    TimesheetListPage,
     validate_deduction_value,
 )
 from app.shared.audit import AuditEntryCreate, AuditWriter
@@ -638,6 +648,84 @@ class PayrollService:
         )
         return bonus
 
+    # --- queries (T9) --------------------------------------------------------
+
+    async def list_runs(
+        self,
+        identity: Identity,
+        *,
+        period: str | None,
+        status: PayrollRunStatus | None,
+        page: PageParams,
+    ) -> PayrollRunListPage:
+        """Paged run history for the company-wide readers (HR+)."""
+        ensure_can_view_runs(identity)
+        items, total = await self._repo.list_runs(
+            identity.tenant_id,
+            PayrollRunFilters(period=period, status=status),
+            page,
+        )
+        return PayrollRunListPage(items=list(items), page=page.make_page(total))
+
+    async def get_run(self, identity: Identity, run_id: UUID) -> PayrollRun:
+        """One run; unknown/cross-tenant/out-of-scope ids are a `404`."""
+        return await self._get_visible_run(identity, run_id)
+
+    async def list_run_timesheets(
+        self, identity: Identity, run_id: UUID, page: PageParams
+    ) -> TimesheetListPage:
+        """Informational time facts for one run (HR+)."""
+        await self._get_visible_run(identity, run_id)
+        items, total = await self._repo.list_run_timesheets(
+            identity.tenant_id, run_id, page
+        )
+        return TimesheetListPage(items=list(items), page=page.make_page(total))
+
+    async def list_run_payslips(
+        self, identity: Identity, run_id: UUID, page: PageParams
+    ) -> PayslipListPage:
+        """Every payslip of one run, including provisional and superseded."""
+        await self._get_visible_run(identity, run_id)
+        items, total = await self._repo.list_run_payslips(
+            identity.tenant_id, run_id, page
+        )
+        return PayslipListPage(items=list(items), page=page.make_page(total))
+
+    async def list_my_payslips(
+        self, identity: Identity, page: PageParams
+    ) -> PayslipListPage:
+        """The caller's own payslips (issued and superseded), every role.
+
+        An account without an employee link owns nothing: it gets an empty
+        page, never another employee's data.
+        """
+        if identity.employee_id is None:
+            return PayslipListPage(items=[], page=page.make_page(0))
+        items, total = await self._repo.list_employee_payslips(
+            identity.tenant_id,
+            identity.employee_id,
+            page,
+            statuses=(PayslipStatus.ISSUED, PayslipStatus.SUPERSEDED),
+        )
+        return PayslipListPage(items=list(items), page=page.make_page(total))
+
+    async def get_payslip(self, identity: Identity, payslip_id: UUID) -> Payslip:
+        """Own payslip, or any payslip for the company-wide view roles.
+
+        The fetch is tenant-scoped first, then the ownership policy runs, so an
+        unknown, cross-tenant or foreign payslip is the same `404` (existence
+        is never leaked).
+        """
+        payslip = await self._repo.get_payslip(identity.tenant_id, payslip_id)
+        if payslip is None:
+            raise PayslipNotFoundError()
+        if payslip.status is PayslipStatus.PROVISIONAL:
+            # Draft payroll is review material for HR/Finance/Admin only; an
+            # employee's own provisional payslip is a `404` until issuance.
+            ensure_can_view_provisional_payslip(identity)
+        ensure_can_view_payslip(identity, payslip.employee_id)
+        return payslip
+
     # --- calculation job (T7) ------------------------------------------------
 
     async def calculate_run(
@@ -651,11 +739,12 @@ class PayrollService:
 
         `QUEUED → CALCULATING → CALCULATED | FAILED`. The worker has no request
         identity, so when `tenant_id` is omitted the run's tenant is resolved
-        with the repository's worker-only lookup. Already-calculated,
-        finalized and failed runs are no-ops, and a duplicate pass that loses
-        the claim cannot replace the result set (the repository re-checks the
-        run is still `CALCULATING`). A failed calculation is recoverable
-        through `recalculate`; a recalculation emits no run-level event.
+        with the repository's worker-only lookup. Only the pass that wins the
+        `QUEUED → CALCULATING` claim calculates; a run that is already
+        calculating (another worker owns it), calculated, finalized or failed
+        is returned untouched, so a duplicate/re-delivered pass can never
+        replace the result set. A failed calculation is recoverable through
+        `recalculate`; a recalculation emits no run-level event.
         """
         tenant = tenant_id or await self._repo.tenant_id_for_run(run_id)
         if tenant is None:
@@ -664,6 +753,7 @@ class PayrollService:
         if run is None:
             raise PayrollRunNotFoundError()
         if run.status in (
+            PayrollRunStatus.CALCULATING,
             PayrollRunStatus.CALCULATED,
             PayrollRunStatus.FINALIZED,
             PayrollRunStatus.FAILED,
@@ -680,18 +770,14 @@ class PayrollService:
                 failed_code=None,
             )
             if claimed is None:
+                # Another worker owns the claim (it is CALCULATING) or already
+                # finished: a job pass that loses the claim must never run a
+                # second calculation over the same run (spec R6).
                 current = await self._repo.get_run(tenant, run_id)
                 if current is None:
                     raise PayrollRunNotFoundError()
-                if current.status in (
-                    PayrollRunStatus.CALCULATED,
-                    PayrollRunStatus.FINALIZED,
-                    PayrollRunStatus.FAILED,
-                ):
-                    return current
-                run = current
-            else:
-                run = claimed
+                return current
+            run = claimed
 
         # A retained `calculated_at` means this run already emitted its one
         # `payroll.calculated` event; a recalculation must not emit again.
@@ -758,6 +844,14 @@ class PayrollService:
         return calculated
 
     # --- internals -----------------------------------------------------------
+
+    async def _get_visible_run(self, identity: Identity, run_id: UUID) -> PayrollRun:
+        """Run reads require the company-wide view roles and tenant scope."""
+        ensure_can_view_runs(identity)
+        run = await self._repo.get_run(identity.tenant_id, run_id)
+        if run is None:
+            raise PayrollRunNotFoundError()
+        return run
 
     async def _prepare_calculation(
         self, tenant_id: UUID, run: PayrollRun, now: datetime

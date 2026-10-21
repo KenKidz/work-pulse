@@ -595,6 +595,19 @@ class PostgresPayrollRepository:
         stmt = select(orm.PayrollRun.tenant_id).where(orm.PayrollRun.id == run_id)
         return (await self._session.execute(stmt.limit(1))).scalar_one_or_none()
 
+    async def queued_run_ids(self, limit: int) -> Sequence[UUID]:
+        """Worker poll: oldest queued runs across tenants (claim happens after)."""
+        stmt = (
+            select(orm.PayrollRun.id)
+            .where(orm.PayrollRun.status == PayrollRunStatus.QUEUED.value)
+            .order_by(
+                orm.PayrollRun.created_at.asc(),
+                orm.PayrollRun.id.asc(),
+            )
+            .limit(limit)
+        )
+        return list((await self._session.execute(stmt)).scalars())
+
     async def update_run(
         self, tenant_id: UUID, run_id: UUID, **changes: Any
     ) -> PayrollRun | None:
@@ -917,12 +930,21 @@ class PostgresPayrollRepository:
         return await self._with_lines(tenant_id, rows), total
 
     async def list_employee_payslips(
-        self, tenant_id: UUID, employee_id: UUID, page: PageParams
+        self,
+        tenant_id: UUID,
+        employee_id: UUID,
+        page: PageParams,
+        *,
+        statuses: Sequence[PayslipStatus] | None = None,
     ) -> tuple[Sequence[Payslip], int]:
         conditions = [
             orm.Payslip.tenant_id == tenant_id,
             orm.Payslip.employee_id == employee_id,
         ]
+        if statuses is not None:
+            conditions.append(
+                orm.Payslip.status.in_([status.value for status in statuses])
+            )
         total = (
             await self._session.execute(
                 select(func.count()).select_from(orm.Payslip).where(*conditions)

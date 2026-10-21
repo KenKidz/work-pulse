@@ -54,8 +54,12 @@ import type {
   ListLeaveBalancesParams,
   ListLeaveRequestsParams,
   ListLocationsParams,
+  ListMyPayslipsParams,
   ListNotificationsParams,
+  ListPayrollRunsParams,
   ListPositionsParams,
+  ListRunPayslipsParams,
+  ListRunTimesheetsParams,
   ListSalariesParams,
   ListUsersParams,
   Location,
@@ -73,6 +77,9 @@ import type {
   PayrollDeductionUpdate,
   PayrollRun,
   PayrollRunCreate,
+  PayrollRunListPage,
+  Payslip,
+  PayslipListPage,
   Position,
   PositionCreate,
   PositionListPage,
@@ -86,6 +93,7 @@ import type {
   ShiftCreate,
   ShiftUpdate,
   TerminationRequest,
+  TimesheetListPage,
   TransferRequest,
   UpdateEmployee,
   UpdateUser,
@@ -9968,6 +9976,202 @@ export const useCreatePayrollRun = <
   return useMutation(getCreatePayrollRunMutationOptions(options), queryClient);
 };
 
+export type listPayrollRunsResponse200 = {
+  data: PayrollRunListPage;
+  status: 200;
+};
+
+export type listPayrollRunsResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type listPayrollRunsResponseSuccess = listPayrollRunsResponse200 & {
+  headers: Headers;
+};
+export type listPayrollRunsResponseError = listPayrollRunsResponse422 & {
+  headers: Headers;
+};
+
+export type listPayrollRunsResponse =
+  listPayrollRunsResponseSuccess | listPayrollRunsResponseError;
+
+export const getListPayrollRunsUrl = (params?: ListPayrollRunsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/payroll/runs?${stringifiedParams}`
+    : `/api/v1/payroll/runs`;
+};
+
+/**
+ * Paged run history, newest period first (HR+).
+ * @summary List Payroll Runs
+ */
+export const listPayrollRuns = async (
+  params?: ListPayrollRunsParams,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<listPayrollRunsResponse> => {
+  return customFetch<listPayrollRunsResponse>(getListPayrollRunsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListPayrollRunsQueryKey = (params?: ListPayrollRunsParams) => {
+  return [`/api/v1/payroll/runs`, ...(params ? [params] : [])] as const;
+};
+
+export const getListPayrollRunsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listPayrollRuns>>,
+  TError = HTTPValidationError,
+>(
+  params?: ListPayrollRunsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listPayrollRuns>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListPayrollRunsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listPayrollRuns>>> = ({
+    signal,
+  }) => listPayrollRuns(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listPayrollRuns>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListPayrollRunsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listPayrollRuns>>
+>;
+export type ListPayrollRunsQueryError = HTTPValidationError;
+
+export function useListPayrollRuns<
+  TData = Awaited<ReturnType<typeof listPayrollRuns>>,
+  TError = HTTPValidationError,
+>(
+  params: undefined | ListPayrollRunsParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listPayrollRuns>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listPayrollRuns>>,
+          TError,
+          Awaited<ReturnType<typeof listPayrollRuns>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useListPayrollRuns<
+  TData = Awaited<ReturnType<typeof listPayrollRuns>>,
+  TError = HTTPValidationError,
+>(
+  params?: ListPayrollRunsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listPayrollRuns>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listPayrollRuns>>,
+          TError,
+          Awaited<ReturnType<typeof listPayrollRuns>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useListPayrollRuns<
+  TData = Awaited<ReturnType<typeof listPayrollRuns>>,
+  TError = HTTPValidationError,
+>(
+  params?: ListPayrollRunsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listPayrollRuns>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary List Payroll Runs
+ */
+
+export function useListPayrollRuns<
+  TData = Awaited<ReturnType<typeof listPayrollRuns>>,
+  TError = HTTPValidationError,
+>(
+  params?: ListPayrollRunsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listPayrollRuns>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getListPayrollRunsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
 export type recalculatePayrollRunResponse200 = {
   data: PayrollRun;
   status: 200;
@@ -10341,6 +10545,961 @@ export const useCreateRunBonus = <
 > => {
   return useMutation(getCreateRunBonusMutationOptions(options), queryClient);
 };
+
+export type getPayrollRunResponse200 = {
+  data: PayrollRun;
+  status: 200;
+};
+
+export type getPayrollRunResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type getPayrollRunResponseSuccess = getPayrollRunResponse200 & {
+  headers: Headers;
+};
+export type getPayrollRunResponseError = getPayrollRunResponse422 & {
+  headers: Headers;
+};
+
+export type getPayrollRunResponse =
+  getPayrollRunResponseSuccess | getPayrollRunResponseError;
+
+export const getGetPayrollRunUrl = (id: string) => {
+  return `/api/v1/payroll/runs/${id}`;
+};
+
+/**
+ * One run and its PII-free summary.
+ * @summary Get Payroll Run
+ */
+export const getPayrollRun = async (
+  id: string,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<getPayrollRunResponse> => {
+  return customFetch<getPayrollRunResponse>(getGetPayrollRunUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetPayrollRunQueryKey = (id: string) => {
+  return [`/api/v1/payroll/runs/${id}`] as const;
+};
+
+export const getGetPayrollRunQueryOptions = <
+  TData = Awaited<ReturnType<typeof getPayrollRun>>,
+  TError = HTTPValidationError,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getPayrollRun>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetPayrollRunQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getPayrollRun>>> = ({
+    signal,
+  }) => getPayrollRun(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getPayrollRun>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetPayrollRunQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getPayrollRun>>
+>;
+export type GetPayrollRunQueryError = HTTPValidationError;
+
+export function useGetPayrollRun<
+  TData = Awaited<ReturnType<typeof getPayrollRun>>,
+  TError = HTTPValidationError,
+>(
+  id: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getPayrollRun>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getPayrollRun>>,
+          TError,
+          Awaited<ReturnType<typeof getPayrollRun>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetPayrollRun<
+  TData = Awaited<ReturnType<typeof getPayrollRun>>,
+  TError = HTTPValidationError,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getPayrollRun>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getPayrollRun>>,
+          TError,
+          Awaited<ReturnType<typeof getPayrollRun>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetPayrollRun<
+  TData = Awaited<ReturnType<typeof getPayrollRun>>,
+  TError = HTTPValidationError,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getPayrollRun>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary Get Payroll Run
+ */
+
+export function useGetPayrollRun<
+  TData = Awaited<ReturnType<typeof getPayrollRun>>,
+  TError = HTTPValidationError,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getPayrollRun>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetPayrollRunQueryOptions(id, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export type listRunTimesheetsResponse200 = {
+  data: TimesheetListPage;
+  status: 200;
+};
+
+export type listRunTimesheetsResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type listRunTimesheetsResponseSuccess = listRunTimesheetsResponse200 & {
+  headers: Headers;
+};
+export type listRunTimesheetsResponseError = listRunTimesheetsResponse422 & {
+  headers: Headers;
+};
+
+export type listRunTimesheetsResponse =
+  listRunTimesheetsResponseSuccess | listRunTimesheetsResponseError;
+
+export const getListRunTimesheetsUrl = (
+  id: string,
+  params?: ListRunTimesheetsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/payroll/runs/${id}/timesheets?${stringifiedParams}`
+    : `/api/v1/payroll/runs/${id}/timesheets`;
+};
+
+/**
+ * Informational worked/overtime/leave facts for the run's scope.
+ * @summary List Run Timesheets
+ */
+export const listRunTimesheets = async (
+  id: string,
+  params?: ListRunTimesheetsParams,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<listRunTimesheetsResponse> => {
+  return customFetch<listRunTimesheetsResponse>(
+    getListRunTimesheetsUrl(id, params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListRunTimesheetsQueryKey = (
+  id: string,
+  params?: ListRunTimesheetsParams,
+) => {
+  return [
+    `/api/v1/payroll/runs/${id}/timesheets`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getListRunTimesheetsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listRunTimesheets>>,
+  TError = HTTPValidationError,
+>(
+  id: string,
+  params?: ListRunTimesheetsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listRunTimesheets>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListRunTimesheetsQueryKey(id, params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listRunTimesheets>>
+  > = ({ signal }) =>
+    listRunTimesheets(id, params, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listRunTimesheets>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListRunTimesheetsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listRunTimesheets>>
+>;
+export type ListRunTimesheetsQueryError = HTTPValidationError;
+
+export function useListRunTimesheets<
+  TData = Awaited<ReturnType<typeof listRunTimesheets>>,
+  TError = HTTPValidationError,
+>(
+  id: string,
+  params: undefined | ListRunTimesheetsParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listRunTimesheets>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listRunTimesheets>>,
+          TError,
+          Awaited<ReturnType<typeof listRunTimesheets>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useListRunTimesheets<
+  TData = Awaited<ReturnType<typeof listRunTimesheets>>,
+  TError = HTTPValidationError,
+>(
+  id: string,
+  params?: ListRunTimesheetsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listRunTimesheets>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listRunTimesheets>>,
+          TError,
+          Awaited<ReturnType<typeof listRunTimesheets>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useListRunTimesheets<
+  TData = Awaited<ReturnType<typeof listRunTimesheets>>,
+  TError = HTTPValidationError,
+>(
+  id: string,
+  params?: ListRunTimesheetsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listRunTimesheets>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary List Run Timesheets
+ */
+
+export function useListRunTimesheets<
+  TData = Awaited<ReturnType<typeof listRunTimesheets>>,
+  TError = HTTPValidationError,
+>(
+  id: string,
+  params?: ListRunTimesheetsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listRunTimesheets>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getListRunTimesheetsQueryOptions(id, params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export type listRunPayslipsResponse200 = {
+  data: PayslipListPage;
+  status: 200;
+};
+
+export type listRunPayslipsResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type listRunPayslipsResponseSuccess = listRunPayslipsResponse200 & {
+  headers: Headers;
+};
+export type listRunPayslipsResponseError = listRunPayslipsResponse422 & {
+  headers: Headers;
+};
+
+export type listRunPayslipsResponse =
+  listRunPayslipsResponseSuccess | listRunPayslipsResponseError;
+
+export const getListRunPayslipsUrl = (
+  id: string,
+  params?: ListRunPayslipsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/payroll/runs/${id}/payslips?${stringifiedParams}`
+    : `/api/v1/payroll/runs/${id}/payslips`;
+};
+
+/**
+ * Every payslip of one run (provisional, issued and superseded).
+ * @summary List Run Payslips
+ */
+export const listRunPayslips = async (
+  id: string,
+  params?: ListRunPayslipsParams,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<listRunPayslipsResponse> => {
+  return customFetch<listRunPayslipsResponse>(
+    getListRunPayslipsUrl(id, params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListRunPayslipsQueryKey = (
+  id: string,
+  params?: ListRunPayslipsParams,
+) => {
+  return [
+    `/api/v1/payroll/runs/${id}/payslips`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getListRunPayslipsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listRunPayslips>>,
+  TError = HTTPValidationError,
+>(
+  id: string,
+  params?: ListRunPayslipsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listRunPayslips>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListRunPayslipsQueryKey(id, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listRunPayslips>>> = ({
+    signal,
+  }) => listRunPayslips(id, params, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listRunPayslips>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListRunPayslipsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listRunPayslips>>
+>;
+export type ListRunPayslipsQueryError = HTTPValidationError;
+
+export function useListRunPayslips<
+  TData = Awaited<ReturnType<typeof listRunPayslips>>,
+  TError = HTTPValidationError,
+>(
+  id: string,
+  params: undefined | ListRunPayslipsParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listRunPayslips>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listRunPayslips>>,
+          TError,
+          Awaited<ReturnType<typeof listRunPayslips>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useListRunPayslips<
+  TData = Awaited<ReturnType<typeof listRunPayslips>>,
+  TError = HTTPValidationError,
+>(
+  id: string,
+  params?: ListRunPayslipsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listRunPayslips>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listRunPayslips>>,
+          TError,
+          Awaited<ReturnType<typeof listRunPayslips>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useListRunPayslips<
+  TData = Awaited<ReturnType<typeof listRunPayslips>>,
+  TError = HTTPValidationError,
+>(
+  id: string,
+  params?: ListRunPayslipsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listRunPayslips>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary List Run Payslips
+ */
+
+export function useListRunPayslips<
+  TData = Awaited<ReturnType<typeof listRunPayslips>>,
+  TError = HTTPValidationError,
+>(
+  id: string,
+  params?: ListRunPayslipsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listRunPayslips>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getListRunPayslipsQueryOptions(id, params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export type listMyPayslipsResponse200 = {
+  data: PayslipListPage;
+  status: 200;
+};
+
+export type listMyPayslipsResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type listMyPayslipsResponseSuccess = listMyPayslipsResponse200 & {
+  headers: Headers;
+};
+export type listMyPayslipsResponseError = listMyPayslipsResponse422 & {
+  headers: Headers;
+};
+
+export type listMyPayslipsResponse =
+  listMyPayslipsResponseSuccess | listMyPayslipsResponseError;
+
+export const getListMyPayslipsUrl = (params?: ListMyPayslipsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/payroll/payslips?${stringifiedParams}`
+    : `/api/v1/payroll/payslips`;
+};
+
+/**
+ * The caller's own payslips, every role (issued + superseded).
+ * @summary List My Payslips
+ */
+export const listMyPayslips = async (
+  params?: ListMyPayslipsParams,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<listMyPayslipsResponse> => {
+  return customFetch<listMyPayslipsResponse>(getListMyPayslipsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListMyPayslipsQueryKey = (params?: ListMyPayslipsParams) => {
+  return [`/api/v1/payroll/payslips`, ...(params ? [params] : [])] as const;
+};
+
+export const getListMyPayslipsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listMyPayslips>>,
+  TError = HTTPValidationError,
+>(
+  params?: ListMyPayslipsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listMyPayslips>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListMyPayslipsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listMyPayslips>>> = ({
+    signal,
+  }) => listMyPayslips(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listMyPayslips>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListMyPayslipsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listMyPayslips>>
+>;
+export type ListMyPayslipsQueryError = HTTPValidationError;
+
+export function useListMyPayslips<
+  TData = Awaited<ReturnType<typeof listMyPayslips>>,
+  TError = HTTPValidationError,
+>(
+  params: undefined | ListMyPayslipsParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listMyPayslips>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listMyPayslips>>,
+          TError,
+          Awaited<ReturnType<typeof listMyPayslips>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useListMyPayslips<
+  TData = Awaited<ReturnType<typeof listMyPayslips>>,
+  TError = HTTPValidationError,
+>(
+  params?: ListMyPayslipsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listMyPayslips>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listMyPayslips>>,
+          TError,
+          Awaited<ReturnType<typeof listMyPayslips>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useListMyPayslips<
+  TData = Awaited<ReturnType<typeof listMyPayslips>>,
+  TError = HTTPValidationError,
+>(
+  params?: ListMyPayslipsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listMyPayslips>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary List My Payslips
+ */
+
+export function useListMyPayslips<
+  TData = Awaited<ReturnType<typeof listMyPayslips>>,
+  TError = HTTPValidationError,
+>(
+  params?: ListMyPayslipsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listMyPayslips>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getListMyPayslipsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export type getPayslipResponse200 = {
+  data: Payslip;
+  status: 200;
+};
+
+export type getPayslipResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type getPayslipResponseSuccess = getPayslipResponse200 & {
+  headers: Headers;
+};
+export type getPayslipResponseError = getPayslipResponse422 & {
+  headers: Headers;
+};
+
+export type getPayslipResponse =
+  getPayslipResponseSuccess | getPayslipResponseError;
+
+export const getGetPayslipUrl = (id: string) => {
+  return `/api/v1/payroll/payslips/${id}`;
+};
+
+/**
+ * Own payslip, or any payslip for HR/Finance/Admin/Super Admin.
+ * @summary Get Payslip
+ */
+export const getPayslip = async (
+  id: string,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<getPayslipResponse> => {
+  return customFetch<getPayslipResponse>(getGetPayslipUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetPayslipQueryKey = (id: string) => {
+  return [`/api/v1/payroll/payslips/${id}`] as const;
+};
+
+export const getGetPayslipQueryOptions = <
+  TData = Awaited<ReturnType<typeof getPayslip>>,
+  TError = HTTPValidationError,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getPayslip>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetPayslipQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getPayslip>>> = ({
+    signal,
+  }) => getPayslip(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getPayslip>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetPayslipQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getPayslip>>
+>;
+export type GetPayslipQueryError = HTTPValidationError;
+
+export function useGetPayslip<
+  TData = Awaited<ReturnType<typeof getPayslip>>,
+  TError = HTTPValidationError,
+>(
+  id: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getPayslip>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getPayslip>>,
+          TError,
+          Awaited<ReturnType<typeof getPayslip>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetPayslip<
+  TData = Awaited<ReturnType<typeof getPayslip>>,
+  TError = HTTPValidationError,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getPayslip>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getPayslip>>,
+          TError,
+          Awaited<ReturnType<typeof getPayslip>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetPayslip<
+  TData = Awaited<ReturnType<typeof getPayslip>>,
+  TError = HTTPValidationError,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getPayslip>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary Get Payslip
+ */
+
+export function useGetPayslip<
+  TData = Awaited<ReturnType<typeof getPayslip>>,
+  TError = HTTPValidationError,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getPayslip>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetPayslipQueryOptions(id, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export type getRealtimeBoardResponse200 = {
   data: RealtimeBoardSnapshot;

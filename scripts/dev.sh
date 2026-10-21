@@ -3,9 +3,10 @@
 #
 # `make dev` is the one command that runs everything: the Makefile owns service
 # startup (PostgreSQL :5434, Redis, Kafka), Alembic migrations and seeding,
-# then hands the five long-running processes to this script — the FastAPI dev
+# then hands the six long-running processes to this script — the FastAPI dev
 # server (:8000), the Next.js dev server (:3000), the outbox relay, the
-# realtime consumer and the notifications consumer (ADR 0012 / 0013 / 0015).
+# realtime consumer, the notifications consumer and the payroll worker
+# (ADR 0012 / 0013 / 0015 / payroll T8).
 #
 # Conventions (shared with tests/e2e/full-hop.sh):
 # - Readiness is deterministic, never sleeps: TCP accept for the two HTTP
@@ -14,8 +15,8 @@
 #   teardown is a bounded SIGTERM with a KILL fallback, applied recursively to
 #   process trees (pnpm and uvicorn --reload both spawn children).
 # - Keep the interpreter/PYTHONPATH/module triples below in sync with the
-#   Makefile's `dev-api` / `dev-relay` / `dev-realtime` / `dev-notifications`
-#   targets — same commands.
+#   Makefile's `dev-api` / `dev-relay` / `dev-realtime` / `dev-notifications` /
+#   `dev-payroll` targets — same commands.
 # - A process dying on its own stops the rest, with log tails on stderr.
 
 set -euo pipefail
@@ -40,9 +41,10 @@ if [[ -t 1 ]]; then
   C_RELAY=$'\033[33m'
   C_REALTIME=$'\033[35m'
   C_NOTIFY=$'\033[34m'
+  C_PAYROLL=$'\033[36m'
   C_BAD=$'\033[31m'
 else
-  C_RESET='' C_API='' C_WEB='' C_RELAY='' C_REALTIME='' C_NOTIFY='' C_BAD=''
+  C_RESET='' C_API='' C_WEB='' C_RELAY='' C_REALTIME='' C_NOTIFY='' C_PAYROLL='' C_BAD=''
 fi
 
 tag_color() {
@@ -52,6 +54,7 @@ tag_color() {
     relay) printf '%s' "$C_RELAY" ;;
     realtime) printf '%s' "$C_REALTIME" ;;
     notify) printf '%s' "$C_NOTIFY" ;;
+    payroll) printf '%s' "$C_PAYROLL" ;;
     *) printf '%s' "$C_RESET" ;;
   esac
 }
@@ -218,10 +221,13 @@ start realtime "$API_DIR" \
   env PYTHONPATH="../..:." "$PYTHON" -m workers.realtime.main
 start notify "$API_DIR" \
   env PYTHONPATH="../..:." "$PYTHON" -m workers.notifications.main
+start payroll "$API_DIR" \
+  env PYTHONPATH="../..:." "$PYTHON" -m workers.payroll.main
 
 wait_for_line relay "${PIDS[2]}" "$LOG_DIR/relay.log" relay_started
 wait_for_line realtime "${PIDS[3]}" "$LOG_DIR/realtime.log" realtime_consumer_started
 wait_for_line notify "${PIDS[4]}" "$LOG_DIR/notify.log" notifications_consumer_started
+wait_for_line payroll "${PIDS[5]}" "$LOG_DIR/payroll.log" payroll_worker_started
 wait_for_port api 8000 "${PIDS[0]}"
 wait_for_port web 3000 "${PIDS[1]}"
 
@@ -231,6 +237,7 @@ echo "  api       http://localhost:8000        (docs at /docs)"
 echo "  relay     outbox -> Kafka (workpulse.events)"
 echo "  realtime  Kafka -> live wall (Redis fan-out)"
 echo "  notify    Kafka -> email/Slack deliveries"
+echo "  payroll   queued payroll runs -> calculated results"
 echo "dev: Ctrl+C stops everything"
 
 # Supervise: the first process to die stops the run (with its log tail in the

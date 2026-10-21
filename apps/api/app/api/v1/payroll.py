@@ -1,9 +1,8 @@
-"""Payroll routes (T5/T6): config, inputs, run lifecycle and bonuses.
+"""Payroll routes (T5/T6/T9): config, inputs, run lifecycle, bonuses and reads.
 
-Query endpoints (run lists/details, timesheets, payslips, own payslips) land
-with T9. Routers stay thin: identity → policy (inside the service) → service,
-with `now` read at this edge only. operationIds are pinned in
-`.ai/features/payroll.md` and drive the orval-generated web hooks.
+Routers stay thin: identity → policy (inside the service) → service, with `now`
+read at this edge only. operationIds are pinned in `.ai/features/payroll.md` and
+drive the orval-generated web hooks.
 """
 
 from datetime import UTC, datetime
@@ -13,6 +12,7 @@ from fastapi import APIRouter, Query
 
 from app.dependencies import IdentityDep, PayrollServiceDep
 from app.domains.payroll.schemas import (
+    PERIOD_PATTERN,
     BonusCreate,
     PayrollBonus,
     PayrollConfig,
@@ -22,9 +22,14 @@ from app.domains.payroll.schemas import (
     PayrollDeductionUpdate,
     PayrollRun,
     PayrollRunCreate,
+    PayrollRunListPage,
+    PayrollRunStatus,
+    Payslip,
+    PayslipListPage,
     Salary,
     SalaryCreate,
     SalaryListPage,
+    TimesheetListPage,
 )
 from app.shared.pagination import PageParamsDep
 
@@ -205,3 +210,94 @@ async def create_run_bonus(
 ) -> PayrollBonus:
     """Add a bonus for an employee in the calculated run."""
     return await service.create_bonus(identity, id, payload, _now())
+
+
+# --- queries (T9) ------------------------------------------------------------
+
+
+@router.get(
+    "/payroll/runs",
+    response_model=PayrollRunListPage,
+    operation_id="listPayrollRuns",
+)
+async def list_payroll_runs(
+    identity: IdentityDep,
+    service: PayrollServiceDep,
+    page: PageParamsDep,
+    period: str | None = Query(default=None, pattern=PERIOD_PATTERN),
+    status: PayrollRunStatus | None = Query(default=None),
+) -> PayrollRunListPage:
+    """Paged run history, newest period first (HR+)."""
+    return await service.list_runs(identity, period=period, status=status, page=page)
+
+
+@router.get(
+    "/payroll/runs/{id}",
+    response_model=PayrollRun,
+    operation_id="getPayrollRun",
+)
+async def get_payroll_run(
+    id: UUID,
+    identity: IdentityDep,
+    service: PayrollServiceDep,
+) -> PayrollRun:
+    """One run and its PII-free summary."""
+    return await service.get_run(identity, id)
+
+
+@router.get(
+    "/payroll/runs/{id}/timesheets",
+    response_model=TimesheetListPage,
+    operation_id="listRunTimesheets",
+)
+async def list_run_timesheets(
+    id: UUID,
+    identity: IdentityDep,
+    service: PayrollServiceDep,
+    page: PageParamsDep,
+) -> TimesheetListPage:
+    """Informational worked/overtime/leave facts for the run's scope."""
+    return await service.list_run_timesheets(identity, id, page)
+
+
+@router.get(
+    "/payroll/runs/{id}/payslips",
+    response_model=PayslipListPage,
+    operation_id="listRunPayslips",
+)
+async def list_run_payslips(
+    id: UUID,
+    identity: IdentityDep,
+    service: PayrollServiceDep,
+    page: PageParamsDep,
+) -> PayslipListPage:
+    """Every payslip of one run (provisional, issued and superseded)."""
+    return await service.list_run_payslips(identity, id, page)
+
+
+@router.get(
+    "/payroll/payslips",
+    response_model=PayslipListPage,
+    operation_id="listMyPayslips",
+)
+async def list_my_payslips(
+    identity: IdentityDep,
+    service: PayrollServiceDep,
+    page: PageParamsDep,
+) -> PayslipListPage:
+    """The caller's own payslips, every role (issued + superseded)."""
+    return await service.list_my_payslips(identity, page)
+
+
+@router.get(
+    "/payroll/payslips/{id}",
+    response_model=Payslip,
+    operation_id="getPayslip",
+)
+async def get_payslip(
+    id: UUID,
+    identity: IdentityDep,
+    service: PayrollServiceDep,
+) -> Payslip:
+    """Own payslip, or any payslip for HR/Finance/Admin/Super Admin."""
+    return await service.get_payslip(identity, id)

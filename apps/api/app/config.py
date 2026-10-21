@@ -75,6 +75,15 @@ class Settings(BaseSettings):
     slack_bot_token: str | None = None
     slack_channel_id: str | None = None
 
+    # --- Phase 4: payroll calculation worker (`workers/payroll`, T8) ---
+    # The job loop polls `payroll_runs` for `QUEUED` runs (claiming happens in
+    # the service's state-guarded transition), calculates them and backs off
+    # exponentially on database hiccups. Amounts never appear in its logs.
+    payroll_worker_batch_size: int = 10
+    payroll_worker_poll_seconds: float = 1.0
+    payroll_worker_backoff_base_seconds: float = 1.0
+    payroll_worker_backoff_max_seconds: float = 30.0
+
     # --- Identity: sessions (pinned in `.ai/features/identity-access.md`) ---
     # Absolute session lifetime; the `wp_session` cookie itself is a session
     # cookie (no Max-Age) — the server-side TTL is the authority.

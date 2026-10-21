@@ -6,7 +6,7 @@ does the work.
 
 ## Now
 
-- [ ] Payroll (`.ai/features/payroll.md`, spec written 2026-10-21, plan approved 2026-10-21): simulated monthly runs, timesheets and payslips per ADR 0003 — plan is T1–T12 in the spec; T1–T7 landed 2026-10-21 (event contracts + ADRs, persistence, domain/seam ports, deterministic calculator, config/salary API, run lifecycle/bonuses API, calculation job), T8–T12 remain; build order: `overtime.md` spec + build first (P0; payroll consumes HR-verified overtime via a read/write port) — until then the calculation/finalize seam is exercised through fakes and the API wires a no-overtime placeholder
+- [ ] Payroll (`.ai/features/payroll.md`, spec written 2026-10-21, plan approved 2026-10-21): simulated monthly runs, timesheets and payslips per ADR 0003 — plan is T1–T12 in the spec; T1–T9 landed 2026-10-21 (event contracts + ADRs, persistence, domain/seam ports, deterministic calculator, config/salary API, run lifecycle/bonuses API, calculation job, payroll worker, query endpoints), T10–T12 remain (web workspace, my payslips, e2e); build order: `overtime.md` spec + build first (P0; payroll consumes HR-verified overtime via a read/write port) — until then the calculation/finalize seam is exercised through fakes and the API wires a no-overtime placeholder
 
 ## Later
 

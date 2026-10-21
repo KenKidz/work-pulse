@@ -42,6 +42,7 @@ from app.domains.payroll.schemas import (
     PayrollRun,
     PayrollRunStatus,
     Payslip,
+    PayslipStatus,
     Salary,
     Timesheet,
 )
@@ -272,6 +273,15 @@ class PayrollRepository(Protocol):
         """
         ...
 
+    async def queued_run_ids(self, limit: int) -> Sequence[UUID]:
+        """Worker-only cross-tenant lookup: the oldest `QUEUED` run ids.
+
+        The worker polls this without an identity (it has no request context).
+        Claiming is the service's state-guarded `QUEUED → CALCULATING`
+        transition, so two workers that see the same id still calculate once.
+        """
+        ...
+
     async def update_run(
         self, tenant_id: UUID, run_id: UUID, **changes: Any
     ) -> PayrollRun | None:
@@ -382,10 +392,19 @@ class PayrollRepository(Protocol):
         ...
 
     async def list_employee_payslips(
-        self, tenant_id: UUID, employee_id: UUID, page: PageParams
+        self,
+        tenant_id: UUID,
+        employee_id: UUID,
+        page: PageParams,
+        *,
+        statuses: Sequence[PayslipStatus] | None = None,
     ) -> tuple[Sequence[Payslip], int]:
-        """The employee's own payslips, newest period first (includes
-        `superseded`)."""
+        """The employee's own payslips, newest period first.
+
+        `statuses` narrows the result (the API passes `issued`/`superseded`
+        only, so an employee never sees a provisional draft). `superseded`
+        remains readable; `None` means every status.
+        """
         ...
 
     async def get_payslip(self, tenant_id: UUID, payslip_id: UUID) -> Payslip | None:
