@@ -149,6 +149,16 @@ class SalaryRecord(Base):
             "currency ~ '^[A-Z]{3}$'",
             name="currency_valid",
         ),
+        # The salary list orders a tenant's history newest-first; the unique
+        # `(tenant, employee, effective_from)` index cannot satisfy that
+        # ordering because `employee_id` intervenes (T5 performance fix).
+        Index(
+            "ix_salary_records_tenant_effective",
+            "tenant_id",
+            "effective_from",
+            "created_at",
+            "id",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid7)

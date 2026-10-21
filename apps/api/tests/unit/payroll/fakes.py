@@ -52,7 +52,7 @@ class FakePayrollRepository:
     async def get_config(self, tenant_id: UUID) -> PayrollConfig | None:
         return self.configs.get(tenant_id)
 
-    async def upsert_config(
+    async def create_config_if_absent(
         self,
         tenant_id: UUID,
         *,
@@ -61,6 +61,9 @@ class FakePayrollRepository:
         overtime_multiplier: Decimal,
         now: datetime,
     ) -> PayrollConfig:
+        existing = self.configs.get(tenant_id)
+        if existing is not None:
+            return existing
         row = PayrollConfig(
             tenant_id=tenant_id,
             currency=currency,
@@ -70,6 +73,29 @@ class FakePayrollRepository:
         )
         self.configs[tenant_id] = row
         return row
+
+    async def update_config_fields(
+        self,
+        tenant_id: UUID,
+        *,
+        currency: str | None = None,
+        standard_monthly_hours: Decimal | None = None,
+        overtime_multiplier: Decimal | None = None,
+        now: datetime,
+    ) -> PayrollConfig | None:
+        row = self.configs.get(tenant_id)
+        if row is None:
+            return None
+        changes: dict[str, Any] = {"updated_at": now}
+        if currency is not None:
+            changes["currency"] = currency
+        if standard_monthly_hours is not None:
+            changes["standard_monthly_hours"] = standard_monthly_hours
+        if overtime_multiplier is not None:
+            changes["overtime_multiplier"] = overtime_multiplier
+        updated = row.model_copy(update=changes)
+        self.configs[tenant_id] = updated
+        return updated
 
     # --- deduction lines ----------------------------------------------------
 

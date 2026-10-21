@@ -60,6 +60,17 @@ Money = Annotated[
 ]
 DecimalNumber = Money
 
+# Request-side numerics are validated as `Decimal`, but the generated
+# contract must stay a JSON number (ADR 0017 decision 5): without the schema
+# override Pydantic's lax input mode emits `number | string`, which lets the
+# typed web client drift from the pinned wire shape.
+PositiveNumberInput = Annotated[
+    Decimal, WithJsonSchema({"type": "number", "exclusiveMinimum": 0})
+]
+CentAmountInput = Annotated[
+    Decimal, WithJsonSchema({"type": "number", "minimum": 0.01})
+]
+
 
 class PayrollRunStatus(StrEnum):
     """Pinned run lifecycle (`queued → calculating → calculated → finalized`)."""
@@ -106,8 +117,8 @@ class PayrollConfigUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     currency: Currency | None = None
-    standard_monthly_hours: Decimal | None = Field(default=None, gt=0)
-    overtime_multiplier: Decimal | None = Field(default=None, gt=0)
+    standard_monthly_hours: PositiveNumberInput | None = Field(default=None, gt=0)
+    overtime_multiplier: PositiveNumberInput | None = Field(default=None, gt=0)
 
 
 class PayrollDeduction(BaseModel):
@@ -125,8 +136,12 @@ class PayrollDeduction(BaseModel):
     updated_at: datetime
 
 
-def _validate_deduction_value(kind: PayrollDeductionKind, value: Decimal) -> None:
-    """Kind-specific value rule shared by create and update validators."""
+def validate_deduction_value(kind: PayrollDeductionKind, value: Decimal) -> None:
+    """Kind-specific value rule shared by create/update and the service.
+
+    The service also calls this with the *merged* rule when an update patches
+    only one side of the kind/value pair.
+    """
     if kind is PayrollDeductionKind.PERCENT_OF_BASE and not (
         Decimal("0.01") <= value <= Decimal("100")
     ):
@@ -141,12 +156,12 @@ class PayrollDeductionCreate(BaseModel):
     code: str = Field(min_length=1, max_length=50)
     name: str = Field(min_length=1, max_length=200)
     kind: PayrollDeductionKind
-    value: Decimal = Field(ge=Decimal("0.01"))
+    value: CentAmountInput = Field(ge=Decimal("0.01"))
     active: bool = True
 
     @model_validator(mode="after")
     def _value_matches_kind(self) -> Self:
-        _validate_deduction_value(self.kind, self.value)
+        validate_deduction_value(self.kind, self.value)
         return self
 
 
@@ -157,7 +172,7 @@ class PayrollDeductionUpdate(BaseModel):
 
     name: str | None = Field(default=None, min_length=1, max_length=200)
     kind: PayrollDeductionKind | None = None
-    value: Decimal | None = Field(default=None, ge=Decimal("0.01"))
+    value: CentAmountInput | None = Field(default=None, ge=Decimal("0.01"))
     active: bool | None = None
 
     @model_validator(mode="after")
@@ -165,7 +180,7 @@ class PayrollDeductionUpdate(BaseModel):
         # When only one of the pair is present the stored counterpart decides;
         # the service validates the merged rule.
         if self.kind is not None and self.value is not None:
-            _validate_deduction_value(self.kind, self.value)
+            validate_deduction_value(self.kind, self.value)
         return self
 
 
@@ -187,7 +202,7 @@ class SalaryCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     employee_id: UUID
-    amount: Decimal = Field(ge=Decimal("0.01"))
+    amount: CentAmountInput = Field(ge=Decimal("0.01"))
     effective_from: date
 
 
@@ -297,7 +312,7 @@ class BonusCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     employee_id: UUID
-    amount: Decimal = Field(ge=Decimal("0.01"))
+    amount: CentAmountInput = Field(ge=Decimal("0.01"))
     note: str | None = Field(default=None, min_length=1, max_length=200)
 
 

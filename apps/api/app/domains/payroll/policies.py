@@ -23,6 +23,7 @@ transition is `403` (e.g. HR finalizing a run).
 from uuid import UUID
 
 from app.domains.payroll.exceptions import (
+    PayrollNotFoundError,
     PayrollRunNotFoundError,
     PayslipNotFoundError,
 )
@@ -52,6 +53,16 @@ def ensure_can_view_runs(identity: Identity) -> None:
     """HR/finance/admin/super_admin only; everyone else gets a `404`."""
     if identity.role not in PAYROLL_VIEW_ROLES:
         raise PayrollRunNotFoundError()
+
+
+def ensure_can_view_payroll(identity: Identity) -> None:
+    """Config, deduction lines and salary records: the company-wide readers.
+
+    HR reads them (view-only); employee/manager have no payroll workspace and
+    receive the same `404` as an unknown resource.
+    """
+    if identity.role not in PAYROLL_VIEW_ROLES:
+        raise PayrollNotFoundError()
 
 
 def ensure_can_view_payslip(identity: Identity, employee_id: UUID) -> None:

@@ -454,6 +454,76 @@ export interface NotificationUnreadCount {
   unread_count: number;
 }
 
+/**
+ * One tenant payroll configuration (single currency).
+ */
+export interface PayrollConfig {
+  tenant_id: string;
+  /** @pattern ^[A-Z]{3}$ */
+  currency: string;
+  standard_monthly_hours: number;
+  overtime_multiplier: number;
+  updated_at: string;
+}
+
+/**
+ * Partial update; every field is optional and validated when present.
+ */
+export interface PayrollConfigUpdate {
+  currency?: string | null;
+  standard_monthly_hours?: number | null;
+  overtime_multiplier?: number | null;
+}
+
+export type PayrollDeductionKind =
+  (typeof PayrollDeductionKind)[keyof typeof PayrollDeductionKind];
+
+export const PayrollDeductionKind = {
+  percent_of_base: "percent_of_base",
+  fixed_amount: "fixed_amount",
+} as const;
+
+/**
+ * One transparent tenant deduction rule.
+ */
+export interface PayrollDeduction {
+  id: string;
+  code: string;
+  name: string;
+  kind: PayrollDeductionKind;
+  value: number;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PayrollDeductionCreate {
+  /**
+   * @minLength 1
+   * @maxLength 50
+   */
+  code: string;
+  /**
+   * @minLength 1
+   * @maxLength 200
+   */
+  name: string;
+  kind: PayrollDeductionKind;
+  /** @minimum 0.01 */
+  value: number;
+  active?: boolean;
+}
+
+/**
+ * Partial update; `code` is immutable once created.
+ */
+export interface PayrollDeductionUpdate {
+  name?: string | null;
+  kind?: PayrollDeductionKind | null;
+  value?: number | null;
+  active?: boolean | null;
+}
+
 export interface Position {
   id: string;
   tenant_id: string;
@@ -559,6 +629,32 @@ export interface RealtimeBoardSnapshot {
 export interface ResetPasswordRequest {
   /** @minLength 10 */
   new_password: string;
+}
+
+/**
+ * One append-only salary record (amount and currency are PII).
+ */
+export interface Salary {
+  id: string;
+  employee_id: string;
+  amount: number;
+  /** @pattern ^[A-Z]{3}$ */
+  currency: string;
+  effective_from: string;
+  created_at: string;
+  created_by: string;
+}
+
+export interface SalaryCreate {
+  employee_id: string;
+  /** @minimum 0.01 */
+  amount: number;
+  effective_from: string;
+}
+
+export interface SalaryListPage {
+  items: Salary[];
+  page: Page;
 }
 
 export interface Shift {
@@ -712,6 +808,12 @@ export type ListLeaveBalancesParams = {
 };
 
 export type ListNotificationsParams = {
+  page?: number;
+  page_size?: number;
+};
+
+export type ListSalariesParams = {
+  employee_id?: string | null;
   page?: number;
   page_size?: number;
 };

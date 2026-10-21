@@ -36,6 +36,7 @@ from app.domains.organizations.service import (
     PositionService,
 )
 from app.domains.payroll.repository import AttendanceHoursPort, LeaveDaysPort
+from app.domains.payroll.service import PayrollService
 from app.domains.realtime.service import RealtimeService
 from app.infrastructure.postgres.audit import PostgresAuditWriter
 from app.infrastructure.postgres.employee_link import PostgresEmployeeLink
@@ -67,6 +68,7 @@ from app.infrastructure.postgres.repositories.organizations import (
     PostgresLocationRepository,
     PostgresPositionRepository,
 )
+from app.infrastructure.postgres.repositories.payroll import PostgresPayrollRepository
 from app.infrastructure.postgres.session import get_session
 from app.infrastructure.redis.client import get_redis
 from app.infrastructure.redis.streams import RedisPresenceStream
@@ -157,6 +159,19 @@ def get_leave_service(session: SessionDep) -> LeaveService:
         # Same session, same transaction: the request row, its audit entry and
         # its event envelope commit together or not at all (ADR 0012).
         outbox=PostgresEventOutbox(session, clock=_utc_now),
+    )
+
+
+def get_payroll_service(session: SessionDep) -> PayrollService:
+    """Config/deduction/salary use cases (T5).
+
+    Run lifecycle and calculation providers grow here with T6/T7 (the outbox
+    and seam ports join then); this concern is read/write of payroll inputs
+    only, which emits no domain events — its mutations are audited.
+    """
+    return PayrollService(
+        repo=PostgresPayrollRepository(session),
+        audit=PostgresAuditWriter(session),
     )
 
 
@@ -274,6 +289,7 @@ LocationServiceDep = Annotated[LocationService, Depends(get_location_service)]
 EmployeeServiceDep = Annotated[EmployeeService, Depends(get_employee_service)]
 AttendanceServiceDep = Annotated[AttendanceService, Depends(get_attendance_service)]
 LeaveServiceDep = Annotated[LeaveService, Depends(get_leave_service)]
+PayrollServiceDep = Annotated[PayrollService, Depends(get_payroll_service)]
 NotificationInboxServiceDep = Annotated[
     NotificationInboxService, Depends(get_notification_inbox_service)
 ]

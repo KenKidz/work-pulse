@@ -63,7 +63,7 @@ class PayrollRepository(Protocol):
         """The tenant's payroll configuration, or `None` before first write."""
         ...
 
-    async def upsert_config(
+    async def create_config_if_absent(
         self,
         tenant_id: UUID,
         *,
@@ -72,7 +72,28 @@ class PayrollRepository(Protocol):
         overtime_multiplier: Decimal,
         now: datetime,
     ) -> PayrollConfig:
-        """Create or replace the one configuration row for the tenant."""
+        """Provision the tenant's one config row without overwriting an existing one.
+
+        This is the first-read/first-salary path: `ON CONFLICT DO NOTHING` plus
+        a re-read, so a concurrent administrator's update can never be
+        clobbered by defaults (the create path must not behave like an update).
+        """
+        ...
+
+    async def update_config_fields(
+        self,
+        tenant_id: UUID,
+        *,
+        currency: str | None = None,
+        standard_monthly_hours: Decimal | None = None,
+        overtime_multiplier: Decimal | None = None,
+        now: datetime,
+    ) -> PayrollConfig | None:
+        """Patch only the supplied columns; `None` when no config exists.
+
+        A single-column UPDATE keeps concurrent partial updates from restoring
+        stale values for fields they did not touch.
+        """
         ...
 
     # --- deduction lines ----------------------------------------------------

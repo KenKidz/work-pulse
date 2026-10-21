@@ -10,6 +10,7 @@ from pydantic import ValidationError
 from app.domains.payroll.schemas import (
     BonusCreate,
     PayrollConfig,
+    PayrollConfigUpdate,
     PayrollDeductionCreate,
     PayrollDeductionKind,
     PayrollDeductionUpdate,
@@ -49,6 +50,24 @@ def test_period_must_be_a_calendar_month() -> None:
         PayrollRunCreate(period="2026-13")
     with pytest.raises(ValidationError):
         PayrollRunCreate(period="2026-9")
+
+
+def test_request_numeric_fields_are_pinned_to_json_numbers() -> None:
+    """Request decimals must not regenerate as `number | string` (ADR 0017)."""
+    amount = SalaryCreate.model_json_schema()["properties"]["amount"]
+    assert amount["type"] == "number"
+    assert amount["minimum"] == 0.01
+
+    value = PayrollDeductionCreate.model_json_schema()["properties"]["value"]
+    assert value["type"] == "number"
+    assert value["minimum"] == 0.01
+
+    hours = PayrollConfigUpdate.model_json_schema()["properties"][
+        "standard_monthly_hours"
+    ]
+    assert hours["anyOf"][0]["type"] == "number"
+    assert hours["anyOf"][0]["exclusiveMinimum"] == 0
+    assert hours["anyOf"][1] == {"type": "null"}
 
 
 @pytest.mark.parametrize("value", [Decimal("0.00"), Decimal("100.01")])

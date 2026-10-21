@@ -76,6 +76,36 @@ class SalaryEffectiveDateTakenError(WorkPulseError):
         super().__init__("Salary effective date already taken")
 
 
+class PayrollDeductionCodeTakenError(WorkPulseError):
+    """Deduction codes are the stable line keys and unique per tenant."""
+
+    status_code = 409
+    code = "payroll_deduction_code_taken"
+
+    def __init__(self) -> None:
+        super().__init__("Payroll deduction code already taken")
+
+
+class InvalidPayrollDeductionValueError(WorkPulseError):
+    """A partial update merged into a kind/value pair that violates the rule."""
+
+    status_code = 422
+    code = "validation_error"
+
+    def __init__(self) -> None:
+        super().__init__("Deduction value is invalid for its kind")
+
+
+class PayrollNotFoundError(WorkPulseError):
+    """No payroll standing for this capability — existence is not leaked."""
+
+    status_code = 404
+    code = "payroll_not_found"
+
+    def __init__(self) -> None:
+        super().__init__("Payroll data not found")
+
+
 class PayrollRunNotFoundError(WorkPulseError):
     """Unknown, cross-tenant or out-of-scope run — existence is not leaked."""
 
