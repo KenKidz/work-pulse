@@ -37,7 +37,6 @@ store.
 """
 
 import asyncio
-import json
 from collections.abc import Awaitable, Callable
 from datetime import datetime
 
@@ -61,16 +60,14 @@ from app.domains.notifications.repository import (
     NotificationRepository,
 )
 from app.domains.notifications.schemas import NotificationIntent, Recipient
+from app.shared.redaction import redaction_needles, safe_error_text
 
 DEFAULT_MAX_ATTEMPTS = 3
 DEFAULT_BACKOFF_BASE_SECONDS = 0.5
 
-# `last_error` discipline mirrors the relay's row rule (ADR 0012): a lower
-# layer may echo request data back, so the raw text is clipped first, every
-# rendered/recipient string is redacted, then the whole result is capped.
-_MAX_ERROR_CHARS = 300
-_MAX_ERROR_INPUT_CHARS = _MAX_ERROR_CHARS * 8
-_MIN_REDACT_CHARS = 3
+# `last_error` discipline: the shared scrubber (ADR 0012's row rule) redacts
+# every rendered/recipient string and caps the result. The backoff exponent is
+# bounded so an unbounded `2 ** n` can never overflow mid-outage.
 _MAX_BACKOFF_EXPONENT = 32
 
 
@@ -312,52 +309,23 @@ def _outcome(delivery: NotificationDelivery) -> DeliveryOutcome:
     )
 
 
-def _redaction_needles(
-    message: RenderedMessage, recipient: Recipient
-) -> tuple[str, ...]:
-    """Every rendered/recipient string that must never survive in `last_error`.
-
-    The whole subject/body (and each line, so a provider that echoes one line is
-    still scrubbed), the recipient's display name and the account address. Only
-    strings long enough to be meaningful are redacted; short tokens would
-    mangle ordinary error text without protecting anything.
-    """
-    candidates = [
-        message.subject,
-        message.body,
-        *message.subject.splitlines(),
-        *message.body.splitlines(),
-        recipient.display_name,
-        recipient.account_address,
-    ]
-    needles = (
-        value.strip() for value in candidates if len(value.strip()) >= _MIN_REDACT_CHARS
-    )
-    return tuple(dict.fromkeys(needles))
-
-
 def _safe_error(
     exc: BaseException, message: RenderedMessage, recipient: Recipient
 ) -> str:
     """`Type: message` diagnostics for `last_error` — payload- and PII-free.
 
-    A provider may echo the rendered message (or the recipient's address) back
-    in its exception text, raw or JSON-escaped; every such substring is
-    redacted before whitespace normalization, and the final string is capped at
-    300 characters. The relay's `_safe_error` discipline, applied to the
-    rendered payload (ADR 0012 row rule).
+    The shared scrubber redacts the rendered message, its lines, the recipient's
+    display name and the account address, raw or JSON-escaped, then caps the
+    result (ADR 0012 row rule).
     """
-    text = str(exc)[:_MAX_ERROR_INPUT_CHARS]
-    for needle in _redaction_needles(message, recipient):
-        escaped = json.dumps(needle)[1:-1]
-        text = text.replace(needle, "[redacted]")
-        if escaped != needle:
-            text = text.replace(escaped, "[redacted]")
-    text = " ".join(text.split())
-    prefix = type(exc).__name__
-    if not text:
-        return prefix[:_MAX_ERROR_CHARS]
-    result = f"{prefix}: {text}"
-    if len(result) > _MAX_ERROR_CHARS:
-        result = result[: _MAX_ERROR_CHARS - 1] + "…"
-    return result
+    return safe_error_text(
+        exc,
+        redaction_needles(
+            (
+                message.subject,
+                message.body,
+                recipient.display_name,
+                recipient.account_address,
+            )
+        ),
+    )

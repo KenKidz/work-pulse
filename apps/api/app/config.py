@@ -54,6 +54,27 @@ class Settings(BaseSettings):
     realtime_backoff_base_seconds: float = 1.0
     realtime_backoff_max_seconds: float = 30.0
 
+    # --- Phase 3: notifications (`workers/notifications`, ADR 0015) ---
+    # Consumer knobs mirror the realtime consumer's shape (poll max wait and
+    # bounded fetch/store backoff). Delivery knobs feed `NotificationService`:
+    # at most `send_max_attempts` provider attempts per channel, doubling the
+    # `send_backoff_base_seconds` delay in between.
+    notifications_consumer_group: str = "workpulse-notifications"
+    notifications_poll_seconds: float = 1.0
+    notifications_backoff_base_seconds: float = 1.0
+    notifications_backoff_max_seconds: float = 30.0
+    notifications_send_max_attempts: int = 3
+    notifications_send_backoff_base_seconds: float = 0.5
+
+    # Provider identities (v1: one env-configured Resend sender and one Slack
+    # channel — the single dev-tenant shape, ADR 0015 decision 5). An empty
+    # value is not a startup failure: that channel's deliveries are
+    # `skipped(not_configured)` while the other channel proceeds.
+    resend_api_key: str | None = None
+    resend_from_address: str | None = None
+    slack_bot_token: str | None = None
+    slack_channel_id: str | None = None
+
     # --- Identity: sessions (pinned in `.ai/features/identity-access.md`) ---
     # Absolute session lifetime; the `wp_session` cookie itself is a session
     # cookie (no Max-Age) — the server-side TTL is the authority.

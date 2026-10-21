@@ -31,3 +31,16 @@ class NotConfiguredError(NotificationError):
 
     def __init__(self, message: str = "Notification channel is not configured") -> None:
         super().__init__(message)
+
+
+class NotificationProviderError(NotificationError):
+    """A channel provider rejected or failed the send (retryable infrastructure).
+
+    Adapters raise it with **payload-free** message text: provider error type
+    plus redacted infrastructure detail, never the rendered message, recipient
+    address, display name or credential (ADR 0012's `last_error` discipline).
+    The service still redacts as defence in depth before storing `last_error`.
+    """
+
+    status_code = 502
+    code = "notification_provider_error"

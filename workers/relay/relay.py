@@ -25,7 +25,6 @@ unit tests drive this exact loop with in-memory stubs — no DB, no broker
 """
 
 import asyncio
-import json
 from collections.abc import Callable, Iterator, Sequence
 from contextlib import AbstractAsyncContextManager
 from datetime import datetime
@@ -37,27 +36,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.infrastructure.postgres.models_outbox import EventOutboxRow
 from app.shared.logging import get_logger
+from app.shared.redaction import redaction_needles, safe_error_text
 
 _log = get_logger("relay")
-
-# `last_error` is diagnostics, not data: the message is whitespace-normalized
-# and truncated to this many characters before it is stored.
-_MAX_ERROR_CHARS = 300
-
-# Input is bounded before the redaction scan, so an accidentally huge echoed
-# message cannot cost unbounded CPU/memory; a value's JSON-escaped form can be
-# several times longer than the value itself.
-_MAX_ERROR_INPUT_CHARS = _MAX_ERROR_CHARS * 8
 
 # The backoff exponent is bounded: an unbounded `2 ** n` overflows to a float
 # error after ~1025 consecutive failures (~9 h at the 30 s cap) and would kill
 # the loop mid-outage, exactly when it must keep retrying.
 _MAX_BACKOFF_EXPONENT = 32
-
-# Payload string values shorter than this are never redacted: payloads carry
-# identifiers, dates and state words only — no free-text PII (`.ai/security.md`)
-# — and replacing 1–2 character strings would mangle legitimate error text.
-_MIN_REDACT_CHARS = 3
 
 
 class OutboxRepository(Protocol):
@@ -101,24 +87,11 @@ def _string_leaves(value: Any) -> Iterator[str]:
 def _safe_error(exc: BaseException, envelope: dict[str, Any]) -> str:
     """`Type: message` diagnostics for `last_error` — payload-free by contract.
 
-    A lower layer may echo request data back in its exception message — raw,
-    JSON-escaped or whitespace-collapsed — so every payload string value and
-    its JSON-escaped form is redacted on the raw message *before* whitespace
-    normalization; the result is then truncated. Payload contents — and
-    therefore PII — never reach the error column (`.ai/security.md`).
+    The shared scrubber redacts every payload string value and its JSON-escaped
+    form before whitespace normalization and caps the result. Payload contents
+    — and therefore PII — never reach the error column (`.ai/security.md`).
     """
-    message = str(exc)[:_MAX_ERROR_INPUT_CHARS]
-    for leaf in _string_leaves(envelope):
-        if len(leaf) < _MIN_REDACT_CHARS:
-            continue
-        escaped = json.dumps(leaf)[1:-1]
-        message = message.replace(leaf, "[redacted]")
-        if escaped != leaf:
-            message = message.replace(escaped, "[redacted]")
-    message = " ".join(message.split())
-    if len(message) > _MAX_ERROR_CHARS:
-        message = message[: _MAX_ERROR_CHARS - 1] + "…"
-    return f"{type(exc).__name__}: {message}" if message else type(exc).__name__
+    return safe_error_text(exc, redaction_needles(_string_leaves(envelope)))
 
 
 class OutboxRelay:
