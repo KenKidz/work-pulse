@@ -48,10 +48,13 @@ SHIFT_ID = UUID("00000000-0000-4000-8000-000000000007")
 DEPARTMENT_ID = UUID("00000000-0000-4000-8000-000000000008")
 POSITION_ID = UUID("00000000-0000-4000-8000-000000000009")
 LOCATION_ID = UUID("00000000-0000-4000-8000-00000000000a")
+PAYROLL_RUN_ID = UUID("00000000-0000-4000-8000-00000000000b")
+PAYSLIP_ID = UUID("00000000-0000-4000-8000-00000000000c")
 NOW = datetime(2026, 10, 21, 9, 0, tzinfo=UTC)
 WORKDAY = date(2026, 10, 21)
 END_DATE = date(2026, 10, 23)
 DAYS = 3
+PERIOD = "2026-09"
 
 # A hostile value planted in `data`; it must never reach an intent or message.
 SENTINEL = "Family medical details — do-not-render"
@@ -95,6 +98,19 @@ def _event_type(schema_path: Path) -> str:
     assert version == "1"
     domain, event_name = base.split("-", 1)
     return f"{domain}.{event_name.replace('-', '_')}"
+
+
+def _raw_envelope(event_type: str, data: dict[str, Any]) -> dict[str, Any]:
+    """An envelope without a domain builder — payroll's builders land in T3."""
+    return {
+        "event_id": f"evt_{event_type.replace('.', '_')}",
+        "event_type": event_type,
+        "version": 1,
+        "tenant_id": str(TENANT_ID),
+        "occurred_at": NOW.isoformat(),
+        "actor_id": str(ACTOR_ID),
+        "data": data,
+    }
 
 
 BUILDER_CASES: dict[str, Callable[[], dict[str, Any]]] = {
@@ -213,6 +229,23 @@ BUILDER_CASES: dict[str, Callable[[], dict[str, Any]]] = {
         employee_id=EMPLOYEE_ID,
         start_date=WORKDAY,
         end_date=END_DATE,
+    ),
+    "payroll/payroll-calculated.v1.json": lambda: _raw_envelope(
+        "payroll.calculated",
+        {
+            "run_id": str(PAYROLL_RUN_ID),
+            "period": PERIOD,
+            "employee_count": 1,
+        },
+    ),
+    "payroll/payslip-issued.v1.json": lambda: _raw_envelope(
+        "payslip.issued",
+        {
+            "payslip_id": str(PAYSLIP_ID),
+            "run_id": str(PAYROLL_RUN_ID),
+            "employee_id": str(EMPLOYEE_ID),
+            "period": PERIOD,
+        },
     ),
 }
 

@@ -10,12 +10,15 @@ Envelopes are stored and published verbatim: `event_id` and `occurred_at` are
 the domain builder's (carrying the injected clock), never re-stamped.
 """
 
+from collections.abc import Mapping
 from typing import Any, Protocol
 from uuid import UUID
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator
 
 from app.shared.errors import WorkPulseError
+
+_MESSAGE_KEY_FIELDS = ("employee_id", "run_id")
 
 
 class InvalidEnvelopeError(WorkPulseError):
@@ -36,13 +39,33 @@ class InvalidEnvelopeError(WorkPulseError):
         super().__init__(message)
 
 
+def kafka_message_key(envelope: Mapping[str, Any]) -> str:
+    """Resolve the Kafka message key for a stored envelope (ADR 0012).
+
+    Employee-scoped events key by `data.employee_id` (per-employee ordering
+    pin). Run-level events — `payroll.calculated` — have no employee and key by
+    `data.run_id` instead (ADR 0012 amendment, 2026-10-21). If both are present,
+    `employee_id` wins: an employee-addressed fact keeps per-employee ordering.
+    """
+    data = envelope.get("data")
+    if not isinstance(data, Mapping):
+        raise ValueError("event envelope data must be an object")
+
+    for field in _MESSAGE_KEY_FIELDS:
+        value = data.get(field)
+        if value is not None and value != "":
+            return str(value)
+
+    raise ValueError("event envelope data must carry employee_id or run_id (Kafka key)")
+
+
 class EventEnvelope(BaseModel):
     """The pinned v1 envelope (`contracts/events/common/event-envelope.v1.json`).
 
     The outbox port's write-time gate. Mirrors the schema's
-    `additionalProperties: false`, and additionally requires
-    `data.employee_id` — all 7 payloads carry it, and it is the Kafka message
-    key (ADR 0012 → per-employee ordering).
+    `additionalProperties: false`, and additionally requires `data.employee_id`
+    or (for run-level events) `data.run_id` — one of them is the Kafka message
+    key (ADR 0012 and its 2026-10-21 amendment).
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -57,9 +80,11 @@ class EventEnvelope(BaseModel):
 
     @field_validator("data")
     @classmethod
-    def _data_must_carry_employee_id(cls, data: dict[str, Any]) -> dict[str, Any]:
-        if "employee_id" not in data:
-            raise ValueError("envelope data must carry employee_id (Kafka key)")
+    def _data_must_carry_a_message_key(cls, data: dict[str, Any]) -> dict[str, Any]:
+        try:
+            kafka_message_key({"data": data})
+        except ValueError as exc:
+            raise ValueError(str(exc)) from None
         return data
 
 

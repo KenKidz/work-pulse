@@ -6,7 +6,8 @@ in v1; broker auto-create is the backstop) and starts the producer — but it is
 **never fatal**: a broker that is down at startup must not stop the relay
 (the write path never depends on the bus). `publish()` connects lazily
 (therefore also retries after a broker restart) and sends one stored envelope
-**verbatim**: key = UTF-8 `data.employee_id` (the per-employee ordering pin —
+**verbatim**: key = UTF-8 `data.employee_id` when present, otherwise
+`data.run_id` for run-level events (ADR 0012 and its 2026-10-21 amendment —
 one employee's transitions land on one partition, in publish order), value =
 `json.dumps(envelope)` as UTF-8 (semantic, not byte-wise, verbatim — `jsonb`
 may normalize object key order; `event_id`/`occurred_at` are never
@@ -24,6 +25,7 @@ from aiokafka.admin import AIOKafkaAdminClient, NewTopic
 from aiokafka.errors import KafkaError, TopicAlreadyExistsError
 
 from app.shared.logging import get_logger
+from app.shared.outbox import kafka_message_key
 
 _log = get_logger("relay.publisher")
 
@@ -67,7 +69,7 @@ class KafkaEnvelopePublisher:
         producer = await self._connect()
         await producer.send_and_wait(
             self._topic,
-            key=str(envelope["data"]["employee_id"]).encode("utf-8"),
+            key=kafka_message_key(envelope).encode("utf-8"),
             value=json.dumps(envelope).encode("utf-8"),
         )
 

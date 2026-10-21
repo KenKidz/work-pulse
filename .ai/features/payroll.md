@@ -4,7 +4,7 @@
 - **Phase:** 4
 - **Size:** L
 - **Surfaces:** api+web+events+workers
-- **Links:** ADR 0003 (payroll is a deterministic simulation) · `.ai/domain.md` (Payroll context, Timesheet/PayrollRun/Payslip language, Overtime state machine, invariants 1–6) · `.ai/security.md` (roles matrix, PII, audit) · `tasks/doc.md` §8 · upcoming `overtime.md` (overtime workflow — **build order: overtime first, payroll second**) · `leave.md` (Decision 7 deferred working-day questions here) · ADR 0012 (outbox transport)
+- **Links:** ADR 0003 (payroll is a deterministic simulation) · `.ai/domain.md` (Payroll context, Timesheet/PayrollRun/Payslip language, Overtime state machine, invariants 1–6) · `.ai/security.md` (roles matrix, PII, audit) · `tasks/doc.md` §8 · upcoming `overtime.md` (overtime workflow — **build order: overtime first, payroll second**) · `leave.md` (Decision 7 deferred working-day questions here) · ADR 0012 (outbox transport, amended for run-level keys) · ADR 0017 (money & rounding) · ADR 0018 (payroll↔overtime seam)
 
 ## Problem
 
@@ -276,7 +276,9 @@ port in the same transaction as the transition and relayed verbatim to
 
 Identifiers, period and counts only — **no amounts** (`.ai/domain.md` catalog
 row + PII rule). Recalculation emits nothing (payslips stay provisional);
-supersession emits nothing in v1 (audit covers it).
+supersession emits nothing in v1 (audit covers it). `payroll.calculated` is the
+first run-level event: its Kafka key is `data.run_id` (ADR 0012 amendment);
+`payslip.issued` remains keyed by `data.employee_id`.
 
 ## Edge cases
 
@@ -406,11 +408,12 @@ through fakes and `0.00` hours in e2e.
   false`, identifiers/period/counts only; envelope via
   `contracts/events/common/event-envelope.v1.json` (see Risk R2 for the
   run-level key question).
-- Add ADRs: **0016 money & rounding** (`Numeric(12,2)` / `Decimal`,
+- Add ADRs: **0017 money & rounding** (`Numeric(12,2)` / `Decimal`,
   ROUND_HALF_UP per output line at 2dp, intermediates unrounded, JSON numbers
-  2dp — the repo's first money convention), **0017 payroll↔overtime seam**
+  2dp — the repo's first money convention), **0018 payroll↔overtime seam**
   (read + write ports; extends ADR 0014's read-only seam to a write flip), and
-  the R2 envelope-key decision if it needs one.
+  an **ADR 0012 amendment** for R2's run-level envelope key (0016 is taken by
+  the notification read-state ADR).
 - Tests: `apps/api/tests/contract/test_payroll_events.py` — schemas parse,
   sample payloads validate, PII-marker scan (reuse `_PII_KEY_MARKERS` incl.
   `salary`), no amount-like keys.
@@ -427,7 +430,7 @@ through fakes and `0.00` hours in e2e.
   `payslips` (UNIQUE `(run_id, employee_id)`), `payslip_deduction_lines`
   (ordered by `code` for determinism). `decimal(12,2)` money columns,
   `tenant_id` everywhere (invariant 1), UUIDv7 ids, timestamptz.
-- `apps/api/app/domains/payroll/models.py` mirroring it (ADR 0016 types).
+- `apps/api/app/domains/payroll/models.py` mirroring it (ADR 0017 types).
 - Verify: `make db-test-up && make check-api` (migration applies clean, models
   import, ruff/pyright green).
 
@@ -574,24 +577,21 @@ shadcn skill only if `components/ui/` primitives change).
   Protocols + fakes keep payroll testable; the real adapters and any
   real-hours e2e block on P0. Do not start T7/T8 integration with real
   overtime rows before `overtime.md` is built.
-- **R2 — Event envelope key conflict.** ADR 0012 pins the Kafka message key as
-  `data.employee_id` and `EventEnvelope` validates its presence, but
-  `payroll.calculated` is run-level (`run_id`, `period`, `employee_count`).
-  Proposed default: extend the envelope rule to `employee_id` **or** `run_id`
-  (key = employee_id when present, else run_id) and record it as an ADR
-  0012 amendment; alternative is emitting per-employee calculate events,
-  which contradicts the spec's payload table. Decide in T1 before any
-  producer exists.
+- **R2 — Event envelope key conflict (resolved in T1).** ADR 0012 pinned the
+  Kafka message key as `data.employee_id`, but `payroll.calculated` is run-level
+  (`run_id`, `period`, `employee_count`). Resolution: an ADR 0012 amendment
+  extends the rule to `employee_id` when present, else `run_id`; `EventEnvelope`
+  and the relay publisher implement it, and the contract test pins both keys.
 - **R3 — Timesheet cross-context reads.** The spec pins only the overtime
   seam; `worked_hours`/`attendance_days`/`leave_days` are attendance/leave
   data. Proposed default: the same port pattern (payroll-owned read Protocols,
-  adapter joins — the `covers_leave` precedent). Recorded in ADR 0017.
+  adapter joins — the `covers_leave` precedent). Recorded in ADR 0018.
 - **R4 — First money convention in the codebase** (no `Numeric`/`Decimal`
   anywhere yet): column scale, ROUND_HALF_UP, unrounded intermediates and
-  JSON 2dp are pinned by ADR 0016 in T1 so T2/T4 cannot drift.
+  JSON 2dp are pinned by ADR 0017 in T1 so T2/T4 cannot drift.
 - **R5 — Write-direction seam.** ADR 0014's seam is read-only;
   `mark_included` is the first cross-context write port. Ownership (payroll
-  Protocol, overtime-side implementation) is settled in ADR 0017; the
+  Protocol, overtime-side implementation) is settled in ADR 0018; the
   "at most one FINALIZED run counts a row" guarantee needs a uniqueness/guard
   test on the overtime side (P0) and a payroll-side integration test.
 - **R6 — Worker claim + finalize concurrency.** The polling run-job and the

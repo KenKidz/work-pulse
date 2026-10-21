@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workpulse.dev/contracts/events/payroll/payroll-calculated.v1.json",
+  "title": "WorkPulse payroll.calculated v1",
+  "description": "A payroll run finished calculating and its provisional payslips exist. Identifiers, period and counts only — salary amounts, payslip lines, bonuses and run totals are PII and never leave the database (`.ai/features/payroll.md` → Events; `.ai/security.md`). The Kafka message key is `run_id` when no `employee_id` is present (ADR 0012 amendment).",
+  "type": "object",
+  "required": [
+    "run_id",
+    "period",
+    "employee_count"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "description": "The calculated payroll run (UUIDv7 string). Run-level events use it as the Kafka message key (ADR 0012 amendment)."
+    },
+    "period": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])$",
+      "description": "Calendar-month period the run covers (`YYYY-MM`, e.g. `2026-09`)."
+    },
+    "employee_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of employees with a calculated payslip in the run. A count only — never an amount."
+    }
+  }
+}

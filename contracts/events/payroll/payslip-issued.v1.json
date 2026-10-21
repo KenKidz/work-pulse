@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workpulse.dev/contracts/events/payroll/payslip-issued.v1.json",
+  "title": "WorkPulse payslip.issued v1",
+  "description": "A payslip became available when its payroll run was finalized. Identifiers and period only — amounts, deduction lines and run totals are PII and never leave the database (`.ai/features/payroll.md` → Events; `.ai/security.md`).",
+  "type": "object",
+  "required": [
+    "payslip_id",
+    "run_id",
+    "employee_id",
+    "period"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "payslip_id": {
+      "type": "string",
+      "description": "The issued payslip (UUIDv7 string)."
+    },
+    "run_id": {
+      "type": "string",
+      "description": "The payroll run that issued the payslip (UUIDv7 string)."
+    },
+    "employee_id": {
+      "type": "string",
+      "description": "Employee the payslip belongs to (UUIDv7 string). Also the Kafka message key (ADR 0012)."
+    },
+    "period": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])$",
+      "description": "Calendar-month period the payslip covers (`YYYY-MM`, e.g. `2026-09`)."
+    }
+  }
+}

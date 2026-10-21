@@ -44,7 +44,8 @@ Alternatives considered:
 2. **Message key = UTF-8 `data.employee_id`** (all 7 payloads carry it). This
    is the per-employee ordering pin: one employee's transitions land on one
    partition and the relay's insertion-order publish gives per-partition order
-   = commit order.
+   = commit order. Run-level events use `data.run_id` when no `employee_id`
+   exists — see the 2026-10-21 amendment below.
 3. **Value = the stored envelope as UTF-8 JSON**, published verbatim — the
    relay never rebuilds or re-stamps an envelope (`event_id` and `occurred_at`
    are the domain builder's, carrying the injected clock). "Verbatim" is
@@ -133,3 +134,25 @@ Alternatives considered:
 - The realtime Command Center keeps its Phase-2 best-effort Redis publish until
   the Kafka-fed consumer (ADR 0011's promise) replaces it as its own follow-up
   (outbox-relay "Out of scope").
+
+## Amendment — 2026-10-21: run-level event keying
+
+Payroll introduces the first **run-level** event, `payroll.calculated`
+(`.ai/features/payroll.md` → Events), whose data carries `run_id`, `period` and
+`employee_count` but no `employee_id`. The spec's Events table deliberately does
+not emit a calculate event per employee (that would invent facts and explode the
+event count), so Decision 2 is extended rather than replaced:
+
+- **Message key = `data.employee_id` when present, otherwise `data.run_id`.**
+  Employee-scoped events keep their per-employee ordering pin unchanged. A
+  run-level event orders by run, which is the aggregate it describes.
+- **The write gate accepts either field.** `EventEnvelope` (the outbox port's
+  write-time model) requires at least one of `data.employee_id` or
+  `data.run_id`; a payload with neither is still rejected as a junk envelope.
+  The relay's publisher resolves the key with the same rule, so the writer and
+  reader cannot disagree.
+- **No version bump and no envelope change.** `event-envelope.v1.json` is
+  untouched; the key is transport metadata derived from `data`, not a schema
+  field. Consumers that only read `event_type`/`data` are unaffected.
+- `payslip.issued` remains employee-keyed; it carries `employee_id` and is
+  therefore unaffected by this amendment.

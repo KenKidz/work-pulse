@@ -2,9 +2,10 @@
 
 `EventEnvelope` is the port's contract check: every one of the 7 catalogued
 builders' outputs must pass, and anything that is not a valid v1 envelope —
-missing `event_id`, no `data.employee_id` (the Kafka message key), unknown
-fields — must be rejected before any row could be written. No DB, no bus:
-these tests pass with every container stopped (`.ai/testing.md`).
+missing `event_id`, no `data.employee_id` (employee-scoped) or `data.run_id`
+(run-level; ADR 0012 amendment), unknown fields — must be rejected before any
+row could be written. No DB, no bus: these tests pass with every container
+stopped (`.ai/testing.md`).
 """
 
 import traceback
@@ -20,7 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.domains.attendance import events as attendance_events
 from app.domains.employees import events as employee_events
 from app.infrastructure.postgres.outbox import PostgresEventOutbox
-from app.shared.outbox import EventEnvelope, InvalidEnvelopeError
+from app.shared.outbox import EventEnvelope, InvalidEnvelopeError, kafka_message_key
 
 TENANT_ID = UUID("00000000-0000-4000-8000-00000000000a")
 USER_ID = UUID("00000000-0000-4000-8000-000000000031")  # the acting user id
@@ -31,6 +32,7 @@ LOCATION_ID = UUID("00000000-0000-4000-8000-000000000005")
 NEW_DEPARTMENT_ID = UUID("00000000-0000-4000-8000-000000000006")
 ATTENDANCE_ID = UUID("00000000-0000-4000-8000-000000000007")
 SHIFT_ID = UUID("00000000-0000-4000-8000-000000000008")
+RUN_ID = UUID("00000000-0000-4000-8000-000000000009")
 NOW = datetime(2026, 9, 24, 12, 0, tzinfo=UTC)
 WORKDAY = date(2026, 9, 24)
 WRITE_TIME = datetime(2026, 10, 16, 8, 0, tzinfo=UTC)
@@ -142,6 +144,23 @@ def _attendance_late() -> dict[str, Any]:
     )
 
 
+def _payroll_calculated() -> dict[str, Any]:
+    """A run-level event: no employee_id, keyed by `data.run_id`."""
+    return {
+        "event_id": "evt_019a0000-0000-7000-8000-000000000009",
+        "event_type": "payroll.calculated",
+        "version": 1,
+        "tenant_id": str(TENANT_ID),
+        "actor_id": str(USER_ID),
+        "occurred_at": NOW.isoformat(),
+        "data": {
+            "run_id": str(RUN_ID),
+            "period": "2026-09",
+            "employee_count": 12,
+        },
+    }
+
+
 BUILDER_CASES: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("employee.created", _employee_created),
     ("employee.updated", _employee_updated),
@@ -188,12 +207,32 @@ def test_non_envelope_dict_is_rejected() -> None:
         EventEnvelope.model_validate({"event_type": "attendance.checked_in"})
 
 
-def test_envelope_without_employee_id_is_rejected() -> None:
+def test_envelope_without_a_message_key_is_rejected() -> None:
     envelope = _employee_created()
     del envelope["data"]["employee_id"]
 
     with pytest.raises(ValidationError):
         EventEnvelope.model_validate(envelope)
+
+
+def test_run_level_envelope_with_run_id_is_accepted() -> None:
+    """`payroll.calculated` has no employee; `run_id` is its key (amendment)."""
+    validated = EventEnvelope.model_validate(_payroll_calculated())
+
+    assert validated.event_type == "payroll.calculated"
+    assert validated.data["run_id"] == str(RUN_ID)
+
+
+def test_message_key_prefers_employee_id_over_run_id() -> None:
+    employee_event = _employee_created()
+    assert kafka_message_key(employee_event) == str(EMPLOYEE_ID)
+    assert kafka_message_key(_payroll_calculated()) == str(RUN_ID)
+
+    both = {**employee_event, "data": {**employee_event["data"], "run_id": "run_1"}}
+    assert kafka_message_key(both) == str(EMPLOYEE_ID)
+
+    with pytest.raises(ValueError):
+        kafka_message_key({"data": {}})
 
 
 def test_unknown_top_level_field_is_rejected() -> None:

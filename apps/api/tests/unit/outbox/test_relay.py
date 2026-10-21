@@ -58,6 +58,23 @@ def _envelope(n: int = 0) -> dict[str, Any]:
     }
 
 
+def _run_envelope() -> dict[str, Any]:
+    """A run-level payroll envelope — no employee_id (ADR 0012 amendment)."""
+    return {
+        "event_id": "evt_019a0000-0000-7000-8000-000000000097",
+        "event_type": "payroll.calculated",
+        "version": 1,
+        "tenant_id": "00000000-0000-4000-8000-00000000000a",
+        "actor_id": "00000000-0000-4000-8000-000000000031",
+        "occurred_at": "2026-10-21T09:00:00+00:00",
+        "data": {
+            "run_id": "00000000-0000-4000-8000-000000000097",
+            "period": "2026-09",
+            "employee_count": 12,
+        },
+    }
+
+
 def _row(event_id: str, payload: dict[str, Any]) -> EventOutboxRow:
     """A real outbox row — constructed, never flushed (no I/O)."""
     return EventOutboxRow(
@@ -467,4 +484,28 @@ async def test_publisher_retries_the_connection_once_the_broker_returns(
     assert broker.sent == [
         ("workpulse.events", key, value),
         ("workpulse.events", key, value),
+    ]
+
+
+async def test_publisher_keys_run_level_events_by_run_id(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """No `employee_id` → the key is UTF-8 `data.run_id` (ADR 0012 amendment)."""
+    broker = _FakeBroker()
+    broker.available = True
+    _install_fake_broker(monkeypatch, broker)
+    publisher = KafkaEnvelopePublisher(
+        bootstrap_servers="127.0.0.1:1", topic="workpulse.events"
+    )
+    envelope = _run_envelope()
+
+    await publisher.publish(envelope)
+
+    run_id = envelope["data"]["run_id"]
+    assert broker.sent == [
+        (
+            "workpulse.events",
+            run_id.encode("utf-8"),
+            json.dumps(envelope).encode("utf-8"),
+        )
     ]
