@@ -23,6 +23,7 @@ Capability rows are the product's real authorization surface. `Y` = allowed,
 | View own profile / attendance / payslips | own | own | own | own | own | own |
 | Check in / out | own | own | own | own | own | own |
 | Request leave / overtime | own | own | own | own | own | own |
+| View own notification inbox & mark read | own | own | own | own | own | own |
 | View team attendance & profiles | — | team | Y | — | Y | Y |
 | Approve leave / overtime | — | team | Y | — | Y | Y |
 | Manage employee records (create/update/terminate) | — | — | Y | — | Y | Y |
@@ -85,6 +86,10 @@ retrofit.
   non-PII fields; PII changes recorded as "field changed", not values).
 - Introduced in **Phase 1** with the first mutating feature (Employees), because
   retrofitting an audit trail is expensive and the product promises it.
+- **Not every mutation is sensitive.** Notification read-state mutations (mark
+  read / mark all read — `notification-inbox.md` rule 7) change no PII and no
+  business fact: they write **no audit entry** and emit **no event**. UI state
+  is not a sensitive mutation; a reviewer should not have to infer this.
 
 ## Secrets & configuration
 
@@ -96,7 +101,9 @@ retrofit.
 ## Checklist for every feature spec
 
 - [ ] Which roles may call each endpoint? (written in the spec's API contract)
-- [ ] Does it mutate sensitive data? → audit entry + event.
+- [ ] Does it mutate sensitive data? → audit entry + event. (Answered
+      *no* for notification read state: no audit entry, no event — see
+      **Audit log** above and `notification-inbox.md` rule 7.)
 - [ ] Is every query tenant-scoped in the repository?
 - [ ] Is there a tenant-isolation test and a denied-role test?
 - [ ] Does any log line, error message, event payload, or analytics row contain PII?

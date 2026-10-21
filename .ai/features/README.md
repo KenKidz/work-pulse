@@ -41,6 +41,7 @@ domain map in `.ai/domain.md` is their placeholder.
 | Realtime Command Center (WebSocket board) | 2 | M | done | `realtime-command-center.md` |
 | Leave (requests, approvals, balances, calendar) | 3 | M | done | `leave.md` |
 | Notifications (email/Slack delivery) | 3 | M | done | `notifications.md` |
+| Notification inbox (bell, read state) | 3 | M | approved | `notification-inbox.md` |
 | Event backbone — transactional outbox + relay (Kafka) | 3 | L | done | `outbox-relay.md` |
 | Realtime consumer swap (events → wall deltas, ADR 0011) | 3 | M | done | `realtime-consumer.md` |
 | Payroll (simulated runs, timesheets, payslips) | 3–4 | L | planned | — |

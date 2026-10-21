@@ -6,7 +6,7 @@ does the work.
 
 ## Now
 
-_Nothing in flight — the next feature starts with `/spec`._
+- [ ] Notification inbox (`.ai/features/notification-inbox.md`) — planned 2026-10-21 (`/plan` done, `Status: approved`; contract-first T1–T6, pagination pinned to the house `PageParams` clamp shape); next: build T2 (persistence `read_at` + migration `0009`)
 
 ## Later
 
