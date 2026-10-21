@@ -38,9 +38,17 @@ unpublished rows: both would race the gate's own relay/consumer and make the
   from the team inbox while a second page watches the wall, which flips the
   worker to `on_leave` and out of `absent` within 2s without a reload (leave
   T9 / ADR 0014).
+- `notification-inbox.spec.ts` — the seeded worker's header bell shows the
+  seeded unread count → the dropdown lists the recent rows and links to
+  `/notifications` → marking one read drops the badge by one, and mark-all
+  takes it to zero with every row showing its read state, without a reload.
+  Rows come from `full-hop.sh`'s notification fixture reset; the notification
+  worker stays out of the hop (its delivery contract is proven at the worker
+  level).
 
-`full-hop.sh` resets only the seeded worker's leave requests and balances
-before Playwright starts: an approved request is terminal (there is no
-cancel/delete API) and repeats would otherwise hit `409 leave_overlaps` on the
-wall date the live assertion needs. Types stay — the service provisions them
-per tenant.
+`full-hop.sh` resets only the seeded worker's leave requests/balances and
+notification rows before Playwright starts: an approved leave request is
+terminal (there is no cancel/delete API) and repeats would otherwise hit
+`409 leave_overlaps` on the wall date the live assertion needs; the inbox spec
+asserts an exact badge count, so it starts from three unread fixture rows.
+Leave types stay — the service provisions them per tenant.

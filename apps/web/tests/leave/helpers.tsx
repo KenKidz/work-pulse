@@ -99,9 +99,12 @@ export function apiError(status: number, code: string, message: string): ApiErro
 }
 
 /** Render inside a QueryClientProvider (retry off — asserts stay deterministic). */
-export function renderWithClient(ui: ReactElement): RenderResult {
+export function renderWithClient(ui: ReactElement): {
+  queryClient: QueryClient;
+} & RenderResult {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+  const result = render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+  return { queryClient, ...result };
 }

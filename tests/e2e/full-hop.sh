@@ -219,9 +219,113 @@ PY
   fi
 }
 
+# The notification-inbox spec asserts an exact badge count, so it starts from a
+# clean, deterministic inbox for the seeded worker: drop the worker's existing
+# rows (and their delivery history) and insert three unread fixtures. The
+# notification worker is deliberately NOT part of the hop — delivery is already
+# proven at the worker level (spec decision 8), so these rows are the only
+# inbox input. Synthetic data only (`.ai/testing.md` rule 6).
+reset_notification_fixtures() {
+  if ! (
+    cd "$API_DIR" || exit 1
+    PYTHONPATH="../..:." "$PYTHON" - <<'PY'
+import asyncio
+from datetime import UTC, datetime, timedelta
+from uuid import UUID
+
+from sqlalchemy import delete, select
+
+from app.infrastructure.postgres.engine import (
+    dispose_engine,
+    get_session_factory,
+)
+from app.infrastructure.postgres.models_notifications import (
+    NotificationDeliveryRow,
+    NotificationRow,
+)
+
+TENANT_ID = UUID("00000000-0000-4000-8000-000000000001")
+WORKER_EMPLOYEE_ID = UUID("00000000-0000-4000-8000-000000000021")
+WORKER_USER_ID = UUID("00000000-0000-4000-8000-000000000013")
+
+FIXTURES = (
+    (
+        "leave_approved",
+        "E2E fixture: leave approved",
+        "Your seeded leave request was approved.",
+    ),
+    (
+        "leave_requested",
+        "E2E fixture: leave request",
+        "A leave request is waiting for a decision.",
+    ),
+    (
+        "attendance_late",
+        "E2E fixture: late check-in",
+        "A late check-in was recorded for the seeded worker.",
+    ),
+)
+
+
+async def reset() -> None:
+    async with get_session_factory()() as session:
+        recipient_rows = (
+            select(NotificationRow.id)
+            .where(NotificationRow.tenant_id == TENANT_ID)
+            .where(
+                NotificationRow.recipient_employee_id == WORKER_EMPLOYEE_ID
+            )
+        )
+        await session.execute(
+            delete(NotificationDeliveryRow).where(
+                NotificationDeliveryRow.notification_id.in_(recipient_rows)
+            )
+        )
+        await session.execute(
+            delete(NotificationRow)
+            .where(NotificationRow.tenant_id == TENANT_ID)
+            .where(
+                NotificationRow.recipient_employee_id == WORKER_EMPLOYEE_ID
+            )
+        )
+
+        now = datetime.now(UTC)
+        for index, (kind, subject, body) in enumerate(FIXTURES):
+            session.add(
+                NotificationRow(
+                    tenant_id=TENANT_ID,
+                    event_id=f"e2e-notification-inbox-{index + 1}",
+                    event_type="e2e.fixture",
+                    kind=kind,
+                    recipient_employee_id=WORKER_EMPLOYEE_ID,
+                    recipient_user_id=WORKER_USER_ID,
+                    subject=subject,
+                    body=body,
+                    created_at=now - timedelta(minutes=index),
+                )
+            )
+        await session.commit()
+
+
+async def main() -> None:
+    try:
+        await reset()
+    finally:
+        await dispose_engine()
+
+
+asyncio.run(main())
+PY
+  ); then
+    echo "full-hop: could not reset the seeded worker's notification fixtures" >&2
+    exit 1
+  fi
+}
+
 assert_no_other_workers
 assert_dev_outbox_is_clean
 reset_leave_fixtures
+reset_notification_fixtures
 
 # Both workers run inside the apps/api uv environment, reading the same
 # settings/.env as uvicorn; only the broker is overridden (kafka-test).

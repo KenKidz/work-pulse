@@ -1,6 +1,6 @@
 # Feature: Notification inbox (bell + read state)
 
-- **Status:** approved
+- **Status:** done
 - **Phase:** 3
 - **Size:** M
 - **Surfaces:** api+web
@@ -181,18 +181,18 @@ new routes and their generated client hooks.
 
 ## Acceptance criteria
 
-- [ ] API (list): given two users in one tenant with fixture notifications, when each lists, then each receives only rows addressed to their own employee, newest first, paginated, with the stored subject/body/kind and `read_at`.
-- [ ] API (read): given unread rows, when the owner marks one read, then `read_at` is set and `unread_count` drops by exactly 1; a second mark-read keeps the original `read_at` (unit + integration).
-- [ ] API (read-all): given k unread among already-read rows, when the owner marks all read, then `unread_count` is 0, previously-read rows keep their `read_at`, and a row created after the call remains unread.
-- [ ] API (denied/ownership): given a notification addressed to user B, when user A marks it read (single or via read-all scope), then `404 notification_not_found` and B's row is unchanged; an unauthenticated call gets `401`.
-- [ ] API (tenant isolation): given tenant A's rows, when tenant B lists or reads counts, then no row of tenant A appears, and marking A's id answers `404`.
-- [ ] API (failure): non-integer `page_size` or `page` → `422`; unknown id → `404 notification_not_found`.
-- [ ] API (link-less identity): an account without `employee_id` gets `[]`, `unread_count: 0`, and read-all is a `204` no-op.
-- [ ] Audit/events: read-state mutations write no audit entry and emit no event; `contracts/events/` is unchanged and `make gen-api`'s diff is exactly the new routes.
-- [ ] Web: the header bell shows the unread count; after mark-read or mark-all on `/notifications` (or from the dropdown) the badge and list update without a reload; the dropdown lists recent notifications and links to `/notifications`.
-- [ ] Web (states): unread rows are visually distinct from read rows; an empty inbox renders the empty state; an API failure renders the error state without breaking the shell.
-- [ ] Unit: read-state semantics (idempotent mark-read, read-all set semantics) and the own-only policy run without I/O and without wall-clock sleeps.
-- [ ] E2E: with fixture-created rows (no notification worker in the hop), a real login sees the badge count, opens `/notifications`, marks all read, and the badge drops to 0 with read styling shown; the existing suite stays green.
+- [x] API (list): given two users in one tenant with fixture notifications, when each lists, then each receives only rows addressed to their own employee, newest first, paginated, with the stored subject/body/kind and `read_at`.
+- [x] API (read): given unread rows, when the owner marks one read, then `read_at` is set and `unread_count` drops by exactly 1; a second mark-read keeps the original `read_at` (unit + integration).
+- [x] API (read-all): given k unread among already-read rows, when the owner marks all read, then `unread_count` is 0, previously-read rows keep their `read_at`, and a row created after the call remains unread.
+- [x] API (denied/ownership): given a notification addressed to user B, when user A marks it read (single or via read-all scope), then `404 notification_not_found` and B's row is unchanged; an unauthenticated call gets `401`.
+- [x] API (tenant isolation): given tenant A's rows, when tenant B lists or reads counts, then no row of tenant A appears, and marking A's id answers `404`.
+- [x] API (failure): non-integer `page_size` or `page` → `422`; unknown id → `404 notification_not_found`.
+- [x] API (link-less identity): an account without `employee_id` gets `[]`, `unread_count: 0`, and read-all is a `204` no-op.
+- [x] Audit/events: read-state mutations write no audit entry and emit no event; `contracts/events/` is unchanged and `make gen-api`'s diff is exactly the new routes.
+- [x] Web: the header bell shows the unread count; after mark-read or mark-all on `/notifications` (or from the dropdown) the badge and list update without a reload; the dropdown lists recent notifications and links to `/notifications`.
+- [x] Web (states): unread rows are visually distinct from read rows; an empty inbox renders the empty state; an API failure renders the error state without breaking the shell.
+- [x] Unit: read-state semantics (idempotent mark-read, read-all set semantics) and the own-only policy run without I/O and without wall-clock sleeps.
+- [x] E2E: with fixture-created rows (no notification worker in the hop), a real login sees the badge count, opens `/notifications`, marks all read, and the badge drops to 0 with read styling shown; the existing suite stays green.
 
 ## Decisions (PO, 2026-10-21)
 

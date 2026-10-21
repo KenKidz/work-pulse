@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 
 import { AuthGate } from "@/features/auth/components/AuthGate";
 import { UserMenu } from "@/features/auth/components/UserMenu";
+import { NotificationBell } from "@/features/notifications/components/NotificationBell";
 import { MobileNav } from "@/components/mobile-nav";
 import { MainNav } from "@/components/main-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -23,6 +24,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             </Link>
             <MainNav className="hidden h-16 md:flex" />
             <div className="ml-auto flex items-center">
+              <NotificationBell />
               <ThemeToggle />
               <UserMenu />
               <MobileNav />
