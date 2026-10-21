@@ -1,10 +1,10 @@
 # Feature: Notifications
 
-- **Status:** approved
+- **Status:** done
 - **Phase:** 3
 - **Size:** M
 - **Surfaces:** api+events+workers (web surface untouched — no UI; delivery is worker-side)
-- **Links:** `.ai/domain.md` (Notifications context · event catalog) · `leave.md` (trigger events) · `realtime-consumer.md` + ADR 0013 (consumer semantics precedent) · ADR 0012 (outbox transport, at-least-once + `event_id` dedupe) · `identity-access.md` (decision 4 — email-dependent identity flows deferred to this feature) · `.ai/security.md` (PII, logging) · `tasks/doc.md` §2 (multi-consumer fan-out)
+- **Links:** `.ai/domain.md` (Notifications context · event catalog) · `leave.md` (trigger events) · `realtime-consumer.md` + ADR 0013 (consumer semantics precedent) · ADR 0012 (outbox transport, at-least-once + `event_id` dedupe) · ADR 0015 (delivery semantics + trigger map) · `identity-access.md` (decision 4 — email-dependent identity flows deferred to this feature) · `.ai/security.md` (PII, logging) · `tasks/doc.md` §2 (multi-consumer fan-out)
 
 ## Problem
 
@@ -205,19 +205,19 @@ changes, and the notification worker **emits no events**.
 
 ## Acceptance criteria
 
-- [ ] Workers: given a `leave.requested` envelope for an employee whose manager has a linked user account, when the worker handles it, then one `leave_requested` notification is stored for the manager with an `email` delivery to their account address and a `slack` delivery to the tenant channel, both `sent` (fake adapters).
-- [ ] Workers: given `leave.approved` / `leave.rejected` / `leave.withdrawn`, then the recipient is the requester's linked user; given `attendance.late`, then the recipient is the late employee's manager (`attendance_late`) — and no other event type produces rows.
-- [ ] Workers (idempotence): given the same envelope handled twice (redelivery), then no second notification row exists and an already-`sent` delivery is not re-sent.
-- [ ] Workers (failure): given the email adapter raising a provider error, when the message is handled, then that delivery is retried at most 3 times, ends `failed` with a payload-free `last_error`, the Slack delivery still completes, and the offset advances.
-- [ ] Workers (failure): given an unresolvable recipient (no `manager_id` or no linked user account), then no rows are written, an ids-only log line is emitted, and the offset advances.
-- [ ] Workers (failure): given a malformed envelope or an unknown `event_type`, then it is skipped with an ids-only log and the worker keeps consuming.
-- [ ] Workers (config): given no Resend key / no Slack configuration, then the corresponding delivery is `skipped` (`not_configured`) and the other channel is unaffected.
-- [ ] Workers (tenant isolation): given an event for tenant A, then every row carries tenant A's `tenant_id` and the Slack post targets tenant A's configured channel only.
-- [ ] Content/PII: rendered subjects and bodies use only the trigger table's content fields — a test proves no `reason`, `decision_note` or other sensitive text reaches a message body, a log line or a `last_error`.
-- [ ] Contracts: the worker consumes exactly the five trigger types, validated against the existing `contracts/events/` v1 schemas; `contracts/events/` is unchanged and `make gen-api` produces no diff.
-- [ ] API (integration): the notification repository is tenant-scoped (tenant B sees none of tenant A's rows) and the unique `(event_id, recipient)` constraint refuses a duplicate insert.
-- [ ] Unit: mapping and template rendering run without I/O, and retry/status bookkeeping is tested without wall-clock sleeps.
-- [ ] E2E: the existing suite stays green with the notification worker stopped (regression only; delivery is proven at the worker level).
+- [x] Workers: given a `leave.requested` envelope for an employee whose manager has a linked user account, when the worker handles it, then one `leave_requested` notification is stored for the manager with an `email` delivery to their account address and a `slack` delivery to the tenant channel, both `sent` (fake adapters).
+- [x] Workers: given `leave.approved` / `leave.rejected` / `leave.withdrawn`, then the recipient is the requester's linked user; given `attendance.late`, then the recipient is the late employee's manager (`attendance_late`) — and no other event type produces rows.
+- [x] Workers (idempotence): given the same envelope handled twice (redelivery), then no second notification row exists and an already-`sent` delivery is not re-sent.
+- [x] Workers (failure): given the email adapter raising a provider error, when the message is handled, then that delivery is retried at most 3 times, ends `failed` with a payload-free `last_error`, the Slack delivery still completes, and the offset advances.
+- [x] Workers (failure): given an unresolvable recipient (no `manager_id` or no linked user account), then no rows are written, an ids-only log line is emitted, and the offset advances.
+- [x] Workers (failure): given a malformed envelope or an unknown `event_type`, then it is skipped with an ids-only log and the worker keeps consuming.
+- [x] Workers (config): given no Resend key / no Slack configuration, then the corresponding delivery is `skipped` (`not_configured`) and the other channel is unaffected.
+- [x] Workers (tenant isolation): given an event for tenant A, then every row carries tenant A's `tenant_id` and the Slack post targets tenant A's configured channel only.
+- [x] Content/PII: rendered subjects and bodies use only the trigger table's content fields — a test proves no `reason`, `decision_note` or other sensitive text reaches a message body, a log line or a `last_error`.
+- [x] Contracts: the worker consumes exactly the five trigger types, validated against the existing `contracts/events/` v1 schemas; `contracts/events/` is unchanged and `make gen-api` produces no diff.
+- [x] API (integration): the notification repository is tenant-scoped (tenant B sees none of tenant A's rows) and the unique `(event_id, recipient)` constraint refuses a duplicate insert.
+- [x] Unit: mapping and template rendering run without I/O, and retry/status bookkeeping is tested without wall-clock sleeps.
+- [x] E2E: the existing suite stays green with the notification worker stopped (regression only; delivery is proven at the worker level).
 
 ## Decisions (PO, 2026-10-20)
 
@@ -258,6 +258,11 @@ are cheap to revisit at `/plan`):
     preferences (out of scope).
 11. Message bodies are stored on the notification row (message of record;
     enables a later inbox and dev inspection without provider credentials).
+
+The expensive-to-reverse outcomes — the delivery state machine, offset
+semantics, trigger map, provider/SDK choice and the stored message-of-record
+model — are recorded in **ADR 0015**
+(`.ai/decisions/0015-notifications-delivery-and-trigger-map.md`).
 
 ## Plan
 
