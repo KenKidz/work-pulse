@@ -3,7 +3,7 @@
 API_DIR := apps/api
 WEB_DIR := apps/web
 
-.PHONY: help install db-up db-down db-test-up redis-up redis-test-up kafka-up kafka-test-up db-migrate db-seed dev-api dev-web dev-relay dev-realtime check check-api check-web check-e2e gen-api format-web
+.PHONY: help install db-up db-down db-test-up redis-up redis-test-up kafka-up kafka-test-up db-migrate db-seed dev-api dev-web dev-relay dev-realtime dev-notifications check check-api check-web check-e2e gen-api format-web
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -53,6 +53,9 @@ dev-relay: ## Run the outbox relay (publishes outbox rows to Kafka, ADR 0012)
 
 dev-realtime: ## Run the realtime consumer (attendance events → live wall, ADR 0013)
 	cd $(API_DIR) && PYTHONPATH="../..:." uv run python -m workers.realtime.main
+
+dev-notifications: ## Run the notification consumer (events → email/Slack deliveries, ADR 0015)
+	cd $(API_DIR) && PYTHONPATH="../..:." uv run python -m workers.notifications.main
 
 check: check-api check-web check-e2e ## Run every gate — run before claiming done
 
