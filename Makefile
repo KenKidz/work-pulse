@@ -3,7 +3,7 @@
 API_DIR := apps/api
 WEB_DIR := apps/web
 
-.PHONY: help install db-up db-down db-test-up redis-up redis-test-up kafka-up kafka-test-up db-migrate db-seed dev-api dev-web dev-relay dev-realtime dev-notifications check check-api check-web check-e2e gen-api format-web
+.PHONY: help install dev db-up db-down db-test-up redis-up redis-test-up kafka-up kafka-test-up db-migrate db-seed dev-api dev-web dev-relay dev-realtime dev-notifications check check-api check-web check-e2e gen-api format-web
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -41,6 +41,9 @@ db-seed: ## Seed the dev database — idempotent, safe to re-run
 
 db-down: ## Stop docker compose services (data volume is kept)
 	docker compose down
+
+dev: db-up redis-up kafka-up db-migrate db-seed ## Run everything for browser testing (infra + migrate + seed + API :8000 + web :3000 + workers)
+	bash scripts/dev.sh
 
 dev-api: ## Run the FastAPI dev server on :8000
 	cd $(API_DIR) && uv run uvicorn app.main:app --reload --port 8000

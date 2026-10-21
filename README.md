@@ -14,13 +14,18 @@ Prerequisites: Node >= 20, [pnpm](https://pnpm.io/), [uv](https://docs.astral.sh
 
 ```sh
 make install     # API (uv) + web (pnpm workspaces) dependencies
+make dev         # run everything for browser testing — infra + migrate + seed +
+                 # API :8000 + web :3000 + relay/realtime/notifications workers
+                 # (open http://localhost:3000; Ctrl+C stops everything)
+make gen-api     # regenerate OpenAPI + typed API client
+make check       # all verification gates
+make check-e2e   # Playwright e2e (migrate + seed + both dev servers)
+
+# granular targets — the pieces `make dev` runs, for separate terminals:
 make db-up       # PostgreSQL on :5434
 make db-migrate  # apply Alembic migrations to the dev database
 make dev-api     # FastAPI on http://localhost:8000   (separate terminal)
 make dev-web     # Next.js on http://localhost:3000   (separate terminal)
-make gen-api     # regenerate OpenAPI + typed API client
-make check       # all verification gates
-make check-e2e   # Playwright e2e (migrate + seed + both dev servers)
 ```
 
 ## Repo map
@@ -32,7 +37,9 @@ apps/web/             Next.js app (routes in app/, feature logic in features/)
 apps/api/             FastAPI app (routers in app/api/v1/, logic in app/domains/)
 packages/api-client/  orval-generated typed client (`make gen-api`)
 contracts/            versioned event schemas + generated OpenAPI
+workers/              background consumers (relay, realtime, notifications)
 database/postgres/    seeds and scripts
+scripts/              dev orchestration (`make dev`)
 tests/e2e/            cross-surface tests
 tasks/                TODO.md (backlog) · doc.md (original brief)
 docs/                 appears when human-facing docs outgrow .ai/

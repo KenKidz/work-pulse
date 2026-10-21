@@ -41,6 +41,7 @@ Roadmap: `.ai/architecture.md`.
 | Command | Purpose |
 | --- | --- |
 | `make install` | install API (uv) + web (pnpm workspaces) dependencies |
+| `make dev` | run everything for browser testing (infra + migrate + seed + API :8000 + web :3000 + workers; Ctrl+C stops) |
 | `make db-up` / `make db-down` | start / stop PostgreSQL |
 | `make db-test-up` | start the throwaway test PostgreSQL on :5433 |
 | `make redis-up` | start Redis (realtime fan-out, :6379; `make redis-test-up` for :6380) |
@@ -66,6 +67,7 @@ workers/              background consumers (Phase 3)
 packages/api-client/  orval-generated typed client (`make gen-api`)
 contracts/            versioned event schemas + generated OpenAPI
 database/postgres/    seeds and scripts
+scripts/              dev orchestration (`make dev`)
 tests/e2e/            cross-surface tests
 tasks/                TODO.md (backlog) · doc.md (original brief)
 .kilo/                agent config (/spec, /plan, /check commands; researcher, verifier
