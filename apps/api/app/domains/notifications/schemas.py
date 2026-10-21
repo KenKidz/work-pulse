@@ -1,11 +1,17 @@
-"""Worker ↔ domain seam DTOs for Notifications (T2).
+"""Worker ↔ domain seam DTOs and inbox read models for Notifications.
 
-These are internal value types, not a wire contract: there is no route and
-`make gen-api` stays diff-free. The worker's pure mapper builds a
-`NotificationIntent`; the read-only recipient directory resolves
+The delivery seam DTOs (`NotificationContent`, `NotificationIntent`,
+`SubjectFacts`, `Recipient`) are internal value types. The worker's pure mapper
+builds a `NotificationIntent`; the read-only recipient directory resolves
 `SubjectFacts` and `Recipient`; templates render a `RenderedMessage`. The
 service persists the rendered message and never resolves reference data
 itself.
+
+The inbox read models (`NotificationItem`, `NotificationListPage`,
+`NotificationUnreadCount`) are the pinned HTTP wire contract
+(`.ai/features/notification-inbox.md`, T1). `NotificationItem` is an explicit
+projection: it exposes exactly the stored message-of-record fields and
+`read_at`, never `event_*`, `recipient_*` or any delivery field (rule 6).
 
 `NotificationContent` is a deliberately **closed** allowlist: it can carry
 only the trigger map's content fields (identifiers, leave type, inclusive
@@ -16,10 +22,13 @@ on the intent.
 """
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from uuid import UUID
 
-from app.domains.notifications.models import NotificationKind
+from pydantic import BaseModel
+
+from app.domains.notifications.models import Notification, NotificationKind
+from app.shared.pagination import Page
 
 
 @dataclass(frozen=True, slots=True)
@@ -75,3 +84,46 @@ class Recipient:
     user_id: UUID
     display_name: str
     account_address: str
+
+
+class NotificationItem(BaseModel):
+    """One inbox row — the stored message of record plus its read state.
+
+    Built by explicit mapping from `Notification`; the worker's projection
+    fields `event_id`/`event_type` and the row's `recipient_*` snapshot are
+    deliberately absent, as is every delivery field (rule 6).
+    """
+
+    id: UUID
+    tenant_id: UUID
+    kind: NotificationKind
+    subject: str
+    body: str
+    created_at: datetime
+    read_at: datetime | None = None
+
+    @classmethod
+    def from_notification(cls, notification: Notification) -> "NotificationItem":
+        """Project a stored notification row onto the pinned wire shape."""
+        return cls(
+            id=notification.id,
+            tenant_id=notification.tenant_id,
+            kind=notification.kind,
+            subject=notification.subject,
+            body=notification.body,
+            created_at=notification.created_at,
+            read_at=notification.read_at,
+        )
+
+
+class NotificationListPage(BaseModel):
+    """Paged inbox response, newest first (house `Page` envelope)."""
+
+    items: list[NotificationItem]
+    page: Page
+
+
+class NotificationUnreadCount(BaseModel):
+    """The caller's own unread total — the header badge's only input."""
+
+    unread_count: int

@@ -1,10 +1,12 @@
 """Notifications domain errors.
 
-The worker has no HTTP surface, so these are not request errors: the family
-exists for stable codes and one port-level signal. `NotConfiguredError` is how
-a channel adapter says "no credentials/channel configured" — the service maps
-it to `skipped(not_configured)` without retrying and without failing the
-message (ADR 0015 decision 2). Messages are static and never echo rendered
+The delivery worker has no HTTP surface: `NotConfiguredError` is how a channel
+adapter says "no credentials/channel configured" — the service maps it to
+`skipped(not_configured)` without retrying and without failing the message
+(ADR 0015 decision 2). The read-side inbox does answer HTTP, where
+`NotificationNotFoundError` is the single `404` for unknown, foreign and
+cross-tenant ids so the API never leaks existence (`.ai/features/
+notification-inbox.md` rule 1). Messages are static and never echo rendered
 content or recipient data (`.ai/security.md`).
 """
 
@@ -12,7 +14,7 @@ from app.shared.errors import WorkPulseError
 
 
 class NotificationError(WorkPulseError):
-    """Base class for expected notification errors (no HTTP surface in v1)."""
+    """Base class for expected notification errors."""
 
     status_code = 500
     code = "notification_error"
@@ -44,3 +46,18 @@ class NotificationProviderError(NotificationError):
 
     status_code = 502
     code = "notification_provider_error"
+
+
+class NotificationNotFoundError(NotificationError):
+    """Unknown, foreign or cross-tenant notification id.
+
+    One code for every miss: the caller cannot distinguish "does not exist"
+    from "not addressed to you" or "another tenant", so the inbox never leaks
+    existence (rule 1; AGENTS.md rule 12).
+    """
+
+    status_code = 404
+    code = "notification_not_found"
+
+    def __init__(self) -> None:
+        super().__init__("Notification not found")

@@ -2,9 +2,11 @@
 
 `FakeNotificationRepository` mirrors the repository protocol's two uniqueness
 guarantees (dedupe on the event/recipient key, conflict-tolerant delivery
-insert), so the service is exercised against the same rules as the Postgres
-adapter without a database. The recording senders and sleeper make retry
-bookkeeping observable without wall-clock waits or provider calls
+insert) and the inbox read side (recipient-scoped listing/counting, conditional
+mark-read and mark-all-read), so the service is exercised against the same
+rules as the Postgres adapter without a database. `seed_notification` inserts
+stored rows directly for read-side tests. The recording senders and sleeper
+make retry bookkeeping observable without wall-clock waits or provider calls
 (`.ai/testing.md`).
 """
 
@@ -13,10 +15,13 @@ from dataclasses import replace
 from datetime import datetime
 from uuid import UUID
 
+from uuid_utils.compat import uuid7
+
 from app.domains.notifications.models import (
     DeliveryStatus,
     Notification,
     NotificationDelivery,
+    NotificationKind,
     RenderedMessage,
 )
 from app.domains.notifications.repository import NewDelivery, NewNotification
@@ -187,6 +192,37 @@ class FakeNotificationRepository:
                 self.notifications[key] = replace(row, read_at=read_at)
                 changed += 1
         return changed
+
+
+def seed_notification(
+    repo: FakeNotificationRepository,
+    *,
+    tenant_id: UUID,
+    recipient_employee_id: UUID,
+    created_at: datetime,
+    notification_id: UUID | None = None,
+    kind: NotificationKind = NotificationKind.LEAVE_REQUESTED,
+    subject: str = "Leave request from Ada Lovelace",
+    body: str = "Ada Lovelace requested annual leave (3 days).",
+    read_at: datetime | None = None,
+) -> Notification:
+    """Insert one stored row directly (no dedupe) for read-side tests."""
+    row_id = notification_id if notification_id is not None else uuid7()
+    row = Notification(
+        id=row_id,
+        tenant_id=tenant_id,
+        event_id=f"evt_{row_id}",
+        event_type="leave.requested",
+        kind=kind,
+        recipient_employee_id=recipient_employee_id,
+        recipient_user_id=uuid7(),
+        subject=subject,
+        body=body,
+        created_at=created_at,
+        read_at=read_at,
+    )
+    repo.notifications[(row.tenant_id, row.id)] = row
+    return row
 
 
 class RecordingEmailSender:

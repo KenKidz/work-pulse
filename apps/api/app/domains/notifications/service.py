@@ -1,4 +1,4 @@
-"""Delivery use cases for Notifications — the only business logic in the domain.
+"""Use cases for Notifications — delivery (worker) and inbox (HTTP read side).
 
 `NotificationService.handle` is the worker's single application operation. It
 implements the pinned delivery semantics (ADR 0015 decision 2/3):
@@ -34,15 +34,26 @@ implements the pinned delivery semantics (ADR 0015 decision 2/3):
 Store (repository) or commit errors deliberately propagate: the consumer backs
 off and leaves the offset uncommitted, preserving at-least-once toward the
 store.
+
+`NotificationInboxService` is the HTTP read side over the stored rows: own-only
+listing and counts, idempotent mark-read and mark-all-read. Read state is
+user-owned state layered on the projection (ADR 0016); these methods write only
+`read_at`, wire no audit writer, no outbox and no commit, and emit no event
+(rule 7 — the request session owns the transaction). `now` is caller-supplied
+like every other domain mutation.
 """
 
 import asyncio
 from collections.abc import Awaitable, Callable
 from datetime import datetime
+from uuid import UUID
 
 from uuid_utils.compat import uuid7
 
-from app.domains.notifications.exceptions import NotConfiguredError
+from app.domains.notifications.exceptions import (
+    NotConfiguredError,
+    NotificationNotFoundError,
+)
 from app.domains.notifications.models import (
     SKIP_NOT_CONFIGURED,
     DeliveryChannel,
@@ -53,13 +64,21 @@ from app.domains.notifications.models import (
     NotificationDelivery,
     RenderedMessage,
 )
+from app.domains.notifications.policies import ensure_own
 from app.domains.notifications.ports import EmailSender, SlackSender
 from app.domains.notifications.repository import (
     NewDelivery,
     NewNotification,
     NotificationRepository,
 )
-from app.domains.notifications.schemas import NotificationIntent, Recipient
+from app.domains.notifications.schemas import (
+    NotificationIntent,
+    NotificationItem,
+    NotificationListPage,
+    Recipient,
+)
+from app.shared.identity import Identity
+from app.shared.pagination import PageParams
 from app.shared.redaction import redaction_needles, safe_error_text
 
 DEFAULT_MAX_ATTEMPTS = 3
@@ -297,6 +316,66 @@ class NotificationService:
         """Doubling between attempts: base after #1, 2× after #2, … (bounded)."""
         exponent = min(attempts - 1, _MAX_BACKOFF_EXPONENT)
         return self._backoff_base_seconds * 2**exponent
+
+
+class NotificationInboxService:
+    """Read and mark the caller's own notification inbox (ADR 0016).
+
+    Every operation is scoped to `identity.employee_id`; there is no capability
+    to read another person's inbox, whatever the role (rule 1). A link-less
+    identity has an empty inbox and its mutations are no-ops. Read state is
+    user-owned UI state, so no audit entry, no event and no commit are wired
+    here (rule 7) — the request session owns the transaction.
+    """
+
+    def __init__(self, repo: NotificationRepository) -> None:
+        self._repo = repo
+
+    async def list(self, identity: Identity, page: PageParams) -> NotificationListPage:
+        """One page of the caller's inbox, newest first, with the stored body."""
+        employee_id = identity.employee_id
+        if employee_id is None:
+            return NotificationListPage(items=[], page=page.make_page(0))
+        rows, total = await self._repo.list_for_recipient(
+            identity.tenant_id, employee_id, page
+        )
+        return NotificationListPage(
+            items=[NotificationItem.from_notification(row) for row in rows],
+            page=page.make_page(total),
+        )
+
+    async def unread_count(self, identity: Identity) -> int:
+        """The caller's unread total (0 for an identity without a link)."""
+        if identity.employee_id is None:
+            return 0
+        return await self._repo.count_unread(identity.tenant_id, identity.employee_id)
+
+    async def mark_read(
+        self, identity: Identity, notification_id: UUID, now: datetime
+    ) -> None:
+        """Mark one own notification read; a repeated call keeps `read_at`.
+
+        The ownership guard runs before the write; the repository's conditional
+        `WHERE read_at IS NULL` update supplies idempotence under races. An
+        unknown, foreign or cross-tenant id is the same `404`.
+        """
+        notification = await self._repo.get(identity.tenant_id, notification_id)
+        if notification is None:
+            raise NotificationNotFoundError()
+        ensure_own(identity, notification)
+        await self._repo.mark_read(identity.tenant_id, notification_id, read_at=now)
+
+    async def mark_all_read(self, identity: Identity, now: datetime) -> int:
+        """Mark the caller's currently-unread rows; return how many changed.
+
+        Already-read rows keep their timestamp and rows created after the
+        statement stay unread (rule 4); a link-less identity is a no-op.
+        """
+        if identity.employee_id is None:
+            return 0
+        return await self._repo.mark_all_read(
+            identity.tenant_id, identity.employee_id, read_at=now
+        )
 
 
 def _outcome(delivery: NotificationDelivery) -> DeliveryOutcome:
