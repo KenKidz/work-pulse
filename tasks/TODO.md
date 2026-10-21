@@ -6,6 +6,8 @@ does the work.
 
 ## Now
 
+- [ ] Payroll (`.ai/features/payroll.md`, spec written 2026-10-21, plan approved 2026-10-21): simulated monthly runs, timesheets and payslips per ADR 0003 — plan is T1–T12 in the spec; build order: `overtime.md` spec + build first (P0; payroll consumes HR-verified overtime via a read/write port), then payroll tasks T1–T12 (T1 pins event contracts + money/seam ADRs before any producer)
+
 ## Later
 
 - [ ] Phase 4: ClickHouse analytics · Payroll (simulated, ADR 0003) · Recruitment · Performance · Documents
