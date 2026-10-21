@@ -1,13 +1,18 @@
-"""Notification projection ORM models (ADR 0015).
+"""Notification projection ORM models (ADR 0015, ADR 0016).
 
 The notification worker's durable output: `notifications` (one row per
 `(event_id, recipient employee)` — the person-addressed intent, with the
 rendered message of record) and `notification_deliveries` (one row per
 `(notification, channel)` — the independent email/Slack attempt history).
 
-Rows are a projection of the event stream, so they are written only by the
-worker and never by the HTTP write path. Both tables are tenant-scoped; the
-unique keys are the dedupe guarantees the delivery service rests on:
+Rows are a projection of the event stream, so every column is written only by
+the worker — with one deliberate carve-out: `notifications.read_at` is
+user-owned mutable state written only by the inbox HTTP path (ADR 0016). A
+rebuild from the event stream may drop it. Nothing else on either table is
+writable by an HTTP path; delivery status remains worker-owned ops data.
+
+Both tables are tenant-scoped; the unique keys are the dedupe guarantees the
+delivery service rests on:
 
 - `uq_notifications_event_recipient` — a redelivered envelope is a no-op.
 - `uq_notification_deliveries_notification_channel` — every channel has exactly
@@ -50,6 +55,15 @@ class NotificationRow(Base):
             name="uq_notifications_event_recipient",
         ),
         Index("ix_notifications_tenant_id", "tenant_id"),
+        # The inbox's only access path (ADR 0016): one recipient's rows in
+        # newest-first order, plus the unread filter on the same prefix.
+        Index(
+            "ix_notifications_inbox",
+            "tenant_id",
+            "recipient_employee_id",
+            "created_at",
+            "id",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid7)
@@ -63,6 +77,11 @@ class NotificationRow(Base):
     body: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
+    )
+    # The only HTTP-writable column (ADR 0016): user-owned read state layered
+    # on the worker-written projection; a rebuild may drop it.
+    read_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
     )
 
 

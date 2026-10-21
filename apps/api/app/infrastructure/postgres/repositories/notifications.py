@@ -18,7 +18,7 @@ from collections.abc import Sequence
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -34,6 +34,7 @@ from app.infrastructure.postgres.models_notifications import (
     NotificationDeliveryRow,
     NotificationRow,
 )
+from app.shared.pagination import PageParams
 
 
 def _notification(row: NotificationRow) -> Notification:
@@ -49,6 +50,7 @@ def _notification(row: NotificationRow) -> Notification:
         subject=row.subject,
         body=row.body,
         created_at=row.created_at,
+        read_at=row.read_at,
     )
 
 
@@ -190,3 +192,86 @@ class PostgresNotificationRepository:
         if row is None:
             raise LookupError("delivery not visible for tenant")
         return _delivery(row)
+
+    async def list_for_recipient(
+        self,
+        tenant_id: UUID,
+        recipient_employee_id: UUID,
+        page: PageParams,
+    ) -> tuple[Sequence[Notification], int]:
+        conditions = (
+            NotificationRow.tenant_id == tenant_id,
+            NotificationRow.recipient_employee_id == recipient_employee_id,
+        )
+        total_items = (
+            await self._session.execute(
+                select(func.count()).select_from(NotificationRow).where(*conditions)
+            )
+        ).scalar_one()
+        stmt = (
+            select(NotificationRow)
+            .where(*conditions)
+            .order_by(
+                NotificationRow.created_at.desc(),
+                NotificationRow.id.desc(),
+            )
+            .limit(page.limit)
+            .offset(page.offset)
+        )
+        rows = (await self._session.execute(stmt)).scalars()
+        return [_notification(row) for row in rows], total_items
+
+    async def count_unread(self, tenant_id: UUID, recipient_employee_id: UUID) -> int:
+        stmt = (
+            select(func.count())
+            .select_from(NotificationRow)
+            .where(
+                NotificationRow.tenant_id == tenant_id,
+                NotificationRow.recipient_employee_id == recipient_employee_id,
+                NotificationRow.read_at.is_(None),
+            )
+        )
+        return (await self._session.execute(stmt)).scalar_one()
+
+    async def get(self, tenant_id: UUID, notification_id: UUID) -> Notification | None:
+        stmt = select(NotificationRow).where(
+            NotificationRow.tenant_id == tenant_id,
+            NotificationRow.id == notification_id,
+        )
+        row = (await self._session.execute(stmt)).scalar_one_or_none()
+        return _notification(row) if row is not None else None
+
+    async def mark_read(
+        self, tenant_id: UUID, notification_id: UUID, *, read_at: datetime
+    ) -> bool:
+        stmt = (
+            update(NotificationRow)
+            .where(
+                NotificationRow.tenant_id == tenant_id,
+                NotificationRow.id == notification_id,
+                NotificationRow.read_at.is_(None),
+            )
+            .values(read_at=read_at)
+            .returning(NotificationRow.id)
+        )
+        return (await self._session.execute(stmt)).scalar_one_or_none() is not None
+
+    async def mark_all_read(
+        self,
+        tenant_id: UUID,
+        recipient_employee_id: UUID,
+        *,
+        read_at: datetime,
+    ) -> int:
+        stmt = (
+            update(NotificationRow)
+            .where(
+                NotificationRow.tenant_id == tenant_id,
+                NotificationRow.recipient_employee_id == recipient_employee_id,
+                NotificationRow.read_at.is_(None),
+            )
+            .values(read_at=read_at)
+            .returning(NotificationRow.id)
+        )
+        updated = (await self._session.execute(stmt)).scalars().all()
+        return len(updated)

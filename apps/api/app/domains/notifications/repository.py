@@ -1,9 +1,14 @@
-"""Data-access abstractions for Notifications (T2, ADR 0015).
+"""Data-access abstractions for Notifications (T2, ADR 0015, ADR 0016).
 
 Protocols only — the domain never imports infrastructure. Every method takes
 `tenant_id` explicitly and implementations scope every statement by it; the
 notification worker is a trusted cross-tenant process, but each row still
 carries (and is queried by) the envelope's tenant.
+
+The read-side methods back the person-addressed inbox. They write exactly one
+column — `read_at` — and never touch projection fields or deliveries (ADR
+0016); recipient ownership is enforced by the domain policy before a single
+row is marked.
 
 The repository owns the two uniqueness guarantees the design rests on:
 `get_or_create` is a dedupe insert on `(tenant_id, event_id,
@@ -25,6 +30,7 @@ from app.domains.notifications.models import (
     NotificationDelivery,
     NotificationKind,
 )
+from app.shared.pagination import PageParams
 
 
 @dataclass(frozen=True, slots=True)
@@ -96,5 +102,50 @@ class NotificationRepository(Protocol):
         retry attempts are counted in memory and persisted with the terminal
         result. Store errors propagate — the consumer decides the backoff and
         never commits past an unhandled message (ADR 0015 decision 3).
+        """
+        ...
+
+    async def list_for_recipient(
+        self,
+        tenant_id: UUID,
+        recipient_employee_id: UUID,
+        page: PageParams,
+    ) -> tuple[Sequence[Notification], int]:
+        """One recipient's rows, newest first, plus the unpaged total.
+
+        Ordered `created_at` DESC with `id` DESC as the tiebreak so pagination
+        is stable; both figures are tenant- and recipient-scoped.
+        """
+        ...
+
+    async def count_unread(self, tenant_id: UUID, recipient_employee_id: UUID) -> int:
+        """The recipient's unread rows (`read_at IS NULL`)."""
+        ...
+
+    async def get(self, tenant_id: UUID, notification_id: UUID) -> Notification | None:
+        """One row by id within the tenant; `None` when foreign or unknown."""
+        ...
+
+    async def mark_read(
+        self, tenant_id: UUID, notification_id: UUID, *, read_at: datetime
+    ) -> bool:
+        """Set `read_at` only while it is still null.
+
+        Returns whether this call wrote. A second mark-read keeps the original
+        timestamp, so the operation is idempotent in one statement.
+        """
+        ...
+
+    async def mark_all_read(
+        self,
+        tenant_id: UUID,
+        recipient_employee_id: UUID,
+        *,
+        read_at: datetime,
+    ) -> int:
+        """Mark the recipient's currently-unread rows; return how many changed.
+
+        Already-read rows keep their timestamp, and rows created after the
+        statement stay unread (rule 4's "at call time" semantics).
         """
         ...

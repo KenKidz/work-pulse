@@ -47,7 +47,9 @@ Rules:
   that means the `Notification`/`Delivery` rows (`.ai/features/notifications.md`)
   — recipient and content enrichment is a read-only reference lookup through
   ports (events carry no PII, `.ai/security.md`), never a projection input and
-  never another context's tables directly.
+  never another context's tables directly. The one deliberate carve-out is the
+  user-owned `notifications.read_at` overlay (ADR 0016): the inbox HTTP path may
+  write it, the worker never does, and a rebuild may drop it.
 
 ## Ubiquitous language
 

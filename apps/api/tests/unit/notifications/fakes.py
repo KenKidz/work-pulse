@@ -21,6 +21,7 @@ from app.domains.notifications.models import (
 )
 from app.domains.notifications.repository import NewDelivery, NewNotification
 from app.domains.notifications.schemas import Recipient
+from app.shared.pagination import PageParams
 
 
 class FakeNotificationRepository:
@@ -123,6 +124,69 @@ class FakeNotificationRepository:
         )
         self.deliveries[key] = updated
         return updated
+
+    async def list_for_recipient(
+        self,
+        tenant_id: UUID,
+        recipient_employee_id: UUID,
+        page: PageParams,
+    ) -> tuple[Sequence[Notification], int]:
+        self.calls.append("list_for_recipient")
+        rows = sorted(
+            (
+                row
+                for row in self.notifications.values()
+                if row.tenant_id == tenant_id
+                and row.recipient_employee_id == recipient_employee_id
+            ),
+            key=lambda row: (row.created_at, row.id),
+            reverse=True,
+        )
+        return rows[page.offset : page.offset + page.limit], len(rows)
+
+    async def count_unread(self, tenant_id: UUID, recipient_employee_id: UUID) -> int:
+        self.calls.append("count_unread")
+        return sum(
+            1
+            for row in self.notifications.values()
+            if row.tenant_id == tenant_id
+            and row.recipient_employee_id == recipient_employee_id
+            and row.read_at is None
+        )
+
+    async def get(self, tenant_id: UUID, notification_id: UUID) -> Notification | None:
+        self.calls.append("get")
+        return self.notifications.get((tenant_id, notification_id))
+
+    async def mark_read(
+        self, tenant_id: UUID, notification_id: UUID, *, read_at: datetime
+    ) -> bool:
+        self.calls.append("mark_read")
+        key = (tenant_id, notification_id)
+        row = self.notifications.get(key)
+        if row is None or row.read_at is not None:
+            return False
+        self.notifications[key] = replace(row, read_at=read_at)
+        return True
+
+    async def mark_all_read(
+        self,
+        tenant_id: UUID,
+        recipient_employee_id: UUID,
+        *,
+        read_at: datetime,
+    ) -> int:
+        self.calls.append("mark_all_read")
+        changed = 0
+        for key, row in list(self.notifications.items()):
+            if (
+                row.tenant_id == tenant_id
+                and row.recipient_employee_id == recipient_employee_id
+                and row.read_at is None
+            ):
+                self.notifications[key] = replace(row, read_at=read_at)
+                changed += 1
+        return changed
 
 
 class RecordingEmailSender:

@@ -1,10 +1,14 @@
-"""Domain values for Notifications (pinned by ADR 0015).
+"""Domain values for Notifications (pinned by ADR 0015, ADR 0016).
 
 Notifications are a pure projection of `workpulse.events`: one `Notification`
 per `(event_id, recipient employee)` and one `NotificationDelivery` per
 channel. Both are immutable values — the Postgres adapter translates rows into
 them and every delivery transition is written back through the repository,
 never mutated in place.
+
+`Notification.read_at` is the one user-owned overlay on the projection (ADR
+0016): the inbox HTTP path may set it, the worker never sees it, and a rebuild
+from the event stream may drop it. It is not event-derived data.
 
 `DeliveryStatus` is the pinned state machine
 (`pending → sent | skipped | failed`), all three targets terminal. A skipped
@@ -75,7 +79,11 @@ class RenderedMessage:
 
 @dataclass(frozen=True, slots=True)
 class Notification:
-    """One delivery intent addressed to a person, deduplicated on the event."""
+    """One delivery intent addressed to a person, deduplicated on the event.
+
+    `read_at` is the user-owned overlay on the projection (ADR 0016); `None`
+    means unread. The worker never writes it and a rebuild may drop it.
+    """
 
     id: UUID
     tenant_id: UUID
@@ -87,6 +95,7 @@ class Notification:
     subject: str
     body: str
     created_at: datetime
+    read_at: datetime | None = None
 
 
 @dataclass(frozen=True, slots=True)
