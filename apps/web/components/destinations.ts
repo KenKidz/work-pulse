@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   MonitorDot,
   ReceiptText,
+  Timer,
   UserCog,
   Users,
   type LucideIcon,
@@ -95,16 +96,17 @@ export function activeNavHref(pathname: string, items: NavItem[]): string | null
 
 /**
  * Every primary navigation destination — Dashboard, the Phase 1 surfaces,
- * Leave, the payroll workspace and its every-role "My payslips" sibling, the
- * live Command center and the admin-only Users management — so the desktop
- * nav and the mobile drawer cannot drift. Role-restricted entries are filtered
- * by `useAuth()` in the navs; the API policy (`ensure_can_manage_users`,
+ * Leave, Overtime, the payroll workspace and its every-role "My payslips"
+ * sibling, the live Command center and the admin-only Users management — so
+ * the desktop nav and the mobile drawer cannot drift. Role-restricted entries
+ * are filtered by `useAuth()` in the navs; the API policy (`ensure_can_manage_users`,
  * `ensure_can_read_presence`, payroll policies) stays the authority.
  */
 export const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   ...DESTINATIONS.map(({ href, label, icon }) => ({ href, label, icon })),
   { href: "/leave", label: "Leave", icon: CalendarDays },
+  { href: "/overtime", label: "Overtime", icon: Timer },
   {
     href: "/payroll",
     label: "Payroll",

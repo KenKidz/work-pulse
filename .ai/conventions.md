@@ -121,7 +121,10 @@
   `size="xs"` buttons (exemplar: `ShiftsPanel.tsx:157-158`).
 - **Filter controls:** use `w-full sm:w-…` so controls stack below `sm`
   (exemplar: `AttendanceRecordsTable.tsx:63,71`).
-- **Dialog field pairs:** use `grid-cols-1 gap-… sm:grid-cols-2`.
+- **Dialog field pairs:** use `grid-cols-1 items-start gap-… sm:grid-cols-2`.
+  `items-start` is mandatory: a description or error message on only one field
+  makes that `FormItem` taller, and without it the sibling item stretches and
+  its label/control stack shifts down out of line.
 - **Mono data labels:** employee codes and timezones use `font-mono`, which
   resolves to Fira Code.
 - **One control language (Button / Input / Select / Textarea):** every

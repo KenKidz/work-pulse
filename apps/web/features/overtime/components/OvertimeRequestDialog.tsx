@@ -1,0 +1,182 @@
+"use client";
+
+/**
+ * Submit an overtime claim — one work date, decimal hours and an optional
+ * reason (PII: visible only to the requester and deciders). Server errors map
+ * back to the field that caused them (`409 overtime_work_date_in_future` /
+ * `overtime_overlaps` → work date) and the dialog stays open so the claim can
+ * be corrected. Client leaf.
+ */
+
+import { zodResolver } from "@hookform/resolvers/zod";
+import { CircleAlert } from "lucide-react";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+
+import { todayISO } from "../dates";
+import {
+  overtimeFieldErrors,
+  useCreateOvertimeAction,
+  type OvertimeFieldName,
+} from "../hooks/use-overtime";
+import { overtimeRequestFormSchema, type OvertimeRequestFormValues } from "../schema";
+
+const EMPTY_VALUES: OvertimeRequestFormValues = {
+  work_date: "",
+  hours: "",
+  reason: "",
+};
+
+type OvertimeRequestDialogProps = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+};
+
+export function OvertimeRequestDialog({ open, onOpenChange }: OvertimeRequestDialogProps) {
+  const createRequest = useCreateOvertimeAction();
+  const [rootError, setRootError] = useState<string | null>(null);
+
+  // The caller mounts the dialog fresh for every claim, so the empty defaults
+  // are the initial state.
+  const form = useForm<OvertimeRequestFormValues>({
+    resolver: zodResolver(overtimeRequestFormSchema),
+    defaultValues: EMPTY_VALUES,
+  });
+
+  async function onSubmit(values: OvertimeRequestFormValues) {
+    setRootError(null);
+    try {
+      await createRequest.mutateAsync({
+        data: {
+          work_date: values.work_date,
+          hours: Number(values.hours),
+          reason: values.reason?.trim() ? values.reason.trim() : null,
+        },
+      });
+      onOpenChange(false);
+    } catch (error) {
+      const fieldErrors = overtimeFieldErrors(error);
+      for (const [field, message] of Object.entries(fieldErrors)) {
+        if (field === "root") {
+          setRootError(message ?? null);
+        } else {
+          form.setError(field as Exclude<OvertimeFieldName, "root">, {
+            type: "server",
+            message,
+          });
+        }
+      }
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle>Request overtime</DialogTitle>
+          <DialogDescription>
+            Claim hours already worked beyond your shift. Your manager approves first, then HR
+            verifies the exact hours before payroll counts them.
+          </DialogDescription>
+        </DialogHeader>
+
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" noValidate>
+            <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="work_date"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Work date</FormLabel>
+                    <FormControl>
+                      <Input {...field} type="date" max={todayISO()} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="hours"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Hours</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        type="number"
+                        inputMode="decimal"
+                        min="0.01"
+                        max="12"
+                        step="0.01"
+                      />
+                    </FormControl>
+                    <FormDescription>More than 0 and at most 12.</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="reason"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Reason (optional)</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      {...field}
+                      value={field.value ?? ""}
+                      rows={3}
+                      placeholder="Share only what your deciders need to know."
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {rootError ? (
+              <p role="alert" className="flex items-start gap-2 text-sm text-destructive">
+                <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                {rootError}
+              </p>
+            ) : null}
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={createRequest.isPending}>
+                {createRequest.isPending ? "Submitting…" : "Submit request"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}

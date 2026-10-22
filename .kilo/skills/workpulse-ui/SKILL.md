@@ -181,9 +181,12 @@ Authoritative list with exemplars: `.ai/conventions.md` → `Presentation rules`
 - **No emoji** anywhere — not in markup, copy, alt text or tests. Use a glyph.
 - **Forms:** label above input (never placeholder-as-label), helper text present
   in markup, error text below input, `gap-2` blocks, dialog field pairs
-  `grid-cols-1 gap-… sm:grid-cols-2`. Long dialogs `max-h-[85vh]
-  overflow-y-auto`; width by content (`sm:max-w-md` confirm / `sm:max-w-lg` /
-  `sm:max-w-xl` form).
+  `grid-cols-1 items-start gap-… sm:grid-cols-2`. **`items-start` is
+  mandatory** — a description or error on only one field makes that
+  `FormItem` taller, and without it the sibling stretches and its
+  label/control stack shifts down out of line (overtime request dialog
+  regression). Long dialogs `max-h-[85vh] overflow-y-auto`; width by content
+  (`sm:max-w-md` confirm / `sm:max-w-lg` / `sm:max-w-xl` form).
 - **List tables:** pass `containerLabel` to `components/ui/table.tsx` — it adds
   `role="region"`, `aria-label`, `tabIndex={0}` and a visible focus outline, so
   the swipe-only affordance has a keyboard equivalent. Render the `sm:hidden`
