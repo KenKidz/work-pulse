@@ -77,6 +77,16 @@ class OvertimeRepository(Protocol):
         """Tenant-scoped employee facts; `None` when the employee is unknown."""
         ...
 
+    async def lock_employee(self, tenant_id: UUID, employee_id: UUID) -> bool:
+        """Lock the employee row for the submit transaction (`FOR UPDATE`).
+
+        Holds until commit so concurrent submits for the same employee
+        serialize: the overlap re-check of the second submit runs after the
+        first insert is visible. `False` when the employee is unknown in the
+        tenant.
+        """
+        ...
+
     async def visible_employee_ids(
         self, tenant_id: UUID, manager_id: UUID | None
     ) -> Sequence[UUID]:
@@ -168,13 +178,16 @@ class OvertimeRepository(Protocol):
         tenant_id: UUID,
         request_id: UUID,
         *,
+        from_status: OvertimeRequestStatus,
         employee_id: UUID,
         now: datetime,
     ) -> OvertimeRequest | None:
-        """Own `requested|manager_approved → withdrawn`.
+        """Own `requested|manager_approved → withdrawn` from `from_status`.
 
-        The ownership predicate is part of the update, so the repository can
-        never withdraw another employee's row. `None` when the row is not in an
-        open pre-verification state or not owned by `employee_id`.
+        The observed source state and the ownership predicate are part of the
+        update, so a concurrent approve cannot make the audit claim a state the
+        row did not have, and the repository can never withdraw another
+        employee's row. `None` when the row is no longer in `from_status` or
+        not owned by `employee_id`.
         """
         ...

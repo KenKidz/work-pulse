@@ -1,13 +1,18 @@
-"""Wire contracts for the Overtime domain (persistence slice, T3).
+"""Wire contracts for the Overtime domain (T3 persistence + T4 domain).
 
 The API contract is pinned by T1 (`.ai/features/overtime.md` → `## API
-contract`). This module starts with the shapes the persistence layer speaks;
-T4 adds the create/decision inputs and the list page envelope.
+contract`). This module carries the persistence wire shape, the create/decision
+inputs and the list page envelope.
 
 `hours` is `Decimal` internally (ADR 0017) but serializes as a JSON **number**,
 never a string — the same JSON-only serializer payroll uses, so the generated
 client types hours as `number`. JSON `status`/`rejected_from` values are
 lowercase end to end.
+
+Writes reject unknown fields (`extra="forbid"`): there is no client-supplied
+employee id, status or timestamp. `hours` is `0 < hours ≤ 12` with at most two
+decimal places and `reason`/`note` are 1..500 characters when present; those
+are schema `422`s. Date and state rules live in the service.
 
 `reason`, `manager_note` and `hr_note` are PII (`.ai/security.md`): they are
 returned to viewers with row visibility but must never be logged, emitted in
@@ -23,9 +28,12 @@ from uuid import UUID
 from pydantic import (
     BaseModel,
     ConfigDict,
+    Field,
     PlainSerializer,
     WithJsonSchema,
 )
+
+from app.shared.pagination import Page
 
 
 def _json_number(value: Decimal) -> float:
@@ -42,6 +50,15 @@ DecimalHours = Annotated[
     # `anyOf: [number, string]`. Pin it to a JSON number so the generated
     # client types hours as `number`, never `number | string` (ADR 0017).
     WithJsonSchema({"type": "number"}),
+]
+
+# Request-side hours stay a JSON number in the generated contract too; the
+# bounds themselves are enforced by the `Field` constraints below.
+OvertimeHoursInput = Annotated[
+    Decimal,
+    WithJsonSchema(
+        {"type": "number", "exclusiveMinimum": 0, "maximum": 12},
+    ),
 ]
 
 
@@ -90,3 +107,38 @@ class OvertimeRequest(BaseModel):
     included_in_run_id: UUID | None = None
     created_at: datetime
     updated_at: datetime
+
+
+class OvertimeRequestCreate(BaseModel):
+    """Submit a claim — always for the caller's linked employee (PO Decision 1).
+
+    Overtime is a claim for hours already worked: the service refuses a future
+    `work_date`; the bounds and precision here are schema `422`s.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    work_date: date
+    hours: OvertimeHoursInput = Field(
+        gt=Decimal("0"),
+        le=Decimal("12"),
+        decimal_places=2,
+    )
+    reason: str | None = Field(default=None, min_length=1, max_length=500)
+
+
+class OvertimeDecision(BaseModel):
+    """Optional decision note — 1..500 characters when provided (PII).
+
+    The service routes it to `manager_note` on the manager step (`requested`)
+    and to `hr_note` on the HR step (`manager_approved`/`hr_verified`) (T1).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    note: str | None = Field(default=None, min_length=1, max_length=500)
+
+
+class OvertimeRequestListPage(BaseModel):
+    items: list[OvertimeRequest]
+    page: Page

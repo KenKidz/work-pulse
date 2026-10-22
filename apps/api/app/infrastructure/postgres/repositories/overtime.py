@@ -71,6 +71,23 @@ class PostgresOvertimeRepository:
             manager_id=row.manager_id,
         )
 
+    async def lock_employee(self, tenant_id: UUID, employee_id: UUID) -> bool:
+        """`SELECT … FOR UPDATE` on the employee row — submit's race backstop.
+
+        Held until the request transaction commits, so a concurrent submit for
+        the same employee re-checks overlaps only after this one's insert is
+        visible.
+        """
+        stmt = (
+            select(employees_orm.Employee.id)
+            .where(
+                employees_orm.Employee.tenant_id == tenant_id,
+                employees_orm.Employee.id == employee_id,
+            )
+            .with_for_update()
+        )
+        return (await self._session.execute(stmt)).scalar_one_or_none() is not None
+
     async def visible_employee_ids(
         self, tenant_id: UUID, manager_id: UUID | None
     ) -> Sequence[UUID]:
@@ -287,6 +304,7 @@ class PostgresOvertimeRepository:
         tenant_id: UUID,
         request_id: UUID,
         *,
+        from_status: OvertimeRequestStatus,
         employee_id: UUID,
         now: datetime,
     ) -> OvertimeRequest | None:
@@ -296,12 +314,7 @@ class PostgresOvertimeRepository:
                 orm.OvertimeRequest.tenant_id == tenant_id,
                 orm.OvertimeRequest.id == request_id,
                 orm.OvertimeRequest.employee_id == employee_id,
-                orm.OvertimeRequest.status.in_(
-                    (
-                        OvertimeRequestStatus.REQUESTED.value,
-                        OvertimeRequestStatus.MANAGER_APPROVED.value,
-                    )
-                ),
+                orm.OvertimeRequest.status == from_status.value,
             )
             .values(
                 status=OvertimeRequestStatus.WITHDRAWN.value,
