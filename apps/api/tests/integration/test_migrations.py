@@ -31,6 +31,7 @@ FEATURE_TABLES = {
     "event_outbox",
     "notifications",
     "notification_deliveries",
+    "overtime_requests",
     "payroll_configs",
     "payroll_deduction_lines",
     "salary_records",
