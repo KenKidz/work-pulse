@@ -46,7 +46,7 @@ domain map in `.ai/domain.md` is their placeholder.
 | Realtime consumer swap (events → wall deltas, ADR 0011) | 3 | M | done | `realtime-consumer.md` |
 | Payroll (simulated runs, timesheets, payslips) | 4 | L | done | `payroll.md` |
 | Overtime (requests, manager approval, HR verification) | 4 | M | done | `overtime.md` |
-| Analytics & Reports (ClickHouse projections) | 4 | L | planned | — |
+| Analytics & Reports (ClickHouse projections) | 4 | L | approved | `analytics-reports.md` |
 | Recruitment (jobs, candidates, interviews) | 4+ | L | planned | — |
 | Performance (goals, reviews, feedback, skills) | 4+ | M | planned | — |
 | Employee documents (presigned upload/download) | 4+ | M | planned | — |

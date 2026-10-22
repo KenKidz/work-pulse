@@ -6,7 +6,7 @@ does the work.
 
 ## Now
 
-_No active feature — start the next one with `/spec <name>`._
+- [ ] Analytics & Reports (`.ai/features/analytics-reports.md`) — spec approved 2026-10-22 with plan T1–T8; next: build T1
 
 ## Later
 
