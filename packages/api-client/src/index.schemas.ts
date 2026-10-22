@@ -462,6 +462,90 @@ export interface NotificationUnreadCount {
 }
 
 /**
+ * Optional decision note — 1..500 characters when provided (PII).
+ *
+ * The service routes it to `manager_note` on the manager step (`requested`)
+ * and to `hr_note` on the HR step (`manager_approved`/`hr_verified`) (T1).
+ */
+export interface OvertimeDecision {
+  note?: string | null;
+}
+
+/**
+ * The observed pre-rejection state, recorded on rejected rows.
+ */
+export type OvertimeRejectedFrom =
+  (typeof OvertimeRejectedFrom)[keyof typeof OvertimeRejectedFrom];
+
+export const OvertimeRejectedFrom = {
+  requested: "requested",
+  manager_approved: "manager_approved",
+  hr_verified: "hr_verified",
+} as const;
+
+/**
+ * Pinned request lifecycle (`REQUESTED` → `MANAGER_APPROVED` → …).
+ */
+export type OvertimeRequestStatus =
+  (typeof OvertimeRequestStatus)[keyof typeof OvertimeRequestStatus];
+
+export const OvertimeRequestStatus = {
+  requested: "requested",
+  manager_approved: "manager_approved",
+  hr_verified: "hr_verified",
+  included_in_payroll: "included_in_payroll",
+  rejected: "rejected",
+  withdrawn: "withdrawn",
+} as const;
+
+/**
+ * One overtime claim and its decision trail (pinned response shape).
+ */
+export interface OvertimeRequest {
+  id: string;
+  tenant_id: string;
+  employee_id: string;
+  work_date: string;
+  hours: number;
+  status: OvertimeRequestStatus;
+  reason?: string | null;
+  manager_note?: string | null;
+  hr_note?: string | null;
+  approved_by?: string | null;
+  approved_at?: string | null;
+  verified_by?: string | null;
+  verified_at?: string | null;
+  rejected_by?: string | null;
+  rejected_at?: string | null;
+  rejected_from?: OvertimeRejectedFrom | null;
+  withdrawn_at?: string | null;
+  included_in_run_id?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Submit a claim — always for the caller's linked employee (PO Decision 1).
+ *
+ * Overtime is a claim for hours already worked: the service refuses a future
+ * `work_date`; the bounds and precision here are schema `422`s.
+ */
+export interface OvertimeRequestCreate {
+  work_date: string;
+  /**
+   * @maximum 12
+   * @exclusiveMinimum 0
+   */
+  hours: number;
+  reason?: string | null;
+}
+
+export interface OvertimeRequestListPage {
+  items: OvertimeRequest[];
+  page: Page;
+}
+
+/**
  * A per-run, per-employee bonus entry (amount and note are PII).
  */
 export interface PayrollBonus {
@@ -960,6 +1044,15 @@ export type ListLeaveRequestsParams = {
 export type ListLeaveBalancesParams = {
   employee_id?: string | null;
   year?: number | null;
+};
+
+export type ListOvertimeRequestsParams = {
+  employee_id?: string | null;
+  status?: OvertimeRequestStatus | null;
+  from?: string | null;
+  to?: string | null;
+  page?: number;
+  page_size?: number;
 };
 
 export type ListNotificationsParams = {

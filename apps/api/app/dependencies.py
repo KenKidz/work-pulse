@@ -35,10 +35,10 @@ from app.domains.organizations.service import (
     LocationService,
     PositionService,
 )
+from app.domains.overtime.service import OvertimeService
 from app.domains.payroll.repository import (
     AttendanceHoursPort,
     LeaveDaysPort,
-    NoOvertimeHoursPort,
     OvertimeHoursPort,
 )
 from app.domains.payroll.service import PayrollService
@@ -51,6 +51,7 @@ from app.infrastructure.postgres.outbox import PostgresEventOutbox
 from app.infrastructure.postgres.payroll_facts import (
     PostgresAttendanceHoursPort,
     PostgresLeaveDaysPort,
+    PostgresOvertimeHoursPort,
 )
 from app.infrastructure.postgres.repositories.attendance import (
     PostgresAttendanceRepository,
@@ -72,6 +73,9 @@ from app.infrastructure.postgres.repositories.organizations import (
     PostgresDepartmentRepository,
     PostgresLocationRepository,
     PostgresPositionRepository,
+)
+from app.infrastructure.postgres.repositories.overtime import (
+    PostgresOvertimeRepository,
 )
 from app.infrastructure.postgres.repositories.payroll import PostgresPayrollRepository
 from app.infrastructure.postgres.session import get_session
@@ -167,6 +171,16 @@ def get_leave_service(session: SessionDep) -> LeaveService:
     )
 
 
+def get_overtime_service(session: SessionDep) -> OvertimeService:
+    return OvertimeService(
+        repo=PostgresOvertimeRepository(session),
+        audit=PostgresAuditWriter(session),
+        # Same session, same transaction: the request row, its audit entry and
+        # its event envelope commit together or not at all (ADR 0012).
+        outbox=PostgresEventOutbox(session, clock=_utc_now),
+    )
+
+
 def get_payroll_service(
     session: SessionDep,
     overtime: "OvertimeHoursPortDep",
@@ -177,9 +191,8 @@ def get_payroll_service(
 
     The outbox shares the request session, so a lifecycle transition, its
     audit entry and its event envelopes commit together (ADR 0012). The seam
-    ports are payroll-owned protocols (ADR 0018); the attendance/leave
-    adapters do the cross-context joins, and the overtime placeholder returns
-    no rows until `overtime.md` (P0) lands.
+    ports are payroll-owned protocols (ADR 0018); every adapter does the
+    cross-context join behind the protocol.
     """
     return PayrollService(
         repo=PostgresPayrollRepository(session),
@@ -191,14 +204,9 @@ def get_payroll_service(
     )
 
 
-def get_overtime_hours_port() -> OvertimeHoursPort:
-    """Payroll's HR-verified overtime seam (ADR 0018).
-
-    The real Postgres adapter is wired with the overtime feature (P0); until
-    then no rows are verified, so payroll's overtime term is `0.00` and no
-    table that feature has not created yet is queried.
-    """
-    return NoOvertimeHoursPort()
+def get_overtime_hours_port(session: SessionDep) -> OvertimeHoursPort:
+    """Payroll's HR-verified overtime seam (ADR 0018)."""
+    return PostgresOvertimeHoursPort(session)
 
 
 def get_attendance_hours_port(session: SessionDep) -> AttendanceHoursPort:
@@ -311,6 +319,7 @@ LocationServiceDep = Annotated[LocationService, Depends(get_location_service)]
 EmployeeServiceDep = Annotated[EmployeeService, Depends(get_employee_service)]
 AttendanceServiceDep = Annotated[AttendanceService, Depends(get_attendance_service)]
 LeaveServiceDep = Annotated[LeaveService, Depends(get_leave_service)]
+OvertimeServiceDep = Annotated[OvertimeService, Depends(get_overtime_service)]
 PayrollServiceDep = Annotated[PayrollService, Depends(get_payroll_service)]
 NotificationInboxServiceDep = Annotated[
     NotificationInboxService, Depends(get_notification_inbox_service)

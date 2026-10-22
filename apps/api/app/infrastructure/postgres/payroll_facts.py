@@ -1,13 +1,15 @@
-"""Postgres adapters for payroll's attendance/leave seam ports (ADR 0018).
+"""Postgres adapters for payroll's seam ports (ADR 0018).
 
 Payroll owns the Protocols (`domains/payroll/repository.py`); these adapters
 perform the cross-context joins, exactly like the attendance↔leave coverage
-seam (ADR 0014). The payroll domain never imports attendance/leave models.
+seam (ADR 0014). The payroll domain never imports attendance/leave/overtime
+models.
 
-The overtime write/read adapter deliberately does not live here yet: the
-overtime feature (`overtime.md`, P0) has not been built, so there is no table
-to read or flip. It lands with P0; until then payroll is exercised through the
-fake ports (`.ai/features/payroll.md` → Risk R1).
+`PostgresOvertimeHoursPort` is the second half of the ADR 0018 overtime seam:
+it reads the month's `hr_verified` rows and performs the finalize flip to
+`included_in_payroll` with the run handle. The write is state-guarded,
+idempotent for the same run, and can never count a row another finalized run
+already included.
 """
 
 from calendar import monthrange
@@ -17,14 +19,20 @@ from datetime import date, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domains.attendance import models as attendance_orm
 from app.domains.leave import models as leave_orm
 from app.domains.leave.schemas import LeaveRequestStatus
+from app.domains.overtime import models as overtime_orm
+from app.domains.overtime.schemas import OvertimeRequestStatus
+from app.domains.payroll.repository import OvertimeHoursRow
 
 _CENTIHOUR = Decimal("0.01")
+# Finalize flips one run's handles in bounded statements: a large monthly run
+# can exceed PostgreSQL/asyncpg's bind-parameter limit with a single IN list.
+_OVERTIME_FLIP_CHUNK = 4000
 
 
 def _period_bounds(period: str) -> tuple[date, date]:
@@ -157,6 +165,107 @@ class PostgresLeaveDaysPort:
         for employee_id in employee_ids:
             days[employee_id] = _union_days(intervals.get(employee_id, []))
         return days
+
+
+class PostgresOvertimeHoursPort:
+    """Payroll's HR-verified overtime seam: month read + guarded finalize flip.
+
+    `verified_hours` returns only rows still in `hr_verified` for the month
+    (lowercase storage; ADR 0018's `'HR_VERIFIED'` is enum notation), ordered
+    deterministically so a calculation's stored handles are stable.
+
+    `mark_included` flips exactly the supplied handles whose current state is
+    `hr_verified` and counts rows already included under the **same** run as
+    idempotent successes. A row included by another run, or in any other
+    state, is never counted — the at-most-one-finalized-run guard (ADR 0018
+    decision 4), which makes payroll's `flipped == len(rows)` check exact.
+    """
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def verified_hours(
+        self, tenant_id: UUID, period: str
+    ) -> Sequence[OvertimeHoursRow]:
+        period_start, period_end = _period_bounds(period)
+        stmt = (
+            select(
+                overtime_orm.OvertimeRequest.id,
+                overtime_orm.OvertimeRequest.employee_id,
+                overtime_orm.OvertimeRequest.hours,
+            )
+            .where(
+                overtime_orm.OvertimeRequest.tenant_id == tenant_id,
+                overtime_orm.OvertimeRequest.status
+                == OvertimeRequestStatus.HR_VERIFIED.value,
+                overtime_orm.OvertimeRequest.work_date >= period_start,
+                overtime_orm.OvertimeRequest.work_date <= period_end,
+            )
+            .order_by(
+                overtime_orm.OvertimeRequest.work_date.asc(),
+                overtime_orm.OvertimeRequest.id.asc(),
+            )
+        )
+        rows = (await self._session.execute(stmt)).all()
+        return [
+            OvertimeHoursRow(
+                overtime_id=overtime_id,
+                employee_id=employee_id,
+                hours=hours,
+            )
+            for overtime_id, employee_id, hours in rows
+        ]
+
+    async def mark_included(
+        self,
+        tenant_id: UUID,
+        rows: Sequence[OvertimeHoursRow],
+        run_id: UUID,
+    ) -> int:
+        # One handle per row; duplicate ids are dropped so a malformed caller
+        # can never be counted twice by two chunks.
+        overtime_ids = list(dict.fromkeys(row.overtime_id for row in rows))
+        if not overtime_ids:
+            return 0
+
+        counted = 0
+        for start in range(0, len(overtime_ids), _OVERTIME_FLIP_CHUNK):
+            chunk = overtime_ids[start : start + _OVERTIME_FLIP_CHUNK]
+            flip = (
+                update(overtime_orm.OvertimeRequest)
+                .where(
+                    overtime_orm.OvertimeRequest.tenant_id == tenant_id,
+                    overtime_orm.OvertimeRequest.id.in_(chunk),
+                    overtime_orm.OvertimeRequest.status
+                    == OvertimeRequestStatus.HR_VERIFIED.value,
+                )
+                .values(
+                    status=OvertimeRequestStatus.INCLUDED_IN_PAYROLL.value,
+                    included_in_run_id=run_id,
+                )
+                .returning(overtime_orm.OvertimeRequest.id)
+            )
+            flipped = set((await self._session.execute(flip)).scalars())
+            counted += len(flipped)
+
+            remaining = [
+                overtime_id for overtime_id in chunk if overtime_id not in flipped
+            ]
+            if not remaining:
+                continue
+
+            # A replay of the same finalize is a no-op on state but still
+            # counts: those rows are already included by *this* run.
+            already = select(overtime_orm.OvertimeRequest.id).where(
+                overtime_orm.OvertimeRequest.tenant_id == tenant_id,
+                overtime_orm.OvertimeRequest.id.in_(remaining),
+                overtime_orm.OvertimeRequest.status
+                == OvertimeRequestStatus.INCLUDED_IN_PAYROLL.value,
+                overtime_orm.OvertimeRequest.included_in_run_id == run_id,
+            )
+            already_ids = set((await self._session.execute(already)).scalars())
+            counted += len(already_ids)
+        return counted
 
 
 def _union_days(intervals: Sequence[tuple[date, date]]) -> int:

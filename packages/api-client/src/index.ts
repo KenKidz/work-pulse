@@ -56,6 +56,7 @@ import type {
   ListLocationsParams,
   ListMyPayslipsParams,
   ListNotificationsParams,
+  ListOvertimeRequestsParams,
   ListPayrollRunsParams,
   ListPositionsParams,
   ListRunPayslipsParams,
@@ -69,6 +70,10 @@ import type {
   LoginRequest,
   NotificationListPage,
   NotificationUnreadCount,
+  OvertimeDecision,
+  OvertimeRequest,
+  OvertimeRequestCreate,
+  OvertimeRequestListPage,
   PayrollBonus,
   PayrollConfig,
   PayrollConfigUpdate,
@@ -8106,6 +8111,1121 @@ export function useListLeaveBalances<
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+export type createOvertimeRequestResponse201 = {
+  data: OvertimeRequest;
+  status: 201;
+};
+
+export type createOvertimeRequestResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type createOvertimeRequestResponseSuccess =
+  createOvertimeRequestResponse201 & {
+    headers: Headers;
+  };
+export type createOvertimeRequestResponseError =
+  createOvertimeRequestResponse422 & {
+    headers: Headers;
+  };
+
+export type createOvertimeRequestResponse =
+  createOvertimeRequestResponseSuccess | createOvertimeRequestResponseError;
+
+export const getCreateOvertimeRequestUrl = () => {
+  return `/api/v1/overtime/requests`;
+};
+
+/**
+ * Submit a claim for the actor's employee link — always `requested`.
+ * @summary Create Overtime Request
+ */
+export const createOvertimeRequest = async (
+  overtimeRequestCreate: OvertimeRequestCreate,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<createOvertimeRequestResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return customFetch<createOvertimeRequestResponse>(
+    getCreateOvertimeRequestUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...getHeaders(options?.headers),
+      },
+      body: JSON.stringify(overtimeRequestCreate),
+    },
+  );
+};
+
+export const getCreateOvertimeRequestMutationKey = () =>
+  ["createOvertimeRequest"] as const;
+
+export const getCreateOvertimeRequestMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createOvertimeRequest>>,
+    TError,
+    CreateOvertimeRequestMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createOvertimeRequest>>,
+  TError,
+  CreateOvertimeRequestMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateOvertimeRequestMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createOvertimeRequest>>,
+    CreateOvertimeRequestMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createOvertimeRequest(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateOvertimeRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createOvertimeRequest>>
+>;
+export type CreateOvertimeRequestMutationBody = OvertimeRequestCreate;
+export type CreateOvertimeRequestMutationError = HTTPValidationError;
+export type CreateOvertimeRequestMutationVariables = {
+  data: OvertimeRequestCreate;
+};
+
+/**
+ * @summary Create Overtime Request
+ */
+export const useCreateOvertimeRequest = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createOvertimeRequest>>,
+      TError,
+      CreateOvertimeRequestMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createOvertimeRequest>>,
+  TError,
+  CreateOvertimeRequestMutationVariables,
+  TContext
+> => {
+  return useMutation(
+    getCreateOvertimeRequestMutationOptions(options),
+    queryClient,
+  );
+};
+
+export type listOvertimeRequestsResponse200 = {
+  data: OvertimeRequestListPage;
+  status: 200;
+};
+
+export type listOvertimeRequestsResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type listOvertimeRequestsResponseSuccess =
+  listOvertimeRequestsResponse200 & {
+    headers: Headers;
+  };
+export type listOvertimeRequestsResponseError =
+  listOvertimeRequestsResponse422 & {
+    headers: Headers;
+  };
+
+export type listOvertimeRequestsResponse =
+  listOvertimeRequestsResponseSuccess | listOvertimeRequestsResponseError;
+
+export const getListOvertimeRequestsUrl = (
+  params?: ListOvertimeRequestsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/overtime/requests?${stringifiedParams}`
+    : `/api/v1/overtime/requests`;
+};
+
+/**
+ * Requests scoped to the actor's visibility (## Roles & access).
+ * @summary List Overtime Requests
+ */
+export const listOvertimeRequests = async (
+  params?: ListOvertimeRequestsParams,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<listOvertimeRequestsResponse> => {
+  return customFetch<listOvertimeRequestsResponse>(
+    getListOvertimeRequestsUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListOvertimeRequestsQueryKey = (
+  params?: ListOvertimeRequestsParams,
+) => {
+  return [`/api/v1/overtime/requests`, ...(params ? [params] : [])] as const;
+};
+
+export const getListOvertimeRequestsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listOvertimeRequests>>,
+  TError = HTTPValidationError,
+>(
+  params?: ListOvertimeRequestsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listOvertimeRequests>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListOvertimeRequestsQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listOvertimeRequests>>
+  > = ({ signal }) =>
+    listOvertimeRequests(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listOvertimeRequests>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListOvertimeRequestsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listOvertimeRequests>>
+>;
+export type ListOvertimeRequestsQueryError = HTTPValidationError;
+
+export function useListOvertimeRequests<
+  TData = Awaited<ReturnType<typeof listOvertimeRequests>>,
+  TError = HTTPValidationError,
+>(
+  params: undefined | ListOvertimeRequestsParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listOvertimeRequests>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listOvertimeRequests>>,
+          TError,
+          Awaited<ReturnType<typeof listOvertimeRequests>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useListOvertimeRequests<
+  TData = Awaited<ReturnType<typeof listOvertimeRequests>>,
+  TError = HTTPValidationError,
+>(
+  params?: ListOvertimeRequestsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listOvertimeRequests>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listOvertimeRequests>>,
+          TError,
+          Awaited<ReturnType<typeof listOvertimeRequests>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useListOvertimeRequests<
+  TData = Awaited<ReturnType<typeof listOvertimeRequests>>,
+  TError = HTTPValidationError,
+>(
+  params?: ListOvertimeRequestsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listOvertimeRequests>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary List Overtime Requests
+ */
+
+export function useListOvertimeRequests<
+  TData = Awaited<ReturnType<typeof listOvertimeRequests>>,
+  TError = HTTPValidationError,
+>(
+  params?: ListOvertimeRequestsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listOvertimeRequests>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getListOvertimeRequestsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export type getOvertimeRequestResponse200 = {
+  data: OvertimeRequest;
+  status: 200;
+};
+
+export type getOvertimeRequestResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type getOvertimeRequestResponseSuccess =
+  getOvertimeRequestResponse200 & {
+    headers: Headers;
+  };
+export type getOvertimeRequestResponseError = getOvertimeRequestResponse422 & {
+  headers: Headers;
+};
+
+export type getOvertimeRequestResponse =
+  getOvertimeRequestResponseSuccess | getOvertimeRequestResponseError;
+
+export const getGetOvertimeRequestUrl = (id: string) => {
+  return `/api/v1/overtime/requests/${id}`;
+};
+
+/**
+ * Request detail; unknown, cross-tenant and out-of-scope ids are `404`.
+ * @summary Get Overtime Request
+ */
+export const getOvertimeRequest = async (
+  id: string,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<getOvertimeRequestResponse> => {
+  return customFetch<getOvertimeRequestResponse>(getGetOvertimeRequestUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetOvertimeRequestQueryKey = (id: string) => {
+  return [`/api/v1/overtime/requests/${id}`] as const;
+};
+
+export const getGetOvertimeRequestQueryOptions = <
+  TData = Awaited<ReturnType<typeof getOvertimeRequest>>,
+  TError = HTTPValidationError,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getOvertimeRequest>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetOvertimeRequestQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getOvertimeRequest>>
+  > = ({ signal }) => getOvertimeRequest(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getOvertimeRequest>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetOvertimeRequestQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getOvertimeRequest>>
+>;
+export type GetOvertimeRequestQueryError = HTTPValidationError;
+
+export function useGetOvertimeRequest<
+  TData = Awaited<ReturnType<typeof getOvertimeRequest>>,
+  TError = HTTPValidationError,
+>(
+  id: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getOvertimeRequest>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getOvertimeRequest>>,
+          TError,
+          Awaited<ReturnType<typeof getOvertimeRequest>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetOvertimeRequest<
+  TData = Awaited<ReturnType<typeof getOvertimeRequest>>,
+  TError = HTTPValidationError,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getOvertimeRequest>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getOvertimeRequest>>,
+          TError,
+          Awaited<ReturnType<typeof getOvertimeRequest>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetOvertimeRequest<
+  TData = Awaited<ReturnType<typeof getOvertimeRequest>>,
+  TError = HTTPValidationError,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getOvertimeRequest>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary Get Overtime Request
+ */
+
+export function useGetOvertimeRequest<
+  TData = Awaited<ReturnType<typeof getOvertimeRequest>>,
+  TError = HTTPValidationError,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getOvertimeRequest>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetOvertimeRequestQueryOptions(id, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export type approveOvertimeRequestResponse200 = {
+  data: OvertimeRequest;
+  status: 200;
+};
+
+export type approveOvertimeRequestResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type approveOvertimeRequestResponseSuccess =
+  approveOvertimeRequestResponse200 & {
+    headers: Headers;
+  };
+export type approveOvertimeRequestResponseError =
+  approveOvertimeRequestResponse422 & {
+    headers: Headers;
+  };
+
+export type approveOvertimeRequestResponse =
+  approveOvertimeRequestResponseSuccess | approveOvertimeRequestResponseError;
+
+export const getApproveOvertimeRequestUrl = (id: string) => {
+  return `/api/v1/overtime/requests/${id}/approve`;
+};
+
+/**
+ * Manager step: `requested → manager_approved`.
+ * @summary Approve Overtime Request
+ */
+export const approveOvertimeRequest = async (
+  id: string,
+  overtimeDecision: OvertimeDecision,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<approveOvertimeRequestResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return customFetch<approveOvertimeRequestResponse>(
+    getApproveOvertimeRequestUrl(id),
+    {
+      ...options,
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...getHeaders(options?.headers),
+      },
+      body: JSON.stringify(overtimeDecision),
+    },
+  );
+};
+
+export const getApproveOvertimeRequestMutationKey = () =>
+  ["approveOvertimeRequest"] as const;
+
+export const getApproveOvertimeRequestMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof approveOvertimeRequest>>,
+    TError,
+    ApproveOvertimeRequestMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof approveOvertimeRequest>>,
+  TError,
+  ApproveOvertimeRequestMutationVariables,
+  TContext
+> => {
+  const mutationKey = getApproveOvertimeRequestMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof approveOvertimeRequest>>,
+    ApproveOvertimeRequestMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return approveOvertimeRequest(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ApproveOvertimeRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof approveOvertimeRequest>>
+>;
+export type ApproveOvertimeRequestMutationBody = OvertimeDecision;
+export type ApproveOvertimeRequestMutationError = HTTPValidationError;
+export type ApproveOvertimeRequestMutationVariables = {
+  id: string;
+  data: OvertimeDecision;
+};
+
+/**
+ * @summary Approve Overtime Request
+ */
+export const useApproveOvertimeRequest = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof approveOvertimeRequest>>,
+      TError,
+      ApproveOvertimeRequestMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof approveOvertimeRequest>>,
+  TError,
+  ApproveOvertimeRequestMutationVariables,
+  TContext
+> => {
+  return useMutation(
+    getApproveOvertimeRequestMutationOptions(options),
+    queryClient,
+  );
+};
+
+export type verifyOvertimeRequestResponse200 = {
+  data: OvertimeRequest;
+  status: 200;
+};
+
+export type verifyOvertimeRequestResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type verifyOvertimeRequestResponseSuccess =
+  verifyOvertimeRequestResponse200 & {
+    headers: Headers;
+  };
+export type verifyOvertimeRequestResponseError =
+  verifyOvertimeRequestResponse422 & {
+    headers: Headers;
+  };
+
+export type verifyOvertimeRequestResponse =
+  verifyOvertimeRequestResponseSuccess | verifyOvertimeRequestResponseError;
+
+export const getVerifyOvertimeRequestUrl = (id: string) => {
+  return `/api/v1/overtime/requests/${id}/verify`;
+};
+
+/**
+ * HR step: `manager_approved → hr_verified`, hours unchanged.
+ * @summary Verify Overtime Request
+ */
+export const verifyOvertimeRequest = async (
+  id: string,
+  overtimeDecision: OvertimeDecision,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<verifyOvertimeRequestResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return customFetch<verifyOvertimeRequestResponse>(
+    getVerifyOvertimeRequestUrl(id),
+    {
+      ...options,
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...getHeaders(options?.headers),
+      },
+      body: JSON.stringify(overtimeDecision),
+    },
+  );
+};
+
+export const getVerifyOvertimeRequestMutationKey = () =>
+  ["verifyOvertimeRequest"] as const;
+
+export const getVerifyOvertimeRequestMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof verifyOvertimeRequest>>,
+    TError,
+    VerifyOvertimeRequestMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof verifyOvertimeRequest>>,
+  TError,
+  VerifyOvertimeRequestMutationVariables,
+  TContext
+> => {
+  const mutationKey = getVerifyOvertimeRequestMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof verifyOvertimeRequest>>,
+    VerifyOvertimeRequestMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return verifyOvertimeRequest(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type VerifyOvertimeRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof verifyOvertimeRequest>>
+>;
+export type VerifyOvertimeRequestMutationBody = OvertimeDecision;
+export type VerifyOvertimeRequestMutationError = HTTPValidationError;
+export type VerifyOvertimeRequestMutationVariables = {
+  id: string;
+  data: OvertimeDecision;
+};
+
+/**
+ * @summary Verify Overtime Request
+ */
+export const useVerifyOvertimeRequest = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof verifyOvertimeRequest>>,
+      TError,
+      VerifyOvertimeRequestMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof verifyOvertimeRequest>>,
+  TError,
+  VerifyOvertimeRequestMutationVariables,
+  TContext
+> => {
+  return useMutation(
+    getVerifyOvertimeRequestMutationOptions(options),
+    queryClient,
+  );
+};
+
+export type rejectOvertimeRequestResponse200 = {
+  data: OvertimeRequest;
+  status: 200;
+};
+
+export type rejectOvertimeRequestResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type rejectOvertimeRequestResponseSuccess =
+  rejectOvertimeRequestResponse200 & {
+    headers: Headers;
+  };
+export type rejectOvertimeRequestResponseError =
+  rejectOvertimeRequestResponse422 & {
+    headers: Headers;
+  };
+
+export type rejectOvertimeRequestResponse =
+  rejectOvertimeRequestResponseSuccess | rejectOvertimeRequestResponseError;
+
+export const getRejectOvertimeRequestUrl = (id: string) => {
+  return `/api/v1/overtime/requests/${id}/reject`;
+};
+
+/**
+ * Reject from any open state, recording the observed `rejected_from`.
+ * @summary Reject Overtime Request
+ */
+export const rejectOvertimeRequest = async (
+  id: string,
+  overtimeDecision: OvertimeDecision,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<rejectOvertimeRequestResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return customFetch<rejectOvertimeRequestResponse>(
+    getRejectOvertimeRequestUrl(id),
+    {
+      ...options,
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...getHeaders(options?.headers),
+      },
+      body: JSON.stringify(overtimeDecision),
+    },
+  );
+};
+
+export const getRejectOvertimeRequestMutationKey = () =>
+  ["rejectOvertimeRequest"] as const;
+
+export const getRejectOvertimeRequestMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof rejectOvertimeRequest>>,
+    TError,
+    RejectOvertimeRequestMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof rejectOvertimeRequest>>,
+  TError,
+  RejectOvertimeRequestMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRejectOvertimeRequestMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof rejectOvertimeRequest>>,
+    RejectOvertimeRequestMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return rejectOvertimeRequest(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RejectOvertimeRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof rejectOvertimeRequest>>
+>;
+export type RejectOvertimeRequestMutationBody = OvertimeDecision;
+export type RejectOvertimeRequestMutationError = HTTPValidationError;
+export type RejectOvertimeRequestMutationVariables = {
+  id: string;
+  data: OvertimeDecision;
+};
+
+/**
+ * @summary Reject Overtime Request
+ */
+export const useRejectOvertimeRequest = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof rejectOvertimeRequest>>,
+      TError,
+      RejectOvertimeRequestMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof rejectOvertimeRequest>>,
+  TError,
+  RejectOvertimeRequestMutationVariables,
+  TContext
+> => {
+  return useMutation(
+    getRejectOvertimeRequestMutationOptions(options),
+    queryClient,
+  );
+};
+
+export type withdrawOvertimeRequestResponse200 = {
+  data: OvertimeRequest;
+  status: 200;
+};
+
+export type withdrawOvertimeRequestResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type withdrawOvertimeRequestResponseSuccess =
+  withdrawOvertimeRequestResponse200 & {
+    headers: Headers;
+  };
+export type withdrawOvertimeRequestResponseError =
+  withdrawOvertimeRequestResponse422 & {
+    headers: Headers;
+  };
+
+export type withdrawOvertimeRequestResponse =
+  withdrawOvertimeRequestResponseSuccess | withdrawOvertimeRequestResponseError;
+
+export const getWithdrawOvertimeRequestUrl = (id: string) => {
+  return `/api/v1/overtime/requests/${id}/withdraw`;
+};
+
+/**
+ * Withdraw the actor's own open pre-verification request.
+ * @summary Withdraw Overtime Request
+ */
+export const withdrawOvertimeRequest = async (
+  id: string,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<withdrawOvertimeRequestResponse> => {
+  return customFetch<withdrawOvertimeRequestResponse>(
+    getWithdrawOvertimeRequestUrl(id),
+    {
+      ...options,
+      method: "POST",
+    },
+  );
+};
+
+export const getWithdrawOvertimeRequestMutationKey = () =>
+  ["withdrawOvertimeRequest"] as const;
+
+export const getWithdrawOvertimeRequestMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof withdrawOvertimeRequest>>,
+    TError,
+    WithdrawOvertimeRequestMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof withdrawOvertimeRequest>>,
+  TError,
+  WithdrawOvertimeRequestMutationVariables,
+  TContext
+> => {
+  const mutationKey = getWithdrawOvertimeRequestMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof withdrawOvertimeRequest>>,
+    WithdrawOvertimeRequestMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return withdrawOvertimeRequest(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type WithdrawOvertimeRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof withdrawOvertimeRequest>>
+>;
+
+export type WithdrawOvertimeRequestMutationError = HTTPValidationError;
+export type WithdrawOvertimeRequestMutationVariables = { id: string };
+
+/**
+ * @summary Withdraw Overtime Request
+ */
+export const useWithdrawOvertimeRequest = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof withdrawOvertimeRequest>>,
+      TError,
+      WithdrawOvertimeRequestMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof withdrawOvertimeRequest>>,
+  TError,
+  WithdrawOvertimeRequestMutationVariables,
+  TContext
+> => {
+  return useMutation(
+    getWithdrawOvertimeRequestMutationOptions(options),
+    queryClient,
+  );
+};
 
 export type listNotificationsResponse200 = {
   data: NotificationListPage;

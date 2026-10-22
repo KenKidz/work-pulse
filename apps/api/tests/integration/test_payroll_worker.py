@@ -27,6 +27,8 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domains.employees.schemas import EmployeeStatus, EmploymentType
+from app.domains.overtime import models as overtime_orm
+from app.domains.overtime.schemas import OvertimeRequestStatus
 from app.domains.payroll import models as payroll_orm
 from app.domains.payroll.schemas import PayrollRun, PayrollRunStatus
 from app.domains.payroll.service import PayrollService
@@ -50,6 +52,7 @@ from tests.unit.payroll.fakes import (
     FakeLeaveDaysPort,
     FakeOvertimeHoursPort,
 )
+from workers.payroll.main import build_job_unit
 from workers.payroll.runner import JobUnit, PayrollJobUnit, PayrollRunWorker
 
 PERIOD = "2026-09"
@@ -259,6 +262,71 @@ async def test_concurrent_workers_claim_a_queued_run_exactly_once(
             )
         ).scalar_one()
         assert run_row.status == PayrollRunStatus.CALCULATED.value
+
+
+async def test_worker_wiring_reads_the_real_overtime_seam(
+    client_factory: ClientFactory,
+    session: AsyncSession,
+) -> None:
+    """The production worker composition reads `hr_verified` rows and finalize
+    flips exactly the handles its calculation persisted."""
+    await _seed_world(client_factory, session)
+    overtime_id = UUID("00000000-0000-4000-8000-0000000000f1")
+    session.add(
+        overtime_orm.OvertimeRequest(
+            id=overtime_id,
+            tenant_id=TENANT_A,
+            employee_id=ACTOR,
+            work_date=date(2026, 9, 15),
+            hours=Decimal("5.00"),
+            status=OvertimeRequestStatus.HR_VERIFIED.value,
+        )
+    )
+    await session.flush()
+    async with client_factory() as admin:
+        run = await _queued_run(admin)
+    await session.commit()
+    run_id = UUID(run["id"])
+
+    # `build_job_unit` is the exact composition `workers/payroll/main.py` uses.
+    async with get_session_factory()() as fresh:
+        calculated = await build_job_unit(fresh).calculate(run_id, NOW)
+        assert calculated.status is PayrollRunStatus.CALCULATED
+
+    async with get_session_factory()() as check:
+        timesheet = (
+            await check.execute(
+                select(payroll_orm.PayrollTimesheet).where(
+                    payroll_orm.PayrollTimesheet.run_id == run_id
+                )
+            )
+        ).scalar_one()
+        assert timesheet.overtime_hours == Decimal("5.00")
+        assert timesheet.overtime_rows == [
+            {
+                "overtime_id": str(overtime_id),
+                "employee_id": str(ACTOR),
+                "hours": "5.00",
+            }
+        ]
+
+    async with client_factory() as admin:
+        finalized = await admin.post(f"/api/v1/payroll/runs/{run_id}/finalize")
+    assert finalized.status_code == 200, finalized.text
+    # The test session is the request session; commit the finalize flip before
+    # checking it from a fresh session (production `get_session` commits).
+    await session.commit()
+
+    async with get_session_factory()() as check:
+        stored = (
+            await check.execute(
+                select(overtime_orm.OvertimeRequest).where(
+                    overtime_orm.OvertimeRequest.id == overtime_id
+                )
+            )
+        ).scalar_one()
+        assert stored.status == "included_in_payroll"
+        assert stored.included_in_run_id == run_id
 
 
 # --- failure and recovery -------------------------------------------------

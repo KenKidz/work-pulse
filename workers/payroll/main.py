@@ -10,9 +10,11 @@ stays queued for the next start. Database hiccups are the loop's to handle
 (ids-only log + backoff); only configuration errors exit loudly for a
 supervisor to act on — restart policy is Phase 8's.
 
-Overtime is still the seam placeholder (`NoOvertimeHoursPort`, ADR 0018): until
-`overtime.md` (P0) lands a calculation consumes zero verified hours, exactly as
-the API does. The real adapter replaces one constructor argument.
+Every seam port is the real adapter (ADR 0018), including the overtime
+read/flip seam: a calculation consumes the month's `hr_verified` rows and
+persists their handles for finalize exactly as the API's finalize path expects.
+`build_job_unit` is the one composition root for that wiring, exported so the
+worker path can be tested directly.
 """
 
 import asyncio
@@ -21,8 +23,9 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.config import get_settings
-from app.domains.payroll.repository import NoOvertimeHoursPort
 from app.domains.payroll.service import PayrollService
 from app.infrastructure.postgres.audit import PostgresAuditWriter
 from app.infrastructure.postgres.engine import dispose_engine, get_session_factory
@@ -30,6 +33,7 @@ from app.infrastructure.postgres.outbox import PostgresEventOutbox
 from app.infrastructure.postgres.payroll_facts import (
     PostgresAttendanceHoursPort,
     PostgresLeaveDaysPort,
+    PostgresOvertimeHoursPort,
 )
 from app.infrastructure.postgres.repositories.payroll import PostgresPayrollRepository
 from app.shared.logging import configure_logging, get_logger
@@ -43,6 +47,23 @@ def _utc_now() -> datetime:
     return datetime.now(UTC)
 
 
+def build_job_unit(session: AsyncSession) -> PayrollJobUnit:
+    """The production job unit: real repository, seams and commit boundary."""
+    repo = PostgresPayrollRepository(session)
+    return PayrollJobUnit(
+        repo=repo,
+        service=PayrollService(
+            repo=repo,
+            audit=PostgresAuditWriter(session),
+            outbox=PostgresEventOutbox(session, clock=_utc_now),
+            overtime=PostgresOvertimeHoursPort(session),
+            attendance=PostgresAttendanceHoursPort(session),
+            leave_days=PostgresLeaveDaysPort(session),
+        ),
+        commit=session.commit,
+    )
+
+
 async def _run() -> None:
     settings = get_settings()
     configure_logging(settings.environment)
@@ -53,19 +74,7 @@ async def _run() -> None:
     async def unit() -> AsyncIterator[PayrollJobUnit]:
         """One job's session: repository, service and the commit boundary."""
         async with session_factory() as session:
-            repo = PostgresPayrollRepository(session)
-            yield PayrollJobUnit(
-                repo=repo,
-                service=PayrollService(
-                    repo=repo,
-                    audit=PostgresAuditWriter(session),
-                    outbox=PostgresEventOutbox(session, clock=_utc_now),
-                    overtime=NoOvertimeHoursPort(),
-                    attendance=PostgresAttendanceHoursPort(session),
-                    leave_days=PostgresLeaveDaysPort(session),
-                ),
-                commit=session.commit,
-            )
+            yield build_job_unit(session)
 
     worker = PayrollRunWorker(
         unit,
