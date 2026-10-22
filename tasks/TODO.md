@@ -6,7 +6,7 @@ does the work.
 
 ## Now
 
-_No active feature — the next Phase 4 spec is Analytics & Reports (`.ai/features/README.md`)._
+- [ ] Overtime (`.ai/features/overtime.md`) — spec approved 2026-10-22 with plan T1–T9 (pin API contract → event contracts → persistence → domain → router → ADR 0018 seam adapter → web → e2e → records); ready to build. P0: lands the real `OvertimeHoursPort` adapter payroll is waiting on (wiring-only swap, no payroll code changes).
 
 ## Later
 
