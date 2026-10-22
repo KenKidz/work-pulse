@@ -1,18 +1,27 @@
 /**
- * Payroll e2e (T12 / AC15, AC13, AC14) — the full self-service hop:
+ * Payroll e2e (T12 / AC15, AC13, AC14) — the full self-service hop, plus the
+ * overtime seam (overtime T8 / ADR 0018):
  *
  * 1. Finance configures the tenant inputs through the UI, adds salary records
  *    for the seeded worker and manager, starts a run for the last closed month,
  *    and sees the background worker take it from `queued` to `calculated`.
+ *    Before the run starts, an `hr_verified` overtime claim for that month is
+ *    seeded through the real worker → manager → HR API chain, so the run's
+ *    timesheet must carry its hours (the seam read port).
  * 2. The run detail exposes the worker's provisional payslip line by line; a
- *    correction-free finalize issues it and flips the row to `Issued`.
+ *    correction-free finalize issues it, flips the row to `Issued`, and flips
+ *    the overtime row to `included_in_payroll` with the run handle (the seam
+ *    write port).
  * 3. The worker logs in, sees only their own issued payslip under "My
- *    payslips", and a foreign payslip id renders the not-found state.
+ *    payslips", and a foreign payslip id renders the not-found state. Their
+ *    overtime history shows the same claim as `included_in_payroll`.
  *
- * `full-hop.sh` resets the seeded tenant's payroll ledger before Playwright
- * starts, so the expected net and the absence of other issued payslips are
- * deterministic. The queued finalize gate is pinned by holding the run-detail
- * GET at its real `queued` response once, then releasing it to the worker.
+ * `full-hop.sh` resets the seeded tenant's payroll ledger and overtime rows
+ * before Playwright starts, so the expected net and the absence of other
+ * issued payslips are deterministic. The spec repeats both resets before its
+ * finance test so a Playwright retry starts clean too. The queued finalize
+ * gate is pinned by holding the run-detail GET at its real `queued` response
+ * once, then releasing it to the worker.
  */
 
 import { execFileSync } from "node:child_process";
@@ -23,9 +32,12 @@ import { expect, test, type Route } from "@playwright/test";
 import {
   API_URL,
   FINANCE_EMAIL,
+  HR_EMAIL,
+  MANAGER_EMAIL,
   MANAGER_EMPLOYEE_ID,
   WORKER_EMAIL,
   WORKER_EMPLOYEE_ID,
+  apiLogin,
   uiLogin,
 } from "./auth";
 
@@ -33,15 +45,23 @@ const SALARY_EFFECTIVE_FROM = "2026-01-01";
 const WORKER_BASE = "4800";
 const MANAGER_BASE = "6000";
 const DEDUCTION_CODE = "E2E_TAX";
-const WORKER_NET = "4,320.00";
+/** Worker net with 4 overtime hours: 4,800 + 180 − 480 = 4,500.00. */
+const WORKER_NET = "4,500.00";
+/** Worker overtime pay: 4h × (4,800 / 160) × 1.5 = 180.00. */
+const WORKER_OVERTIME_PAY = "180.00";
+const SEAM_OVERTIME_HOURS = 4;
+
+const OVERTIME_REQUESTS_URL = `${API_URL}/api/v1/overtime/requests`;
 
 const API_DIR = join(process.cwd(), "apps/api");
 const RESET_SCRIPT = join(API_DIR, "scripts", "reset_payroll_fixtures.py");
+const OVERTIME_RESET_SCRIPT = join(API_DIR, "scripts", "reset_overtime_fixtures.py");
 const API_PYTHON = join(API_DIR, ".venv", "bin", "python");
 
 let period = "";
 let runId = "";
 let foreignPayslipId = "";
+let overtimeRequestId = "";
 
 /**
  * A retry starts from a clean ledger. `full-hop.sh` resets once before
@@ -55,6 +75,58 @@ function resetPayrollFixtures(): void {
     env: { ...process.env, PYTHONPATH: "../..:." },
     stdio: "pipe",
   });
+}
+
+/** Retry-safe overtime slate: the seam row must be the only verified one. */
+function resetOvertimeFixtures(): void {
+  execFileSync(API_PYTHON, [OVERTIME_RESET_SCRIPT], {
+    cwd: API_DIR,
+    env: { ...process.env, PYTHONPATH: "../..:." },
+    stdio: "pipe",
+  });
+}
+
+/**
+ * Seed one `hr_verified` overtime claim for the run's period through the real
+ * API chain. Overtime owns the row; payroll only consumes it through the
+ * `OvertimeHoursPort` seam (ADR 0018).
+ */
+async function seedVerifiedOvertime(forPeriod: string): Promise<void> {
+  const worker = await apiLogin(WORKER_EMAIL);
+  const manager = await apiLogin(MANAGER_EMAIL);
+  const hr = await apiLogin(HR_EMAIL);
+  try {
+    const created = await worker.post(OVERTIME_REQUESTS_URL, {
+      data: {
+        work_date: `${forPeriod}-15`,
+        hours: SEAM_OVERTIME_HOURS,
+        reason: "E2E payroll seam fixture",
+      },
+    });
+    expect(created.status(), await created.text()).toBe(201);
+    const request = (await created.json()) as { id: string; status: string };
+    expect(request.status).toBe("requested");
+    overtimeRequestId = request.id;
+
+    const approved = await manager.post(
+      `${OVERTIME_REQUESTS_URL}/${request.id}/approve`,
+      { data: { note: null } },
+    );
+    expect(approved.status(), await approved.text()).toBe(200);
+    expect(((await approved.json()) as { status: string }).status).toBe(
+      "manager_approved",
+    );
+
+    const verified = await hr.post(`${OVERTIME_REQUESTS_URL}/${request.id}/verify`, {
+      data: { note: null },
+    });
+    expect(verified.status(), await verified.text()).toBe(200);
+    expect(((await verified.json()) as { status: string }).status).toBe("hr_verified");
+  } finally {
+    await worker.dispose();
+    await manager.dispose();
+    await hr.dispose();
+  }
 }
 
 /** `2026-09` → `September 2026`, the UI's period label. */
@@ -82,6 +154,7 @@ function queuedRunBody(body: Record<string, unknown>): Record<string, unknown> {
 test.describe.serial("payroll", () => {
   test("finance configures inputs, calculates, reviews and finalizes", async ({ page }) => {
     resetPayrollFixtures();
+    resetOvertimeFixtures();
 
     await uiLogin(page, FINANCE_EMAIL);
     await page.goto("/payroll");
@@ -143,6 +216,8 @@ test.describe.serial("payroll", () => {
     const runDialog = page.getByRole("dialog");
     period = await runDialog.getByLabel("Month").inputValue();
     expect(period).toMatch(/^\d{4}-(0[1-9]|1[0-2])$/);
+    // The seam fixture must exist before the worker calculates the run.
+    await seedVerifiedOvertime(period);
     await runDialog.getByRole("button", { name: "Start run" }).click();
     await page.waitForURL(/\/payroll\/runs\/[0-9a-f-]+$/);
 
@@ -161,11 +236,21 @@ test.describe.serial("payroll", () => {
     expect(runId).not.toBe("");
 
     // --- Review the provisional payslip -----------------------------------
+    const timesheetTable = page.getByRole("table", { name: "Run timesheets" });
+    await expect(timesheetTable).toBeVisible();
+    const workerTimesheet = timesheetTable
+      .getByRole("row")
+      .filter({ hasText: "Employee …0021" });
+    // Column 3 (0-based: employee, worked, overtime) is the seam read.
+    await expect(workerTimesheet.locator("td").nth(2)).toHaveText(
+      String(SEAM_OVERTIME_HOURS),
+    );
+
     const payslipTable = page.getByRole("table", { name: "Run payslips" });
     await expect(payslipTable).toBeVisible();
     const workerRow = payslipTable.getByRole("row").filter({ hasText: "Employee …0021" });
     await expect(workerRow).toContainText("Provisional");
-    await expect(workerRow).toContainText("$4,320.00");
+    await expect(workerRow).toContainText(`$${WORKER_NET}`);
 
     await workerRow.getByRole("button", { name: /Show payslip lines for Employee/ }).click();
     const deductionRow = page.getByRole("row").filter({ hasText: DEDUCTION_CODE });
@@ -181,6 +266,24 @@ test.describe.serial("payroll", () => {
     await finalizeDialog.getByRole("button", { name: "Finalize payroll" }).click();
     await expect(page.getByText("Finalized", { exact: true })).toBeVisible();
     await expect(workerRow).toContainText("Issued");
+
+    // --- The finalize flip is payroll's accounting fact (ADR 0018) ---------
+    expect(overtimeRequestId).not.toBe("");
+    const workerApi = await apiLogin(WORKER_EMAIL);
+    try {
+      const flipped = await workerApi.get(
+        `${OVERTIME_REQUESTS_URL}/${overtimeRequestId}`,
+      );
+      expect(flipped.status(), await flipped.text()).toBe(200);
+      const overtimeRow = (await flipped.json()) as {
+        status: string;
+        included_in_run_id: string | null;
+      };
+      expect(overtimeRow.status).toBe("included_in_payroll");
+      expect(overtimeRow.included_in_run_id).toBe(runId);
+    } finally {
+      await workerApi.dispose();
+    }
 
     // Capture the manager's payslip id for the employee's foreign-id check.
     const payslipsResponse = await page.request.get(
@@ -221,6 +324,7 @@ test.describe.serial("payroll", () => {
     ).toBeVisible();
     await expect(page.getByText("Issued", { exact: true })).toBeVisible();
     await expect(page.getByText("4,800.00")).toBeVisible();
+    await expect(page.getByText(WORKER_OVERTIME_PAY)).toBeVisible();
     await expect(page.getByText(WORKER_NET)).toBeVisible();
     await expect(page.getByText(DEDUCTION_CODE)).toBeVisible();
 
@@ -229,5 +333,16 @@ test.describe.serial("payroll", () => {
     await expect(
       page.getByText("This payslip doesn’t exist or you don’t have access to it."),
     ).toBeVisible();
+
+    // The finalize flip is visible on the employee's own overtime history.
+    await page.goto("/overtime");
+    await expect(
+      page.getByRole("heading", { name: "Overtime", exact: true }),
+    ).toBeVisible();
+    const overtimeRow = page
+      .getByTestId("my-overtime-row")
+      .filter({ hasText: "Included in payroll" });
+    await expect(overtimeRow).toHaveCount(1);
+    await expect(overtimeRow).toHaveAttribute("data-status", "included_in_payroll");
   });
 });

@@ -45,7 +45,7 @@ domain map in `.ai/domain.md` is their placeholder.
 | Event backbone — transactional outbox + relay (Kafka) | 3 | L | done | `outbox-relay.md` |
 | Realtime consumer swap (events → wall deltas, ADR 0011) | 3 | M | done | `realtime-consumer.md` |
 | Payroll (simulated runs, timesheets, payslips) | 4 | L | done | `payroll.md` |
-| Overtime (requests, manager approval, HR verification) | 4 | M | approved | `overtime.md` |
+| Overtime (requests, manager approval, HR verification) | 4 | M | done | `overtime.md` |
 | Analytics & Reports (ClickHouse projections) | 4 | L | planned | — |
 | Recruitment (jobs, candidates, interviews) | 4+ | L | planned | — |
 | Performance (goals, reviews, feedback, skills) | 4+ | M | planned | — |

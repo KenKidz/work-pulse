@@ -47,21 +47,41 @@ before running the gate.
   Rows come from `full-hop.sh`'s notification fixture reset; the notification
   worker stays out of the hop (its delivery contract is proven at the worker
   level).
+- `overtime.spec.ts` — the seeded worker submits a claim through `/overtime` →
+  "My requests" shows it `requested`; a second same-date claim renders the
+  pinned `409 overtime_overlaps` on the field. The manager approves from the
+  manager inbox and the worker's still-open page follows it `manager_approved`
+  through list polling (no reload); a decision dialog held open across a
+  same-session API approve proves the pinned wrong-state
+  `409 overtime_not_requested` message. HR verifies from the verification
+  queue → the row shows `hr_verified` in HR's verified section and on the
+  worker's open page; HR then un-verifies it (ADR 0018's finalize-rollback
+  window) and a stale reject dialog renders `409 overtime_not_open`. The
+  manager's own claim is listed without actions (self-decision is withheld)
+  and a same-session API approve returns the pinned `forbidden` `403`; the
+  claim is then withdrawn through the UI.
 - `payroll.spec.ts` — the seeded finance user configures payroll, adds salary
-  records for the worker and manager, starts a closed-month run, watches the
-  worker move it `queued → calculated`, reviews the provisional payslip lines
-  and finalizes; the worker then logs in, sees only their own issued payslip in
-  "My payslips" (with the expected net) and a foreign payslip id renders the
-  not-found state. `full-hop.sh` resets the tenant's payroll ledger first and
-  runs the payroll worker alongside the relay/consumer so the transition is
-  real, not a test double. The spec invokes the same reset script before its
-  finance test so a Playwright retry starts clean too.
+  records for the worker and manager, seeds one `hr_verified` overtime claim
+  for the run's month through the real worker → manager → HR API chain, starts
+  a closed-month run, watches the worker move it `queued → calculated`, sees
+  the claim's hours in the run timesheet's `overtime_hours`, reviews the
+  provisional payslip lines (net extended by the overtime pay) and finalizes,
+  which flips the claim to `included_in_payroll` with the run handle; the
+  worker then logs in, sees only their own issued payslip in "My payslips"
+  (with the expected net), a foreign payslip id renders the not-found state,
+  and `/overtime` shows the claim `included_in_payroll`. `full-hop.sh` resets
+  the tenant's payroll ledger and the seeded overtime rows first and runs the
+  payroll worker alongside the relay/consumer so the transition is real, not a
+  test double. The spec invokes the same reset scripts before its finance test
+  so a Playwright retry starts clean too.
 
 `full-hop.sh` resets only the seeded worker's leave requests/balances,
-notification rows and the seeded tenant's payroll ledger before Playwright
-starts: an approved leave request is terminal (there is no cancel/delete API)
-and repeats would otherwise hit `409 leave_overlaps` on the wall date the live
-assertion needs; the inbox spec asserts an exact badge count, so it starts from
-three unread fixture rows; the payroll spec asserts exact net amounts, so it
-starts from an empty payroll ledger. Leave types stay — the service provisions
-them per tenant.
+notification rows, the seeded tenant's payroll ledger and the seeded
+worker's/manager's overtime rows before Playwright starts: an approved leave
+request is terminal (there is no cancel/delete API) and repeats would otherwise
+hit `409 leave_overlaps` on the wall date the live assertion needs; the inbox
+spec asserts an exact badge count, so it starts from three unread fixture rows;
+the payroll spec asserts exact net amounts, so it starts from an empty payroll
+ledger; and approved/verified overtime claims are terminal too, so the overtime
+and seam fixtures need a free work date and exact countable hours. Leave types
+stay — the service provisions them per tenant.

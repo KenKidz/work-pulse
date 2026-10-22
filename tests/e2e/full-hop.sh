@@ -343,11 +343,27 @@ reset_payroll_fixtures() {
   fi
 }
 
+# Overtime claims are terminal once approved or verified (no delete API), and
+# the overtime spec needs a free work date while the payroll seam hop asserts
+# exact overtime hours. Reset only the two seeded employees' rows. The shared
+# script is also called by both specs before their flows, so a Playwright retry
+# starts clean too. Synthetic dev data only (`.ai/testing.md` rule 6).
+reset_overtime_fixtures() {
+  if ! (
+    cd "$API_DIR" || exit 1
+    PYTHONPATH="../..:." "$PYTHON" scripts/reset_overtime_fixtures.py
+  ); then
+    echo "full-hop: could not reset the seeded overtime fixtures" >&2
+    exit 1
+  fi
+}
+
 assert_no_other_workers
 assert_dev_outbox_is_clean
 reset_leave_fixtures
 reset_notification_fixtures
 reset_payroll_fixtures
+reset_overtime_fixtures
 
 # All workers run inside the apps/api uv environment, reading the same
 # settings/.env as uvicorn; only the broker is overridden (kafka-test).

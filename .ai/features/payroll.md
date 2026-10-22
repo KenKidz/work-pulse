@@ -637,8 +637,10 @@ also invokes per attempt so CI retries start clean, so
 payslip and a foreign-id `404` without test doubles. Gates: 1044 API tests, 226
 web tests, 22 Playwright tests.
 
-**Overtime caveat (P0).** `overtime.md` is still unbuilt, so the API and worker
-wire `NoOvertimeHoursPort`: the overtime term, the read/write seam and the
-"counted once" flip are proven through the port fakes/integration tests, while
-the e2e run has zero verified hours. Replacing the placeholder with the real
-overtime adapter remains P0's work; no payroll behavior changes when it lands.
+**Overtime seam (landed 2026-10-22).** `overtime.md` is built, so
+`app/dependencies.py` now wires the real `PostgresOvertimeHoursPort` in place of
+`NoOvertimeHoursPort`. Payroll code is unchanged: the overtime term, the
+read/write seam and the "counted once" flip are proven by
+`tests/integration/test_overtime_seam.py`, and `tests/e2e/payroll.spec.ts` seeds
+an `hr_verified` row for the run's month, sees its hours in the timesheet, and
+proves the finalize flip to `included_in_payroll` with the run handle.

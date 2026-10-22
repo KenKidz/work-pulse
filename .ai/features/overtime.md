@@ -1,10 +1,10 @@
 # Feature: Overtime
 
-- **Status:** approved
+- **Status:** done
 - **Phase:** 4 (payroll seam P0; its events were catalogued in `.ai/domain.md`'s Phase-3 wave)
 - **Size:** M
 - **Surfaces:** api+web+events
-- **Links:** `.ai/domain.md` (Overtime state machine, invariants 1–6) · ADR 0018 (payroll ↔ overtime seam — read/write ports, finalize flip) · ADR 0014 (seam pattern) · ADR 0010 (actor ids) · ADR 0012 (outbox) · ADR 0017 (decimal/rounding discipline) · `payroll.md` (the consuming side; `NoOvertimeHoursPort` placeholder) · `leave.md` (the analogous approval workflow) · `.ai/security.md` (roles matrix, PII)
+- **Links:** `.ai/domain.md` (Overtime state machine, invariants 1–6) · ADR 0018 (payroll ↔ overtime seam — read/write ports, finalize flip) · ADR 0014 (seam pattern) · ADR 0010 (actor ids) · ADR 0012 (outbox) · ADR 0017 (decimal/rounding discipline) · `payroll.md` (the consuming side; its `NoOvertimeHoursPort` placeholder is replaced by this feature's adapter) · `leave.md` (the analogous approval workflow) · `.ai/security.md` (roles matrix, PII)
 
 ## Problem
 
@@ -295,21 +295,21 @@ in the implementing change.
 
 ## Acceptance criteria
 
-- [ ] API: submitting a request returns `201` in `requested` with the stored `hours`, writes an audit entry and produces a valid `overtime.requested` envelope.
-- [ ] API: manager approve → `manager_approved` + `overtime.approved`; HR verify → `hr_verified` + `overtime.verified`; notes are stored but absent from both payloads.
-- [ ] API: reject from `REQUESTED`, `MANAGER_APPROVED` and `HR_VERIFIED` each land in `rejected` with the right `rejected_from` and produce `overtime.rejected`; own withdraw produces `overtime.withdrawn`.
-- [ ] API (seam): the real adapter's `verified_hours` returns exactly the `hr_verified` rows for the period excluding included ones, and `mark_included` flips exactly those rows to `included_in_payroll` with `included_in_run_id`; a flip of the same rows for a different `run_id` flips 0 rows (at-most-one-finalized-run guard, ADR 0018 decision 4).
-- [ ] API (failure): future `work_date` → `409 overtime_work_date_in_future`; same-date open overlap → `409 overtime_overlaps`; approve from the wrong state → `409 overtime_not_requested`; verify from the wrong state → `409 overtime_not_manager_approved`; withdraw on `hr_verified`, and reject/withdraw on `included_in_payroll` or other terminal rows, → `409 overtime_not_open`; out-of-bounds `hours` → `422`.
-- [ ] API (denied role): an `Employee`-role approve or verify attempt → `403`; a manager without an HR role verifying → `403`; self-approval/self-verification → `403` even for HR/Admin.
-- [ ] API (tenant isolation): tenant B sees none of tenant A's requests (assert `404`/empty).
-- [ ] Contracts: the five `overtime.*` v1 schemas exist, validate produced payloads, and contain no `reason`/`manager_note`/`hr_note` text.
-- [ ] Unit tests use an injected clock — no wall-time assertions (date rules take `now` as the parameter).
-- [ ] Payroll regression: with zero verified rows the real adapter keeps payroll's overtime term at `0.00`, and no payroll file changes (the `NoOvertimeHoursPort` swap is wiring-only).
-- [ ] Web: an employee submits a request from the overtime page and sees it in "My requests" as `requested`; withdraw works while it is open.
-- [ ] Web: a manager sees their team's `requested` overtime and can approve/reject; a self-action attempt shows the `403` error state.
-- [ ] Web: HR sees the verification queue (`manager_approved` rows) and can verify/reject; the wrong-state and overlap refusals surface the pinned error messages.
-- [ ] E2E: request → manager approve → HR verify shows the row `hr_verified` on both the employee's and HR's views without a manual refresh.
-- [ ] E2E (seam): an `hr_verified` row appears in the payroll timesheet's `overtime_hours` for its month and flips to `included_in_payroll` after finalize (extend the payroll `full-hop.sh` reset for overtime rows).
+- [x] API: submitting a request returns `201` in `requested` with the stored `hours`, writes an audit entry and produces a valid `overtime.requested` envelope.
+- [x] API: manager approve → `manager_approved` + `overtime.approved`; HR verify → `hr_verified` + `overtime.verified`; notes are stored but absent from both payloads.
+- [x] API: reject from `REQUESTED`, `MANAGER_APPROVED` and `HR_VERIFIED` each land in `rejected` with the right `rejected_from` and produce `overtime.rejected`; own withdraw produces `overtime.withdrawn`.
+- [x] API (seam): the real adapter's `verified_hours` returns exactly the `hr_verified` rows for the period excluding included ones, and `mark_included` flips exactly those rows to `included_in_payroll` with `included_in_run_id`; a flip of the same rows for a different `run_id` flips 0 rows (at-most-one-finalized-run guard, ADR 0018 decision 4).
+- [x] API (failure): future `work_date` → `409 overtime_work_date_in_future`; same-date open overlap → `409 overtime_overlaps`; approve from the wrong state → `409 overtime_not_requested`; verify from the wrong state → `409 overtime_not_manager_approved`; withdraw on `hr_verified`, and reject/withdraw on `included_in_payroll` or other terminal rows, → `409 overtime_not_open`; out-of-bounds `hours` → `422`.
+- [x] API (denied role): an `Employee`-role approve or verify attempt → `403`; a manager without an HR role verifying → `403`; self-approval/self-verification → `403` even for HR/Admin.
+- [x] API (tenant isolation): tenant B sees none of tenant A's requests (assert `404`/empty).
+- [x] Contracts: the five `overtime.*` v1 schemas exist, validate produced payloads, and contain no `reason`/`manager_note`/`hr_note` text.
+- [x] Unit tests use an injected clock — no wall-time assertions (date rules take `now` as the parameter).
+- [x] Payroll regression: with zero verified rows the real adapter keeps payroll's overtime term at `0.00`, and no payroll file changes (the `NoOvertimeHoursPort` swap is wiring-only).
+- [x] Web: an employee submits a request from the overtime page and sees it in "My requests" as `requested`; withdraw works while it is open.
+- [x] Web: a manager sees their team's `requested` overtime and can approve/reject; a self-action attempt shows the `403` error state.
+- [x] Web: HR sees the verification queue (`manager_approved` rows) and can verify/reject; the wrong-state and overlap refusals surface the pinned error messages.
+- [x] E2E: request → manager approve → HR verify shows the row `hr_verified` on both the employee's and HR's views without a manual refresh.
+- [x] E2E (seam): an `hr_verified` row appears in the payroll timesheet's `overtime_hours` for its month and flips to `included_in_payroll` after finalize (extend the payroll `full-hop.sh` reset for overtime rows).
 
 ## Decisions (PO, 2026-10-22)
 

@@ -11,7 +11,13 @@
  * request with only the legacy headers is rejected (`auth.spec.ts` proves it).
  */
 
-import { expect, type BrowserContext, type Page } from '@playwright/test';
+import {
+  expect,
+  request as playwrightRequest,
+  type APIRequestContext,
+  type BrowserContext,
+  type Page,
+} from '@playwright/test';
 
 export const API_URL = "http://localhost:8000";
 
@@ -37,6 +43,21 @@ export async function uiLogin(page: Page, email: string): Promise<void> {
   await page.getByLabel("Password", { exact: true }).fill(SEEDED_PASSWORD);
   await page.getByRole("button", { name: "Sign in" }).click();
   await page.waitForURL(/\/dashboard$/);
+}
+
+/**
+ * Log a seeded user in through the API and return the cookie-carrying request
+ * context. Suites use this to arrange data a browser role cannot create (the
+ * payroll seam hop seeds overtime through the worker → manager → HR chain
+ * without opening three extra browser contexts). Dispose the context when done.
+ */
+export async function apiLogin(email: string): Promise<APIRequestContext> {
+  const context = await playwrightRequest.newContext({ baseURL: API_URL });
+  const response = await context.post("/api/v1/auth/login", {
+    data: { email, password: SEEDED_PASSWORD },
+  });
+  expect(response.status(), await response.text()).toBe(200);
+  return context;
 }
 
 /**
