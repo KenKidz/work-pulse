@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workpulse.dev/contracts/events/overtime/overtime-approved.v1.json",
+  "title": "WorkPulse overtime.approved v1",
+  "description": "An overtime request passed the manager step. Identifiers, the work date, hours and the approving actor only — the reason and manager note are PII and never leave the database (`.ai/security.md`).",
+  "type": "object",
+  "required": ["overtime_id", "employee_id", "work_date", "hours", "approved_by"],
+  "additionalProperties": false,
+  "properties": {
+    "overtime_id": {
+      "type": "string",
+      "description": "The approved overtime request (UUIDv7 string)."
+    },
+    "employee_id": {
+      "type": "string",
+      "description": "Employee the request belongs to (UUIDv7 string). Also the Kafka message key (ADR 0012)."
+    },
+    "work_date": {
+      "type": "string",
+      "format": "date",
+      "description": "The single day the overtime was worked (`YYYY-MM-DD`)."
+    },
+    "hours": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "maximum": 12,
+      "description": "Requested overtime hours as a JSON number (ADR 0017); 0 < hours <= 12 with at most 2 decimal places. A count, never an amount."
+    },
+    "approved_by": {
+      "type": "string",
+      "description": "Actor user id that approved the request (ADR 0010 — never the requester)."
+    }
+  }
+}

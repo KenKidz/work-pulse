@@ -91,7 +91,10 @@ where it actually flows on the bus.
 | `leave.requested` | a leave request is submitted | 3 | 3 | Workflow, Notifications |
 | `leave.approved` / `leave.rejected` | a manager decides | 3 | 3 | Payroll, Notifications, Analytics |
 | `leave.withdrawn` | the requester withdraws a pending request | 3 | 3 | Workflow, Notifications |
-| `overtime.requested` / `overtime.approved` | overtime moves through approval | 3 | 3 | Payroll, Notifications |
+| `overtime.requested` | an overtime request is submitted | 3 | 3 | Payroll, Notifications |
+| `overtime.approved` / `overtime.rejected` | a manager or HR decides | 3 | 3 | Payroll, Notifications, Analytics |
+| `overtime.verified` | HR confirms the requested hours | 3 | 3 | Payroll, Notifications |
+| `overtime.withdrawn` | the requester withdraws before verification | 3 | 3 | Workflow, Notifications |
 | `payroll.calculated` | a payroll run completes | 4 | 4 | Notifications, Analytics |
 | `payslip.issued` | a payslip becomes available | 4 | 4 | Notifications |
 | `candidate.created` / `interview.completed` | recruitment moves | 4+ | 4+ | Notifications, Analytics |
@@ -124,8 +127,16 @@ DRAFT ─► PENDING ─┬─► APPROVED ─► (feeds payroll + balance deduc
 
 ```text
 REQUESTED ─► MANAGER_APPROVED ─► HR_VERIFIED ─► INCLUDED_IN_PAYROLL
-      └──────────────┴───────────────┴─► REJECTED
+      │              │                  │
+      └──────────────┴──────────────────┴─► REJECTED
+
+withdraw (own): REQUESTED | MANAGER_APPROVED ─► WITHDRAWN
 ```
+
+`REJECTED`, `WITHDRAWN` and `INCLUDED_IN_PAYROLL` are terminal.
+`INCLUDED_IN_PAYROLL` is written only by payroll's finalize through the write
+port (ADR 0018) — no overtime endpoint reaches it, and the flip is the one
+transition without an `overtime.*` event.
 
 **Employment**
 

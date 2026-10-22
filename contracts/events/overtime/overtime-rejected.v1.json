@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workpulse.dev/contracts/events/overtime/overtime-rejected.v1.json",
+  "title": "WorkPulse overtime.rejected v1",
+  "description": "An overtime request was rejected from `requested`, `manager_approved` or `hr_verified`. Identifiers, the work date, hours, the deciding actor and the source state only — the reason and notes are PII and never leave the database (`.ai/security.md`).",
+  "type": "object",
+  "required": [
+    "overtime_id",
+    "employee_id",
+    "work_date",
+    "hours",
+    "rejected_by",
+    "rejected_from"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "overtime_id": {
+      "type": "string",
+      "description": "The rejected overtime request (UUIDv7 string)."
+    },
+    "employee_id": {
+      "type": "string",
+      "description": "Employee the request belongs to (UUIDv7 string). Also the Kafka message key (ADR 0012)."
+    },
+    "work_date": {
+      "type": "string",
+      "format": "date",
+      "description": "The single day the overtime was worked (`YYYY-MM-DD`)."
+    },
+    "hours": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "maximum": 12,
+      "description": "Requested overtime hours as a JSON number (ADR 0017); 0 < hours <= 12 with at most 2 decimal places. A count, never an amount."
+    },
+    "rejected_by": {
+      "type": "string",
+      "description": "Actor user id that rejected the request (ADR 0010 — never the requester)."
+    },
+    "rejected_from": {
+      "type": "string",
+      "enum": ["requested", "manager_approved", "hr_verified"],
+      "description": "The observed prior state; `hr_verified` is the un-verify window ADR 0018's finalize rollback assumes."
+    }
+  }
+}

@@ -19,6 +19,7 @@ import json
 from collections.abc import Callable
 from dataclasses import fields
 from datetime import UTC, date, datetime
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 from uuid import UUID
@@ -30,6 +31,7 @@ from app.domains.attendance import events as attendance_events
 from app.domains.employees import events as employee_events
 from app.domains.leave import events as leave_events
 from app.domains.notifications.models import NotificationKind
+from app.domains.overtime import events as overtime_events
 from workers.notifications.mapping import TRIGGER_EVENT_TYPES, map_envelope
 from workers.notifications.templates import render
 
@@ -50,10 +52,12 @@ POSITION_ID = UUID("00000000-0000-4000-8000-000000000009")
 LOCATION_ID = UUID("00000000-0000-4000-8000-00000000000a")
 PAYROLL_RUN_ID = UUID("00000000-0000-4000-8000-00000000000b")
 PAYSLIP_ID = UUID("00000000-0000-4000-8000-00000000000c")
+OVERTIME_ID = UUID("00000000-0000-4000-8000-00000000000d")
 NOW = datetime(2026, 10, 21, 9, 0, tzinfo=UTC)
 WORKDAY = date(2026, 10, 21)
 END_DATE = date(2026, 10, 23)
 DAYS = 3
+HOURS = Decimal("1.50")
 PERIOD = "2026-09"
 
 # A hostile value planted in `data`; it must never reach an intent or message.
@@ -229,6 +233,54 @@ BUILDER_CASES: dict[str, Callable[[], dict[str, Any]]] = {
         employee_id=EMPLOYEE_ID,
         start_date=WORKDAY,
         end_date=END_DATE,
+    ),
+    "overtime/overtime-requested.v1.json": lambda: overtime_events.overtime_requested(
+        tenant_id=TENANT_ID,
+        actor_id=ACTOR_ID,
+        occurred_at=NOW,
+        overtime_id=OVERTIME_ID,
+        employee_id=EMPLOYEE_ID,
+        work_date=WORKDAY,
+        hours=HOURS,
+    ),
+    "overtime/overtime-approved.v1.json": lambda: overtime_events.overtime_approved(
+        tenant_id=TENANT_ID,
+        actor_id=ACTOR_ID,
+        occurred_at=NOW,
+        overtime_id=OVERTIME_ID,
+        employee_id=EMPLOYEE_ID,
+        work_date=WORKDAY,
+        hours=HOURS,
+        approved_by=DECIDER_ID,
+    ),
+    "overtime/overtime-verified.v1.json": lambda: overtime_events.overtime_verified(
+        tenant_id=TENANT_ID,
+        actor_id=ACTOR_ID,
+        occurred_at=NOW,
+        overtime_id=OVERTIME_ID,
+        employee_id=EMPLOYEE_ID,
+        work_date=WORKDAY,
+        hours=HOURS,
+        verified_by=DECIDER_ID,
+    ),
+    "overtime/overtime-rejected.v1.json": lambda: overtime_events.overtime_rejected(
+        tenant_id=TENANT_ID,
+        actor_id=ACTOR_ID,
+        occurred_at=NOW,
+        overtime_id=OVERTIME_ID,
+        employee_id=EMPLOYEE_ID,
+        work_date=WORKDAY,
+        hours=HOURS,
+        rejected_by=DECIDER_ID,
+        rejected_from="requested",
+    ),
+    "overtime/overtime-withdrawn.v1.json": lambda: overtime_events.overtime_withdrawn(
+        tenant_id=TENANT_ID,
+        actor_id=ACTOR_ID,
+        occurred_at=NOW,
+        overtime_id=OVERTIME_ID,
+        employee_id=EMPLOYEE_ID,
+        work_date=WORKDAY,
     ),
     "payroll/payroll-calculated.v1.json": lambda: _raw_envelope(
         "payroll.calculated",

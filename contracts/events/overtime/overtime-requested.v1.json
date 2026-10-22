@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workpulse.dev/contracts/events/overtime/overtime-requested.v1.json",
+  "title": "WorkPulse overtime.requested v1",
+  "description": "An overtime request was submitted and is awaiting the manager step. Identifiers, the work date and hours only — the free-text reason is PII and never leaves the database (`.ai/security.md`).",
+  "type": "object",
+  "required": ["overtime_id", "employee_id", "work_date", "hours"],
+  "additionalProperties": false,
+  "properties": {
+    "overtime_id": {
+      "type": "string",
+      "description": "The submitted overtime request (UUIDv7 string)."
+    },
+    "employee_id": {
+      "type": "string",
+      "description": "Employee the request belongs to (UUIDv7 string). Also the Kafka message key (ADR 0012)."
+    },
+    "work_date": {
+      "type": "string",
+      "format": "date",
+      "description": "The single day the overtime was worked (`YYYY-MM-DD`)."
+    },
+    "hours": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "maximum": 12,
+      "description": "Requested overtime hours as a JSON number (ADR 0017); 0 < hours <= 12 with at most 2 decimal places, enforced by the API. A count, never an amount."
+    }
+  }
+}
