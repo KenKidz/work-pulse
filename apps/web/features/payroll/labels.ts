@@ -24,11 +24,7 @@ import type {
 
 type BadgeVariant = ComponentProps<typeof Badge>["variant"];
 
-/** Configure/run payroll — HR is deliberately view-only. */
-export const PAYROLL_OPERATOR_ROLES: Role[] = ["finance", "admin", "super_admin"];
-
-/** Workspace readers: runs, timesheets and every payslip. */
-export const PAYROLL_VIEW_ROLES: Role[] = ["hr", "finance", "admin", "super_admin"];
+export { PAYROLL_OPERATOR_ROLES, PAYROLL_VIEW_ROLES } from "./roles";
 
 /**
  * Roles that may read the employee directory. Payroll shows names when the

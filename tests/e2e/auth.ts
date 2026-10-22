@@ -20,11 +20,13 @@ export const SEEDED_PASSWORD = "workpulse-dev";
 
 export const ADMIN_EMAIL = "admin@workpulse.test";
 export const HR_EMAIL = "hr@workpulse.test";
+export const FINANCE_EMAIL = "finance@workpulse.test";
 /** Linked to the synthetic employee `00000000-0000-4000-8000-000000000021`. */
 export const WORKER_EMAIL = "worker@workpulse.test";
 export const WORKER_EMPLOYEE_ID = "00000000-0000-4000-8000-000000000021";
 /** Linked to `00000000-0000-4000-8000-000000000023`; the worker reports to them. */
 export const MANAGER_EMAIL = "manager@workpulse.test";
+export const MANAGER_EMPLOYEE_ID = "00000000-0000-4000-8000-000000000023";
 
 /** Log a seeded user in through the real UI; lands on the dashboard. */
 export async function uiLogin(page: Page, email: string): Promise<void> {

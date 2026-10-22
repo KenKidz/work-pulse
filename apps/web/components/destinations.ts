@@ -1,15 +1,19 @@
 import {
+  Banknote,
   Building2,
   CalendarClock,
   CalendarDays,
   LayoutDashboard,
   MonitorDot,
+  ReceiptText,
   UserCog,
   Users,
   type LucideIcon,
 } from "lucide-react";
 
 import type { Role } from "@workpulse/api-client/index.schemas";
+
+import { PAYROLL_VIEW_ROLES } from "@/features/payroll/roles";
 
 export type Destination = {
   href: string;
@@ -74,16 +78,40 @@ export const MANAGE_USER_ROLES: Role[] = ["admin", "super_admin"];
 export const COMMAND_CENTER_ROLES: Role[] = ["manager", "hr", "admin", "super_admin"];
 
 /**
+ * The nav entry whose href is the most specific match for the current path.
+ * Longest-prefix wins so a nested route (`/payroll/my-payslips/{id}`) marks
+ * only its own destination, not the workspace parent.
+ */
+export function activeNavHref(pathname: string, items: NavItem[]): string | null {
+  let active: string | null = null;
+  for (const item of items) {
+    const matches = pathname === item.href || pathname.startsWith(`${item.href}/`);
+    if (matches && (active === null || item.href.length > active.length)) {
+      active = item.href;
+    }
+  }
+  return active;
+}
+
+/**
  * Every primary navigation destination — Dashboard, the Phase 1 surfaces,
- * the live Command center and the admin-only Users management — so the
- * desktop nav and the mobile drawer cannot drift. Role-restricted entries
- * are filtered by `useAuth()` in the navs; the API policy
- * (`ensure_can_manage_users`, `ensure_can_read_presence`) stays the authority.
+ * Leave, the payroll workspace and its every-role "My payslips" sibling, the
+ * live Command center and the admin-only Users management — so the desktop
+ * nav and the mobile drawer cannot drift. Role-restricted entries are filtered
+ * by `useAuth()` in the navs; the API policy (`ensure_can_manage_users`,
+ * `ensure_can_read_presence`, payroll policies) stays the authority.
  */
 export const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   ...DESTINATIONS.map(({ href, label, icon }) => ({ href, label, icon })),
   { href: "/leave", label: "Leave", icon: CalendarDays },
+  {
+    href: "/payroll",
+    label: "Payroll",
+    icon: Banknote,
+    roles: PAYROLL_VIEW_ROLES,
+  },
+  { href: "/payroll/my-payslips", label: "My payslips", icon: ReceiptText },
   {
     href: "/command-center",
     label: "Command center",

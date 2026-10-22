@@ -63,6 +63,21 @@ export function formatMoney(amount: number, currency: string): string {
   return formatter === null ? `${currency} ${amount.toFixed(2)}` : formatter.format(amount);
 }
 
+const amountFormatter = new Intl.NumberFormat("en-US", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+/**
+ * An amount without a currency symbol, for self-service payslips. Employees
+ * cannot read the tenant config (the policy gives only payroll viewers the
+ * currency), so "My payslips" states the tenant currency in copy instead of
+ * guessing a symbol.
+ */
+export function formatAmount(amount: number): string {
+  return amountFormatter.format(amount);
+}
+
 const hoursFormatter = new Intl.NumberFormat("en-US", {
   minimumFractionDigits: 0,
   maximumFractionDigits: 2,

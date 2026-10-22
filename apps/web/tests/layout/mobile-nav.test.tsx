@@ -7,6 +7,7 @@ import type { User } from "@workpulse/api-client/index.schemas";
 
 import { MainNav } from "@/components/main-nav";
 import { MobileNav } from "@/components/mobile-nav";
+import { activeNavHref, NAV_ITEMS } from "@/components/destinations";
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/attendance",
@@ -151,6 +152,11 @@ describe("MobileNav", () => {
 });
 
 describe("MainNav", () => {
+  it("marks the most specific destination for a nested payroll route", () => {
+    expect(activeNavHref("/payroll/my-payslips/abc", NAV_ITEMS)).toBe("/payroll/my-payslips");
+    expect(activeNavHref("/payroll/runs/abc", NAV_ITEMS)).toBe("/payroll");
+  });
+
   it("preserves the desktop navigation destinations", () => {
     render(<MainNav />);
 

@@ -14,6 +14,7 @@ import {
   getGetPayrollRunQueryKey,
   getListPayrollDeductionsQueryKey,
   getListPayrollRunsQueryKey,
+  getListMyPayslipsQueryKey,
   getListRunPayslipsQueryKey,
   getListRunTimesheetsQueryKey,
   getListSalariesQueryKey,
@@ -23,6 +24,21 @@ export const payrollConfigQueryKey = [...getGetPayrollConfigQueryKey()];
 export const payrollDeductionsQueryKey = [...getListPayrollDeductionsQueryKey()];
 export const payrollSalariesQueryKey = [...getListSalariesQueryKey()];
 export const payrollRunsQueryKey = [...getListPayrollRunsQueryKey()];
+/** Base key for the self-service payslip list (details need their own match). */
+export const payrollPayslipsQueryKey = [...getListMyPayslipsQueryKey()];
+
+/**
+ * True for the self-service payslip list and any per-payslip detail key. The
+ * generated list key is `["/api/v1/payroll/payslips", ...params]` while a
+ * detail key is a single `["/api/v1/payroll/payslips/{id}"]` string, so the
+ * two do not share a prefix element — invalidation must match the URL itself.
+ */
+export function isPayrollPayslipQueryKey(queryKey: readonly unknown[]): boolean {
+  const [root] = queryKey;
+  if (typeof root !== "string") return false;
+  const prefix = payrollPayslipsQueryKey[0];
+  return typeof prefix === "string" && (root === prefix || root.startsWith(`${prefix}/`));
+}
 
 export function payrollRunQueryKey(id: string): readonly unknown[] {
   return [...getGetPayrollRunQueryKey(id)];
@@ -58,6 +74,12 @@ export async function invalidatePayrollRun(queryClient: QueryClient, id: string)
     queryClient.invalidateQueries({ queryKey: payrollRunQueryKey(id) }),
     queryClient.invalidateQueries({ queryKey: payrollRunTimesheetsQueryKey(id) }),
     queryClient.invalidateQueries({ queryKey: payrollRunPayslipsQueryKey(id) }),
+    // Finalize issues payslips; the operator may also be an employee with a
+    // self-service list/detail open in another tab. The list and detail keys
+    // have different shapes, so match the URL rather than one prefix key.
+    queryClient.invalidateQueries({
+      predicate: (query) => isPayrollPayslipQueryKey(query.queryKey),
+    }),
   ]);
 }
 

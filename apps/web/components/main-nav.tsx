@@ -10,19 +10,24 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "cn";
 
-import { NAV_ITEMS } from "@/components/destinations";
+import { activeNavHref, NAV_ITEMS } from "@/components/destinations";
 import { useAuth } from "@/features/auth/components/AuthGate";
 
 export function MainNav({ className }: { className?: string }) {
   const pathname = usePathname();
   const { user } = useAuth();
+  const items = NAV_ITEMS.filter(
+    (item) => !item.roles || (user !== null && item.roles.includes(user.role)),
+  );
+  const activeHref = activeNavHref(pathname, items);
 
   return (
-    <nav aria-label="Main" className={cn("flex items-center gap-1", className)}>
-      {NAV_ITEMS.filter(
-        (item) => !item.roles || (user !== null && item.roles.includes(user.role)),
-      ).map((item) => {
-        const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+    <nav
+      aria-label="Main"
+      className={cn("flex min-w-0 flex-1 items-center gap-1 overflow-x-auto", className)}
+    >
+      {items.map((item) => {
+        const active = item.href === activeHref;
         return (
           <Link
             key={item.href}

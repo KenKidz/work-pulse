@@ -49,6 +49,7 @@ vi.mock("@workpulse/api-client", () => ({
   getGetPayrollRunQueryKey: (id: string) => [`/api/v1/payroll/runs/${id}`],
   getListPayrollDeductionsQueryKey: () => ["/api/v1/payroll/deductions"],
   getListPayrollRunsQueryKey: () => ["/api/v1/payroll/runs"],
+  getListMyPayslipsQueryKey: () => ["/api/v1/payroll/payslips"],
   getListRunPayslipsQueryKey: (id: string) => [`/api/v1/payroll/runs/${id}/payslips`],
   getListRunTimesheetsQueryKey: (id: string) => [`/api/v1/payroll/runs/${id}/timesheets`],
   getListSalariesQueryKey: () => ["/api/v1/payroll/salaries"],

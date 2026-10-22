@@ -9,6 +9,7 @@
 export type {
   BonusCreate,
   Employee,
+  ListMyPayslipsParams,
   ListPayrollRunsParams,
   ListRunPayslipsParams,
   ListRunTimesheetsParams,

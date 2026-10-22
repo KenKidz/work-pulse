@@ -1,6 +1,6 @@
 # Feature: Payroll
 
-- **Status:** approved
+- **Status:** done
 - **Phase:** 4
 - **Size:** L
 - **Surfaces:** api+web+events+workers
@@ -316,21 +316,21 @@ first run-level event: its Kafka key is `data.run_id` (ADR 0012 amendment);
 
 ## Acceptance criteria
 
-- [ ] API: creating a run for a closed period returns `201` `queued`; the worker calculates it to `calculated` with deterministic payslips — base from the effective salary record, `overtime_pay = hours × (base/standard_monthly_hours) × multiplier`, bonus entries summed, one line per active deduction, `net = base + overtime_pay + bonuses − Σ deductions` — and `totals` equal the Σ of payslip lines to the cent.
-- [ ] API: finalize moves the run to `finalized`, flips payslips to `issued`, writes audit entries, flips counted overtime rows to `INCLUDED_IN_PAYROLL` exactly once, and produces one valid `payroll.calculated` envelope (at calculate) plus one `payslip.issued` envelope per payslip — payloads contain no amounts.
-- [ ] API: recalculate an open run replaces the provisional payslips atomically; recalculating with unchanged inputs yields byte-identical payslips (determinism).
-- [ ] API: a correction run for a finalized period supersedes it on finalize — the earlier payslips become `superseded` and are excluded from "current" while remaining readable.
-- [ ] API (failure): a run for a month that has not ended → `409 payroll_period_not_closed`; a second open run for the same period → `409 payroll_period_open`; finalize of a non-`calculated` run → `409 payroll_run_not_calculated`; any mutation of a `finalized` run → `409 payroll_run_finalized`.
-- [ ] API (failure): an in-scope employee without a salary record is skipped with reason `no_salary` in the run summary and gets no payslip; the run still calculates and finalizes.
-- [ ] API (denied role): an `Employee`- or `Manager`-role attempt to create a run, write config, or create a salary/bonus → `403`; an `HR`-role finalize attempt → `403`; an employee fetching another employee's payslip → `404`.
-- [ ] API (tenant isolation): tenant B sees none of tenant A's runs, payslips, salaries, deductions or config (assert `404`/empty).
-- [ ] Contracts: the `payroll.calculated` / `payslip.issued` v1 schemas exist, validate produced payloads, and contain no amounts or salary values.
-- [ ] Unit tests use an injected clock and a fixed `standard_monthly_hours`/multiplier — no wall-time assertions; rounding is asserted at the cent.
-- [ ] Workers: a queued run is picked up by `workers/payroll/` and ends `calculated` (or `failed` with a stable code on job failure, recoverable via recalculate); a duplicate job pass produces no second payslip set.
-- [ ] Web: Finance configures deduction lines and a salary record, triggers a run, sees it move to `calculated`, reviews timesheets and payslip lines, and finalizes.
-- [ ] Web: an employee sees only their own payslips in "My payslips" (issued + superseded marked); another employee's payslip id renders the not-found state.
-- [ ] Web (failure): finalize is unavailable while the run is `queued`/`calculating`/`failed`, and a `409` on any mutation surfaces the mapped error message (toast), not a raw code.
-- [ ] E2E: config → salary → run → calculated → finalize → the employee's payslip view shows the issued payslip with the expected net.
+- [x] API: creating a run for a closed period returns `201` `queued`; the worker calculates it to `calculated` with deterministic payslips — base from the effective salary record, `overtime_pay = hours × (base/standard_monthly_hours) × multiplier`, bonus entries summed, one line per active deduction, `net = base + overtime_pay + bonuses − Σ deductions` — and `totals` equal the Σ of payslip lines to the cent.
+- [x] API: finalize moves the run to `finalized`, flips payslips to `issued`, writes audit entries, flips counted overtime rows to `INCLUDED_IN_PAYROLL` exactly once, and produces one valid `payroll.calculated` envelope (at calculate) plus one `payslip.issued` envelope per payslip — payloads contain no amounts.
+- [x] API: recalculate an open run replaces the provisional payslips atomically; recalculating with unchanged inputs yields byte-identical payslips (determinism).
+- [x] API: a correction run for a finalized period supersedes it on finalize — the earlier payslips become `superseded` and are excluded from "current" while remaining readable.
+- [x] API (failure): a run for a month that has not ended → `409 payroll_period_not_closed`; a second open run for the same period → `409 payroll_period_open`; finalize of a non-`calculated` run → `409 payroll_run_not_calculated`; any mutation of a `finalized` run → `409 payroll_run_finalized`.
+- [x] API (failure): an in-scope employee without a salary record is skipped with reason `no_salary` in the run summary and gets no payslip; the run still calculates and finalizes.
+- [x] API (denied role): an `Employee`- or `Manager`-role attempt to create a run, write config, or create a salary/bonus → `403`; an `HR`-role finalize attempt → `403`; an employee fetching another employee's payslip → `404`.
+- [x] API (tenant isolation): tenant B sees none of tenant A's runs, payslips, salaries, deductions or config (assert `404`/empty).
+- [x] Contracts: the `payroll.calculated` / `payslip.issued` v1 schemas exist, validate produced payloads, and contain no amounts or salary values.
+- [x] Unit tests use an injected clock and a fixed `standard_monthly_hours`/multiplier — no wall-time assertions; rounding is asserted at the cent.
+- [x] Workers: a queued run is picked up by `workers/payroll/` and ends `calculated` (or `failed` with a stable code on job failure, recoverable via recalculate); a duplicate job pass produces no second payslip set.
+- [x] Web: Finance configures deduction lines and a salary record, triggers a run, sees it move to `calculated`, reviews timesheets and payslip lines, and finalizes.
+- [x] Web: an employee sees only their own payslips in "My payslips" (issued + superseded marked); another employee's payslip id renders the not-found state.
+- [x] Web (failure): finalize is unavailable while the run is `queued`/`calculating`/`failed`, and a `409` on any mutation surfaces the mapped error message (toast), not a raw code.
+- [x] E2E: config → salary → run → calculated → finalize → the employee's payslip view shows the issued payslip with the expected net.
 
 ## Decisions (PO, 2026-10-21)
 
@@ -622,3 +622,23 @@ shadcn skill only if `components/ui/` primitives change).
 - **E2E** (`tests/e2e/payroll.spec.ts`, `make check-e2e`): the AC15 full hop
   plus the two web failure cases (AC13/AC14) against seeded roles.
 - Gates per task as listed; full `make check` before the closing status sync.
+
+## Close-out (2026-10-22)
+
+T1–T12 are built. T10 landed the Finance/Admin workspace, T11 the self-service
+"My payslips" list/detail with the foreign-id not-found state (and one
+longest-prefix nav rule so the nested payslip route marks only its own entry),
+and T12 the full e2e hop: `full-hop.sh` now runs the payroll worker alongside
+the relay/realtime consumer and resets the seeded tenant's payroll ledger
+through the shared `apps/api/scripts/reset_payroll_fixtures.py`, which the spec
+also invokes per attempt so CI retries start clean, so
+`tests/e2e/payroll.spec.ts` proves config → salaries → queued gate →
+`calculated` → provisional line review → finalize → the employee's issued
+payslip and a foreign-id `404` without test doubles. Gates: 1044 API tests, 226
+web tests, 22 Playwright tests.
+
+**Overtime caveat (P0).** `overtime.md` is still unbuilt, so the API and worker
+wire `NoOvertimeHoursPort`: the overtime term, the read/write seam and the
+"counted once" flip are proven through the port fakes/integration tests, while
+the e2e run has zero verified hours. Replacing the placeholder with the real
+overtime adapter remains P0's work; no payroll behavior changes when it lands.

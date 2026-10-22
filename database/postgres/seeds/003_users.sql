@@ -1,5 +1,6 @@
--- WorkPulse dev seed 003 — Identity (users, sessions-free) + dev worker and
--- dev manager (with the worker reporting to the manager).
+-- WorkPulse dev seed 003 — Identity (users, sessions-free) + dev worker,
+-- dev manager (with the worker reporting to the manager) and a finance
+-- operator for the payroll workspace.
 --
 -- Deterministic and idempotent (INSERT ... ON CONFLICT DO NOTHING): safe to
 -- re-run at any time. Synthetic data only — never real people
@@ -7,11 +8,12 @@
 --
 -- DEV PASSWORD (synthetic, dev-only — never reuse outside local work):
 --   workpulse-dev
--- Shared by all four seeded accounts; accounts:
+-- Shared by all five seeded accounts; accounts:
 --   admin@workpulse.test   role admin     (id ...0011)
 --   hr@workpulse.test      role hr        (id ...0012)
 --   worker@workpulse.test  role employee  (id ...0013, linked to employee ...0021)
 --   manager@workpulse.test role manager   (id ...0014, linked to employee ...0023)
+--   finance@workpulse.test role finance   (id ...0015, no employee link)
 -- The argon2id hash below is `PasswordHasher()` defaults (t=3, m=64 MiB, p=4);
 -- plaintext lives only here and in the .env comment. Change it in real setups.
 --
@@ -31,7 +33,8 @@ INSERT INTO users (id, tenant_id, email, role, employee_id, password_hash, activ
   ('00000000-0000-4000-8000-000000000011', '00000000-0000-4000-8000-000000000001', 'admin@workpulse.test',  'admin',    NULL,                                   '$argon2id$v=19$m=65536,t=3,p=4$1RGL7f7mGKCWo+pkwtX0mA$q9Nqje5ydp1VjIF45o6yCPTulchgwVWwWUYCZz+P6vk', true),
   ('00000000-0000-4000-8000-000000000012', '00000000-0000-4000-8000-000000000001', 'hr@workpulse.test',     'hr',       NULL,                                   '$argon2id$v=19$m=65536,t=3,p=4$1RGL7f7mGKCWo+pkwtX0mA$q9Nqje5ydp1VjIF45o6yCPTulchgwVWwWUYCZz+P6vk', true),
   ('00000000-0000-4000-8000-000000000013', '00000000-0000-4000-8000-000000000001', 'worker@workpulse.test',  'employee', '00000000-0000-4000-8000-000000000021', '$argon2id$v=19$m=65536,t=3,p=4$1RGL7f7mGKCWo+pkwtX0mA$q9Nqje5ydp1VjIF45o6yCPTulchgwVWwWUYCZz+P6vk', true),
-  ('00000000-0000-4000-8000-000000000014', '00000000-0000-4000-8000-000000000001', 'manager@workpulse.test', 'manager',  '00000000-0000-4000-8000-000000000023', '$argon2id$v=19$m=65536,t=3,p=4$1RGL7f7mGKCWo+pkwtX0mA$q9Nqje5ydp1VjIF45o6yCPTulchgwVWwWUYCZz+P6vk', true)
+  ('00000000-0000-4000-8000-000000000014', '00000000-0000-4000-8000-000000000001', 'manager@workpulse.test', 'manager',  '00000000-0000-4000-8000-000000000023', '$argon2id$v=19$m=65536,t=3,p=4$1RGL7f7mGKCWo+pkwtX0mA$q9Nqje5ydp1VjIF45o6yCPTulchgwVWwWUYCZz+P6vk', true),
+  ('00000000-0000-4000-8000-000000000015', '00000000-0000-4000-8000-000000000001', 'finance@workpulse.test', 'finance',  NULL,                                   '$argon2id$v=19$m=65536,t=3,p=4$1RGL7f7mGKCWo+pkwtX0mA$q9Nqje5ydp1VjIF45o6yCPTulchgwVWwWUYCZz+P6vk', true)
 ON CONFLICT DO NOTHING;
 
 -- The dev worker employee (seed 001 refs: Backend d0003 · Software Engineer

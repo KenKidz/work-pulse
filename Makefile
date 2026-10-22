@@ -74,7 +74,7 @@ check-api: db-test-up redis-test-up kafka-test-up ## API gate: ruff + pyright + 
 check-web: ## Web gate: typecheck + ESLint + Vitest
 	cd $(WEB_DIR) && pnpm run typecheck && pnpm run lint && pnpm run test
 
-check-e2e: db-up redis-up kafka-test-up db-migrate db-seed ## E2E gate: Playwright across the full event hop (kafka-test + relay + realtime)
+check-e2e: db-up redis-up kafka-test-up db-migrate db-seed ## E2E gate: Playwright across the full event hop (kafka-test + relay + realtime + payroll)
 	bash tests/e2e/full-hop.sh
 
 gen-api: ## Regenerate OpenAPI contract + typed API client

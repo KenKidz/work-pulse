@@ -2,12 +2,12 @@
 # E2E full-hop gate (realtime-consumer D2, ADR 0013 decision 4).
 #
 # The wall's live-delta spec is only meaningful when its only input is the
-# bus, so the e2e gate runs the full hop around Playwright: the outbox relay
-# and the realtime consumer against the throwaway kafka-test broker (:9093),
-# while the dev PostgreSQL and Redis — the same services Playwright's uvicorn
-# reads — keep serving the app. `make check-e2e` owns service startup,
-# migrations and seeding; this script owns the two worker processes and
-# exposes them as the Playwright run's surroundings.
+# bus, so the e2e gate runs the full hop around Playwright: the outbox relay,
+# the realtime consumer and the payroll calculation worker against the
+# throwaway kafka-test broker (:9093), while the dev PostgreSQL and Redis — the
+# same services Playwright's uvicorn reads — keep serving the app. `make
+# check-e2e` owns service startup, migrations and seeding; this script owns the
+# worker processes and exposes them as the Playwright run's surroundings.
 #
 # Readiness is deterministic log lines, never sleeps: `relay_started` lands
 # after the publisher connected, `realtime_consumer_started` after the
@@ -32,8 +32,10 @@ fi
 LOG_DIR="$(mktemp -d)"
 RELAY_LOG="$LOG_DIR/relay.log"
 REALTIME_LOG="$LOG_DIR/realtime.log"
+PAYROLL_LOG="$LOG_DIR/payroll.log"
 RELAY_PID=""
 REALTIME_PID=""
+PAYROLL_PID=""
 
 # Ids-only worker logs: safe to surface when the hop misbehaves (a readiness
 # bug otherwise reads as a product flake — R4).
@@ -43,6 +45,8 @@ dump_logs() {
   tail -n 40 "$RELAY_LOG" >&2 || true
   echo "full-hop: realtime log (tail):" >&2
   tail -n 40 "$REALTIME_LOG" >&2 || true
+  echo "full-hop: payroll log (tail):" >&2
+  tail -n 40 "$PAYROLL_LOG" >&2 || true
 }
 
 stop_worker() {
@@ -62,11 +66,12 @@ cleanup() {
   local status=$?
   trap - EXIT
   set +e
+  stop_worker "$PAYROLL_PID"
   stop_worker "$REALTIME_PID"
   stop_worker "$RELAY_PID"
   # Pre-flight guard failures have no worker logs (and no Kafka dependency to
   # diagnose); only dump the tails once a worker was actually launched.
-  if ((status != 0)) && [[ -n "$RELAY_PID$REALTIME_PID" ]]; then
+  if ((status != 0)) && [[ -n "$RELAY_PID$REALTIME_PID$PAYROLL_PID" ]]; then
     dump_logs
   fi
   rm -rf "$LOG_DIR"
@@ -91,22 +96,24 @@ wait_for_line() {
 }
 
 # The gate shares the dev PostgreSQL/Redis with `make dev-relay` /
-# `make dev-realtime`. A concurrently running dev worker would race the gate
-# for the same outbox rows (the dev relay publishes to :9092 and can win the
-# mark) or deliver the fact over the same dev Redis (a false green). Refuse
-# before starting our own workers; the check sees only pre-existing processes.
+# `make dev-realtime` / `make dev-payroll`. A concurrently running dev worker
+# would race the gate for the same outbox rows or the same queued payroll runs
+# (and can win the mark/claim) or deliver the fact over the same dev Redis (a
+# false green). Refuse before starting our own workers; the check sees only
+# pre-existing processes.
 assert_no_other_workers() {
   local pids
   if ! command -v pgrep >/dev/null 2>&1; then
     echo "full-hop: 'pgrep' is required to check for concurrent workers." >&2
     exit 1
   fi
-  pids="$(pgrep -f 'workers\.(relay|realtime)\.main' || true)"
+  pids="$(pgrep -f 'workers\.(relay|realtime|payroll)\.main' || true)"
   if [[ -n "$pids" ]]; then
-    echo "full-hop: another relay/realtime worker is already running:" >&2
+    echo "full-hop: another relay/realtime/payroll worker is already running:" >&2
     echo "full-hop:   $(echo "$pids" | tr '\n' ' ')" >&2
-    echo "full-hop: stop 'make dev-relay' / 'make dev-realtime' (or a leaked" >&2
-    echo "full-hop: worker from an earlier gate) before running the hop." >&2
+    echo "full-hop: stop 'make dev-relay' / 'make dev-realtime' / 'make" >&2
+    echo "full-hop: dev-payroll' (or a leaked worker from an earlier gate)" >&2
+    echo "full-hop: before running the hop." >&2
     exit 1
   fi
 }
@@ -322,12 +329,27 @@ PY
   fi
 }
 
+# The payroll spec asserts an exact net, so it starts from a clean payroll
+# ledger for the seeded tenant. The shared script is also called by the spec
+# before its finance test, so a Playwright retry starts clean too. Synthetic
+# dev data only (`.ai/testing.md` rule 6).
+reset_payroll_fixtures() {
+  if ! (
+    cd "$API_DIR" || exit 1
+    PYTHONPATH="../..:." "$PYTHON" scripts/reset_payroll_fixtures.py
+  ); then
+    echo "full-hop: could not reset the seeded tenant's payroll fixtures" >&2
+    exit 1
+  fi
+}
+
 assert_no_other_workers
 assert_dev_outbox_is_clean
 reset_leave_fixtures
 reset_notification_fixtures
+reset_payroll_fixtures
 
-# Both workers run inside the apps/api uv environment, reading the same
+# All workers run inside the apps/api uv environment, reading the same
 # settings/.env as uvicorn; only the broker is overridden (kafka-test).
 # Keep the interpreter/PYTHONPATH/module triple in sync with the Makefile's
 # `dev-relay` / `dev-realtime` targets — same command, plus the `exec` that
@@ -346,8 +368,17 @@ RELAY_PID=$!
 ) >"$REALTIME_LOG" 2>&1 &
 REALTIME_PID=$!
 
+# The payroll worker is database-backed (not bus-backed): it polls QUEUED runs
+# and commits calculation, payslips, the event envelope and audit together.
+(
+  cd "$API_DIR"
+  exec env PYTHONPATH="../..:." "$PYTHON" -m workers.payroll.main
+) >"$PAYROLL_LOG" 2>&1 &
+PAYROLL_PID=$!
+
 wait_for_line relay "$RELAY_PID" "$RELAY_LOG" relay_started
 wait_for_line realtime "$REALTIME_PID" "$REALTIME_LOG" realtime_consumer_started
+wait_for_line payroll "$PAYROLL_PID" "$PAYROLL_LOG" payroll_worker_started
 
 cd "$ROOT_DIR"
 npx playwright test
