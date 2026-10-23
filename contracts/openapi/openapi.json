@@ -5605,6 +5605,566 @@
           }
         }
       }
+    },
+    "/api/v1/reports/overtime": {
+      "get": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Get Overtime Report",
+        "description": "Verified overtime by bucket and dimensions (HR-verified hours only).",
+        "operationId": "getOvertimeReport",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "To"
+            }
+          },
+          {
+            "name": "group_by",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "department",
+              "title": "Group By"
+            }
+          },
+          {
+            "name": "interval",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/ReportInterval",
+              "default": "month"
+            }
+          },
+          {
+            "name": "department_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Department Id"
+            }
+          },
+          {
+            "name": "location_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Location Id"
+            }
+          },
+          {
+            "name": "position_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Position Id"
+            }
+          },
+          {
+            "name": "wp_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Wp Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OvertimeReport"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reports/attendance": {
+      "get": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Get Attendance Report",
+        "description": "Attendance, worked time and lateness by bucket and dimensions.",
+        "operationId": "getAttendanceReport",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "To"
+            }
+          },
+          {
+            "name": "group_by",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "department",
+              "title": "Group By"
+            }
+          },
+          {
+            "name": "interval",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/ReportInterval",
+              "default": "month"
+            }
+          },
+          {
+            "name": "department_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Department Id"
+            }
+          },
+          {
+            "name": "location_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Location Id"
+            }
+          },
+          {
+            "name": "position_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Position Id"
+            }
+          },
+          {
+            "name": "wp_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Wp Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttendanceReport"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reports/leave": {
+      "get": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Get Leave Report",
+        "description": "Approved leave by bucket and dimensions (`leave_type` allowed here).",
+        "operationId": "getLeaveReport",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "To"
+            }
+          },
+          {
+            "name": "group_by",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "department",
+              "title": "Group By"
+            }
+          },
+          {
+            "name": "interval",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/ReportInterval",
+              "default": "month"
+            }
+          },
+          {
+            "name": "department_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Department Id"
+            }
+          },
+          {
+            "name": "location_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Location Id"
+            }
+          },
+          {
+            "name": "position_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Position Id"
+            }
+          },
+          {
+            "name": "wp_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Wp Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeaveReport"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reports/headcount": {
+      "get": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Get Headcount Report",
+        "description": "Headcount at bucket end plus joiners/leavers for the bucket.",
+        "operationId": "getHeadcountReport",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "To"
+            }
+          },
+          {
+            "name": "group_by",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "department",
+              "title": "Group By"
+            }
+          },
+          {
+            "name": "interval",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/ReportInterval",
+              "default": "month"
+            }
+          },
+          {
+            "name": "department_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Department Id"
+            }
+          },
+          {
+            "name": "location_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Location Id"
+            }
+          },
+          {
+            "name": "position_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Position Id"
+            }
+          },
+          {
+            "name": "wp_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Wp Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HeadcountReport"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -5757,6 +6317,107 @@
           "page"
         ],
         "title": "AttendanceRecordListPage"
+      },
+      "AttendanceReport": {
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date",
+            "title": "From"
+          },
+          "to": {
+            "type": "string",
+            "format": "date",
+            "title": "To"
+          },
+          "group_by": {
+            "items": {
+              "$ref": "#/components/schemas/ReportDimension"
+            },
+            "type": "array",
+            "title": "Group By"
+          },
+          "interval": {
+            "$ref": "#/components/schemas/ReportInterval"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/AttendanceReportRow"
+            },
+            "type": "array",
+            "title": "Rows"
+          }
+        },
+        "type": "object",
+        "required": [
+          "from",
+          "to",
+          "group_by",
+          "interval",
+          "rows"
+        ],
+        "title": "AttendanceReport",
+        "description": "`GET /api/v1/reports/attendance` response."
+      },
+      "AttendanceReportRow": {
+        "properties": {
+          "bucket": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bucket"
+          },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/ReportGroup"
+            },
+            "type": "array",
+            "title": "Groups"
+          },
+          "checkin_count": {
+            "type": "integer",
+            "title": "Checkin Count"
+          },
+          "worked_day_count": {
+            "type": "integer",
+            "title": "Worked Day Count"
+          },
+          "worked_minutes": {
+            "type": "integer",
+            "title": "Worked Minutes"
+          },
+          "late_count": {
+            "type": "integer",
+            "title": "Late Count"
+          },
+          "late_rate": {
+            "type": "string",
+            "title": "Late Rate"
+          },
+          "avg_minutes_late": {
+            "type": "string",
+            "title": "Avg Minutes Late"
+          }
+        },
+        "type": "object",
+        "required": [
+          "bucket",
+          "groups",
+          "checkin_count",
+          "worked_day_count",
+          "worked_minutes",
+          "late_count",
+          "late_rate",
+          "avg_minutes_late"
+        ],
+        "title": "AttendanceReportRow",
+        "description": "Attendance/lateness metrics for one bucket \u00d7 group."
       },
       "Board": {
         "properties": {
@@ -6696,6 +7357,92 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
+      "HeadcountReport": {
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date",
+            "title": "From"
+          },
+          "to": {
+            "type": "string",
+            "format": "date",
+            "title": "To"
+          },
+          "group_by": {
+            "items": {
+              "$ref": "#/components/schemas/ReportDimension"
+            },
+            "type": "array",
+            "title": "Group By"
+          },
+          "interval": {
+            "$ref": "#/components/schemas/ReportInterval"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/HeadcountReportRow"
+            },
+            "type": "array",
+            "title": "Rows"
+          }
+        },
+        "type": "object",
+        "required": [
+          "from",
+          "to",
+          "group_by",
+          "interval",
+          "rows"
+        ],
+        "title": "HeadcountReport",
+        "description": "`GET /api/v1/reports/headcount` response."
+      },
+      "HeadcountReportRow": {
+        "properties": {
+          "bucket": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bucket"
+          },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/ReportGroup"
+            },
+            "type": "array",
+            "title": "Groups"
+          },
+          "headcount": {
+            "type": "integer",
+            "title": "Headcount"
+          },
+          "joiners": {
+            "type": "integer",
+            "title": "Joiners"
+          },
+          "leavers": {
+            "type": "integer",
+            "title": "Leavers"
+          }
+        },
+        "type": "object",
+        "required": [
+          "bucket",
+          "groups",
+          "headcount",
+          "joiners",
+          "leavers"
+        ],
+        "title": "HeadcountReportRow",
+        "description": "Workforce metrics at the bucket's as-of date."
+      },
       "LeaveBalance": {
         "properties": {
           "tenant_id": {
@@ -6764,6 +7511,87 @@
         "type": "object",
         "title": "LeaveDecision",
         "description": "Optional decision note \u2014 1..500 characters when provided (PII)."
+      },
+      "LeaveReport": {
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date",
+            "title": "From"
+          },
+          "to": {
+            "type": "string",
+            "format": "date",
+            "title": "To"
+          },
+          "group_by": {
+            "items": {
+              "$ref": "#/components/schemas/ReportDimension"
+            },
+            "type": "array",
+            "title": "Group By"
+          },
+          "interval": {
+            "$ref": "#/components/schemas/ReportInterval"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/LeaveReportRow"
+            },
+            "type": "array",
+            "title": "Rows"
+          }
+        },
+        "type": "object",
+        "required": [
+          "from",
+          "to",
+          "group_by",
+          "interval",
+          "rows"
+        ],
+        "title": "LeaveReport",
+        "description": "`GET /api/v1/reports/leave` response."
+      },
+      "LeaveReportRow": {
+        "properties": {
+          "bucket": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bucket"
+          },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/ReportGroup"
+            },
+            "type": "array",
+            "title": "Groups"
+          },
+          "approved_day_count": {
+            "type": "integer",
+            "title": "Approved Day Count"
+          },
+          "approved_request_count": {
+            "type": "integer",
+            "title": "Approved Request Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "bucket",
+          "groups",
+          "approved_day_count",
+          "approved_request_count"
+        ],
+        "title": "LeaveReportRow",
+        "description": "Approved-leave metrics for one bucket \u00d7 group."
       },
       "LeaveRequest": {
         "properties": {
@@ -7300,6 +8128,102 @@
         ],
         "title": "OvertimeRejectedFrom",
         "description": "The observed pre-rejection state, recorded on rejected rows."
+      },
+      "OvertimeReport": {
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date",
+            "title": "From"
+          },
+          "to": {
+            "type": "string",
+            "format": "date",
+            "title": "To"
+          },
+          "group_by": {
+            "items": {
+              "$ref": "#/components/schemas/ReportDimension"
+            },
+            "type": "array",
+            "title": "Group By"
+          },
+          "interval": {
+            "$ref": "#/components/schemas/ReportInterval"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/OvertimeReportRow"
+            },
+            "type": "array",
+            "title": "Rows"
+          }
+        },
+        "type": "object",
+        "required": [
+          "from",
+          "to",
+          "group_by",
+          "interval",
+          "rows"
+        ],
+        "title": "OvertimeReport",
+        "description": "`GET /api/v1/reports/overtime` response."
+      },
+      "OvertimeReportRow": {
+        "properties": {
+          "bucket": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bucket"
+          },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/ReportGroup"
+            },
+            "type": "array",
+            "title": "Groups"
+          },
+          "verified_hours": {
+            "type": "string",
+            "title": "Verified Hours"
+          },
+          "verified_request_count": {
+            "type": "integer",
+            "title": "Verified Request Count"
+          },
+          "verified_day_count": {
+            "type": "integer",
+            "title": "Verified Day Count"
+          },
+          "active_employee_count": {
+            "type": "integer",
+            "title": "Active Employee Count"
+          },
+          "hours_per_employee": {
+            "type": "string",
+            "title": "Hours Per Employee"
+          }
+        },
+        "type": "object",
+        "required": [
+          "bucket",
+          "groups",
+          "verified_hours",
+          "verified_request_count",
+          "verified_day_count",
+          "active_employee_count",
+          "hours_per_employee"
+        ],
+        "title": "OvertimeReportRow",
+        "description": "Verified-overtime metrics for one bucket \u00d7 group."
       },
       "OvertimeRequest": {
         "properties": {
@@ -8562,6 +9486,52 @@
         ],
         "title": "RealtimeBoardSnapshot",
         "description": "The one board payload: REST `200` of `GET /realtime/board`.\n\nThe `snapshot` frame is this body plus `type` (see\n`RealtimeSnapshotFrame`), so the first WS frame and the REST body can\nnever drift. Rows are unordered (the client sorts); `presence` is\nuncapped, `activity` is newest-first capped 20."
+      },
+      "ReportDimension": {
+        "type": "string",
+        "enum": [
+          "department",
+          "location",
+          "position",
+          "seniority",
+          "leave_type"
+        ],
+        "title": "ReportDimension",
+        "description": "Every `group_by` dimension the four reports accept."
+      },
+      "ReportGroup": {
+        "properties": {
+          "dimension": {
+            "$ref": "#/components/schemas/ReportDimension"
+          },
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dimension",
+          "key",
+          "label"
+        ],
+        "title": "ReportGroup",
+        "description": "One group-by dimension value on a report row."
+      },
+      "ReportInterval": {
+        "type": "string",
+        "enum": [
+          "day",
+          "week",
+          "month",
+          "total"
+        ],
+        "title": "ReportInterval",
+        "description": "Time bucketing; `week` starts Monday, `total` has `bucket = null`."
       },
       "ResetPasswordRequest": {
         "properties": {

@@ -43,16 +43,22 @@ from app.domains.payroll.repository import (
 )
 from app.domains.payroll.service import PayrollService
 from app.domains.realtime.service import RealtimeService
+from app.domains.reports.exceptions import ReportsUnavailableError
+from app.domains.reports.service import ReportsService
+from app.infrastructure.clickhouse.client import get_clickhouse_client
+from app.infrastructure.clickhouse.reports import ClickhouseReportsRepository
 from app.infrastructure.postgres.audit import PostgresAuditWriter
 from app.infrastructure.postgres.employee_link import PostgresEmployeeLink
 from app.infrastructure.postgres.employee_usage import PostgresEmployeeUsage
 from app.infrastructure.postgres.engine import get_session_factory
+from app.infrastructure.postgres.manager_scope import PostgresEmployeeScope
 from app.infrastructure.postgres.outbox import PostgresEventOutbox
 from app.infrastructure.postgres.payroll_facts import (
     PostgresAttendanceHoursPort,
     PostgresLeaveDaysPort,
     PostgresOvertimeHoursPort,
 )
+from app.infrastructure.postgres.reference_labels import PostgresReferenceLabels
 from app.infrastructure.postgres.repositories.attendance import (
     PostgresAttendanceRepository,
     PostgresShiftRepository,
@@ -229,6 +235,26 @@ def get_notification_inbox_service(session: SessionDep) -> NotificationInboxServ
     return NotificationInboxService(PostgresNotificationRepository(session))
 
 
+def get_reports_service(session: SessionDep) -> ReportsService:
+    """Read-only reports over ClickHouse + the two Postgres lookup ports.
+
+    No audit writer and no outbox: reports mutate nothing (spec rule 11). The
+    ClickHouse client is lazily created; an unreachable store becomes the
+    service's `503 reports_unavailable`, never an import/boot failure. Client
+    creation itself connects eagerly, so its failure is translated here; query
+    failures are translated by the repository.
+    """
+    try:
+        client = get_clickhouse_client()
+    except Exception as exc:  # noqa: BLE001 - the read side degrades to 503
+        raise ReportsUnavailableError() from exc
+    return ReportsService(
+        repo=ClickhouseReportsRepository(client),
+        labels=PostgresReferenceLabels(session),
+        scope=PostgresEmployeeScope(session),
+    )
+
+
 def get_shift_service(session: SessionDep) -> ShiftService:
     audit = PostgresAuditWriter(session)
     return ShiftService(
@@ -324,6 +350,7 @@ PayrollServiceDep = Annotated[PayrollService, Depends(get_payroll_service)]
 NotificationInboxServiceDep = Annotated[
     NotificationInboxService, Depends(get_notification_inbox_service)
 ]
+ReportsServiceDep = Annotated[ReportsService, Depends(get_reports_service)]
 OvertimeHoursPortDep = Annotated[OvertimeHoursPort, Depends(get_overtime_hours_port)]
 AttendanceHoursPortDep = Annotated[
     AttendanceHoursPort, Depends(get_attendance_hours_port)

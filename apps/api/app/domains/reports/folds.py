@@ -209,15 +209,29 @@ def resolve_assignment(
     the earliest known interval fall back to that interval (a pre-extension
     create only knows its first-seen date).
     """
-    ordered = sorted(assignments, key=lambda assignment: assignment.effective_from)
+    return resolve_ordered_assignment(
+        sorted(assignments, key=lambda assignment: assignment.effective_from),
+        fact_date,
+    )
+
+
+def resolve_ordered_assignment(
+    assignments: Sequence[AssignmentRow], fact_date: date
+) -> AssignmentRow | None:
+    """`resolve_assignment` for a sequence already ordered by start date.
+
+    The headcount read applies this once per employee × bucket over dimension
+    rows the repository already returns `ORDER BY effective_from`, so it must
+    not re-sort on every visit.
+    """
     covering: AssignmentRow | None = None
-    for assignment in ordered:
+    for assignment in assignments:
         if assignment.effective_from <= fact_date:
             covering = assignment
         else:
             break
-    if covering is None and ordered:
-        return ordered[0]
+    if covering is None and assignments:
+        return assignments[0]
     return covering
 
 

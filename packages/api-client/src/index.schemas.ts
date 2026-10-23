@@ -50,6 +50,67 @@ export interface AttendanceRecordListPage {
 }
 
 /**
+ * Every `group_by` dimension the four reports accept.
+ */
+export type ReportDimension =
+  (typeof ReportDimension)[keyof typeof ReportDimension];
+
+export const ReportDimension = {
+  department: "department",
+  location: "location",
+  position: "position",
+  seniority: "seniority",
+  leave_type: "leave_type",
+} as const;
+
+/**
+ * Time bucketing; `week` starts Monday, `total` has `bucket = null`.
+ */
+export type ReportInterval =
+  (typeof ReportInterval)[keyof typeof ReportInterval];
+
+export const ReportInterval = {
+  day: "day",
+  week: "week",
+  month: "month",
+  total: "total",
+} as const;
+
+/**
+ * One group-by dimension value on a report row.
+ */
+export interface ReportGroup {
+  dimension: ReportDimension;
+  key: string;
+  label: string;
+}
+
+/**
+ * Attendance/lateness metrics for one bucket × group.
+ */
+export interface AttendanceReportRow {
+  bucket: string | null;
+  groups: ReportGroup[];
+  checkin_count: number;
+  worked_day_count: number;
+  worked_minutes: number;
+  late_count: number;
+  late_rate: string;
+  avg_minutes_late: string;
+}
+
+/**
+ * `GET /api/v1/reports/attendance` response.
+ */
+export interface AttendanceReport {
+  from: string;
+  to: string;
+  group_by: ReportDimension[];
+  interval: ReportInterval;
+  rows: AttendanceReportRow[];
+}
+
+/**
  * Independent counts — not a partition (a person can be present and late).
  */
 export interface BoardCounts {
@@ -295,6 +356,28 @@ export interface HTTPValidationError {
   detail?: ValidationError[];
 }
 
+/**
+ * Workforce metrics at the bucket's as-of date.
+ */
+export interface HeadcountReportRow {
+  bucket: string | null;
+  groups: ReportGroup[];
+  headcount: number;
+  joiners: number;
+  leavers: number;
+}
+
+/**
+ * `GET /api/v1/reports/headcount` response.
+ */
+export interface HeadcountReport {
+  from: string;
+  to: string;
+  group_by: ReportDimension[];
+  interval: ReportInterval;
+  rows: HeadcountReportRow[];
+}
+
 export interface LeaveBalance {
   tenant_id: string;
   employee_id: string;
@@ -311,6 +394,27 @@ export interface LeaveBalance {
  */
 export interface LeaveDecision {
   decision_note?: string | null;
+}
+
+/**
+ * Approved-leave metrics for one bucket × group.
+ */
+export interface LeaveReportRow {
+  bucket: string | null;
+  groups: ReportGroup[];
+  approved_day_count: number;
+  approved_request_count: number;
+}
+
+/**
+ * `GET /api/v1/reports/leave` response.
+ */
+export interface LeaveReport {
+  from: string;
+  to: string;
+  group_by: ReportDimension[];
+  interval: ReportInterval;
+  rows: LeaveReportRow[];
 }
 
 export type LeaveTypeCode = (typeof LeaveTypeCode)[keyof typeof LeaveTypeCode];
@@ -482,6 +586,30 @@ export const OvertimeRejectedFrom = {
   manager_approved: "manager_approved",
   hr_verified: "hr_verified",
 } as const;
+
+/**
+ * Verified-overtime metrics for one bucket × group.
+ */
+export interface OvertimeReportRow {
+  bucket: string | null;
+  groups: ReportGroup[];
+  verified_hours: string;
+  verified_request_count: number;
+  verified_day_count: number;
+  active_employee_count: number;
+  hours_per_employee: string;
+}
+
+/**
+ * `GET /api/v1/reports/overtime` response.
+ */
+export interface OvertimeReport {
+  from: string;
+  to: string;
+  group_by: ReportDimension[];
+  interval: ReportInterval;
+  rows: OvertimeReportRow[];
+}
 
 /**
  * Pinned request lifecycle (`REQUESTED` → `MANAGER_APPROVED` → …).
@@ -1086,4 +1214,44 @@ export type ListRunPayslipsParams = {
 export type ListMyPayslipsParams = {
   page?: number;
   page_size?: number;
+};
+
+export type GetOvertimeReportParams = {
+  from: string;
+  to: string;
+  group_by?: string;
+  interval?: ReportInterval;
+  department_id?: string | null;
+  location_id?: string | null;
+  position_id?: string | null;
+};
+
+export type GetAttendanceReportParams = {
+  from: string;
+  to: string;
+  group_by?: string;
+  interval?: ReportInterval;
+  department_id?: string | null;
+  location_id?: string | null;
+  position_id?: string | null;
+};
+
+export type GetLeaveReportParams = {
+  from: string;
+  to: string;
+  group_by?: string;
+  interval?: ReportInterval;
+  department_id?: string | null;
+  location_id?: string | null;
+  position_id?: string | null;
+};
+
+export type GetHeadcountReportParams = {
+  from: string;
+  to: string;
+  group_by?: string;
+  interval?: ReportInterval;
+  department_id?: string | null;
+  location_id?: string | null;
+  position_id?: string | null;
 };

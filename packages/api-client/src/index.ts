@@ -24,6 +24,7 @@ import type {
   ArchiveRequest,
   AttendanceRecord,
   AttendanceRecordListPage,
+  AttendanceReport,
   Board,
   BonusCreate,
   ChangePasswordRequest,
@@ -40,10 +41,16 @@ import type {
   EmployeeListPage,
   Employment,
   GetAttendanceBoardParams,
+  GetAttendanceReportParams,
+  GetHeadcountReportParams,
+  GetLeaveReportParams,
+  GetOvertimeReportParams,
   HTTPValidationError,
+  HeadcountReport,
   HealthzHealthzGet200,
   LeaveBalance,
   LeaveDecision,
+  LeaveReport,
   LeaveRequest,
   LeaveRequestCreate,
   LeaveRequestListPage,
@@ -71,6 +78,7 @@ import type {
   NotificationListPage,
   NotificationUnreadCount,
   OvertimeDecision,
+  OvertimeReport,
   OvertimeRequest,
   OvertimeRequestCreate,
   OvertimeRequestListPage,
@@ -12787,6 +12795,794 @@ export function useGetRealtimeBoard<
   queryKey: DataTag<QueryKey, TData, TError>;
 } {
   const queryOptions = getGetRealtimeBoardQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export type getOvertimeReportResponse200 = {
+  data: OvertimeReport;
+  status: 200;
+};
+
+export type getOvertimeReportResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type getOvertimeReportResponseSuccess = getOvertimeReportResponse200 & {
+  headers: Headers;
+};
+export type getOvertimeReportResponseError = getOvertimeReportResponse422 & {
+  headers: Headers;
+};
+
+export type getOvertimeReportResponse =
+  getOvertimeReportResponseSuccess | getOvertimeReportResponseError;
+
+export const getGetOvertimeReportUrl = (params: GetOvertimeReportParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/reports/overtime?${stringifiedParams}`
+    : `/api/v1/reports/overtime`;
+};
+
+/**
+ * Verified overtime by bucket and dimensions (HR-verified hours only).
+ * @summary Get Overtime Report
+ */
+export const getOvertimeReport = async (
+  params: GetOvertimeReportParams,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<getOvertimeReportResponse> => {
+  return customFetch<getOvertimeReportResponse>(
+    getGetOvertimeReportUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetOvertimeReportQueryKey = (
+  params?: GetOvertimeReportParams,
+) => {
+  return [`/api/v1/reports/overtime`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetOvertimeReportQueryOptions = <
+  TData = Awaited<ReturnType<typeof getOvertimeReport>>,
+  TError = HTTPValidationError,
+>(
+  params: GetOvertimeReportParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getOvertimeReport>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetOvertimeReportQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getOvertimeReport>>
+  > = ({ signal }) => getOvertimeReport(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getOvertimeReport>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetOvertimeReportQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getOvertimeReport>>
+>;
+export type GetOvertimeReportQueryError = HTTPValidationError;
+
+export function useGetOvertimeReport<
+  TData = Awaited<ReturnType<typeof getOvertimeReport>>,
+  TError = HTTPValidationError,
+>(
+  params: GetOvertimeReportParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getOvertimeReport>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getOvertimeReport>>,
+          TError,
+          Awaited<ReturnType<typeof getOvertimeReport>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetOvertimeReport<
+  TData = Awaited<ReturnType<typeof getOvertimeReport>>,
+  TError = HTTPValidationError,
+>(
+  params: GetOvertimeReportParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getOvertimeReport>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getOvertimeReport>>,
+          TError,
+          Awaited<ReturnType<typeof getOvertimeReport>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetOvertimeReport<
+  TData = Awaited<ReturnType<typeof getOvertimeReport>>,
+  TError = HTTPValidationError,
+>(
+  params: GetOvertimeReportParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getOvertimeReport>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary Get Overtime Report
+ */
+
+export function useGetOvertimeReport<
+  TData = Awaited<ReturnType<typeof getOvertimeReport>>,
+  TError = HTTPValidationError,
+>(
+  params: GetOvertimeReportParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getOvertimeReport>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetOvertimeReportQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export type getAttendanceReportResponse200 = {
+  data: AttendanceReport;
+  status: 200;
+};
+
+export type getAttendanceReportResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type getAttendanceReportResponseSuccess =
+  getAttendanceReportResponse200 & {
+    headers: Headers;
+  };
+export type getAttendanceReportResponseError =
+  getAttendanceReportResponse422 & {
+    headers: Headers;
+  };
+
+export type getAttendanceReportResponse =
+  getAttendanceReportResponseSuccess | getAttendanceReportResponseError;
+
+export const getGetAttendanceReportUrl = (
+  params: GetAttendanceReportParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/reports/attendance?${stringifiedParams}`
+    : `/api/v1/reports/attendance`;
+};
+
+/**
+ * Attendance, worked time and lateness by bucket and dimensions.
+ * @summary Get Attendance Report
+ */
+export const getAttendanceReport = async (
+  params: GetAttendanceReportParams,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<getAttendanceReportResponse> => {
+  return customFetch<getAttendanceReportResponse>(
+    getGetAttendanceReportUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetAttendanceReportQueryKey = (
+  params?: GetAttendanceReportParams,
+) => {
+  return [`/api/v1/reports/attendance`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetAttendanceReportQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAttendanceReport>>,
+  TError = HTTPValidationError,
+>(
+  params: GetAttendanceReportParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getAttendanceReport>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetAttendanceReportQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getAttendanceReport>>
+  > = ({ signal }) =>
+    getAttendanceReport(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAttendanceReport>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetAttendanceReportQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAttendanceReport>>
+>;
+export type GetAttendanceReportQueryError = HTTPValidationError;
+
+export function useGetAttendanceReport<
+  TData = Awaited<ReturnType<typeof getAttendanceReport>>,
+  TError = HTTPValidationError,
+>(
+  params: GetAttendanceReportParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getAttendanceReport>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAttendanceReport>>,
+          TError,
+          Awaited<ReturnType<typeof getAttendanceReport>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetAttendanceReport<
+  TData = Awaited<ReturnType<typeof getAttendanceReport>>,
+  TError = HTTPValidationError,
+>(
+  params: GetAttendanceReportParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getAttendanceReport>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAttendanceReport>>,
+          TError,
+          Awaited<ReturnType<typeof getAttendanceReport>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetAttendanceReport<
+  TData = Awaited<ReturnType<typeof getAttendanceReport>>,
+  TError = HTTPValidationError,
+>(
+  params: GetAttendanceReportParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getAttendanceReport>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary Get Attendance Report
+ */
+
+export function useGetAttendanceReport<
+  TData = Awaited<ReturnType<typeof getAttendanceReport>>,
+  TError = HTTPValidationError,
+>(
+  params: GetAttendanceReportParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getAttendanceReport>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetAttendanceReportQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export type getLeaveReportResponse200 = {
+  data: LeaveReport;
+  status: 200;
+};
+
+export type getLeaveReportResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type getLeaveReportResponseSuccess = getLeaveReportResponse200 & {
+  headers: Headers;
+};
+export type getLeaveReportResponseError = getLeaveReportResponse422 & {
+  headers: Headers;
+};
+
+export type getLeaveReportResponse =
+  getLeaveReportResponseSuccess | getLeaveReportResponseError;
+
+export const getGetLeaveReportUrl = (params: GetLeaveReportParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/reports/leave?${stringifiedParams}`
+    : `/api/v1/reports/leave`;
+};
+
+/**
+ * Approved leave by bucket and dimensions (`leave_type` allowed here).
+ * @summary Get Leave Report
+ */
+export const getLeaveReport = async (
+  params: GetLeaveReportParams,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<getLeaveReportResponse> => {
+  return customFetch<getLeaveReportResponse>(getGetLeaveReportUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetLeaveReportQueryKey = (params?: GetLeaveReportParams) => {
+  return [`/api/v1/reports/leave`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetLeaveReportQueryOptions = <
+  TData = Awaited<ReturnType<typeof getLeaveReport>>,
+  TError = HTTPValidationError,
+>(
+  params: GetLeaveReportParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getLeaveReport>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetLeaveReportQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getLeaveReport>>> = ({
+    signal,
+  }) => getLeaveReport(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getLeaveReport>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetLeaveReportQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getLeaveReport>>
+>;
+export type GetLeaveReportQueryError = HTTPValidationError;
+
+export function useGetLeaveReport<
+  TData = Awaited<ReturnType<typeof getLeaveReport>>,
+  TError = HTTPValidationError,
+>(
+  params: GetLeaveReportParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getLeaveReport>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getLeaveReport>>,
+          TError,
+          Awaited<ReturnType<typeof getLeaveReport>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetLeaveReport<
+  TData = Awaited<ReturnType<typeof getLeaveReport>>,
+  TError = HTTPValidationError,
+>(
+  params: GetLeaveReportParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getLeaveReport>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getLeaveReport>>,
+          TError,
+          Awaited<ReturnType<typeof getLeaveReport>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetLeaveReport<
+  TData = Awaited<ReturnType<typeof getLeaveReport>>,
+  TError = HTTPValidationError,
+>(
+  params: GetLeaveReportParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getLeaveReport>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary Get Leave Report
+ */
+
+export function useGetLeaveReport<
+  TData = Awaited<ReturnType<typeof getLeaveReport>>,
+  TError = HTTPValidationError,
+>(
+  params: GetLeaveReportParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getLeaveReport>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetLeaveReportQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export type getHeadcountReportResponse200 = {
+  data: HeadcountReport;
+  status: 200;
+};
+
+export type getHeadcountReportResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type getHeadcountReportResponseSuccess =
+  getHeadcountReportResponse200 & {
+    headers: Headers;
+  };
+export type getHeadcountReportResponseError = getHeadcountReportResponse422 & {
+  headers: Headers;
+};
+
+export type getHeadcountReportResponse =
+  getHeadcountReportResponseSuccess | getHeadcountReportResponseError;
+
+export const getGetHeadcountReportUrl = (params: GetHeadcountReportParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/reports/headcount?${stringifiedParams}`
+    : `/api/v1/reports/headcount`;
+};
+
+/**
+ * Headcount at bucket end plus joiners/leavers for the bucket.
+ * @summary Get Headcount Report
+ */
+export const getHeadcountReport = async (
+  params: GetHeadcountReportParams,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<getHeadcountReportResponse> => {
+  return customFetch<getHeadcountReportResponse>(
+    getGetHeadcountReportUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetHeadcountReportQueryKey = (
+  params?: GetHeadcountReportParams,
+) => {
+  return [`/api/v1/reports/headcount`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetHeadcountReportQueryOptions = <
+  TData = Awaited<ReturnType<typeof getHeadcountReport>>,
+  TError = HTTPValidationError,
+>(
+  params: GetHeadcountReportParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getHeadcountReport>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetHeadcountReportQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getHeadcountReport>>
+  > = ({ signal }) => getHeadcountReport(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getHeadcountReport>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetHeadcountReportQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getHeadcountReport>>
+>;
+export type GetHeadcountReportQueryError = HTTPValidationError;
+
+export function useGetHeadcountReport<
+  TData = Awaited<ReturnType<typeof getHeadcountReport>>,
+  TError = HTTPValidationError,
+>(
+  params: GetHeadcountReportParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getHeadcountReport>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getHeadcountReport>>,
+          TError,
+          Awaited<ReturnType<typeof getHeadcountReport>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetHeadcountReport<
+  TData = Awaited<ReturnType<typeof getHeadcountReport>>,
+  TError = HTTPValidationError,
+>(
+  params: GetHeadcountReportParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getHeadcountReport>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getHeadcountReport>>,
+          TError,
+          Awaited<ReturnType<typeof getHeadcountReport>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetHeadcountReport<
+  TData = Awaited<ReturnType<typeof getHeadcountReport>>,
+  TError = HTTPValidationError,
+>(
+  params: GetHeadcountReportParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getHeadcountReport>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary Get Headcount Report
+ */
+
+export function useGetHeadcountReport<
+  TData = Awaited<ReturnType<typeof getHeadcountReport>>,
+  TError = HTTPValidationError,
+>(
+  params: GetHeadcountReportParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getHeadcountReport>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetHeadcountReportQueryOptions(params, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<
     TData,
