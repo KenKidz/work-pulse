@@ -378,6 +378,71 @@ export interface HeadcountReport {
   rows: HeadcountReportRow[];
 }
 
+/**
+ * Pinned job lifecycle (`draft → open → closed`).
+ */
+export type JobStatus = (typeof JobStatus)[keyof typeof JobStatus];
+
+export const JobStatus = {
+  draft: "draft",
+  open: "open",
+  closed: "closed",
+} as const;
+
+/**
+ * One hiring opening (pinned response shape).
+ */
+export interface Job {
+  id: string;
+  tenant_id: string;
+  title: string;
+  description?: string | null;
+  department_id: string;
+  position_id: string;
+  location_id: string;
+  openings: number;
+  status: JobStatus;
+  created_by: string;
+  opened_at?: string | null;
+  closed_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Create a job — always `draft` (opening is its own action).
+ */
+export interface JobCreate {
+  /**
+   * @minLength 1
+   * @maxLength 200
+   */
+  title: string;
+  description?: string | null;
+  department_id: string;
+  position_id: string;
+  location_id: string;
+  /** @minimum 1 */
+  openings?: number;
+}
+
+export interface JobListPage {
+  items: Job[];
+  page: Page;
+}
+
+/**
+ * Edit a job while `draft`/`open`; absent fields are unchanged.
+ */
+export interface JobUpdate {
+  title?: string | null;
+  description?: string | null;
+  department_id?: string | null;
+  position_id?: string | null;
+  location_id?: string | null;
+  openings?: number | null;
+}
+
 export interface LeaveBalance {
   tenant_id: string;
   employee_id: string;
@@ -1254,4 +1319,12 @@ export type GetHeadcountReportParams = {
   department_id?: string | null;
   location_id?: string | null;
   position_id?: string | null;
+};
+
+export type ListJobsParams = {
+  status?: JobStatus | null;
+  q?: string | null;
+  department_id?: string | null;
+  page?: number;
+  page_size?: number;
 };

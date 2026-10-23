@@ -16,6 +16,7 @@ from app.api.v1 import (
     overtime,
     payroll,
     realtime,
+    recruitment,
     reports,
     users,
 )
@@ -33,3 +34,4 @@ api_router.include_router(notifications.router, tags=["notifications"])
 api_router.include_router(payroll.router, tags=["payroll"])
 api_router.include_router(realtime.router, tags=["realtime"])
 api_router.include_router(reports.router, tags=["reports"])
+api_router.include_router(recruitment.router, tags=["recruitment"])

@@ -17,6 +17,7 @@ import app.domains.leave.models  # noqa: F401
 import app.domains.organizations.models  # noqa: F401
 import app.domains.overtime.models  # noqa: F401
 import app.domains.payroll.models  # noqa: F401
+import app.domains.recruitment.models  # noqa: F401
 import app.infrastructure.postgres.models_audit  # noqa: F401
 import app.infrastructure.postgres.models_notifications  # noqa: F401
 import app.infrastructure.postgres.models_outbox  # noqa: F401

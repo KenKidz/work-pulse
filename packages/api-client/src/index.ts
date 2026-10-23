@@ -48,6 +48,10 @@ import type {
   HTTPValidationError,
   HeadcountReport,
   HealthzHealthzGet200,
+  Job,
+  JobCreate,
+  JobListPage,
+  JobUpdate,
   LeaveBalance,
   LeaveDecision,
   LeaveReport,
@@ -58,6 +62,7 @@ import type {
   ListAttendanceRecordsParams,
   ListDepartmentsParams,
   ListEmployeesParams,
+  ListJobsParams,
   ListLeaveBalancesParams,
   ListLeaveRequestsParams,
   ListLocationsParams,
@@ -13591,3 +13596,825 @@ export function useGetHeadcountReport<
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+export type createJobResponse201 = {
+  data: Job;
+  status: 201;
+};
+
+export type createJobResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type createJobResponseSuccess = createJobResponse201 & {
+  headers: Headers;
+};
+export type createJobResponseError = createJobResponse422 & {
+  headers: Headers;
+};
+
+export type createJobResponse =
+  createJobResponseSuccess | createJobResponseError;
+
+export const getCreateJobUrl = () => {
+  return `/api/v1/recruitment/jobs`;
+};
+
+/**
+ * Create a job in `draft`.
+ * @summary Create Job
+ */
+export const createJob = async (
+  jobCreate: JobCreate,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<createJobResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return customFetch<createJobResponse>(getCreateJobUrl(), {
+    ...options,
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...getHeaders(options?.headers),
+    },
+    body: JSON.stringify(jobCreate),
+  });
+};
+
+export const getCreateJobMutationKey = () => ["createJob"] as const;
+
+export const getCreateJobMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createJob>>,
+    TError,
+    CreateJobMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createJob>>,
+  TError,
+  CreateJobMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateJobMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createJob>>,
+    CreateJobMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createJob(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateJobMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createJob>>
+>;
+export type CreateJobMutationBody = JobCreate;
+export type CreateJobMutationError = HTTPValidationError;
+export type CreateJobMutationVariables = { data: JobCreate };
+
+/**
+ * @summary Create Job
+ */
+export const useCreateJob = <TError = HTTPValidationError, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createJob>>,
+      TError,
+      CreateJobMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createJob>>,
+  TError,
+  CreateJobMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateJobMutationOptions(options), queryClient);
+};
+
+export type listJobsResponse200 = {
+  data: JobListPage;
+  status: 200;
+};
+
+export type listJobsResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type listJobsResponseSuccess = listJobsResponse200 & {
+  headers: Headers;
+};
+export type listJobsResponseError = listJobsResponse422 & {
+  headers: Headers;
+};
+
+export type listJobsResponse = listJobsResponseSuccess | listJobsResponseError;
+
+export const getListJobsUrl = (params?: ListJobsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/recruitment/jobs?${stringifiedParams}`
+    : `/api/v1/recruitment/jobs`;
+};
+
+/**
+ * Jobs scoped to the caller's visibility (## Roles & access).
+ * @summary List Jobs
+ */
+export const listJobs = async (
+  params?: ListJobsParams,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<listJobsResponse> => {
+  return customFetch<listJobsResponse>(getListJobsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListJobsQueryKey = (params?: ListJobsParams) => {
+  return [`/api/v1/recruitment/jobs`, ...(params ? [params] : [])] as const;
+};
+
+export const getListJobsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listJobs>>,
+  TError = HTTPValidationError,
+>(
+  params?: ListJobsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listJobs>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListJobsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listJobs>>> = ({
+    signal,
+  }) => listJobs(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listJobs>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListJobsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listJobs>>
+>;
+export type ListJobsQueryError = HTTPValidationError;
+
+export function useListJobs<
+  TData = Awaited<ReturnType<typeof listJobs>>,
+  TError = HTTPValidationError,
+>(
+  params: undefined | ListJobsParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listJobs>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listJobs>>,
+          TError,
+          Awaited<ReturnType<typeof listJobs>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useListJobs<
+  TData = Awaited<ReturnType<typeof listJobs>>,
+  TError = HTTPValidationError,
+>(
+  params?: ListJobsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listJobs>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listJobs>>,
+          TError,
+          Awaited<ReturnType<typeof listJobs>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useListJobs<
+  TData = Awaited<ReturnType<typeof listJobs>>,
+  TError = HTTPValidationError,
+>(
+  params?: ListJobsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listJobs>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary List Jobs
+ */
+
+export function useListJobs<
+  TData = Awaited<ReturnType<typeof listJobs>>,
+  TError = HTTPValidationError,
+>(
+  params?: ListJobsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listJobs>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getListJobsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export type getJobResponse200 = {
+  data: Job;
+  status: 200;
+};
+
+export type getJobResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type getJobResponseSuccess = getJobResponse200 & {
+  headers: Headers;
+};
+export type getJobResponseError = getJobResponse422 & {
+  headers: Headers;
+};
+
+export type getJobResponse = getJobResponseSuccess | getJobResponseError;
+
+export const getGetJobUrl = (jobId: string) => {
+  return `/api/v1/recruitment/jobs/${jobId}`;
+};
+
+/**
+ * Job detail; unknown, cross-tenant and out-of-scope ids are `404`.
+ * @summary Get Job
+ */
+export const getJob = async (
+  jobId: string,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<getJobResponse> => {
+  return customFetch<getJobResponse>(getGetJobUrl(jobId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetJobQueryKey = (jobId: string) => {
+  return [`/api/v1/recruitment/jobs/${jobId}`] as const;
+};
+
+export const getGetJobQueryOptions = <
+  TData = Awaited<ReturnType<typeof getJob>>,
+  TError = HTTPValidationError,
+>(
+  jobId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getJob>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetJobQueryKey(jobId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getJob>>> = ({
+    signal,
+  }) => getJob(jobId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: jobId !== null && jobId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getJob>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetJobQueryResult = NonNullable<Awaited<ReturnType<typeof getJob>>>;
+export type GetJobQueryError = HTTPValidationError;
+
+export function useGetJob<
+  TData = Awaited<ReturnType<typeof getJob>>,
+  TError = HTTPValidationError,
+>(
+  jobId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getJob>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getJob>>,
+          TError,
+          Awaited<ReturnType<typeof getJob>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetJob<
+  TData = Awaited<ReturnType<typeof getJob>>,
+  TError = HTTPValidationError,
+>(
+  jobId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getJob>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getJob>>,
+          TError,
+          Awaited<ReturnType<typeof getJob>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetJob<
+  TData = Awaited<ReturnType<typeof getJob>>,
+  TError = HTTPValidationError,
+>(
+  jobId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getJob>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary Get Job
+ */
+
+export function useGetJob<
+  TData = Awaited<ReturnType<typeof getJob>>,
+  TError = HTTPValidationError,
+>(
+  jobId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getJob>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetJobQueryOptions(jobId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export type updateJobResponse200 = {
+  data: Job;
+  status: 200;
+};
+
+export type updateJobResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type updateJobResponseSuccess = updateJobResponse200 & {
+  headers: Headers;
+};
+export type updateJobResponseError = updateJobResponse422 & {
+  headers: Headers;
+};
+
+export type updateJobResponse =
+  updateJobResponseSuccess | updateJobResponseError;
+
+export const getUpdateJobUrl = (jobId: string) => {
+  return `/api/v1/recruitment/jobs/${jobId}`;
+};
+
+/**
+ * Edit a `draft`/`open` job (`409 job_not_open` when closed).
+ * @summary Update Job
+ */
+export const updateJob = async (
+  jobId: string,
+  jobUpdate: JobUpdate,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<updateJobResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return customFetch<updateJobResponse>(getUpdateJobUrl(jobId), {
+    ...options,
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      ...getHeaders(options?.headers),
+    },
+    body: JSON.stringify(jobUpdate),
+  });
+};
+
+export const getUpdateJobMutationKey = () => ["updateJob"] as const;
+
+export const getUpdateJobMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateJob>>,
+    TError,
+    UpdateJobMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateJob>>,
+  TError,
+  UpdateJobMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateJobMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateJob>>,
+    UpdateJobMutationVariables
+  > = (props) => {
+    const { jobId, data } = props ?? {};
+
+    return updateJob(jobId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateJobMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateJob>>
+>;
+export type UpdateJobMutationBody = JobUpdate;
+export type UpdateJobMutationError = HTTPValidationError;
+export type UpdateJobMutationVariables = { jobId: string; data: JobUpdate };
+
+/**
+ * @summary Update Job
+ */
+export const useUpdateJob = <TError = HTTPValidationError, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateJob>>,
+      TError,
+      UpdateJobMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateJob>>,
+  TError,
+  UpdateJobMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateJobMutationOptions(options), queryClient);
+};
+
+export type openJobResponse200 = {
+  data: Job;
+  status: 200;
+};
+
+export type openJobResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type openJobResponseSuccess = openJobResponse200 & {
+  headers: Headers;
+};
+export type openJobResponseError = openJobResponse422 & {
+  headers: Headers;
+};
+
+export type openJobResponse = openJobResponseSuccess | openJobResponseError;
+
+export const getOpenJobUrl = (jobId: string) => {
+  return `/api/v1/recruitment/jobs/${jobId}/open`;
+};
+
+/**
+ * Open a draft job: `draft → open` (`409 job_not_draft` otherwise).
+ * @summary Open Job
+ */
+export const openJob = async (
+  jobId: string,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<openJobResponse> => {
+  return customFetch<openJobResponse>(getOpenJobUrl(jobId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getOpenJobMutationKey = () => ["openJob"] as const;
+
+export const getOpenJobMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof openJob>>,
+    TError,
+    OpenJobMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof openJob>>,
+  TError,
+  OpenJobMutationVariables,
+  TContext
+> => {
+  const mutationKey = getOpenJobMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof openJob>>,
+    OpenJobMutationVariables
+  > = (props) => {
+    const { jobId } = props ?? {};
+
+    return openJob(jobId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type OpenJobMutationResult = NonNullable<
+  Awaited<ReturnType<typeof openJob>>
+>;
+
+export type OpenJobMutationError = HTTPValidationError;
+export type OpenJobMutationVariables = { jobId: string };
+
+/**
+ * @summary Open Job
+ */
+export const useOpenJob = <TError = HTTPValidationError, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof openJob>>,
+      TError,
+      OpenJobMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof openJob>>,
+  TError,
+  OpenJobMutationVariables,
+  TContext
+> => {
+  return useMutation(getOpenJobMutationOptions(options), queryClient);
+};
+
+export type closeJobResponse200 = {
+  data: Job;
+  status: 200;
+};
+
+export type closeJobResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type closeJobResponseSuccess = closeJobResponse200 & {
+  headers: Headers;
+};
+export type closeJobResponseError = closeJobResponse422 & {
+  headers: Headers;
+};
+
+export type closeJobResponse = closeJobResponseSuccess | closeJobResponseError;
+
+export const getCloseJobUrl = (jobId: string) => {
+  return `/api/v1/recruitment/jobs/${jobId}/close`;
+};
+
+/**
+ * Close an open job: `open → closed`, terminal.
+ * @summary Close Job
+ */
+export const closeJob = async (
+  jobId: string,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<closeJobResponse> => {
+  return customFetch<closeJobResponse>(getCloseJobUrl(jobId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getCloseJobMutationKey = () => ["closeJob"] as const;
+
+export const getCloseJobMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof closeJob>>,
+    TError,
+    CloseJobMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof closeJob>>,
+  TError,
+  CloseJobMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCloseJobMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof closeJob>>,
+    CloseJobMutationVariables
+  > = (props) => {
+    const { jobId } = props ?? {};
+
+    return closeJob(jobId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CloseJobMutationResult = NonNullable<
+  Awaited<ReturnType<typeof closeJob>>
+>;
+
+export type CloseJobMutationError = HTTPValidationError;
+export type CloseJobMutationVariables = { jobId: string };
+
+/**
+ * @summary Close Job
+ */
+export const useCloseJob = <TError = HTTPValidationError, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof closeJob>>,
+      TError,
+      CloseJobMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof closeJob>>,
+  TError,
+  CloseJobMutationVariables,
+  TContext
+> => {
+  return useMutation(getCloseJobMutationOptions(options), queryClient);
+};

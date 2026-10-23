@@ -43,6 +43,7 @@ from app.domains.payroll.repository import (
 )
 from app.domains.payroll.service import PayrollService
 from app.domains.realtime.service import RealtimeService
+from app.domains.recruitment.service import RecruitmentService
 from app.domains.reports.exceptions import ReportsUnavailableError
 from app.domains.reports.service import ReportsService
 from app.infrastructure.clickhouse.client import get_clickhouse_client
@@ -84,6 +85,9 @@ from app.infrastructure.postgres.repositories.overtime import (
     PostgresOvertimeRepository,
 )
 from app.infrastructure.postgres.repositories.payroll import PostgresPayrollRepository
+from app.infrastructure.postgres.repositories.recruitment import (
+    PostgresRecruitmentRepository,
+)
 from app.infrastructure.postgres.session import get_session
 from app.infrastructure.redis.client import get_redis
 from app.infrastructure.redis.streams import RedisPresenceStream
@@ -184,6 +188,29 @@ def get_overtime_service(session: SessionDep) -> OvertimeService:
         # Same session, same transaction: the request row, its audit entry and
         # its event envelope commit together or not at all (ADR 0012).
         outbox=PostgresEventOutbox(session, clock=_utc_now),
+    )
+
+
+def get_recruitment_service(session: SessionDep) -> RecruitmentService:
+    """Recruitment jobs/candidates/interviews (T2–T5).
+
+    The outbox shares the request session, so a transition, its audit entry and
+    its event envelope commit together (ADR 0012). Org refs are validated
+    through the Organizations services (conventions: never another domain's
+    internals); the hire seam port joins in T4.
+    """
+    audit = PostgresAuditWriter(session)
+    return RecruitmentService(
+        repo=PostgresRecruitmentRepository(session),
+        audit=audit,
+        outbox=PostgresEventOutbox(session, clock=_utc_now),
+        departments=_department_service(session),
+        positions=PositionService(
+            repo=PostgresPositionRepository(session), audit=audit
+        ),
+        locations=LocationService(
+            repo=PostgresLocationRepository(session), audit=audit
+        ),
     )
 
 
@@ -346,6 +373,7 @@ EmployeeServiceDep = Annotated[EmployeeService, Depends(get_employee_service)]
 AttendanceServiceDep = Annotated[AttendanceService, Depends(get_attendance_service)]
 LeaveServiceDep = Annotated[LeaveService, Depends(get_leave_service)]
 OvertimeServiceDep = Annotated[OvertimeService, Depends(get_overtime_service)]
+RecruitmentServiceDep = Annotated[RecruitmentService, Depends(get_recruitment_service)]
 PayrollServiceDep = Annotated[PayrollService, Depends(get_payroll_service)]
 NotificationInboxServiceDep = Annotated[
     NotificationInboxService, Depends(get_notification_inbox_service)

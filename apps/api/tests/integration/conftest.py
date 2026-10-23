@@ -109,6 +109,7 @@ ALL_TABLES = (
     "payroll_runs, salary_records, payroll_deduction_lines, payroll_configs, "
     "notification_deliveries, notifications, "
     "leave_balances, leave_requests, leave_types, overtime_requests, "
+    "interviews, candidates, jobs, "
     "audit_entries, departments, positions, locations, employees, employments, "
     "shifts, attendance_records, users, sessions, event_outbox"
 )
