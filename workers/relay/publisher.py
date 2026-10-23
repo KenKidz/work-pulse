@@ -4,7 +4,10 @@
 topic exists (admin create, ignore-exists — 1 partition / replication factor 1
 in v1; broker auto-create is the backstop) and starts the producer — but it is
 **never fatal**: a broker that is down at startup must not stop the relay
-(the write path never depends on the bus). `publish()` connects lazily
+(the write path never depends on the bus). Topic creation also pins
+`retention.ms` to `REPORT_RETENTION_MS`, the 24-month maximum report span plus
+a margin, because the reports projection rebuilds by replaying `earliest`
+within that window (ADR 0019 decision 6). `publish()` connects lazily
 (therefore also retries after a broker restart) and sends one stored envelope
 **verbatim**: key = UTF-8 `data.employee_id` when present, otherwise
 `data.run_id` for run-level events (ADR 0012 and its 2026-10-21 amendment —
@@ -29,6 +32,13 @@ from app.shared.outbox import kafka_message_key
 
 _log = get_logger("relay.publisher")
 
+#: Topic retention the reports projection depends on (ADR 0019 decision 6).
+#: Reports accept a range of at most 24 calendar months; 26 months of 31 days
+#: leaves a margin for month-boundary spans and relay/consumer lag. A rebuild
+#: replays `earliest` within this window (the `event_outbox` rows are the
+#: documented re-publish source once the topic has aged past it).
+REPORT_RETENTION_MS = 26 * 31 * 24 * 60 * 60 * 1000
+
 
 class KafkaEnvelopePublisher:
     """`start()` warms up; `publish()` connects lazily and waits for the ack."""
@@ -39,11 +49,13 @@ class KafkaEnvelopePublisher:
         bootstrap_servers: str,
         topic: str,
         partitions: int = 1,
+        retention_ms: int = REPORT_RETENTION_MS,
         request_timeout_ms: int = 40_000,
     ) -> None:
         self._bootstrap_servers = bootstrap_servers
         self._topic = topic
         self._partitions = partitions
+        self._retention_ms = retention_ms
         self._request_timeout_ms = request_timeout_ms
         self._producer: AIOKafkaProducer | None = None
 
@@ -106,6 +118,11 @@ class KafkaEnvelopePublisher:
                             name=self._topic,
                             num_partitions=self._partitions,
                             replication_factor=1,
+                            # Reports replay the retained stream (ADR 0019);
+                            # pin retention at creation. An existing topic is
+                            # the steady state and keeps its own config — ops
+                            # verifies the live value.
+                            topic_configs={"retention.ms": str(self._retention_ms)},
                         )
                     ]
                 )

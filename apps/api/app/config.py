@@ -93,6 +93,16 @@ class Settings(BaseSettings):
         "http://workpulse:workpulse@127.0.0.1:8124/workpulse_test"
     )
 
+    # The reports consumer (workers/reports, ADR 0019): `workpulse.events` →
+    # ClickHouse. A stable group with `earliest` builds the retained history on
+    # a first start and resumes committed offsets on restart. Poll/backoff knobs
+    # mirror the other consumers; a store outage retries head-of-line with the
+    # offset held, so the backoff cap bounds that retry cadence.
+    reports_consumer_group: str = "workpulse-reports"
+    reports_poll_seconds: float = 1.0
+    reports_backoff_base_seconds: float = 1.0
+    reports_backoff_max_seconds: float = 30.0
+
     # --- Identity: sessions (pinned in `.ai/features/identity-access.md`) ---
     # Absolute session lifetime; the `wp_session` cookie itself is a session
     # cookie (no Max-Age) — the server-side TTL is the authority.
