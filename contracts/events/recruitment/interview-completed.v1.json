@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workpulse.dev/contracts/events/recruitment/interview-completed.v1.json",
+  "title": "WorkPulse interview.completed v1",
+  "description": "The assigned interviewer filed feedback, completing the interview. Identifiers and the acting user only — the rating and feedback notes are PII and never leave the database (`.ai/security.md`).",
+  "type": "object",
+  "required": [
+    "interview_id",
+    "candidate_id",
+    "job_id",
+    "interviewer_id",
+    "completed_by"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "interview_id": {
+      "type": "string",
+      "description": "The completed interview (UUIDv7 string)."
+    },
+    "candidate_id": {
+      "type": "string",
+      "description": "The candidate being interviewed (UUIDv7 string). Also the Kafka message key (ADR 0012 — candidate fallback orders interviews with their candidate)."
+    },
+    "job_id": {
+      "type": "string",
+      "description": "The job the candidate applied to (UUIDv7 string)."
+    },
+    "interviewer_id": {
+      "type": "string",
+      "description": "Employee id of the assigned interviewer (UUIDv7 string; a person, not a user account)."
+    },
+    "completed_by": {
+      "type": "string",
+      "description": "Actor user id that filed the feedback — the assigned interviewer (ADR 0010)."
+    }
+  }
+}

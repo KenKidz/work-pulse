@@ -27,6 +27,7 @@ Capability rows are the product's real authorization surface. `Y` = allowed,
 | View team attendance & profiles | — | team | Y | — | Y | Y |
 | Approve leave / overtime | — | team | Y | — | Y | Y |
 | Manage employee records (create/update/terminate) | — | — | Y | — | Y | Y |
+| Run recruitment (jobs, candidates, interviews, hiring) | — | assigned interviews only | Y | — | Y | Y |
 | Manage organization structure | — | — | Y | — | Y | Y |
 | View company-wide reports | — | — | Y | Y | Y | Y |
 | Configure & run payroll | — | — | view | Y | Y | Y |

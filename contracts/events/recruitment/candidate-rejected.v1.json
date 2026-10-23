@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workpulse.dev/contracts/events/recruitment/candidate-rejected.v1.json",
+  "title": "WorkPulse candidate.rejected v1",
+  "description": "HR rejected a candidate from a pre-hire stage. Identifiers, the observed source stage and the acting user only — the rejection note is PII and never leaves the database (`.ai/security.md`).",
+  "type": "object",
+  "required": ["candidate_id", "job_id", "rejected_from", "rejected_by"],
+  "additionalProperties": false,
+  "properties": {
+    "candidate_id": {
+      "type": "string",
+      "description": "The rejected candidate application (UUIDv7 string). Also the Kafka message key (ADR 0012 — candidate fallback)."
+    },
+    "job_id": {
+      "type": "string",
+      "description": "The job the candidate applied to (UUIDv7 string)."
+    },
+    "rejected_from": {
+      "type": "string",
+      "enum": ["applied", "interviewing", "offered"],
+      "description": "Stage the candidate was rejected from."
+    },
+    "rejected_by": {
+      "type": "string",
+      "description": "Actor user id that rejected the candidate (ADR 0010)."
+    }
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workpulse.dev/contracts/events/recruitment/candidate-withdrawn.v1.json",
+  "title": "WorkPulse candidate.withdrawn v1",
+  "description": "HR recorded that a candidate pulled out of the pipeline before being hired. Identifiers and the observed source stage only — withdrawal note text is PII and never leaves the database (`.ai/security.md`).",
+  "type": "object",
+  "required": ["candidate_id", "job_id", "withdrawn_from"],
+  "additionalProperties": false,
+  "properties": {
+    "candidate_id": {
+      "type": "string",
+      "description": "The withdrawn candidate application (UUIDv7 string). Also the Kafka message key (ADR 0012 — candidate fallback)."
+    },
+    "job_id": {
+      "type": "string",
+      "description": "The job the candidate applied to (UUIDv7 string)."
+    },
+    "withdrawn_from": {
+      "type": "string",
+      "enum": ["applied", "interviewing", "offered"],
+      "description": "Stage the candidate was in when the withdrawal was recorded."
+    }
+  }
+}

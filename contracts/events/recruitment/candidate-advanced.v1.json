@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workpulse.dev/contracts/events/recruitment/candidate-advanced.v1.json",
+  "title": "WorkPulse candidate.advanced v1",
+  "description": "An HR-driven pipeline move stepped a candidate one stage forward. Identifiers and the two stage names only — no candidate PII (`.ai/security.md`).",
+  "type": "object",
+  "required": ["candidate_id", "job_id", "from", "to"],
+  "additionalProperties": false,
+  "properties": {
+    "candidate_id": {
+      "type": "string",
+      "description": "The advanced candidate application (UUIDv7 string). Also the Kafka message key (ADR 0012 — candidate fallback)."
+    },
+    "job_id": {
+      "type": "string",
+      "description": "The job the candidate applied to (UUIDv7 string)."
+    },
+    "from": {
+      "type": "string",
+      "enum": ["applied", "interviewing"],
+      "description": "Stage the candidate left; a move is exactly one step forward."
+    },
+    "to": {
+      "type": "string",
+      "enum": ["interviewing", "offered"],
+      "description": "Stage the candidate entered; `hired` is reached only through `candidate.hired`."
+    }
+  }
+}

@@ -156,3 +156,30 @@ event count), so Decision 2 is extended rather than replaced:
   field. Consumers that only read `event_type`/`data` are unaffected.
 - `payslip.issued` remains employee-keyed; it carries `employee_id` and is
   therefore unaffected by this amendment.
+
+## Amendment — 2026-10-23: recruitment key fallback
+
+Recruitment (`.ai/features/recruitment.md`) adds ten event types. Only
+`candidate.hired` carries `employee_id`; the job, candidate and interview
+events describe aggregates that have no employee and no payroll run. Decision 2
+is extended rather than replaced:
+
+- **Message key = the first present field of `data.employee_id` →
+  `data.run_id` → `data.candidate_id` → `data.job_id` → `data.interview_id`.**
+  The order is pinned in `app/shared/outbox.py` (`_MESSAGE_KEY_FIELDS`), so the
+  write gate and the relay's publisher (`kafka_message_key`) cannot disagree.
+- **Ordering rationale.** Employee-addressed facts keep their per-employee pin;
+  payroll runs keep per-run ordering; candidate events order by candidate,
+  which is the pipeline aggregate that absorbs advance/reject/withdraw/hire.
+  Interview payloads carry `candidate_id`, so interviews order with their
+  candidate (not with the interviewer) even though they also carry
+  `interview_id`. Job payloads carry no candidate and key by `job_id`.
+- **`candidate.hired` is employee-keyed**, not candidate-keyed: `employee_id`
+  precedes `candidate_id` in the fallback order, so the hire lands on the new
+  employee's partition like every other employee-scoped fact.
+- **The write gate accepts any one of the five fields.** An envelope carrying
+  none of them is still rejected as a junk payload; validation stays structural
+  and full Draft-2020-12 conformance is proven in tests against
+  `contracts/events/`.
+- **No version bump and no envelope change.** `event-envelope.v1.json` is
+  untouched; the key remains transport metadata derived from `data`.

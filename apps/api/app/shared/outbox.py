@@ -18,7 +18,17 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validato
 
 from app.shared.errors import WorkPulseError
 
-_MESSAGE_KEY_FIELDS = ("employee_id", "run_id")
+# The Kafka message key is the first present field in this order (ADR 0012 and
+# its 2026-10-21 / 2026-10-23 amendments). Employee facts keep per-employee
+# ordering, run-level payroll facts order by run, recruitment candidate events
+# order by candidate, job events by job and interview-only facts by interview.
+_MESSAGE_KEY_FIELDS = (
+    "employee_id",
+    "run_id",
+    "candidate_id",
+    "job_id",
+    "interview_id",
+)
 
 
 class InvalidEnvelopeError(WorkPulseError):
@@ -42,10 +52,14 @@ class InvalidEnvelopeError(WorkPulseError):
 def kafka_message_key(envelope: Mapping[str, Any]) -> str:
     """Resolve the Kafka message key for a stored envelope (ADR 0012).
 
-    Employee-scoped events key by `data.employee_id` (per-employee ordering
-    pin). Run-level events — `payroll.calculated` — have no employee and key by
-    `data.run_id` instead (ADR 0012 amendment, 2026-10-21). If both are present,
-    `employee_id` wins: an employee-addressed fact keeps per-employee ordering.
+    The key is the first present field of `data.employee_id` → `data.run_id` →
+    `data.candidate_id` → `data.job_id` → `data.interview_id` (ADR 0012 and its
+    2026-10-21 / 2026-10-23 amendments). Employee-scoped events keep the
+    per-employee ordering pin; run-level payroll events order by run;
+    recruitment candidate events order by candidate (interviews included,
+    because their payloads carry `candidate_id`), job events by job. When
+    several fields are present the earlier one wins — `candidate.hired` is
+    employee-keyed, not candidate-keyed.
     """
     data = envelope.get("data")
     if not isinstance(data, Mapping):
@@ -56,16 +70,20 @@ def kafka_message_key(envelope: Mapping[str, Any]) -> str:
         if value is not None and value != "":
             return str(value)
 
-    raise ValueError("event envelope data must carry employee_id or run_id (Kafka key)")
+    raise ValueError(
+        "event envelope data must carry employee_id, run_id, candidate_id, "
+        "job_id or interview_id (Kafka key)"
+    )
 
 
 class EventEnvelope(BaseModel):
     """The pinned v1 envelope (`contracts/events/common/event-envelope.v1.json`).
 
     The outbox port's write-time gate. Mirrors the schema's
-    `additionalProperties: false`, and additionally requires `data.employee_id`
-    or (for run-level events) `data.run_id` — one of them is the Kafka message
-    key (ADR 0012 and its 2026-10-21 amendment).
+    `additionalProperties: false`, and additionally requires one of the pinned
+    message-key fields — `data.employee_id`, `data.run_id`,
+    `data.candidate_id`, `data.job_id` or `data.interview_id` (ADR 0012 and its
+    2026-10-21 / 2026-10-23 amendments).
     """
 
     model_config = ConfigDict(extra="forbid")

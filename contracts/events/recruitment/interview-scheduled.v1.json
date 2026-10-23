@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workpulse.dev/contracts/events/recruitment/interview-scheduled.v1.json",
+  "title": "WorkPulse interview.scheduled v1",
+  "description": "An interview was scheduled for an interviewing candidate. Identifiers only — the scheduled time, notes and candidate PII stay out of the event (`.ai/security.md`).",
+  "type": "object",
+  "required": ["interview_id", "candidate_id", "job_id", "interviewer_id"],
+  "additionalProperties": false,
+  "properties": {
+    "interview_id": {
+      "type": "string",
+      "description": "The scheduled interview (UUIDv7 string)."
+    },
+    "candidate_id": {
+      "type": "string",
+      "description": "The candidate being interviewed (UUIDv7 string). Also the Kafka message key (ADR 0012 — candidate fallback orders interviews with their candidate)."
+    },
+    "job_id": {
+      "type": "string",
+      "description": "The job the candidate applied to (UUIDv7 string)."
+    },
+    "interviewer_id": {
+      "type": "string",
+      "description": "Employee id of the assigned interviewer (UUIDv7 string; a person, not a user account)."
+    }
+  }
+}

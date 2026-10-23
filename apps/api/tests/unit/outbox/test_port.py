@@ -2,10 +2,10 @@
 
 `EventEnvelope` is the port's contract check: every one of the 7 catalogued
 builders' outputs must pass, and anything that is not a valid v1 envelope —
-missing `event_id`, no `data.employee_id` (employee-scoped) or `data.run_id`
-(run-level; ADR 0012 amendment), unknown fields — must be rejected before any
-row could be written. No DB, no bus: these tests pass with every container
-stopped (`.ai/testing.md`).
+missing `event_id`, no message-key field (`employee_id` / `run_id` /
+`candidate_id` / `job_id` / `interview_id`; ADR 0012 and its amendments),
+unknown fields — must be rejected before any row could be written. No DB, no
+bus: these tests pass with every container stopped (`.ai/testing.md`).
 """
 
 import traceback
@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domains.attendance import events as attendance_events
 from app.domains.employees import events as employee_events
+from app.domains.recruitment import events as recruitment_events
 from app.infrastructure.postgres.outbox import PostgresEventOutbox
 from app.shared.outbox import EventEnvelope, InvalidEnvelopeError, kafka_message_key
 
@@ -33,6 +34,10 @@ NEW_DEPARTMENT_ID = UUID("00000000-0000-4000-8000-000000000006")
 ATTENDANCE_ID = UUID("00000000-0000-4000-8000-000000000007")
 SHIFT_ID = UUID("00000000-0000-4000-8000-000000000008")
 RUN_ID = UUID("00000000-0000-4000-8000-000000000009")
+RECRUITMENT_JOB_ID = UUID("00000000-0000-4000-8000-00000000000e")
+CANDIDATE_ID = UUID("00000000-0000-4000-8000-00000000000f")
+INTERVIEW_ID = UUID("00000000-0000-4000-8000-000000000010")
+INTERVIEWER_ID = UUID("00000000-0000-4000-8000-000000000011")
 NOW = datetime(2026, 9, 24, 12, 0, tzinfo=UTC)
 WORKDAY = date(2026, 9, 24)
 WRITE_TIME = datetime(2026, 10, 16, 8, 0, tzinfo=UTC)
@@ -161,6 +166,55 @@ def _payroll_calculated() -> dict[str, Any]:
     }
 
 
+def _recruitment_job_opened() -> dict[str, Any]:
+    return recruitment_events.job_opened(
+        tenant_id=TENANT_ID,
+        actor_id=USER_ID,
+        occurred_at=NOW,
+        job_id=RECRUITMENT_JOB_ID,
+        position_id=POSITION_ID,
+        department_id=DEPARTMENT_ID,
+        location_id=LOCATION_ID,
+        openings=2,
+    )
+
+
+def _recruitment_candidate_advanced() -> dict[str, Any]:
+    return recruitment_events.candidate_advanced(
+        tenant_id=TENANT_ID,
+        actor_id=USER_ID,
+        occurred_at=NOW,
+        candidate_id=CANDIDATE_ID,
+        job_id=RECRUITMENT_JOB_ID,
+        from_stage="applied",
+        to_stage="interviewing",
+    )
+
+
+def _recruitment_candidate_hired() -> dict[str, Any]:
+    return recruitment_events.candidate_hired(
+        tenant_id=TENANT_ID,
+        actor_id=USER_ID,
+        occurred_at=NOW,
+        candidate_id=CANDIDATE_ID,
+        job_id=RECRUITMENT_JOB_ID,
+        employee_id=EMPLOYEE_ID,
+        hired_by=USER_ID,
+    )
+
+
+def _recruitment_interview_scheduled() -> dict[str, Any]:
+    return recruitment_events.interview_scheduled(
+        tenant_id=TENANT_ID,
+        actor_id=USER_ID,
+        occurred_at=NOW,
+        interview_id=INTERVIEW_ID,
+        candidate_id=CANDIDATE_ID,
+        job_id=RECRUITMENT_JOB_ID,
+        interviewer_id=INTERVIEWER_ID,
+    )
+
+
 BUILDER_CASES: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("employee.created", _employee_created),
     ("employee.updated", _employee_updated),
@@ -233,6 +287,43 @@ def test_message_key_prefers_employee_id_over_run_id() -> None:
 
     with pytest.raises(ValueError):
         kafka_message_key({"data": {}})
+
+
+def test_message_key_follows_the_recruitment_fallback_order() -> None:
+    """`employee_id` → `run_id` → `candidate_id` → `job_id` → `interview_id`."""
+    assert kafka_message_key(_recruitment_candidate_hired()) == str(EMPLOYEE_ID)
+    assert kafka_message_key(_recruitment_candidate_advanced()) == str(CANDIDATE_ID)
+    assert kafka_message_key(_recruitment_job_opened()) == str(RECRUITMENT_JOB_ID)
+    # Interview payloads carry both `job_id` and `interview_id`; `candidate_id`
+    # wins so interviews stay ordered with their pipeline aggregate.
+    assert kafka_message_key(_recruitment_interview_scheduled()) == str(CANDIDATE_ID)
+
+    # Every fallback step works on its own.
+    for field, expected in (
+        ("candidate_id", CANDIDATE_ID),
+        ("job_id", RECRUITMENT_JOB_ID),
+        ("interview_id", INTERVIEW_ID),
+    ):
+        assert kafka_message_key({"data": {field: str(expected)}}) == str(expected)
+
+
+def test_recruitment_envelopes_pass_the_write_gate() -> None:
+    for build in (
+        _recruitment_job_opened,
+        _recruitment_candidate_advanced,
+        _recruitment_candidate_hired,
+        _recruitment_interview_scheduled,
+    ):
+        EventEnvelope.model_validate(build())
+
+
+def test_envelope_with_only_non_key_data_is_rejected() -> None:
+    """A job payload without `job_id` carries no message key — rejected."""
+    envelope = _recruitment_job_opened()
+    del envelope["data"]["job_id"]
+
+    with pytest.raises(ValidationError):
+        EventEnvelope.model_validate(envelope)
 
 
 def test_unknown_top_level_field_is_rejected() -> None:

@@ -63,7 +63,13 @@ _PII_KEY_MARKERS = ("name", "email", "phone", "salary", "reason", "note")
 
 # `event_type` domain → `contracts/events/` directory (the employees domain's
 # events live under the plural directory).
-_SCHEMA_DIRECTORIES = {"employee": "employees", "attendance": "attendance"}
+_SCHEMA_DIRECTORIES = {
+    "employee": "employees",
+    "attendance": "attendance",
+    "job": "recruitment",
+    "candidate": "recruitment",
+    "interview": "recruitment",
+}
 
 
 def _load(path: Path) -> dict[str, Any]:

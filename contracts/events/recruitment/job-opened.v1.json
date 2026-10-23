@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workpulse.dev/contracts/events/recruitment/job-opened.v1.json",
+  "title": "WorkPulse job.opened v1",
+  "description": "A recruitment job was opened and starts accepting candidates. Identifiers and the opening count only — title, description and all other job text stay out of the event (`.ai/security.md`).",
+  "type": "object",
+  "required": ["job_id", "position_id", "department_id", "location_id", "openings"],
+  "additionalProperties": false,
+  "properties": {
+    "job_id": {
+      "type": "string",
+      "description": "The opened job (UUIDv7 string). Also the Kafka message key (ADR 0012)."
+    },
+    "position_id": {
+      "type": "string",
+      "description": "Position the job hires for (UUIDv7 string)."
+    },
+    "department_id": {
+      "type": "string",
+      "description": "Department the job belongs to (UUIDv7 string)."
+    },
+    "location_id": {
+      "type": "string",
+      "description": "Location the job is based at (UUIDv7 string)."
+    },
+    "openings": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Number of hires the job is open for; hiring stops once hired candidates reach this count."
+    }
+  }
+}

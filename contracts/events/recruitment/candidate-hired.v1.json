@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workpulse.dev/contracts/events/recruitment/candidate-hired.v1.json",
+  "title": "WorkPulse candidate.hired v1",
+  "description": "An offered candidate was hired and the Employee record was created through the Employees seam in the same transaction (ADR 0020). Identifiers and the acting user only — no candidate or employee PII (`.ai/security.md`).",
+  "type": "object",
+  "required": ["candidate_id", "job_id", "employee_id", "hired_by"],
+  "additionalProperties": false,
+  "properties": {
+    "candidate_id": {
+      "type": "string",
+      "description": "The hired candidate application (UUIDv7 string)."
+    },
+    "job_id": {
+      "type": "string",
+      "description": "The job the candidate was hired for (UUIDv7 string)."
+    },
+    "employee_id": {
+      "type": "string",
+      "description": "The Employee record created by the hire seam (UUIDv7 string). Also the Kafka message key — `employee_id` wins over `candidate_id` (ADR 0012)."
+    },
+    "hired_by": {
+      "type": "string",
+      "description": "Actor user id that ran the hire (ADR 0010)."
+    }
+  }
+}

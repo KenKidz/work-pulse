@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workpulse.dev/contracts/events/recruitment/job-closed.v1.json",
+  "title": "WorkPulse job.closed v1",
+  "description": "A recruitment job was closed and no longer accepts candidates or new hires. Identifiers and the acting user only (`.ai/security.md`).",
+  "type": "object",
+  "required": ["job_id", "closed_by"],
+  "additionalProperties": false,
+  "properties": {
+    "job_id": {
+      "type": "string",
+      "description": "The closed job (UUIDv7 string). Also the Kafka message key (ADR 0012)."
+    },
+    "closed_by": {
+      "type": "string",
+      "description": "Actor user id that closed the job (ADR 0010)."
+    }
+  }
+}

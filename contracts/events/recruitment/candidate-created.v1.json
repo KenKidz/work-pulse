@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workpulse.dev/contracts/events/recruitment/candidate-created.v1.json",
+  "title": "WorkPulse candidate.created v1",
+  "description": "HR added a candidate application to an open job. Identifiers and the intake source only — candidate names, emails, phones and notes are PII and never leave the database (`.ai/security.md`).",
+  "type": "object",
+  "required": ["candidate_id", "job_id", "source"],
+  "additionalProperties": false,
+  "properties": {
+    "candidate_id": {
+      "type": "string",
+      "description": "The created candidate application (UUIDv7 string). Also the Kafka message key (ADR 0012 — candidate fallback)."
+    },
+    "job_id": {
+      "type": "string",
+      "description": "The job the candidate applied to (UUIDv7 string)."
+    },
+    "source": {
+      "type": "string",
+      "enum": ["referral", "job_board", "agency", "other"],
+      "description": "How the candidate reached the pipeline (intake channel code only)."
+    }
+  }
+}

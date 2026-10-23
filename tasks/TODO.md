@@ -6,9 +6,11 @@ does the work.
 
 ## Now
 
+- [ ] Recruitment (`.ai/features/recruitment.md`) — `Status: approved`, plan landed 2026-10-23 (T1–T9: contracts/outbox keys → API → hire seam → web → e2e); T1 landed 2026-10-23 (ten event contracts, outbox key fallback, ADRs 0020/0012); next: build T2
+
 ## Later
 
-- [ ] Phase 4: ClickHouse analytics · Payroll (simulated, ADR 0003) · Recruitment · Performance · Documents
+- [ ] Phase 4+: Performance · Documents
 - [ ] Phase 5: CDC / Debezium
 - [ ] Phase 6: OpenTelemetry / Prometheus / Grafana
 - [ ] Phase 7: load testing, rate limiting, circuit breakers

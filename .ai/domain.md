@@ -97,7 +97,16 @@ where it actually flows on the bus.
 | `overtime.withdrawn` | the requester withdraws before verification | 3 | 3 | Workflow, Notifications |
 | `payroll.calculated` | a payroll run completes | 4 | 4 | Notifications, Analytics |
 | `payslip.issued` | a payslip becomes available | 4 | 4 | Notifications |
-| `candidate.created` / `interview.completed` | recruitment moves | 4+ | 4+ | Notifications, Analytics |
+| `job.opened` | a job starts accepting candidates | 4+ | 4+ | Analytics |
+| `job.closed` | a job stops accepting candidates | 4+ | 4+ | Analytics |
+| `candidate.created` | HR adds a candidate to an open job | 4+ | 4+ | Notifications, Analytics |
+| `candidate.advanced` | a candidate moves one pipeline stage | 4+ | 4+ | Analytics |
+| `candidate.rejected` | HR rejects a pre-hire candidate | 4+ | 4+ | Analytics |
+| `candidate.withdrawn` | HR records a candidate withdrawal | 4+ | 4+ | Analytics |
+| `candidate.hired` | a hire creates the employee through the seam | 4+ | 4+ | Analytics |
+| `interview.scheduled` | an interview is scheduled | 4+ | 4+ | Analytics |
+| `interview.completed` | the assigned interviewer files feedback | 4+ | 4+ | Notifications, Analytics |
+| `interview.cancelled` | a scheduled interview is cancelled | 4+ | 4+ | Analytics |
 | `performance.review_completed` | a review is finalized | 4+ | 4+ | Analytics |
 
 Envelope and versioning rules: `contracts/README.md`,
@@ -137,6 +146,33 @@ withdraw (own): REQUESTED | MANAGER_APPROVED ─► WITHDRAWN
 `INCLUDED_IN_PAYROLL` is written only by payroll's finalize through the write
 port (ADR 0018) — no overtime endpoint reaches it, and the flip is the one
 transition without an `overtime.*` event.
+
+**Job**
+
+```text
+DRAFT ─► OPEN ─► CLOSED (terminal)
+```
+
+**Candidate**
+
+```text
+APPLIED ─► INTERVIEWING ─► OFFERED ─► HIRED (terminal)
+   │              │             │
+   └──────────────┴─────────────┴─► REJECTED | WITHDRAWN (terminal)
+```
+
+Stage moves are HR-driven. `HIRED` is written only by the hire flow after the
+Employees seam succeeds (ADR 0020); terminal candidates are never re-opened.
+
+**Interview**
+
+```text
+SCHEDULED ─┬─► COMPLETED (the assigned interviewer files feedback)
+           └─► CANCELLED
+```
+
+`COMPLETED` and `CANCELLED` are terminal. Completing an interview does not move
+the candidate's stage.
 
 **Employment**
 

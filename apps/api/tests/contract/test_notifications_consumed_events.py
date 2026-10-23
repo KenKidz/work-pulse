@@ -32,6 +32,7 @@ from app.domains.employees import events as employee_events
 from app.domains.leave import events as leave_events
 from app.domains.notifications.models import NotificationKind
 from app.domains.overtime import events as overtime_events
+from app.domains.recruitment import events as recruitment_events
 from workers.notifications.mapping import TRIGGER_EVENT_TYPES, map_envelope
 from workers.notifications.templates import render
 
@@ -53,6 +54,11 @@ LOCATION_ID = UUID("00000000-0000-4000-8000-00000000000a")
 PAYROLL_RUN_ID = UUID("00000000-0000-4000-8000-00000000000b")
 PAYSLIP_ID = UUID("00000000-0000-4000-8000-00000000000c")
 OVERTIME_ID = UUID("00000000-0000-4000-8000-00000000000d")
+RECRUITMENT_JOB_ID = UUID("00000000-0000-4000-8000-00000000000e")
+CANDIDATE_ID = UUID("00000000-0000-4000-8000-00000000000f")
+INTERVIEW_ID = UUID("00000000-0000-4000-8000-000000000010")
+INTERVIEWER_ID = UUID("00000000-0000-4000-8000-000000000011")
+HIRED_EMPLOYEE_ID = UUID("00000000-0000-4000-8000-000000000012")
 NOW = datetime(2026, 10, 21, 9, 0, tzinfo=UTC)
 WORKDAY = date(2026, 10, 21)
 END_DATE = date(2026, 10, 23)
@@ -281,6 +287,108 @@ BUILDER_CASES: dict[str, Callable[[], dict[str, Any]]] = {
         overtime_id=OVERTIME_ID,
         employee_id=EMPLOYEE_ID,
         work_date=WORKDAY,
+    ),
+    "recruitment/job-opened.v1.json": lambda: recruitment_events.job_opened(
+        tenant_id=TENANT_ID,
+        actor_id=ACTOR_ID,
+        occurred_at=NOW,
+        job_id=RECRUITMENT_JOB_ID,
+        position_id=POSITION_ID,
+        department_id=DEPARTMENT_ID,
+        location_id=LOCATION_ID,
+        openings=2,
+    ),
+    "recruitment/job-closed.v1.json": lambda: recruitment_events.job_closed(
+        tenant_id=TENANT_ID,
+        actor_id=ACTOR_ID,
+        occurred_at=NOW,
+        job_id=RECRUITMENT_JOB_ID,
+        closed_by=DECIDER_ID,
+    ),
+    "recruitment/candidate-created.v1.json": (
+        lambda: recruitment_events.candidate_created(
+            tenant_id=TENANT_ID,
+            actor_id=ACTOR_ID,
+            occurred_at=NOW,
+            candidate_id=CANDIDATE_ID,
+            job_id=RECRUITMENT_JOB_ID,
+            source="referral",
+        )
+    ),
+    "recruitment/candidate-advanced.v1.json": (
+        lambda: recruitment_events.candidate_advanced(
+            tenant_id=TENANT_ID,
+            actor_id=ACTOR_ID,
+            occurred_at=NOW,
+            candidate_id=CANDIDATE_ID,
+            job_id=RECRUITMENT_JOB_ID,
+            from_stage="applied",
+            to_stage="interviewing",
+        )
+    ),
+    "recruitment/candidate-rejected.v1.json": (
+        lambda: recruitment_events.candidate_rejected(
+            tenant_id=TENANT_ID,
+            actor_id=ACTOR_ID,
+            occurred_at=NOW,
+            candidate_id=CANDIDATE_ID,
+            job_id=RECRUITMENT_JOB_ID,
+            rejected_from="interviewing",
+            rejected_by=DECIDER_ID,
+        )
+    ),
+    "recruitment/candidate-withdrawn.v1.json": (
+        lambda: recruitment_events.candidate_withdrawn(
+            tenant_id=TENANT_ID,
+            actor_id=ACTOR_ID,
+            occurred_at=NOW,
+            candidate_id=CANDIDATE_ID,
+            job_id=RECRUITMENT_JOB_ID,
+            withdrawn_from="offered",
+        )
+    ),
+    "recruitment/candidate-hired.v1.json": lambda: recruitment_events.candidate_hired(
+        tenant_id=TENANT_ID,
+        actor_id=ACTOR_ID,
+        occurred_at=NOW,
+        candidate_id=CANDIDATE_ID,
+        job_id=RECRUITMENT_JOB_ID,
+        employee_id=HIRED_EMPLOYEE_ID,
+        hired_by=DECIDER_ID,
+    ),
+    "recruitment/interview-scheduled.v1.json": (
+        lambda: recruitment_events.interview_scheduled(
+            tenant_id=TENANT_ID,
+            actor_id=ACTOR_ID,
+            occurred_at=NOW,
+            interview_id=INTERVIEW_ID,
+            candidate_id=CANDIDATE_ID,
+            job_id=RECRUITMENT_JOB_ID,
+            interviewer_id=INTERVIEWER_ID,
+        )
+    ),
+    "recruitment/interview-completed.v1.json": (
+        lambda: recruitment_events.interview_completed(
+            tenant_id=TENANT_ID,
+            actor_id=ACTOR_ID,
+            occurred_at=NOW,
+            interview_id=INTERVIEW_ID,
+            candidate_id=CANDIDATE_ID,
+            job_id=RECRUITMENT_JOB_ID,
+            interviewer_id=INTERVIEWER_ID,
+            completed_by=DECIDER_ID,
+        )
+    ),
+    "recruitment/interview-cancelled.v1.json": (
+        lambda: recruitment_events.interview_cancelled(
+            tenant_id=TENANT_ID,
+            actor_id=ACTOR_ID,
+            occurred_at=NOW,
+            interview_id=INTERVIEW_ID,
+            candidate_id=CANDIDATE_ID,
+            job_id=RECRUITMENT_JOB_ID,
+            cancelled_by=DECIDER_ID,
+        )
     ),
     "payroll/payroll-calculated.v1.json": lambda: _raw_envelope(
         "payroll.calculated",
