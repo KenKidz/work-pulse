@@ -1,5 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 
+/** `full-hop.sh` pins the throwaway analytics store for the whole hop. */
+const clickhouseUrl = process.env.CLICKHOUSE_URL;
+
 /**
  * E2E gate — cross-surface flows in `tests/e2e/` (run via `make check-e2e`).
  *
@@ -41,6 +44,13 @@ export default defineConfig({
       url: 'http://localhost:8000/healthz',
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
+      // Pass the hop's pinned store explicitly: the API must read the same
+      // database the reports worker writes, even though the config-level
+      // `env` would normally inherit it anyway. Omitted outside the hop, so a
+      // direct `npx playwright test` keeps the API's `.env` default.
+      env: clickhouseUrl
+        ? { ...process.env, CLICKHOUSE_URL: clickhouseUrl }
+        : undefined,
     },
     {
       command: 'pnpm run dev',

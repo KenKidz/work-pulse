@@ -1,6 +1,6 @@
 # Feature: Analytics & Reports
 
-- **Status:** approved
+- **Status:** done
 - **Phase:** 4
 - **Size:** L
 - **Surfaces:** api+web+events+workers
@@ -344,20 +344,20 @@ rule 3 describes.
 
 ## Acceptance criteria
 
-- [ ] API (overtime): given projected fixtures spanning two departments, two locations and multiple tenures, `GET /api/v1/reports/overtime?from&to&group_by=department,location,seniority&interval=month` returns rows whose `verified_hours`, `verified_request_count`, `verified_day_count`, `active_employee_count` and `hours_per_employee` exactly match the expected per-group per-month aggregates.
-- [ ] API (latency): that same six-month flagship query over seeded volume completes in < 1s in the integration benchmark (`.ai/product.md` Phase-4 metric).
-- [ ] API (attendance/leave/headcount): each report returns its pinned metric block; leave with `group_by=leave_type` buckets by `leave_type_code`; headcount with `interval=total` reports `headcount` as of `to` plus range `joiners`/`leavers`.
-- [ ] API (attribution): an employee transferred mid-range contributes pre-transfer facts to the old department and post-transfer facts to the new one (per-fact date attribution).
-- [ ] API (failure): `from > to` or span > 24 months or `group_by=leave_type` on a non-leave report → `422`; an unreachable ClickHouse → `503 reports_unavailable` with the house error shape.
-- [ ] API (denied role): an Employee-role call to any report endpoint → `403`; a Manager's rows cover only self + direct reports (fixtures span two managers' teams).
-- [ ] API (tenant isolation): tenant B querying the same ranges sees no tenant-A facts (empty rows), including with tenant-A dimension filters — 404/empty, never 403-shaped leakage.
-- [ ] API (PII): a response/log/row sweep finds no names, emails, salaries, leave reasons or employee ids — only group keys, labels, dates, counts and hours.
-- [ ] Worker: redelivering the whole stream (duplicate `event_id`s) leaves aggregates byte-identical; an `hr_verified → rejected` un-verification removes its hours; unknown and malformed messages are skipped without stalling; offsets commit only after the ClickHouse write.
-- [ ] Worker (rebuild): truncating the projection and replaying from `earliest` reproduces the exact aggregates (pure-consumer proof, `.ai/domain.md`).
-- [ ] Contracts: `hired_at`/`to_position_id`/`to_location_id` validate in the extended v1 schemas, the producers fill them, and a pre-extension payload still validates (additive proof, ADR 0013).
-- [ ] Web: the Reports workspace renders each report with loading, empty and error states; filter changes re-query with new TanStack Query keys (no ad-hoc fetch); charts + tables show the same rows; the surface follows `workpulse-ui` (incl. `--chart-1..5`) and the control-language rules.
-- [ ] Web (denied): an Employee user never sees the Reports nav and a direct visit is denied (API 403 rendered as the error state).
-- [ ] E2E: with ClickHouse + the reports worker in the hop, an HR login opens /reports and sees non-empty overtime rows for seeded verified overtime; an Employee login cannot reach the surface.
+- [x] API (overtime): given projected fixtures spanning two departments, two locations and multiple tenures, `GET /api/v1/reports/overtime?from&to&group_by=department,location,seniority&interval=month` returns rows whose `verified_hours`, `verified_request_count`, `verified_day_count`, `active_employee_count` and `hours_per_employee` exactly match the expected per-group per-month aggregates.
+- [x] API (latency): that same six-month flagship query over seeded volume completes in < 1s in the integration benchmark (`.ai/product.md` Phase-4 metric).
+- [x] API (attendance/leave/headcount): each report returns its pinned metric block; leave with `group_by=leave_type` buckets by `leave_type_code`; headcount with `interval=total` reports `headcount` as of `to` plus range `joiners`/`leavers`.
+- [x] API (attribution): an employee transferred mid-range contributes pre-transfer facts to the old department and post-transfer facts to the new one (per-fact date attribution).
+- [x] API (failure): `from > to` or span > 24 months or `group_by=leave_type` on a non-leave report → `422`; an unreachable ClickHouse → `503 reports_unavailable` with the house error shape.
+- [x] API (denied role): an Employee-role call to any report endpoint → `403`; a Manager's rows cover only self + direct reports (fixtures span two managers' teams).
+- [x] API (tenant isolation): tenant B querying the same ranges sees no tenant-A facts (empty rows), including with tenant-A dimension filters — 404/empty, never 403-shaped leakage.
+- [x] API (PII): a response/log/row sweep finds no names, emails, salaries, leave reasons or employee ids — only group keys, labels, dates, counts and hours.
+- [x] Worker: redelivering the whole stream (duplicate `event_id`s) leaves aggregates byte-identical; an `hr_verified → rejected` un-verification removes its hours; unknown and malformed messages are skipped without stalling; offsets commit only after the ClickHouse write.
+- [x] Worker (rebuild): truncating the projection and replaying from `earliest` reproduces the exact aggregates (pure-consumer proof, `.ai/domain.md`).
+- [x] Contracts: `hired_at`/`to_position_id`/`to_location_id` validate in the extended v1 schemas, the producers fill them, and a pre-extension payload still validates (additive proof, ADR 0013).
+- [x] Web: the Reports workspace renders each report with loading, empty and error states; filter changes re-query with new TanStack Query keys (no ad-hoc fetch); charts + tables show the same rows; the surface follows `workpulse-ui` (incl. `--chart-1..5`) and the control-language rules.
+- [x] Web (denied): an Employee user never sees the Reports nav and a direct visit is denied (API 403 rendered as the error state).
+- [x] E2E: with ClickHouse + the reports worker in the hop, an HR login opens /reports and sees non-empty overtime rows for seeded verified overtime; an Employee login cannot reach the surface.
 
 ## Decisions (PO, 2026-10-22)
 

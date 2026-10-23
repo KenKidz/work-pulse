@@ -3,11 +3,12 @@
 #
 # The wall's live-delta spec is only meaningful when its only input is the
 # bus, so the e2e gate runs the full hop around Playwright: the outbox relay,
-# the realtime consumer and the payroll calculation worker against the
-# throwaway kafka-test broker (:9093), while the dev PostgreSQL and Redis — the
-# same services Playwright's uvicorn reads — keep serving the app. `make
-# check-e2e` owns service startup, migrations and seeding; this script owns the
-# worker processes and exposes them as the Playwright run's surroundings.
+# the realtime consumer, the payroll calculation worker and the reports
+# projection worker against the throwaway kafka-test broker (:9093) and
+# clickhouse-test store (:8124), while the dev PostgreSQL and Redis — the same
+# services Playwright's uvicorn reads — keep serving the app. `make check-e2e`
+# owns service startup, migrations and seeding; this script owns the worker
+# processes and exposes them as the Playwright run's surroundings.
 #
 # Readiness is deterministic log lines, never sleeps: `relay_started` lands
 # after the publisher connected, `realtime_consumer_started` after the
@@ -23,6 +24,12 @@ API_DIR="$ROOT_DIR/apps/api"
 # recorded PID is the worker itself (no wrapper to forward signals through).
 PYTHON="$API_DIR/.venv/bin/python"
 BOOTSTRAP="localhost:9093" # the kafka-test service the Makefile brings up
+# Reports read and project the throwaway analytics store. Pin it rather than
+# honoring a caller's CLICKHOUSE_URL: synthetic fixtures must never reach
+# another store, and the Playwright-managed API must read the same database
+# the reports worker writes (the DSN is the clickhouse-test service).
+CLICKHOUSE_URL="http://workpulse:workpulse@127.0.0.1:8124/workpulse_test"
+export CLICKHOUSE_URL
 
 if [[ ! -x "$PYTHON" ]]; then
   echo "full-hop: missing $PYTHON — run 'make install' first." >&2
@@ -33,9 +40,11 @@ LOG_DIR="$(mktemp -d)"
 RELAY_LOG="$LOG_DIR/relay.log"
 REALTIME_LOG="$LOG_DIR/realtime.log"
 PAYROLL_LOG="$LOG_DIR/payroll.log"
+REPORTS_LOG="$LOG_DIR/reports.log"
 RELAY_PID=""
 REALTIME_PID=""
 PAYROLL_PID=""
+REPORTS_PID=""
 
 # Ids-only worker logs: safe to surface when the hop misbehaves (a readiness
 # bug otherwise reads as a product flake — R4).
@@ -47,6 +56,8 @@ dump_logs() {
   tail -n 40 "$REALTIME_LOG" >&2 || true
   echo "full-hop: payroll log (tail):" >&2
   tail -n 40 "$PAYROLL_LOG" >&2 || true
+  echo "full-hop: reports log (tail):" >&2
+  tail -n 40 "$REPORTS_LOG" >&2 || true
 }
 
 stop_worker() {
@@ -66,12 +77,13 @@ cleanup() {
   local status=$?
   trap - EXIT
   set +e
+  stop_worker "$REPORTS_PID"
   stop_worker "$PAYROLL_PID"
   stop_worker "$REALTIME_PID"
   stop_worker "$RELAY_PID"
   # Pre-flight guard failures have no worker logs (and no Kafka dependency to
   # diagnose); only dump the tails once a worker was actually launched.
-  if ((status != 0)) && [[ -n "$RELAY_PID$REALTIME_PID$PAYROLL_PID" ]]; then
+  if ((status != 0)) && [[ -n "$RELAY_PID$REALTIME_PID$PAYROLL_PID$REPORTS_PID" ]]; then
     dump_logs
   fi
   rm -rf "$LOG_DIR"
@@ -107,13 +119,31 @@ assert_no_other_workers() {
     echo "full-hop: 'pgrep' is required to check for concurrent workers." >&2
     exit 1
   fi
-  pids="$(pgrep -f 'workers\.(relay|realtime|payroll)\.main' || true)"
+  pids="$(pgrep -f 'workers\.(relay|realtime|payroll|reports)\.main' || true)"
   if [[ -n "$pids" ]]; then
-    echo "full-hop: another relay/realtime/payroll worker is already running:" >&2
+    echo "full-hop: another relay/realtime/payroll/reports worker is already running:" >&2
     echo "full-hop:   $(echo "$pids" | tr '\n' ' ')" >&2
     echo "full-hop: stop 'make dev-relay' / 'make dev-realtime' / 'make" >&2
-    echo "full-hop: dev-payroll' (or a leaked worker from an earlier gate)" >&2
-    echo "full-hop: before running the hop." >&2
+    echo "full-hop: dev-payroll' / 'make dev-reports' (or a leaked worker" >&2
+    echo "full-hop: from an earlier gate) before running the hop." >&2
+    exit 1
+  fi
+}
+
+# Playwright reuses an existing API server outside CI. That server keeps the
+# ClickHouse URL it was started with, while this run's reports worker uses the
+# pinned test store — the report polls and UI would read a different database.
+# Refuse before anything writes, so the gate can never false-green on stale
+# dev rows or timeout against an empty dev projection.
+assert_no_existing_api() {
+  if "$PYTHON" -c 'import socket, sys
+sock = socket.socket()
+sock.settimeout(0.2)
+sys.exit(0 if sock.connect_ex(("127.0.0.1", 8000)) == 0 else 1)'; then
+    echo "full-hop: an API is already listening on :8000. Playwright would" >&2
+    echo "full-hop: reuse it with a different ClickHouse URL than this run's" >&2
+    echo "full-hop: reports worker. Stop 'make dev-api' (or the stray" >&2
+    echo "full-hop: uvicorn) before running the hop." >&2
     exit 1
   fi
 }
@@ -358,12 +388,205 @@ reset_overtime_fixtures() {
   fi
 }
 
+# The reports spec asserts exact, labelled rows, so it starts from the real
+# builders' envelopes published to kafka-test before the reports worker starts:
+# the worker folds them into clickhouse-test exactly as it folds production
+# events. The projection is truncated first and the fixture uses a synthetic
+# People Ops employee with fixed dates, so earlier specs and reruns cannot
+# satisfy the assertions or leave a duplicate month-partitioned leave row. No
+# OLTP row is touched — reports are a projection of the stream (spec rule 1).
+# Synthetic data only (`.ai/testing.md` rule 6).
+reset_reports_fixtures() {
+  if ! (
+    cd "$API_DIR" || exit 1
+    env KAFKA_BOOTSTRAP_SERVERS="$BOOTSTRAP" PYTHONPATH="../..:." "$PYTHON" - <<'PY'
+import asyncio
+import json
+from datetime import UTC, date, datetime, timedelta
+from decimal import Decimal
+from uuid import UUID
+
+from aiokafka import AIOKafkaProducer
+
+from app.config import get_settings
+from app.infrastructure.clickhouse.client import create_clickhouse_client
+from app.domains.attendance.events import (
+    attendance_checked_in,
+    attendance_checked_out,
+)
+from app.domains.employees.events import employee_created
+from app.domains.leave.events import leave_approved
+from app.domains.overtime.events import (
+    overtime_approved,
+    overtime_requested,
+    overtime_verified,
+)
+
+TENANT_ID = UUID("00000000-0000-4000-8000-000000000001")
+# A synthetic employee in People Ops, deliberately not the seeded worker that
+# the overtime/payroll/leave specs write to. Fixed fact dates keep reruns on the
+# same rows (including the month-partitioned fact_leave row) no matter when the
+# gate runs; the e2e sets its report window to these dates.
+EMPLOYEE_ID = UUID("00000000-0000-4000-8000-00000000e2e1")
+WORKER_USER_ID = UUID("00000000-0000-4000-8000-000000000013")
+MANAGER_USER_ID = UUID("00000000-0000-4000-8000-000000000014")
+HR_USER_ID = UUID("00000000-0000-4000-8000-000000000012")
+DEPARTMENT_ID = UUID("00000000-0000-4000-8000-0000000d0005")  # People Ops
+POSITION_ID = UUID("00000000-0000-4000-8000-0000000e0004")  # HR Specialist
+LOCATION_ID = UUID("00000000-0000-4000-8000-0000000c0002")  # Berlin Office
+OVERTIME_ID = UUID("00000000-0000-4000-8000-0000000f0001")
+ATTENDANCE_ID = UUID("00000000-0000-4000-8000-0000000a0001")
+LEAVE_REQUEST_ID = UUID("00000000-0000-4000-8000-0000000b0001")
+
+OVERTIME_HOURS = Decimal("2.50")
+HIRED_AT = date(2024, 1, 15)
+WORK_DATE = date(2026, 6, 15)
+LEAVE_START = date(2026, 6, 20)
+
+
+def fixtures() -> list[dict[str, object]]:
+    now = datetime.now(UTC)
+    return [
+        employee_created(
+            tenant_id=TENANT_ID,
+            actor_id=WORKER_USER_ID,
+            occurred_at=now,
+            employee_id=EMPLOYEE_ID,
+            department_id=DEPARTMENT_ID,
+            position_id=POSITION_ID,
+            location_id=LOCATION_ID,
+            employment_type="full_time",
+            hired_at=HIRED_AT,
+        ),
+        overtime_requested(
+            tenant_id=TENANT_ID,
+            actor_id=WORKER_USER_ID,
+            occurred_at=now,
+            overtime_id=OVERTIME_ID,
+            employee_id=EMPLOYEE_ID,
+            work_date=WORK_DATE,
+            hours=OVERTIME_HOURS,
+        ),
+        overtime_approved(
+            tenant_id=TENANT_ID,
+            actor_id=MANAGER_USER_ID,
+            occurred_at=now,
+            overtime_id=OVERTIME_ID,
+            employee_id=EMPLOYEE_ID,
+            work_date=WORK_DATE,
+            hours=OVERTIME_HOURS,
+            approved_by=MANAGER_USER_ID,
+        ),
+        overtime_verified(
+            tenant_id=TENANT_ID,
+            actor_id=HR_USER_ID,
+            occurred_at=now,
+            overtime_id=OVERTIME_ID,
+            employee_id=EMPLOYEE_ID,
+            work_date=WORK_DATE,
+            hours=OVERTIME_HOURS,
+            verified_by=HR_USER_ID,
+        ),
+        attendance_checked_in(
+            tenant_id=TENANT_ID,
+            actor_id=WORKER_USER_ID,
+            occurred_at=now,
+            attendance_id=ATTENDANCE_ID,
+            employee_id=EMPLOYEE_ID,
+            workday=WORK_DATE,
+            work_mode="onsite",
+            late=False,
+            minutes_late=None,
+        ),
+        attendance_checked_out(
+            tenant_id=TENANT_ID,
+            actor_id=WORKER_USER_ID,
+            occurred_at=now,
+            attendance_id=ATTENDANCE_ID,
+            employee_id=EMPLOYEE_ID,
+            workday=WORK_DATE,
+            duration_minutes=450,
+            late=False,
+            minutes_late=None,
+        ),
+        leave_approved(
+            tenant_id=TENANT_ID,
+            actor_id=MANAGER_USER_ID,
+            occurred_at=now,
+            leave_request_id=LEAVE_REQUEST_ID,
+            employee_id=EMPLOYEE_ID,
+            leave_type_code="annual",
+            start_date=LEAVE_START,
+            end_date=LEAVE_START + timedelta(days=1),
+            days=2,
+            decided_by=MANAGER_USER_ID,
+        ),
+    ]
+
+
+def reset_projection() -> None:
+    """Clear the throwaway projection so this run proves its own fixtures.
+
+    `clickhouse-test` survives across compose invocations, and a prior run's
+    facts (including a month-partitioned leave row) can otherwise satisfy the
+    non-empty checks or double-count. The worker applies its DDL afterward.
+    """
+    client = create_clickhouse_client()
+    try:
+        for table in (
+            "dim_employee",
+            "dim_assignment",
+            "fact_overtime",
+            "fact_attendance",
+            "fact_leave",
+            "projection_state",
+        ):
+            client.command(f"TRUNCATE TABLE IF EXISTS {table}")
+    finally:
+        client.close()
+
+
+async def publish() -> None:
+    settings = get_settings()
+    producer = AIOKafkaProducer(
+        bootstrap_servers=settings.kafka_bootstrap_servers
+    )
+    await producer.start()
+    try:
+        for event in fixtures():
+            # Key by employee_id like the relay does: the worker folds these
+            # in per-partition order, so employee.created lands before the
+            # facts that need its dimension stamp.
+            await producer.send_and_wait(
+                settings.kafka_events_topic,
+                key=str(EMPLOYEE_ID).encode("utf-8"),
+                value=json.dumps(event).encode("utf-8"),
+            )
+    finally:
+        await producer.stop()
+
+
+def main() -> None:
+    reset_projection()
+    asyncio.run(publish())
+
+
+main()
+PY
+  ); then
+    echo "full-hop: could not publish the reports projection fixtures" >&2
+    exit 1
+  fi
+}
+
 assert_no_other_workers
+assert_no_existing_api
 assert_dev_outbox_is_clean
 reset_leave_fixtures
 reset_notification_fixtures
 reset_payroll_fixtures
 reset_overtime_fixtures
+reset_reports_fixtures
 
 # All workers run inside the apps/api uv environment, reading the same
 # settings/.env as uvicorn; only the broker is overridden (kafka-test).
@@ -392,9 +615,20 @@ REALTIME_PID=$!
 ) >"$PAYROLL_LOG" 2>&1 &
 PAYROLL_PID=$!
 
+# The reports worker folds the fixtures published above into clickhouse-test:
+# it consumes from `earliest` within the retained history with its stable
+# group, and its readiness line is the first completed fetch round.
+(
+  cd "$API_DIR"
+  exec env KAFKA_BOOTSTRAP_SERVERS="$BOOTSTRAP" CLICKHOUSE_URL="$CLICKHOUSE_URL" \
+    PYTHONPATH="../..:." "$PYTHON" -m workers.reports.main
+) >"$REPORTS_LOG" 2>&1 &
+REPORTS_PID=$!
+
 wait_for_line relay "$RELAY_PID" "$RELAY_LOG" relay_started
 wait_for_line realtime "$REALTIME_PID" "$REALTIME_LOG" realtime_consumer_started
 wait_for_line payroll "$PAYROLL_PID" "$PAYROLL_LOG" payroll_worker_started
+wait_for_line reports "$REPORTS_PID" "$REPORTS_LOG" reports_started
 
 cd "$ROOT_DIR"
 npx playwright test

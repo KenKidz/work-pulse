@@ -7,7 +7,8 @@ Stack and rationale: ADR 0005 (`.ai/decisions/0005-frontend-stack.md`).
 
 Tailwind CSS v4 · shadcn/ui (Radix + lucide-react + sonner) · TanStack Query v5 ·
 orval-generated `@workpulse/api-client` · react-hook-form + zod · Zustand ·
-dayjs (`utc` + `timezone`) · ESLint + Prettier · Vitest + Testing Library.
+dayjs (`utc` + `timezone`) · Recharts (Reports charts only) · ESLint + Prettier ·
+Vitest + Testing Library.
 
 ## Commands
 

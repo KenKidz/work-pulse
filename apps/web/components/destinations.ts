@@ -3,6 +3,7 @@ import {
   Building2,
   CalendarClock,
   CalendarDays,
+  ChartColumn,
   LayoutDashboard,
   MonitorDot,
   ReceiptText,
@@ -15,6 +16,7 @@ import {
 import type { Role } from "@workpulse/api-client/index.schemas";
 
 import { PAYROLL_VIEW_ROLES } from "@/features/payroll/roles";
+import { REPORT_READ_ROLES } from "@/features/reports/roles";
 
 export type Destination = {
   href: string;
@@ -114,6 +116,12 @@ export const NAV_ITEMS: NavItem[] = [
     roles: PAYROLL_VIEW_ROLES,
   },
   { href: "/payroll/my-payslips", label: "My payslips", icon: ReceiptText },
+  {
+    href: "/reports",
+    label: "Reports",
+    icon: ChartColumn,
+    roles: REPORT_READ_ROLES,
+  },
   {
     href: "/command-center",
     label: "Command center",
