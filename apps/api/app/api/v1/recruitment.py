@@ -1,4 +1,4 @@
-"""Recruitment routes — jobs first (T2), candidates/interviews in T3/T5.
+"""Recruitment routes — jobs (T2), candidates (T3), interviews (T5).
 
 Thin by rule: identity → domain policy/service; `now` is taken at this edge only
 (`_now()` is the single wall-clock read, every service method takes it as its
@@ -17,6 +17,13 @@ from fastapi import APIRouter, Query
 
 from app.dependencies import IdentityDep, RecruitmentServiceDep
 from app.domains.recruitment.schemas import (
+    Candidate,
+    CandidateCreate,
+    CandidateDecision,
+    CandidateDetail,
+    CandidateListPage,
+    CandidateStatus,
+    CandidateUpdate,
     Job,
     JobCreate,
     JobListPage,
@@ -126,3 +133,118 @@ async def close_job(
 ) -> Job:
     """Close an open job: `open → closed`, terminal."""
     return await service.close_job(identity, job_id, _now())
+
+
+# --- candidates --------------------------------------------------------------
+
+
+@router.post(
+    "/recruitment/jobs/{job_id}/candidates",
+    response_model=Candidate,
+    operation_id="createCandidate",
+    status_code=201,
+)
+async def create_candidate(
+    job_id: UUID,
+    payload: CandidateCreate,
+    identity: IdentityDep,
+    service: RecruitmentServiceDep,
+) -> Candidate:
+    """Add an application to an `open` job — always `applied`."""
+    return await service.create_candidate(identity, job_id, payload, _now())
+
+
+@router.get(
+    "/recruitment/candidates",
+    response_model=CandidateListPage,
+    operation_id="listCandidates",
+)
+async def list_candidates(
+    identity: IdentityDep,
+    service: RecruitmentServiceDep,
+    page: PageParamsDep,
+    job_id: UUID | None = Query(default=None),
+    status: CandidateStatus | None = Query(default=None),
+    q: str | None = Query(default=None),
+) -> CandidateListPage:
+    """Candidates scoped to the caller's visibility (## Roles & access)."""
+    return await service.list_candidates(
+        identity,
+        job_id=job_id,
+        status=status,
+        q=q,
+        page=page,
+    )
+
+
+@router.get(
+    "/recruitment/candidates/{candidate_id}",
+    response_model=CandidateDetail,
+    operation_id="getCandidate",
+)
+async def get_candidate(
+    candidate_id: UUID,
+    identity: IdentityDep,
+    service: RecruitmentServiceDep,
+) -> CandidateDetail:
+    """Candidate detail; unknown, cross-tenant and out-of-scope ids are `404`."""
+    return await service.get_candidate(identity, candidate_id)
+
+
+@router.patch(
+    "/recruitment/candidates/{candidate_id}",
+    response_model=Candidate,
+    operation_id="updateCandidate",
+)
+async def update_candidate(
+    candidate_id: UUID,
+    payload: CandidateUpdate,
+    identity: IdentityDep,
+    service: RecruitmentServiceDep,
+) -> Candidate:
+    """Edit contact fields; the job-scoped email uniqueness guard applies."""
+    return await service.update_candidate(identity, candidate_id, payload, _now())
+
+
+@router.post(
+    "/recruitment/candidates/{candidate_id}/advance",
+    response_model=Candidate,
+    operation_id="advanceCandidate",
+)
+async def advance_candidate(
+    candidate_id: UUID,
+    identity: IdentityDep,
+    service: RecruitmentServiceDep,
+) -> Candidate:
+    """Step exactly one stage forward (`409 candidate_stage_conflict`)."""
+    return await service.advance_candidate(identity, candidate_id, _now())
+
+
+@router.post(
+    "/recruitment/candidates/{candidate_id}/reject",
+    response_model=Candidate,
+    operation_id="rejectCandidate",
+)
+async def reject_candidate(
+    candidate_id: UUID,
+    payload: CandidateDecision,
+    identity: IdentityDep,
+    service: RecruitmentServiceDep,
+) -> Candidate:
+    """Terminal reject from any pre-hire stage."""
+    return await service.reject_candidate(identity, candidate_id, payload, _now())
+
+
+@router.post(
+    "/recruitment/candidates/{candidate_id}/withdraw",
+    response_model=Candidate,
+    operation_id="withdrawCandidate",
+)
+async def withdraw_candidate(
+    candidate_id: UUID,
+    payload: CandidateDecision,
+    identity: IdentityDep,
+    service: RecruitmentServiceDep,
+) -> Candidate:
+    """HR records a candidate withdrawal from any pre-hire stage."""
+    return await service.withdraw_candidate(identity, candidate_id, payload, _now())

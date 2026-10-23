@@ -1,4 +1,4 @@
-"""Use cases for the Recruitment domain — jobs (T2).
+"""Use cases for the Recruitment domain — jobs (T2) and candidates (T3).
 
 Rules implemented here (pinned in `.ai/features/recruitment.md`):
 
@@ -7,29 +7,42 @@ Rules implemented here (pinned in `.ai/features/recruitment.md`):
   is terminal. Edits are allowed while `DRAFT`/`OPEN` only. Every transition is
   an event + an audit entry appended in the mutation's transaction (ADR 0012);
   creating a draft emits nothing (the catalog's first job event is `job.opened`).
+- **Candidate state machine**: created `APPLIED` on an `OPEN` job; `advance`
+  steps exactly one stage (`APPLIED → INTERVIEWING → OFFERED`); `reject` and
+  `withdraw` are the terminal side exits from any pre-hire state. Terminal
+  candidates are never re-opened. Every mutation is an event + an audit entry
+  in the same transaction (ADR 0012). `hire` (which creates the Employee
+  through the Employees seam) lands in T4 — until then `OFFERED` is the end.
 - **Org references**: `department_id`/`position_id`/`location_id` are validated
   through the Organizations services — never their tables (AGENTS.md rule 3).
   Their 404s propagate unchanged; archived refs are accepted at job creation
   (risk 4 in the spec) and refused later by Employees at hire time.
 - **Access**: management mutations are HR/Admin/Super Admin only
   (`recruitment_denied` 403). Reads: management sees everything, an assigned
-  interviewer sees the jobs of their interview candidates, everyone else gets
-  `403`; an out-of-scope entity id is `404` (existence is not leaked).
+  interviewer sees what their interviews make visible (jobs, candidates, own
+  interviews), everyone else gets `403`; an out-of-scope entity id is `404`
+  (existence is not leaked).
 - **Clock**: every mutation takes `now` as its last parameter — the router is
   the only wall-clock reader, and tests inject a fixed instant.
-- **PII**: jobs carry no candidate PII. Candidate fields never appear in this
-  module's events or audit values.
+- **PII**: candidate names, emails, phones, notes and side-exit notes never
+  appear in this module's events or audit `changes` values. Audit records the
+  PII field names with the `"changed"` marker only; events carry identifiers,
+  state and the intake source code.
 """
 
 from collections.abc import Sequence
 from datetime import datetime
-from typing import Any, Protocol
+from enum import StrEnum
+from typing import Any, Protocol, cast
 from uuid import UUID
 
 from uuid_utils.compat import uuid7
 
 from app.domains.recruitment import events
 from app.domains.recruitment.exceptions import (
+    CandidateNotFoundError,
+    CandidateNotOpenError,
+    CandidateStageConflictError,
     JobNotDraftError,
     JobNotFoundError,
     JobNotOpenError,
@@ -39,8 +52,20 @@ from app.domains.recruitment.policies import (
     ensure_has_standing,
     is_management,
 )
-from app.domains.recruitment.repository import JobFilters, RecruitmentRepository
+from app.domains.recruitment.repository import (
+    CandidateFilters,
+    JobFilters,
+    RecruitmentRepository,
+)
 from app.domains.recruitment.schemas import (
+    Candidate,
+    CandidateCreate,
+    CandidateDecision,
+    CandidateDetail,
+    CandidateListPage,
+    CandidateRejectedFrom,
+    CandidateStatus,
+    CandidateUpdate,
     Job,
     JobCreate,
     JobListPage,
@@ -52,6 +77,17 @@ from app.shared.identity import Identity
 from app.shared.outbox import EventOutbox
 from app.shared.pagination import PageParams
 
+PII_CHANGED = "changed"  # audit marker: field changed, value deliberately absent
+# The states a candidate may be rejected/withdrawn from (all pre-hire stages).
+_CANDIDATE_OPEN = (
+    CandidateStatus.APPLIED,
+    CandidateStatus.INTERVIEWING,
+    CandidateStatus.OFFERED,
+)
+_CANDIDATE_PII_FIELDS = frozenset(
+    {"first_name", "last_name", "email", "phone", "notes"}
+)
+
 
 class OrgReferenceReader(Protocol):
     """The Organizations read used to validate job refs (service-level seam)."""
@@ -60,8 +96,12 @@ class OrgReferenceReader(Protocol):
 
 
 def _value(value: object) -> object:
-    """Audit-safe JSON value: UUIDs become strings, everything else is as-is."""
-    return str(value) if isinstance(value, UUID) else value
+    """Audit-safe JSON value: UUIDs/StrEnums become strings, the rest as-is."""
+    if isinstance(value, UUID):
+        return str(value)
+    if isinstance(value, StrEnum):
+        return value.value
+    return value
 
 
 class RecruitmentService:
@@ -261,6 +301,282 @@ class RecruitmentService:
         )
         return updated
 
+    async def create_candidate(
+        self,
+        identity: Identity,
+        job_id: UUID,
+        payload: CandidateCreate,
+        now: datetime,
+    ) -> Candidate:
+        """Add an application to an `open` job — always `applied`."""
+        ensure_can_manage(identity)
+        job = await self._repo.get_job(identity.tenant_id, job_id)
+        if job is None:
+            raise JobNotFoundError()
+        if job.status is not JobStatus.OPEN:
+            raise JobNotOpenError()
+
+        candidate = await self._repo.create_candidate(
+            identity.tenant_id,
+            uuid7(),
+            job_id=job_id,
+            first_name=payload.first_name,
+            last_name=payload.last_name,
+            email=payload.email,
+            phone=payload.phone,
+            source=payload.source,
+            notes=payload.notes,
+        )
+
+        await self._outbox.append(
+            events.candidate_created(
+                tenant_id=identity.tenant_id,
+                actor_id=identity.actor_id,
+                occurred_at=now,
+                candidate_id=candidate.id,
+                job_id=candidate.job_id,
+                source=cast("events.CandidateSource", candidate.source.value),
+            )
+        )
+        changes: dict[str, Any] = {
+            "job_id": {"old": None, "new": str(candidate.job_id)},
+            "source": {"old": None, "new": candidate.source.value},
+            "status": {"old": None, "new": candidate.status.value},
+            # PII: field names only, never the values (`.ai/security.md`).
+            "first_name": PII_CHANGED,
+            "last_name": PII_CHANGED,
+            "email": PII_CHANGED,
+        }
+        if candidate.phone is not None:
+            changes["phone"] = PII_CHANGED
+        if candidate.notes is not None:
+            changes["notes"] = PII_CHANGED
+        await self._audit.write(
+            AuditEntryCreate(
+                tenant_id=identity.tenant_id,
+                actor_id=identity.actor_id,
+                action="candidate.created",
+                entity_type="candidate",
+                entity_id=candidate.id,
+                occurred_at=now,
+                changes=changes,
+            )
+        )
+        return candidate
+
+    async def update_candidate(
+        self,
+        identity: Identity,
+        candidate_id: UUID,
+        payload: CandidateUpdate,
+        now: datetime,
+    ) -> Candidate:
+        """Edit contact fields; the job-scoped email uniqueness guard applies."""
+        ensure_can_manage(identity)
+        existing = await self._manageable_candidate(identity, candidate_id)
+
+        updates = payload.model_dump(exclude_unset=True)
+        if not updates:
+            return existing
+
+        updated = await self._repo.update_candidate(
+            identity.tenant_id, candidate_id, now=now, **updates
+        )
+        if updated is None:
+            raise CandidateNotFoundError()
+
+        await self._audit.write(
+            AuditEntryCreate(
+                tenant_id=identity.tenant_id,
+                actor_id=identity.actor_id,
+                action="candidate.updated",
+                entity_type="candidate",
+                entity_id=candidate_id,
+                occurred_at=now,
+                changes={
+                    field: (
+                        PII_CHANGED
+                        if field in _CANDIDATE_PII_FIELDS
+                        else {
+                            "old": _value(getattr(existing, field)),
+                            "new": _value(getattr(updated, field)),
+                        }
+                    )
+                    for field in updates
+                },
+            )
+        )
+        return updated
+
+    async def advance_candidate(
+        self, identity: Identity, candidate_id: UUID, now: datetime
+    ) -> Candidate:
+        """Step exactly one stage forward (`409 candidate_stage_conflict`)."""
+        ensure_can_manage(identity)
+        existing = await self._manageable_candidate(identity, candidate_id)
+        match existing.status:
+            case CandidateStatus.APPLIED:
+                to_status = CandidateStatus.INTERVIEWING
+            case CandidateStatus.INTERVIEWING:
+                to_status = CandidateStatus.OFFERED
+            case _:
+                raise CandidateStageConflictError()
+
+        updated = await self._repo.transition_candidate(
+            identity.tenant_id,
+            candidate_id,
+            from_status=existing.status,
+            to_status=to_status,
+            now=now,
+        )
+        if updated is None:
+            # A concurrent move won between the read and the conditional update.
+            raise CandidateStageConflictError()
+
+        await self._outbox.append(
+            events.candidate_advanced(
+                tenant_id=identity.tenant_id,
+                actor_id=identity.actor_id,
+                occurred_at=now,
+                candidate_id=updated.id,
+                job_id=updated.job_id,
+                from_stage=cast("events.CandidateStage", existing.status.value),
+                to_stage=cast("events.CandidateStage", to_status.value),
+            )
+        )
+        await self._audit.write(
+            AuditEntryCreate(
+                tenant_id=identity.tenant_id,
+                actor_id=identity.actor_id,
+                action="candidate.advanced",
+                entity_type="candidate",
+                entity_id=updated.id,
+                occurred_at=now,
+                changes={
+                    "status": {
+                        "old": existing.status.value,
+                        "new": to_status.value,
+                    }
+                },
+            )
+        )
+        return updated
+
+    async def reject_candidate(
+        self,
+        identity: Identity,
+        candidate_id: UUID,
+        payload: CandidateDecision,
+        now: datetime,
+    ) -> Candidate:
+        """Terminal reject from any pre-hire stage, recording the source stage."""
+        ensure_can_manage(identity)
+        existing = await self._manageable_candidate(identity, candidate_id)
+        if existing.status not in _CANDIDATE_OPEN:
+            raise CandidateNotOpenError()
+        rejected_from = CandidateRejectedFrom(existing.status.value)
+
+        updated = await self._repo.transition_candidate(
+            identity.tenant_id,
+            candidate_id,
+            from_status=existing.status,
+            to_status=CandidateStatus.REJECTED,
+            now=now,
+            stage_note=payload.note,
+            rejected_from=rejected_from,
+        )
+        if updated is None:
+            # A concurrent decision already moved the row out of an open state.
+            raise CandidateNotOpenError()
+
+        await self._outbox.append(
+            events.candidate_rejected(
+                tenant_id=identity.tenant_id,
+                actor_id=identity.actor_id,
+                occurred_at=now,
+                candidate_id=updated.id,
+                job_id=updated.job_id,
+                rejected_from=cast("events.CandidateStage", rejected_from.value),
+                rejected_by=identity.actor_id,
+            )
+        )
+        changes: dict[str, Any] = {
+            "status": {
+                "old": existing.status.value,
+                "new": CandidateStatus.REJECTED.value,
+            },
+            "rejected_from": {"old": None, "new": rejected_from.value},
+        }
+        if payload.note is not None:
+            changes["stage_note"] = PII_CHANGED  # PII: never the value
+        await self._audit.write(
+            AuditEntryCreate(
+                tenant_id=identity.tenant_id,
+                actor_id=identity.actor_id,
+                action="candidate.rejected",
+                entity_type="candidate",
+                entity_id=updated.id,
+                occurred_at=now,
+                changes=changes,
+            )
+        )
+        return updated
+
+    async def withdraw_candidate(
+        self,
+        identity: Identity,
+        candidate_id: UUID,
+        payload: CandidateDecision,
+        now: datetime,
+    ) -> Candidate:
+        """HR records a candidate withdrawal from any pre-hire stage."""
+        ensure_can_manage(identity)
+        existing = await self._manageable_candidate(identity, candidate_id)
+        if existing.status not in _CANDIDATE_OPEN:
+            raise CandidateNotOpenError()
+
+        updated = await self._repo.transition_candidate(
+            identity.tenant_id,
+            candidate_id,
+            from_status=existing.status,
+            to_status=CandidateStatus.WITHDRAWN,
+            now=now,
+            stage_note=payload.note,
+        )
+        if updated is None:
+            raise CandidateNotOpenError()
+
+        await self._outbox.append(
+            events.candidate_withdrawn(
+                tenant_id=identity.tenant_id,
+                actor_id=identity.actor_id,
+                occurred_at=now,
+                candidate_id=updated.id,
+                job_id=updated.job_id,
+                withdrawn_from=cast("events.CandidateStage", existing.status.value),
+            )
+        )
+        changes: dict[str, Any] = {
+            "status": {
+                "old": existing.status.value,
+                "new": CandidateStatus.WITHDRAWN.value,
+            }
+        }
+        if payload.note is not None:
+            changes["stage_note"] = PII_CHANGED  # PII: never the value
+        await self._audit.write(
+            AuditEntryCreate(
+                tenant_id=identity.tenant_id,
+                actor_id=identity.actor_id,
+                action="candidate.withdrawn",
+                entity_type="candidate",
+                entity_id=updated.id,
+                occurred_at=now,
+                changes=changes,
+            )
+        )
+        return updated
+
     # --- reads ---------------------------------------------------------------
 
     async def list_jobs(
@@ -293,6 +609,49 @@ class RecruitmentService:
             raise JobNotFoundError()
         return job
 
+    async def list_candidates(
+        self,
+        identity: Identity,
+        *,
+        job_id: UUID | None,
+        status: CandidateStatus | None,
+        q: str | None,
+        page: PageParams,
+    ) -> CandidateListPage:
+        """Paged candidates scoped to the caller's visibility (## Roles & access)."""
+        scope = await self._candidate_scope(identity)
+        if job_id is not None:
+            # Foreign/unknown filter ids are `404` (pinned query semantics).
+            job = await self._repo.get_job(identity.tenant_id, job_id)
+            if job is None:
+                raise JobNotFoundError()
+        filters = CandidateFilters(
+            job_id=job_id,
+            status=status,
+            q=q,
+            visible_candidate_ids=scope,
+        )
+        items, total = await self._repo.list_candidates(
+            identity.tenant_id, filters, page
+        )
+        return CandidateListPage(items=list(items), page=page.make_page(total))
+
+    async def get_candidate(
+        self, identity: Identity, candidate_id: UUID
+    ) -> CandidateDetail:
+        """Candidate detail; unknown, cross-tenant and out-of-scope ids are `404`.
+
+        `interviews` is populated by T5 (management: all; an assigned
+        interviewer: their own); until then it is the empty list.
+        """
+        scope = await self._candidate_scope(identity)
+        candidate = await self._repo.get_candidate(identity.tenant_id, candidate_id)
+        if candidate is None:
+            raise CandidateNotFoundError()
+        if scope is not None and candidate.id not in scope:
+            raise CandidateNotFoundError()
+        return CandidateDetail(**candidate.model_dump(), interviews=[])
+
     # --- internals -----------------------------------------------------------
 
     async def _get_manageable(self, identity: Identity, job_id: UUID) -> Job:
@@ -301,6 +660,26 @@ class RecruitmentService:
         if job is None:
             raise JobNotFoundError()
         return job
+
+    async def _manageable_candidate(
+        self, identity: Identity, candidate_id: UUID
+    ) -> Candidate:
+        """Fetch a candidate for a management mutation; missing/foreign is `404`."""
+        candidate = await self._repo.get_candidate(identity.tenant_id, candidate_id)
+        if candidate is None:
+            raise CandidateNotFoundError()
+        return candidate
+
+    async def _candidate_scope(self, identity: Identity) -> Sequence[UUID] | None:
+        """Effective candidate scope; `None` means unscoped (management)."""
+        ensure_has_standing(identity)
+        if is_management(identity):
+            return None
+        if identity.employee_id is None:
+            return []
+        return await self._repo.visible_candidate_ids(
+            identity.tenant_id, identity.employee_id
+        )
 
     async def _read_scope(self, identity: Identity) -> Sequence[UUID] | None:
         """Effective job scope; `None` means unscoped (hr/admin/super_admin)."""

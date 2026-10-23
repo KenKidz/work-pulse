@@ -27,6 +27,12 @@ import type {
   AttendanceReport,
   Board,
   BonusCreate,
+  Candidate,
+  CandidateCreate,
+  CandidateDecision,
+  CandidateDetail,
+  CandidateListPage,
+  CandidateUpdate,
   ChangePasswordRequest,
   CheckInRequest,
   CheckOutRequest,
@@ -60,6 +66,7 @@ import type {
   LeaveRequestListPage,
   LeaveType,
   ListAttendanceRecordsParams,
+  ListCandidatesParams,
   ListDepartmentsParams,
   ListEmployeesParams,
   ListJobsParams,
@@ -14417,4 +14424,1042 @@ export const useCloseJob = <TError = HTTPValidationError, TContext = unknown>(
   TContext
 > => {
   return useMutation(getCloseJobMutationOptions(options), queryClient);
+};
+
+export type createCandidateResponse201 = {
+  data: Candidate;
+  status: 201;
+};
+
+export type createCandidateResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type createCandidateResponseSuccess = createCandidateResponse201 & {
+  headers: Headers;
+};
+export type createCandidateResponseError = createCandidateResponse422 & {
+  headers: Headers;
+};
+
+export type createCandidateResponse =
+  createCandidateResponseSuccess | createCandidateResponseError;
+
+export const getCreateCandidateUrl = (jobId: string) => {
+  return `/api/v1/recruitment/jobs/${jobId}/candidates`;
+};
+
+/**
+ * Add an application to an `open` job — always `applied`.
+ * @summary Create Candidate
+ */
+export const createCandidate = async (
+  jobId: string,
+  candidateCreate: CandidateCreate,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<createCandidateResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return customFetch<createCandidateResponse>(getCreateCandidateUrl(jobId), {
+    ...options,
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...getHeaders(options?.headers),
+    },
+    body: JSON.stringify(candidateCreate),
+  });
+};
+
+export const getCreateCandidateMutationKey = () => ["createCandidate"] as const;
+
+export const getCreateCandidateMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createCandidate>>,
+    TError,
+    CreateCandidateMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createCandidate>>,
+  TError,
+  CreateCandidateMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateCandidateMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createCandidate>>,
+    CreateCandidateMutationVariables
+  > = (props) => {
+    const { jobId, data } = props ?? {};
+
+    return createCandidate(jobId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateCandidateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createCandidate>>
+>;
+export type CreateCandidateMutationBody = CandidateCreate;
+export type CreateCandidateMutationError = HTTPValidationError;
+export type CreateCandidateMutationVariables = {
+  jobId: string;
+  data: CandidateCreate;
+};
+
+/**
+ * @summary Create Candidate
+ */
+export const useCreateCandidate = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createCandidate>>,
+      TError,
+      CreateCandidateMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createCandidate>>,
+  TError,
+  CreateCandidateMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateCandidateMutationOptions(options), queryClient);
+};
+
+export type listCandidatesResponse200 = {
+  data: CandidateListPage;
+  status: 200;
+};
+
+export type listCandidatesResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type listCandidatesResponseSuccess = listCandidatesResponse200 & {
+  headers: Headers;
+};
+export type listCandidatesResponseError = listCandidatesResponse422 & {
+  headers: Headers;
+};
+
+export type listCandidatesResponse =
+  listCandidatesResponseSuccess | listCandidatesResponseError;
+
+export const getListCandidatesUrl = (params?: ListCandidatesParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/recruitment/candidates?${stringifiedParams}`
+    : `/api/v1/recruitment/candidates`;
+};
+
+/**
+ * Candidates scoped to the caller's visibility (## Roles & access).
+ * @summary List Candidates
+ */
+export const listCandidates = async (
+  params?: ListCandidatesParams,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<listCandidatesResponse> => {
+  return customFetch<listCandidatesResponse>(getListCandidatesUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListCandidatesQueryKey = (params?: ListCandidatesParams) => {
+  return [
+    `/api/v1/recruitment/candidates`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getListCandidatesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listCandidates>>,
+  TError = HTTPValidationError,
+>(
+  params?: ListCandidatesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCandidates>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListCandidatesQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listCandidates>>> = ({
+    signal,
+  }) => listCandidates(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listCandidates>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListCandidatesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listCandidates>>
+>;
+export type ListCandidatesQueryError = HTTPValidationError;
+
+export function useListCandidates<
+  TData = Awaited<ReturnType<typeof listCandidates>>,
+  TError = HTTPValidationError,
+>(
+  params: undefined | ListCandidatesParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCandidates>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCandidates>>,
+          TError,
+          Awaited<ReturnType<typeof listCandidates>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useListCandidates<
+  TData = Awaited<ReturnType<typeof listCandidates>>,
+  TError = HTTPValidationError,
+>(
+  params?: ListCandidatesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCandidates>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCandidates>>,
+          TError,
+          Awaited<ReturnType<typeof listCandidates>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useListCandidates<
+  TData = Awaited<ReturnType<typeof listCandidates>>,
+  TError = HTTPValidationError,
+>(
+  params?: ListCandidatesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCandidates>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary List Candidates
+ */
+
+export function useListCandidates<
+  TData = Awaited<ReturnType<typeof listCandidates>>,
+  TError = HTTPValidationError,
+>(
+  params?: ListCandidatesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCandidates>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getListCandidatesQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export type getCandidateResponse200 = {
+  data: CandidateDetail;
+  status: 200;
+};
+
+export type getCandidateResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type getCandidateResponseSuccess = getCandidateResponse200 & {
+  headers: Headers;
+};
+export type getCandidateResponseError = getCandidateResponse422 & {
+  headers: Headers;
+};
+
+export type getCandidateResponse =
+  getCandidateResponseSuccess | getCandidateResponseError;
+
+export const getGetCandidateUrl = (candidateId: string) => {
+  return `/api/v1/recruitment/candidates/${candidateId}`;
+};
+
+/**
+ * Candidate detail; unknown, cross-tenant and out-of-scope ids are `404`.
+ * @summary Get Candidate
+ */
+export const getCandidate = async (
+  candidateId: string,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<getCandidateResponse> => {
+  return customFetch<getCandidateResponse>(getGetCandidateUrl(candidateId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCandidateQueryKey = (candidateId: string) => {
+  return [`/api/v1/recruitment/candidates/${candidateId}`] as const;
+};
+
+export const getGetCandidateQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCandidate>>,
+  TError = HTTPValidationError,
+>(
+  candidateId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCandidate>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetCandidateQueryKey(candidateId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getCandidate>>> = ({
+    signal,
+  }) => getCandidate(candidateId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: candidateId !== null && candidateId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCandidate>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetCandidateQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCandidate>>
+>;
+export type GetCandidateQueryError = HTTPValidationError;
+
+export function useGetCandidate<
+  TData = Awaited<ReturnType<typeof getCandidate>>,
+  TError = HTTPValidationError,
+>(
+  candidateId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCandidate>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCandidate>>,
+          TError,
+          Awaited<ReturnType<typeof getCandidate>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetCandidate<
+  TData = Awaited<ReturnType<typeof getCandidate>>,
+  TError = HTTPValidationError,
+>(
+  candidateId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCandidate>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCandidate>>,
+          TError,
+          Awaited<ReturnType<typeof getCandidate>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetCandidate<
+  TData = Awaited<ReturnType<typeof getCandidate>>,
+  TError = HTTPValidationError,
+>(
+  candidateId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCandidate>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary Get Candidate
+ */
+
+export function useGetCandidate<
+  TData = Awaited<ReturnType<typeof getCandidate>>,
+  TError = HTTPValidationError,
+>(
+  candidateId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCandidate>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetCandidateQueryOptions(candidateId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export type updateCandidateResponse200 = {
+  data: Candidate;
+  status: 200;
+};
+
+export type updateCandidateResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type updateCandidateResponseSuccess = updateCandidateResponse200 & {
+  headers: Headers;
+};
+export type updateCandidateResponseError = updateCandidateResponse422 & {
+  headers: Headers;
+};
+
+export type updateCandidateResponse =
+  updateCandidateResponseSuccess | updateCandidateResponseError;
+
+export const getUpdateCandidateUrl = (candidateId: string) => {
+  return `/api/v1/recruitment/candidates/${candidateId}`;
+};
+
+/**
+ * Edit contact fields; the job-scoped email uniqueness guard applies.
+ * @summary Update Candidate
+ */
+export const updateCandidate = async (
+  candidateId: string,
+  candidateUpdate: CandidateUpdate,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<updateCandidateResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return customFetch<updateCandidateResponse>(
+    getUpdateCandidateUrl(candidateId),
+    {
+      ...options,
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        ...getHeaders(options?.headers),
+      },
+      body: JSON.stringify(candidateUpdate),
+    },
+  );
+};
+
+export const getUpdateCandidateMutationKey = () => ["updateCandidate"] as const;
+
+export const getUpdateCandidateMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateCandidate>>,
+    TError,
+    UpdateCandidateMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateCandidate>>,
+  TError,
+  UpdateCandidateMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateCandidateMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateCandidate>>,
+    UpdateCandidateMutationVariables
+  > = (props) => {
+    const { candidateId, data } = props ?? {};
+
+    return updateCandidate(candidateId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateCandidateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateCandidate>>
+>;
+export type UpdateCandidateMutationBody = CandidateUpdate;
+export type UpdateCandidateMutationError = HTTPValidationError;
+export type UpdateCandidateMutationVariables = {
+  candidateId: string;
+  data: CandidateUpdate;
+};
+
+/**
+ * @summary Update Candidate
+ */
+export const useUpdateCandidate = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateCandidate>>,
+      TError,
+      UpdateCandidateMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateCandidate>>,
+  TError,
+  UpdateCandidateMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateCandidateMutationOptions(options), queryClient);
+};
+
+export type advanceCandidateResponse200 = {
+  data: Candidate;
+  status: 200;
+};
+
+export type advanceCandidateResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type advanceCandidateResponseSuccess = advanceCandidateResponse200 & {
+  headers: Headers;
+};
+export type advanceCandidateResponseError = advanceCandidateResponse422 & {
+  headers: Headers;
+};
+
+export type advanceCandidateResponse =
+  advanceCandidateResponseSuccess | advanceCandidateResponseError;
+
+export const getAdvanceCandidateUrl = (candidateId: string) => {
+  return `/api/v1/recruitment/candidates/${candidateId}/advance`;
+};
+
+/**
+ * Step exactly one stage forward (`409 candidate_stage_conflict`).
+ * @summary Advance Candidate
+ */
+export const advanceCandidate = async (
+  candidateId: string,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<advanceCandidateResponse> => {
+  return customFetch<advanceCandidateResponse>(
+    getAdvanceCandidateUrl(candidateId),
+    {
+      ...options,
+      method: "POST",
+    },
+  );
+};
+
+export const getAdvanceCandidateMutationKey = () =>
+  ["advanceCandidate"] as const;
+
+export const getAdvanceCandidateMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof advanceCandidate>>,
+    TError,
+    AdvanceCandidateMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof advanceCandidate>>,
+  TError,
+  AdvanceCandidateMutationVariables,
+  TContext
+> => {
+  const mutationKey = getAdvanceCandidateMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof advanceCandidate>>,
+    AdvanceCandidateMutationVariables
+  > = (props) => {
+    const { candidateId } = props ?? {};
+
+    return advanceCandidate(candidateId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdvanceCandidateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof advanceCandidate>>
+>;
+
+export type AdvanceCandidateMutationError = HTTPValidationError;
+export type AdvanceCandidateMutationVariables = { candidateId: string };
+
+/**
+ * @summary Advance Candidate
+ */
+export const useAdvanceCandidate = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof advanceCandidate>>,
+      TError,
+      AdvanceCandidateMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof advanceCandidate>>,
+  TError,
+  AdvanceCandidateMutationVariables,
+  TContext
+> => {
+  return useMutation(getAdvanceCandidateMutationOptions(options), queryClient);
+};
+
+export type rejectCandidateResponse200 = {
+  data: Candidate;
+  status: 200;
+};
+
+export type rejectCandidateResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type rejectCandidateResponseSuccess = rejectCandidateResponse200 & {
+  headers: Headers;
+};
+export type rejectCandidateResponseError = rejectCandidateResponse422 & {
+  headers: Headers;
+};
+
+export type rejectCandidateResponse =
+  rejectCandidateResponseSuccess | rejectCandidateResponseError;
+
+export const getRejectCandidateUrl = (candidateId: string) => {
+  return `/api/v1/recruitment/candidates/${candidateId}/reject`;
+};
+
+/**
+ * Terminal reject from any pre-hire stage.
+ * @summary Reject Candidate
+ */
+export const rejectCandidate = async (
+  candidateId: string,
+  candidateDecision: CandidateDecision,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<rejectCandidateResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return customFetch<rejectCandidateResponse>(
+    getRejectCandidateUrl(candidateId),
+    {
+      ...options,
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...getHeaders(options?.headers),
+      },
+      body: JSON.stringify(candidateDecision),
+    },
+  );
+};
+
+export const getRejectCandidateMutationKey = () => ["rejectCandidate"] as const;
+
+export const getRejectCandidateMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof rejectCandidate>>,
+    TError,
+    RejectCandidateMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof rejectCandidate>>,
+  TError,
+  RejectCandidateMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRejectCandidateMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof rejectCandidate>>,
+    RejectCandidateMutationVariables
+  > = (props) => {
+    const { candidateId, data } = props ?? {};
+
+    return rejectCandidate(candidateId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RejectCandidateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof rejectCandidate>>
+>;
+export type RejectCandidateMutationBody = CandidateDecision;
+export type RejectCandidateMutationError = HTTPValidationError;
+export type RejectCandidateMutationVariables = {
+  candidateId: string;
+  data: CandidateDecision;
+};
+
+/**
+ * @summary Reject Candidate
+ */
+export const useRejectCandidate = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof rejectCandidate>>,
+      TError,
+      RejectCandidateMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof rejectCandidate>>,
+  TError,
+  RejectCandidateMutationVariables,
+  TContext
+> => {
+  return useMutation(getRejectCandidateMutationOptions(options), queryClient);
+};
+
+export type withdrawCandidateResponse200 = {
+  data: Candidate;
+  status: 200;
+};
+
+export type withdrawCandidateResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type withdrawCandidateResponseSuccess = withdrawCandidateResponse200 & {
+  headers: Headers;
+};
+export type withdrawCandidateResponseError = withdrawCandidateResponse422 & {
+  headers: Headers;
+};
+
+export type withdrawCandidateResponse =
+  withdrawCandidateResponseSuccess | withdrawCandidateResponseError;
+
+export const getWithdrawCandidateUrl = (candidateId: string) => {
+  return `/api/v1/recruitment/candidates/${candidateId}/withdraw`;
+};
+
+/**
+ * HR records a candidate withdrawal from any pre-hire stage.
+ * @summary Withdraw Candidate
+ */
+export const withdrawCandidate = async (
+  candidateId: string,
+  candidateDecision: CandidateDecision,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<withdrawCandidateResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return customFetch<withdrawCandidateResponse>(
+    getWithdrawCandidateUrl(candidateId),
+    {
+      ...options,
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...getHeaders(options?.headers),
+      },
+      body: JSON.stringify(candidateDecision),
+    },
+  );
+};
+
+export const getWithdrawCandidateMutationKey = () =>
+  ["withdrawCandidate"] as const;
+
+export const getWithdrawCandidateMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof withdrawCandidate>>,
+    TError,
+    WithdrawCandidateMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof withdrawCandidate>>,
+  TError,
+  WithdrawCandidateMutationVariables,
+  TContext
+> => {
+  const mutationKey = getWithdrawCandidateMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof withdrawCandidate>>,
+    WithdrawCandidateMutationVariables
+  > = (props) => {
+    const { candidateId, data } = props ?? {};
+
+    return withdrawCandidate(candidateId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type WithdrawCandidateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof withdrawCandidate>>
+>;
+export type WithdrawCandidateMutationBody = CandidateDecision;
+export type WithdrawCandidateMutationError = HTTPValidationError;
+export type WithdrawCandidateMutationVariables = {
+  candidateId: string;
+  data: CandidateDecision;
+};
+
+/**
+ * @summary Withdraw Candidate
+ */
+export const useWithdrawCandidate = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof withdrawCandidate>>,
+      TError,
+      WithdrawCandidateMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof withdrawCandidate>>,
+  TError,
+  WithdrawCandidateMutationVariables,
+  TContext
+> => {
+  return useMutation(getWithdrawCandidateMutationOptions(options), queryClient);
 };

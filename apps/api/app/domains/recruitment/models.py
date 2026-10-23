@@ -136,6 +136,21 @@ class Candidate(Base):
             "status",
             "created_at",
         ),
+        # Newest-first scans without a status equality: the default list and a
+        # job's pipeline (migration 0016 keeps model/migration parity).
+        Index(
+            "ix_candidates_tenant_created",
+            "tenant_id",
+            "created_at",
+            "id",
+        ),
+        Index(
+            "ix_candidates_tenant_job_created",
+            "tenant_id",
+            "job_id",
+            "created_at",
+            "id",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid7)

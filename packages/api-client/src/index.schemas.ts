@@ -148,6 +148,171 @@ export interface BonusCreate {
   note?: string | null;
 }
 
+/**
+ * How the candidate reached the pipeline (intake is HR-entered).
+ */
+export type CandidateSource =
+  (typeof CandidateSource)[keyof typeof CandidateSource];
+
+export const CandidateSource = {
+  referral: "referral",
+  job_board: "job_board",
+  agency: "agency",
+  other: "other",
+} as const;
+
+/**
+ * Pinned candidate pipeline and its terminal side exits.
+ */
+export type CandidateStatus =
+  (typeof CandidateStatus)[keyof typeof CandidateStatus];
+
+export const CandidateStatus = {
+  applied: "applied",
+  interviewing: "interviewing",
+  offered: "offered",
+  hired: "hired",
+  rejected: "rejected",
+  withdrawn: "withdrawn",
+} as const;
+
+/**
+ * The observed pre-rejection state recorded on rejected rows.
+ */
+export type CandidateRejectedFrom =
+  (typeof CandidateRejectedFrom)[keyof typeof CandidateRejectedFrom];
+
+export const CandidateRejectedFrom = {
+  applied: "applied",
+  interviewing: "interviewing",
+  offered: "offered",
+} as const;
+
+/**
+ * One application and its pipeline state (pinned response shape).
+ */
+export interface Candidate {
+  id: string;
+  tenant_id: string;
+  job_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone?: string | null;
+  source: CandidateSource;
+  notes?: string | null;
+  status: CandidateStatus;
+  stage_note?: string | null;
+  rejected_from?: CandidateRejectedFrom | null;
+  hired_at?: string | null;
+  employee_id?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * HR-entered intake on an open job (no public application surface).
+ */
+export interface CandidateCreate {
+  /**
+   * @minLength 1
+   * @maxLength 200
+   */
+  first_name: string;
+  /**
+   * @minLength 1
+   * @maxLength 200
+   */
+  last_name: string;
+  /**
+   * @minLength 3
+   * @maxLength 320
+   */
+  email: string;
+  phone?: string | null;
+  source: CandidateSource;
+  notes?: string | null;
+}
+
+/**
+ * Optional reject/withdraw or cancel note — 1..500 characters (PII).
+ */
+export interface CandidateDecision {
+  note?: string | null;
+}
+
+/**
+ * Pinned interview lifecycle (`scheduled → completed | cancelled`).
+ */
+export type InterviewStatus =
+  (typeof InterviewStatus)[keyof typeof InterviewStatus];
+
+export const InterviewStatus = {
+  scheduled: "scheduled",
+  completed: "completed",
+  cancelled: "cancelled",
+} as const;
+
+/**
+ * One scheduled conversation (pinned response shape).
+ */
+export interface Interview {
+  id: string;
+  tenant_id: string;
+  candidate_id: string;
+  job_id: string;
+  interviewer_id: string;
+  scheduled_at: string;
+  notes?: string | null;
+  status: InterviewStatus;
+  rating?: number | null;
+  feedback_notes?: string | null;
+  completed_at?: string | null;
+  cancelled_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Candidate plus its interviews (management: all; interviewer: own).
+ */
+export interface CandidateDetail {
+  id: string;
+  tenant_id: string;
+  job_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone?: string | null;
+  source: CandidateSource;
+  notes?: string | null;
+  status: CandidateStatus;
+  stage_note?: string | null;
+  rejected_from?: CandidateRejectedFrom | null;
+  hired_at?: string | null;
+  employee_id?: string | null;
+  created_at: string;
+  updated_at: string;
+  interviews?: Interview[];
+}
+
+export interface CandidateListPage {
+  items: Candidate[];
+  page: Page;
+}
+
+/**
+ * Edit contact fields; absent fields are unchanged.
+ */
+export interface CandidateUpdate {
+  first_name?: string | null;
+  last_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  source?: CandidateSource | null;
+  notes?: string | null;
+}
+
 export interface ChangePasswordRequest {
   current_password: string;
   /** @minLength 10 */
@@ -1325,6 +1490,14 @@ export type ListJobsParams = {
   status?: JobStatus | null;
   q?: string | null;
   department_id?: string | null;
+  page?: number;
+  page_size?: number;
+};
+
+export type ListCandidatesParams = {
+  job_id?: string | null;
+  status?: CandidateStatus | null;
+  q?: string | null;
   page?: number;
   page_size?: number;
 };

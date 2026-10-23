@@ -15,7 +15,16 @@ from app.domains.organizations.exceptions import (
     LocationNotFoundError,
     PositionNotFoundError,
 )
-from app.domains.recruitment.schemas import Job, JobCreate, JobStatus
+from app.domains.recruitment.schemas import (
+    Candidate,
+    CandidateCreate,
+    CandidateRejectedFrom,
+    CandidateSource,
+    CandidateStatus,
+    Job,
+    JobCreate,
+    JobStatus,
+)
 from app.domains.recruitment.service import RecruitmentService
 from app.shared.identity import Identity, Role
 from tests.unit.organizations.fakes import RecordingAuditWriter
@@ -166,6 +175,71 @@ async def create_job(
             position_id=POSITION,
             location_id=LOCATION,
             openings=openings,
+        ),
+        now,
+    )
+
+
+def seed_candidate(
+    repo: FakeRecruitmentRepo,
+    *,
+    job_id: UUID,
+    tenant_id: UUID = TENANT_A,
+    first_name: str = "Ada",
+    last_name: str = "Lovelace",
+    email: str = "ada@example.test",
+    phone: str | None = None,
+    source: CandidateSource = CandidateSource.REFERRAL,
+    notes: str | None = None,
+    status: CandidateStatus = CandidateStatus.APPLIED,
+    stage_note: str | None = None,
+    rejected_from: CandidateRejectedFrom | None = None,
+    created_at: datetime = CREATED_AT,
+) -> Candidate:
+    """Insert a candidate directly — only for states no service path produced."""
+    candidate = Candidate(
+        id=uuid7(),
+        tenant_id=tenant_id,
+        job_id=job_id,
+        first_name=first_name,
+        last_name=last_name,
+        email=email,
+        phone=phone,
+        source=source,
+        notes=notes,
+        status=status,
+        stage_note=stage_note,
+        rejected_from=rejected_from,
+        created_at=created_at,
+        updated_at=created_at,
+    )
+    repo.candidates[(tenant_id, candidate.id)] = candidate
+    return candidate
+
+
+async def create_candidate(
+    service: RecruitmentService,
+    job_id: UUID,
+    *,
+    caller: Identity | None = None,
+    first_name: str = "Ada",
+    last_name: str = "Lovelace",
+    email: str = "ada@example.test",
+    phone: str | None = None,
+    source: CandidateSource = CandidateSource.REFERRAL,
+    notes: str | None = None,
+    now: datetime = NOW,
+) -> Candidate:
+    return await service.create_candidate(
+        caller or identity(),
+        job_id,
+        CandidateCreate(
+            first_name=first_name,
+            last_name=last_name,
+            email=email,
+            phone=phone,
+            source=source,
+            notes=notes,
         ),
         now,
     )
