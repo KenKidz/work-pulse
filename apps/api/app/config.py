@@ -84,6 +84,15 @@ class Settings(BaseSettings):
     payroll_worker_backoff_base_seconds: float = 1.0
     payroll_worker_backoff_max_seconds: float = 30.0
 
+    # --- Phase 4: analytical projection (`make clickhouse-up`, ADR 0019) ---
+    # Reports read from ClickHouse; only the reports consumer writes it. The
+    # test URL points at the throwaway `clickhouse-test` service on :8124 —
+    # `tests/conftest.py` pins `CLICKHOUSE_URL` to it before any `app.*` import.
+    clickhouse_url: str = "http://workpulse:workpulse@127.0.0.1:8123/workpulse"
+    clickhouse_test_url: str = (
+        "http://workpulse:workpulse@127.0.0.1:8124/workpulse_test"
+    )
+
     # --- Identity: sessions (pinned in `.ai/features/identity-access.md`) ---
     # Absolute session lifetime; the `wp_session` cookie itself is a session
     # cookie (no Max-Age) — the server-side TTL is the authority.

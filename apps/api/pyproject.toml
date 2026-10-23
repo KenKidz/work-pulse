@@ -10,6 +10,9 @@ dependencies = [
     "alembic>=1.20.0",
     "argon2-cffi>=25.1.0",
     "asyncpg>=0.31.0",
+    # Phase 4, Analytics & Reports (ADR 0006's pre-agreed gate; justified by
+    # `.ai/features/analytics-reports.md` / ADR 0019): ClickHouse HTTP client.
+    "clickhouse-connect>=1.11.0",
     "fastapi>=0.115.0",
     "pydantic-settings>=2.6.0",
     "redis>=8.1.0",

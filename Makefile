@@ -3,7 +3,7 @@
 API_DIR := apps/api
 WEB_DIR := apps/web
 
-.PHONY: help install dev db-up db-down db-test-up redis-up redis-test-up kafka-up kafka-test-up db-migrate db-seed dev-api dev-web dev-relay dev-realtime dev-notifications dev-payroll check check-api check-web check-e2e gen-api format-web
+.PHONY: help install dev db-up db-down db-test-up redis-up redis-test-up kafka-up kafka-test-up clickhouse-up clickhouse-down clickhouse-test-up db-migrate db-seed dev-api dev-web dev-relay dev-realtime dev-notifications dev-payroll check check-api check-web check-e2e gen-api format-web
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -29,6 +29,15 @@ kafka-up: ## Start Kafka (event bus, :9092; detached, waits for healthy)
 
 kafka-test-up: ## Start the throwaway test Kafka on :9093 (detached)
 	docker compose up -d --wait kafka-test
+
+clickhouse-up: ## Start ClickHouse (analytics projection, :8123; detached, waits for healthy)
+	docker compose up -d --wait clickhouse
+
+clickhouse-test-up: ## Start the throwaway test ClickHouse on :8124 (detached)
+	docker compose up -d --wait clickhouse-test
+
+clickhouse-down: ## Stop ClickHouse (the dev data volume is kept)
+	docker compose stop clickhouse
 
 db-migrate: ## Apply Alembic migrations to the dev database
 	cd $(API_DIR) && uv run alembic upgrade head
@@ -65,7 +74,7 @@ dev-payroll: ## Run the payroll calculation worker (queued runs → calculated, 
 
 check: check-api check-web check-e2e ## Run every gate — run before claiming done
 
-check-api: db-test-up redis-test-up kafka-test-up ## API gate: ruff + pyright + pytest (ADR 0006)
+check-api: db-test-up redis-test-up kafka-test-up clickhouse-test-up ## API gate: ruff + pyright + pytest (ADR 0006)
 	cd $(API_DIR) && uv run ruff check . ../../workers
 	cd $(API_DIR) && uv run ruff format --check . ../../workers
 	cd $(API_DIR) && uv run pyright . ../../workers

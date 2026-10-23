@@ -20,7 +20,7 @@ is not wired into `make check` does not protect anything.
 | Level | Where | Needs | Purpose |
 | --- | --- | --- | --- |
 | Unit | `apps/api/tests/unit` | nothing (no DB, no network) | domain services, policies, state machines, pure helpers |
-| Integration | `apps/api/tests/integration` | PostgreSQL (docker compose) | repositories, migrations, tenant scoping, routers end-to-end in-process |
+| Integration | `apps/api/tests/integration` | PostgreSQL + ClickHouse (docker compose) | repositories, migrations, tenant scoping, routers end-to-end in-process; the reports projection suites use `clickhouse-test` |
 | Contract | `apps/api/tests/contract` | OpenAPI + `contracts/events/*` | API shape and event payloads match the published contracts |
 | Web | `apps/web/tests` | runner TBD (proposed: Vitest) | feature hooks/components, error states |
 | E2E | `tests/e2e` | web + api + db | one feature, one user-visible flow, both surfaces |
@@ -72,7 +72,9 @@ is not wired into `make check` does not protect anything.
    `make check-web` alongside `tsc --noEmit`.
 2. **Integration database: a dedicated `postgres-test` compose service** rather
    than testcontainers — simpler locally, no Docker-in-Docker, and
-   `make check-api` can bring it up deterministically.
+   `make check-api` can bring it up deterministically. The throwaway
+   `clickhouse-test` service follows the same pattern (`make check-api` brings
+   it up; ADR 0019).
 3. **E2E: Playwright** in `tests/e2e/`, behind its own `make check-e2e`. It joins
    `make check` only once it is fast and stable enough to gate every change —
    a flaky gate gets ignored, which is worse than no gate.

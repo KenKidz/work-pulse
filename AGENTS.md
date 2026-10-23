@@ -27,7 +27,8 @@ Installed so far:
   `apps/api/` (ADR 0006)
 - AuthN: argon2id passwords + DB-backed opaque sessions (`wp_session` cookie),
   session-resolved identity (ADR 0010)
-- Datastore: PostgreSQL (docker compose) — `database/postgres/`
+- Datastore: PostgreSQL (source of truth, docker compose) — `database/postgres/`;
+  ClickHouse (Phase 4 analytical projection, ADR 0019) — `database/clickhouse/`
 
 Requires Python 3.12+, Node >= 20, pnpm, Docker, and uv.
 
@@ -58,7 +59,7 @@ Roadmap: `.ai/architecture.md`.
 ```
 AGENTS.md             this file
 Makefile              single entry point (install / dev / db / check)
-docker-compose.yml    PostgreSQL for local dev
+docker-compose.yml    PostgreSQL, Redis, Kafka and ClickHouse for local dev
 .ai/                  product, domain, architecture, conventions, security,
                       testing, decisions/, features/ (specs + backlog index)
 apps/web/             Next.js app (routes in app/, feature logic in features/)
@@ -66,7 +67,7 @@ apps/api/             FastAPI app (routers in app/api/v1/, logic in app/domains/
 workers/              background consumers (Phase 3)
 packages/api-client/  orval-generated typed client (`make gen-api`)
 contracts/            versioned event schemas + generated OpenAPI
-database/postgres/    seeds and scripts
+database/             postgres/ (seeds, scripts) · clickhouse/ (projection DDL)
 scripts/              dev orchestration (`make dev`)
 tests/e2e/            cross-surface tests
 tasks/                TODO.md (backlog) · doc.md (original brief)

@@ -1,5 +1,6 @@
-# Local development infrastructure (PostgreSQL + Phase-2 Redis + Phase-3 Kafka).
-# The apps run natively via `make dev-api` / `make dev-web` — see the Makefile.
+# Local development infrastructure (PostgreSQL + Phase-2 Redis + Phase-3 Kafka
+# + Phase-4 ClickHouse). The apps run natively via `make dev-api` /
+# `make dev-web` — see the Makefile.
 
 services:
   postgres:
@@ -132,6 +133,58 @@ services:
       timeout: 3s
       retries: 30
 
+  # --- Phase 4: analytical projection (`make clickhouse-up`, ADR 0019) ---
+  # ClickHouse speaks HTTP on :8123; `clickhouse-connect` from the API and the
+  # reports worker are its only clients. Loopback only, like Redis/Kafka: the
+  # fixed dev credential never leaves the host, and v1 adds no broker auth.
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.8-alpine
+    ports:
+      - "127.0.0.1:8123:8123"
+    environment:
+      # Created on first boot; the projection DDL runs in this database. The
+      # image's `default` user is loopback-only inside the container, so the
+      # API/worker use this fixed dev user instead.
+      CLICKHOUSE_DB: workpulse
+      CLICKHOUSE_USER: workpulse
+      CLICKHOUSE_PASSWORD: workpulse
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+    healthcheck:
+      # `/ping` answers `Ok.`; it is the server's own liveness endpoint.
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- --timeout=2 http://127.0.0.1:8123/ping | grep -q Ok",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  clickhouse-test:
+    image: clickhouse/clickhouse-server:24.8-alpine
+    ports:
+      - "127.0.0.1:8124:8123"
+    environment:
+      CLICKHOUSE_DB: workpulse_test
+      CLICKHOUSE_USER: workpulse
+      CLICKHOUSE_PASSWORD: workpulse
+    tmpfs:
+      # The image runs as `clickhouse` (uid/gid 101); keep its data dir
+      # writable without an entrypoint chown on every boot.
+      - /var/lib/clickhouse:uid=101,gid=101
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- --timeout=2 http://127.0.0.1:8123/ping | grep -q Ok",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
 volumes:
   postgres-data:
   kafka-data:
+  clickhouse-data:
