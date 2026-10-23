@@ -33,6 +33,12 @@
       "type": "string",
       "enum": ["full_time", "part_time", "contract", "intern"],
       "description": "Contract type of the initial employment period."
+    },
+    "hired_at": {
+      "type": ["string", "null"],
+      "format": "date",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+      "description": "First day of the initial employment period (YYYY-MM-DD) — the tenure anchor for seniority bands. Optional (ADR 0019): pre-extension stored envelopes lack it; null/absent means unknown tenure."
     }
   }
 }

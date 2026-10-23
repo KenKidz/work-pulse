@@ -57,8 +57,14 @@ def employee_created(
     position_id: UUID,
     location_id: UUID,
     employment_type: str,
+    hired_at: date | None = None,
 ) -> dict[str, Any]:
-    """Envelope for `employee.created` — identifiers only, no PII."""
+    """Envelope for `employee.created` — identifiers only, no PII.
+
+    `hired_at` is the tenure anchor Analytics & Reports folds into seniority
+    bands (ADR 0019). It is optional on the wire (ADR 0013 additive pattern):
+    the producer always fills it; pre-extension envelopes degrade to unknown.
+    """
     return _envelope(
         "employee.created",
         tenant_id,
@@ -70,6 +76,7 @@ def employee_created(
             "position_id": str(position_id),
             "location_id": str(location_id),
             "employment_type": employment_type,
+            "hired_at": hired_at.isoformat() if hired_at is not None else None,
         },
     )
 
@@ -104,8 +111,16 @@ def employee_transferred(
     from_department_id: UUID,
     to_department_id: UUID,
     effective_from: date,
+    to_position_id: UUID | None = None,
+    to_location_id: UUID | None = None,
 ) -> dict[str, Any]:
-    """Envelope for `employee.transferred` — new period, append-only history."""
+    """Envelope for `employee.transferred` — new period, append-only history.
+
+    `to_position_id`/`to_location_id` ride along so Analytics & Reports can
+    stamp a fact with the dimension triple as of its own date (ADR 0019).
+    Optional on the wire (ADR 0013 additive pattern): the producer fills them,
+    pre-extension envelopes keep the previous values.
+    """
     return _envelope(
         "employee.transferred",
         tenant_id,
@@ -116,6 +131,12 @@ def employee_transferred(
             "from_department_id": str(from_department_id),
             "to_department_id": str(to_department_id),
             "effective_from": effective_from.isoformat(),
+            "to_position_id": (
+                str(to_position_id) if to_position_id is not None else None
+            ),
+            "to_location_id": (
+                str(to_location_id) if to_location_id is not None else None
+            ),
         },
     )
 

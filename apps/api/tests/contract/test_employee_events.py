@@ -37,6 +37,7 @@ LOCATION_ID = UUID("00000000-0000-4000-8000-000000000006")
 NEW_DEPARTMENT_ID = UUID("00000000-0000-4000-8000-000000000007")
 NOW = datetime(2026, 9, 28, 12, 0, tzinfo=UTC)
 EFFECTIVE = date(2026, 9, 28)
+HIRED_AT = date(2025, 1, 15)
 
 _PII_KEY_MARKERS = ("name", "email", "phone", "salary", "reason")
 
@@ -74,6 +75,7 @@ BUILDER_CASES: list[tuple[str, Callable[[], dict[str, Any]]]] = [
             position_id=POSITION_ID,
             location_id=LOCATION_ID,
             employment_type="full_time",
+            hired_at=HIRED_AT,
         ),
     ),
     (
@@ -96,6 +98,8 @@ BUILDER_CASES: list[tuple[str, Callable[[], dict[str, Any]]]] = [
             from_department_id=DEPARTMENT_ID,
             to_department_id=NEW_DEPARTMENT_ID,
             effective_from=EFFECTIVE,
+            to_position_id=POSITION_ID,
+            to_location_id=LOCATION_ID,
         ),
     ),
     (
@@ -109,6 +113,9 @@ BUILDER_CASES: list[tuple[str, Callable[[], dict[str, Any]]]] = [
         ),
     ),
 ]
+
+
+BUILDERS_BY_SCHEMA = dict(BUILDER_CASES)
 
 
 def _pii_keys(obj: Any) -> list[str]:
@@ -146,6 +153,113 @@ def test_builder_output_validates_contract(
     envelope_validator.validate(event)
 
     validators[schema_file].validate(event["data"])
+
+
+def test_additive_extension_fields_are_filled(
+    validators: dict[str, Draft202012Validator],
+) -> None:
+    """Producers fill the analytics fields (ADR 0019) and payloads validate."""
+    created = BUILDERS_BY_SCHEMA["employee-created.v1.json"]()
+    assert created["data"]["hired_at"] == HIRED_AT.isoformat()
+    validators["employee-created.v1.json"].validate(created["data"])
+
+    transferred = BUILDERS_BY_SCHEMA["employee-transferred.v1.json"]()
+    assert transferred["data"]["to_position_id"] == str(POSITION_ID)
+    assert transferred["data"]["to_location_id"] == str(LOCATION_ID)
+    validators["employee-transferred.v1.json"].validate(transferred["data"])
+
+
+def test_pre_extension_payloads_still_validate(
+    validators: dict[str, Draft202012Validator],
+) -> None:
+    """Envelopes stored before the extension still validate (ADR 0019).
+
+    The new fields are optional via `required`-list membership, so replaying
+    pre-extension outbox rows or topic messages is valid, not an error.
+    """
+    created = {
+        key: value
+        for key, value in BUILDERS_BY_SCHEMA["employee-created.v1.json"]()[
+            "data"
+        ].items()
+        if key != "hired_at"
+    }
+    validators["employee-created.v1.json"].validate(created)
+
+    transferred = {
+        key: value
+        for key, value in BUILDERS_BY_SCHEMA["employee-transferred.v1.json"]()[
+            "data"
+        ].items()
+        if key not in ("to_position_id", "to_location_id")
+    }
+    validators["employee-transferred.v1.json"].validate(transferred)
+
+
+def test_extension_fields_are_nullable(
+    validators: dict[str, Draft202012Validator],
+) -> None:
+    """Builders always fill the keys; absent producer data serializes as null."""
+    created = events.employee_created(
+        tenant_id=TENANT_ID,
+        actor_id=ACTOR_ID,
+        occurred_at=NOW,
+        employee_id=EMPLOYEE_ID,
+        department_id=DEPARTMENT_ID,
+        position_id=POSITION_ID,
+        location_id=LOCATION_ID,
+        employment_type="full_time",
+    )
+    assert created["data"]["hired_at"] is None
+    validators["employee-created.v1.json"].validate(created["data"])
+
+    transferred = events.employee_transferred(
+        tenant_id=TENANT_ID,
+        actor_id=ACTOR_ID,
+        occurred_at=NOW,
+        employee_id=EMPLOYEE_ID,
+        from_department_id=DEPARTMENT_ID,
+        to_department_id=NEW_DEPARTMENT_ID,
+        effective_from=EFFECTIVE,
+    )
+    assert transferred["data"]["to_position_id"] is None
+    assert transferred["data"]["to_location_id"] is None
+    validators["employee-transferred.v1.json"].validate(transferred["data"])
+
+
+@pytest.mark.parametrize(
+    ("schema_file", "tampering"),
+    [
+        pytest.param(
+            "employee-created.v1.json",
+            {"hired_at": 20260115},
+            id="hired-at-integer",
+        ),
+        pytest.param(
+            "employee-created.v1.json",
+            {"hired_at": "15/01/2025"},
+            id="hired-at-bad-format",
+        ),
+        pytest.param(
+            "employee-transferred.v1.json",
+            {"to_position_id": 123},
+            id="to-position-id-integer",
+        ),
+        pytest.param(
+            "employee-transferred.v1.json",
+            {"to_location_id": 123},
+            id="to-location-id-integer",
+        ),
+    ],
+)
+def test_extension_fields_reject_wrong_types(
+    validators: dict[str, Draft202012Validator],
+    schema_file: str,
+    tampering: dict[str, Any],
+) -> None:
+    tampered = {**BUILDERS_BY_SCHEMA[schema_file]()["data"], **tampering}
+    with pytest.raises(ValidationError):
+        validators[schema_file].validate(tampered)
 
 
 @pytest.mark.parametrize(("schema_file", "build"), BUILDER_CASES)

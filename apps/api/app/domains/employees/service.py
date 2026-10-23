@@ -227,6 +227,7 @@ class EmployeeService:
                 position_id=created.position_id,
                 location_id=created.location_id,
                 employment_type=created.employment_type.value,
+                hired_at=created.hired_at,
             )
         )
         await self._audit.write(
@@ -403,6 +404,8 @@ class EmployeeService:
                 from_department_id=employee.department_id,
                 to_department_id=department_id,
                 effective_from=effective_from,
+                to_position_id=position_id,
+                to_location_id=location_id,
             )
         )
         await self._audit.write(

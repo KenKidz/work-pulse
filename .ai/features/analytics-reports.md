@@ -122,14 +122,17 @@ first — in well under a second.
   justification architecture rule 10 requires; same wiring pattern as
   `aiokafka`, ADR 0012 decision 10).
 - `workers/reports/`: the projection worker — consume `workpulse.events`
-  (stable group `workpulse-reports`, `auto_offset_reset="earliest"`: first
-  start builds the whole picture, restarts resume committed offsets), fold
+  (stable group `workpulse-reports`, `auto_offset_reset="earliest"` within the
+  configured retention window: first start builds the retained history,
+  restarts resume committed offsets), fold
   employee dimension state + the four fact families, write to ClickHouse,
   commit offsets manually after the write (at-least-once in, idempotent on
   `event_id` out). Single instance in v1 (relay precedent).
-- A documented rebuild path: truncate projection tables + reset the group to
-  `earliest`; ADR 0012 decision 8's kept `event_outbox` rows are the durable
-  replay source if the topic has expired past retention (ops note, not code).
+- A documented, fenced rebuild path: gate report reads through
+  `projection_state`, stop the worker, reset the group to `earliest`, truncate
+  the projection tables and replay; the topic retains the 24-month report span,
+  and ADR 0012 decision 8's kept `event_outbox` rows are the re-publish source
+  if the topic has expired past retention (ops note, not code).
 - Two additive v1 event payload extensions (ADR 0013 pattern — optional via
   `required`-list membership, no version bump) with producer updates:
   `employee-created.v1.json` gains `hired_at`;
@@ -522,9 +525,11 @@ call sites.
   `/ping` healthcheck) + `clickhouse-test` (tmpfs, `:8124→8123`).
 - `database/clickhouse/` — idempotent DDL (`CREATE TABLE IF NOT EXISTS`):
   `fact_overtime(tenant_id, overtime_id, employee_id, work_date, hours,
-  status, department_id, position_id, location_id, hired_at)` etc. per ADR
-  0019; `app/infrastructure/clickhouse/schema.py` applies it at startup
-  (worker and API), `client.py` wraps `clickhouse-connect`.
+  status, department_id, position_id, location_id, hired_at)` etc. plus the
+  `projection_state` rebuild marker per ADR 0019;
+  `app/infrastructure/clickhouse/schema.py` applies it at startup (the worker
+  must succeed; the API is best-effort so ClickHouse down never blocks boot),
+  `client.py` wraps `clickhouse-connect`.
 - `apps/api/pyproject.toml` — `uv add clickhouse-connect` (rule-10
   justification: ADR 0006 gate + this spec). `app/config.py` —
   `clickhouse_url`; `.env.example` updated.
@@ -539,24 +544,31 @@ call sites.
 - `apps/api/app/domains/reports/folds.py` — pure, I/O-free fold rules:
   seniority band from `hired_at` at a reference date (`lt_1y|1_3y|3_5y|
   5y_plus|unknown`); dimension-interval transitions (create / transfer-close+open
-  / terminate-close) with the pre-extension degradations (rule 3); overtime
-  state machine (`requested|manager_approved|hr_verified|rejected|withdrawn`
-  per `overtime_id`, un-verify removal semantics, `included_in_payroll`
-  invisibility); attendance record merge (checked_in + checked_out → one row);
-  leave approved-days row. All pure functions of (prior row, envelope).
+  / terminate-close) with the pre-extension degradations (rule 3); a transfer
+  fold returns the bounded re-stamp range (facts dated on/after
+  `effective_from`) that the projection writer executes (backdated-transfer
+  correction, ADR 0019 decision 5); overtime state machine
+  (`requested|manager_approved|hr_verified|
+  rejected|withdrawn` per `overtime_id`, un-verify removal semantics,
+  `included_in_payroll` invisibility); attendance record merge (checked_in +
+  checked_out → one row); leave approved-days row. All pure functions of
+  (prior row, envelope).
 - `domains/reports/repository.py` — `ProjectionWriter` Protocol (upsert
-  per-entity rows, tenant-scoped) + `ReportsRepository` Protocol (aggregate
-  queries); `domains/reports/schemas.py` — fold-row DTOs;
+  per-entity rows + the bounded per-employee fact re-stamp on transfer,
+  tenant-scoped) + `ReportsRepository` Protocol (aggregate queries);
+  `domains/reports/schemas.py` — fold-row DTOs;
   `domains/reports/exceptions.py` — `ReportsUnavailableError`
   (`503 reports_unavailable`).
 - `app/infrastructure/clickhouse/projection.py` — `ClickhouseProjectionWriter`
   implementing upserts against the ADR 0019 tables (the worker's output port).
 *Tests:* `tests/unit/reports/test_folds.py` — band boundaries (anniversary
-  dates), transfer re-stamp, un-verify drops hours, payroll-flip invisibility,
+  dates), backdated-transfer re-stamp (facts dated on/after `effective_from`),
+  un-verify drops hours, payroll-flip invisibility,
   pre-extension `unknown` band + stale dims, check-in-only record, duplicate
   application is a no-op (idempotence); `tests/integration/
-  test_clickhouse_projection.py` — writer round-trips rows and re-writes
-  converge (redelivery shape).
+  test_clickhouse_projection.py` — writer round-trips rows, re-writes converge
+  (redelivery shape), and the transfer re-stamp corrects facts dated on/after
+  `effective_from`.
 *Verify:* `make check-api` green.
 
 **T5 — Reports read API (contract pinned in code) + `make gen-api`.**
@@ -574,12 +586,15 @@ call sites.
   late_rate, avg_minutes_late, half-even rounding, band assignment +
   cross-row merge) over repository aggregates; no wall-clock.
 - `app/infrastructure/clickhouse/reports.py` — `ClickhouseReportsRepository`:
-  `GROUP BY` over stamped fact columns with bucket expressions
+  gates every query on `projection_state.ready` (`503 reports_unavailable`
+  while a rebuild is in progress), then `GROUP BY` over stamped fact columns
+  with bucket expressions
   (`toStartOfMonth` / `toStartOfWeek(…, 1)` Monday / `toStartOfDay`), fact
   filters `tenant_id` + `[from,to]` + optional dim filters + manager scope
   employee set; headcount as-of `min(bucket_end, to)` from
-  `dim_employee`/`dim_assignment`; ClickHouse client errors →
-  `ReportsUnavailableError`.
+  `dim_employee`/`dim_assignment`, using the first assignment interval as the
+  hire anchor when `hired_at` is null (pre-extension); ClickHouse client
+  errors → `ReportsUnavailableError`.
 - `app/api/v1/reports.py` — four GET routes, operationIds
   `getOvertimeReport|getAttendanceReport|getLeaveReport|getHeadcountReport`;
   `app/dependencies.py` — `get_reports_service` + `ReportsServiceDep` +
@@ -590,7 +605,8 @@ call sites.
   `leave_type`/headcount semantics), `422` cases, Employee `403`, manager
   scoping (two managers' fixtures), tenant isolation (empty, not 403),
   unknown/foreign filter ids → empty rows, ClickHouse-down → 503 (client
-  stub raising), PII sweep over responses; `tests/integration/
+  stub raising), `projection_state.ready = 0` → 503, pre-extension headcount
+  fallback, PII sweep over responses; `tests/integration/
   test_reports_benchmark.py` — flagship query over the seeded volume < 1s
   (`time.perf_counter`, R1). OpenAPI drift test covers the contract pin.
 *Verify:* `make check-api` green and `make gen-api` diff-free.
@@ -605,12 +621,17 @@ call sites.
   `reports_consumer_group`.
 - `Makefile` — `dev-reports` (F8 recipe); `scripts/dev.sh` gains the worker +
   `clickhouse-up` so `make dev` shows real reports.
+- `workers/relay/publisher.py` — topic creation sets `retention.ms` covering
+  the 24-month maximum report span plus a margin (ADR 0019); the reports
+  consumer applies the transfer re-stamp after folding the new interval.
 *Tests:* `tests/unit/workers/test_reports_consumer.py` (loop with in-memory
   stubs: malformed/unknown skip, commit-after-write ordering);
   `tests/integration/test_reports_consumer_kafka.py` (real kafka-test +
   clickhouse-test): a produced event slice projects exact rows; whole-stream
   redelivery leaves aggregates identical (AC 9); `hr_verified → rejected`
-  removes hours; truncate + replay reproduces aggregates (AC 10);
+  removes hours; truncate + replay reproduces aggregates (AC 10) with the
+  `projection_state.ready` fence toggled by the test; retention covers the
+  maximum report span at topic creation (`retention.ms`);
   pre-extension envelopes degrade per rule 3.
 *Verify:* `make check-api` green.
 

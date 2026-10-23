@@ -27,6 +27,14 @@
     "effective_from": {
       "type": "string",
       "description": "First day of the new employment period (YYYY-MM-DD); periods are half-open [effective_from, effective_to)."
+    },
+    "to_position_id": {
+      "type": ["string", "null"],
+      "description": "Position of the new employment period (UUIDv7 string). Optional (ADR 0019): pre-extension stored envelopes lack it; null/absent means the projection keeps the previous value."
+    },
+    "to_location_id": {
+      "type": ["string", "null"],
+      "description": "Location of the new employment period (UUIDv7 string). Optional (ADR 0019): pre-extension stored envelopes lack it; null/absent means the projection keeps the previous value."
     }
   }
 }

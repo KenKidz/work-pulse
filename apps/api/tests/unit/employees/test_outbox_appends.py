@@ -53,6 +53,7 @@ async def test_create_appends_the_created_envelope(
         "position_id": str(refs[1]),
         "location_id": str(refs[2]),
         "employment_type": "full_time",
+        "hired_at": created.hired_at.isoformat(),
     }
 
 
@@ -116,6 +117,9 @@ async def test_transfer_appends_from_and_to_departments(
         "from_department_id": str(refs[0]),  # the closed assignment
         "to_department_id": str(target_department),
         "effective_from": LATER.isoformat(),
+        # Unchanged in the transfer request — carried forward (ADR 0019).
+        "to_position_id": str(refs[1]),
+        "to_location_id": str(refs[2]),
     }
     assert period.department_id == target_department
 
