@@ -6,10 +6,12 @@ does the work.
 
 ## Now
 
+- [ ] Performance (`.ai/features/performance.md`): goals, reviews, feedback and
+      skills — spec drafted, PO decisions resolved 2026-10-26; awaiting `/plan`.
 
 ## Later
 
-- [ ] Phase 4+: Performance · Documents
+- [ ] Phase 4+: Employee documents
 - [ ] Phase 5: CDC / Debezium
 - [ ] Phase 6: OpenTelemetry / Prometheus / Grafana
 - [ ] Phase 7: load testing, rate limiting, circuit breakers
