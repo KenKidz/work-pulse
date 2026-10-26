@@ -276,6 +276,31 @@ describe("JobsTable", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 
+  it("keeps field explanations in accessible tooltips, not visible helper lines", async () => {
+    const user = userEvent.setup();
+    renderWithClient(<JobsTable />);
+
+    await user.click(await screen.findByRole("button", { name: "New job" }));
+
+    const openings = screen.getByLabelText("Openings");
+    const descriptionId = openings.getAttribute("aria-describedby");
+    expect(descriptionId).not.toBeNull();
+    expect(document.getElementById(descriptionId ?? "")).toHaveTextContent(
+      "Hiring stops once this many candidates are hired.",
+    );
+    // The always-visible FormDescription line is gone; the hint lives in the label.
+    expect(document.querySelector('[data-slot="form-description"]')).toBeNull();
+
+    const openingsItem = openings.closest('[data-slot="form-item"]');
+    expect(openingsItem).not.toBeNull();
+    await user.hover(
+      within(openingsItem as HTMLElement).getByRole("button", { name: "Show field help" }),
+    );
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "Hiring stops once this many candidates are hired.",
+    );
+  });
+
   it("edits a job with the pinned JobUpdate shape", async () => {
     const user = userEvent.setup();
     updateJob.mockResolvedValue({ data: { status: 200 } });

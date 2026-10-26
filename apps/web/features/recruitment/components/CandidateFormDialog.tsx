@@ -24,7 +24,6 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -171,7 +170,7 @@ export function CandidateFormDialog({
                 name="job_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Job</FormLabel>
+                    <FormLabel hint="Only open jobs accept new candidates.">Job</FormLabel>
                     {openJobs.length === 0 ? (
                       <p className="text-sm text-muted-foreground">
                         {jobsPending
@@ -194,7 +193,6 @@ export function CandidateFormDialog({
                             ))}
                           </SelectContent>
                         </Select>
-                        <FormDescription>Only open jobs accept new candidates.</FormDescription>
                       </>
                     )}
                     <FormMessage />
@@ -290,7 +288,9 @@ export function CandidateFormDialog({
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Notes (optional)</FormLabel>
+                  <FormLabel hint="Sensitive: visible to HR only and never included in events.">
+                    Notes (optional)
+                  </FormLabel>
                   <FormControl>
                     <Textarea
                       {...field}
@@ -299,9 +299,6 @@ export function CandidateFormDialog({
                       placeholder="Context for the hiring team — never shared with the candidate."
                     />
                   </FormControl>
-                  <FormDescription>
-                    Sensitive: visible to HR only and never included in events.
-                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

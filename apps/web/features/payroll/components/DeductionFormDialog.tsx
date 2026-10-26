@@ -24,7 +24,6 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -137,7 +136,13 @@ export function DeductionFormDialog({ open, onOpenChange, deduction }: Deduction
                 name="code"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Code</FormLabel>
+                    <FormLabel
+                      hint={
+                        isEdit ? "The code is fixed once created." : "Stable key on every payslip."
+                      }
+                    >
+                      Code
+                    </FormLabel>
                     <FormControl>
                       <Input
                         {...field}
@@ -147,9 +152,6 @@ export function DeductionFormDialog({ open, onOpenChange, deduction }: Deduction
                         disabled={isEdit}
                       />
                     </FormControl>
-                    <FormDescription>
-                      {isEdit ? "The code is fixed once created." : "Stable key on every payslip."}
-                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -160,11 +162,10 @@ export function DeductionFormDialog({ open, onOpenChange, deduction }: Deduction
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Name</FormLabel>
+                    <FormLabel hint="Shown to readers of the payslip.">Name</FormLabel>
                     <FormControl>
                       <Input {...field} value={field.value} placeholder="Withholding" />
                     </FormControl>
-                    <FormDescription>Shown to readers of the payslip.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -204,7 +205,15 @@ export function DeductionFormDialog({ open, onOpenChange, deduction }: Deduction
                 name="value"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Value</FormLabel>
+                    <FormLabel
+                      hint={
+                        kind === "percent_of_base"
+                          ? "Percent of base, 0.01 to 100."
+                          : "Fixed amount per payslip."
+                      }
+                    >
+                      Value
+                    </FormLabel>
                     <FormControl>
                       <Input
                         {...field}
@@ -219,11 +228,6 @@ export function DeductionFormDialog({ open, onOpenChange, deduction }: Deduction
                         }
                       />
                     </FormControl>
-                    <FormDescription>
-                      {kind === "percent_of_base"
-                        ? "Percent of base, 0.01 to 100."
-                        : "Fixed amount per payslip."}
-                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -235,7 +239,7 @@ export function DeductionFormDialog({ open, onOpenChange, deduction }: Deduction
               name="active"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Status</FormLabel>
+                  <FormLabel hint="Inactive lines appear on no payslip.">Status</FormLabel>
                   <Select
                     value={field.value ? "active" : "inactive"}
                     onValueChange={(value) => field.onChange(value === "active")}
@@ -250,7 +254,6 @@ export function DeductionFormDialog({ open, onOpenChange, deduction }: Deduction
                       <SelectItem value="inactive">Inactive</SelectItem>
                     </SelectContent>
                   </Select>
-                  <FormDescription>Inactive lines appear on no payslip.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

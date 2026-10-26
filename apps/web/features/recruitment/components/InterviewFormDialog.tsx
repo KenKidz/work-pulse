@@ -25,7 +25,6 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -85,8 +84,7 @@ export function InterviewFormDialog({
     defaultValues: {
       candidate_id: interview?.candidate_id ?? defaultCandidateId ?? "",
       interviewer_id: interview?.interviewer_id ?? "",
-      scheduled_at:
-        interview === null ? "" : toLocalDateTimeInput(interview.scheduled_at),
+      scheduled_at: interview === null ? "" : toLocalDateTimeInput(interview.scheduled_at),
       notes: interview?.notes ?? "",
     },
   });
@@ -180,7 +178,9 @@ export function InterviewFormDialog({
                 name="candidate_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Candidate</FormLabel>
+                    <FormLabel hint="Only interviewing candidates can be scheduled.">
+                      Candidate
+                    </FormLabel>
                     {candidates.length === 0 ? (
                       <p className="text-sm text-muted-foreground">
                         {candidatesPending
@@ -203,7 +203,6 @@ export function InterviewFormDialog({
                             ))}
                           </SelectContent>
                         </Select>
-                        <FormDescription>Only interviewing candidates can be scheduled.</FormDescription>
                       </>
                     )}
                     <FormMessage />
@@ -218,7 +217,7 @@ export function InterviewFormDialog({
                 name="interviewer_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Interviewer</FormLabel>
+                    <FormLabel hint="Any active employee can interview.">Interviewer</FormLabel>
                     <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger>
@@ -233,7 +232,6 @@ export function InterviewFormDialog({
                         ))}
                       </SelectContent>
                     </Select>
-                    <FormDescription>Any active employee can interview.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -243,11 +241,10 @@ export function InterviewFormDialog({
                 name="scheduled_at"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Scheduled at</FormLabel>
+                    <FormLabel hint="Your local time; stored in UTC.">Scheduled at</FormLabel>
                     <FormControl>
                       <Input {...field} value={field.value} type="datetime-local" />
                     </FormControl>
-                    <FormDescription>Your local time; stored in UTC.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -259,7 +256,9 @@ export function InterviewFormDialog({
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Notes (optional)</FormLabel>
+                  <FormLabel hint="Sensitive: never included in events or audit values.">
+                    Notes (optional)
+                  </FormLabel>
                   <FormControl>
                     <Textarea
                       {...field}
@@ -268,9 +267,6 @@ export function InterviewFormDialog({
                       placeholder="Context for the conversation — visible to HR and the interviewer."
                     />
                   </FormControl>
-                  <FormDescription>
-                    Sensitive: never included in events or audit values.
-                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

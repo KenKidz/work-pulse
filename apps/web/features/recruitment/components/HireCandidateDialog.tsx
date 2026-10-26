@@ -25,7 +25,6 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -165,11 +164,10 @@ export function HireCandidateDialog({
                 name="hired_at"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Hire date</FormLabel>
+                    <FormLabel hint="Today or earlier.">Hire date</FormLabel>
                     <FormControl>
                       <Input {...field} value={field.value} type="date" max={todayISO()} />
                     </FormControl>
-                    <FormDescription>Today or earlier.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -207,11 +205,12 @@ export function HireCandidateDialog({
                 name="employee_code"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Employee code (optional)</FormLabel>
+                    <FormLabel hint="Generated automatically if left empty.">
+                      Employee code (optional)
+                    </FormLabel>
                     <FormControl>
                       <Input {...field} value={field.value} className="font-mono" />
                     </FormControl>
-                    <FormDescription>Generated automatically if left empty.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

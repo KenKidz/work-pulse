@@ -25,7 +25,6 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -101,11 +100,10 @@ export function RunFormDialog({ open, onOpenChange }: RunFormDialogProps) {
               name="period"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Month</FormLabel>
+                  <FormLabel hint="Closed months only, in YYYY-MM form.">Month</FormLabel>
                   <FormControl>
                     <Input {...field} value={field.value} type="month" max={lastClosedPeriod()} />
                   </FormControl>
-                  <FormDescription>Closed months only, in YYYY-MM form.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

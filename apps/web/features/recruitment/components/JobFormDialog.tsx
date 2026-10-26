@@ -26,7 +26,6 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -150,7 +149,9 @@ export function JobFormDialog({ open, onOpenChange, job }: JobFormDialogProps) {
                 name="openings"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Openings</FormLabel>
+                    <FormLabel hint="Hiring stops once this many candidates are hired.">
+                      Openings
+                    </FormLabel>
                     <FormControl>
                       <Input
                         {...field}
@@ -164,9 +165,6 @@ export function JobFormDialog({ open, onOpenChange, job }: JobFormDialogProps) {
                         }
                       />
                     </FormControl>
-                    <FormDescription>
-                      Hiring stops once this many candidates are hired.
-                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -178,7 +176,9 @@ export function JobFormDialog({ open, onOpenChange, job }: JobFormDialogProps) {
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description (optional)</FormLabel>
+                  <FormLabel hint="Visible to HR and managers running the pipeline. Do not include candidate details.">
+                    Description (optional)
+                  </FormLabel>
                   <FormControl>
                     <Textarea
                       {...field}
@@ -187,10 +187,6 @@ export function JobFormDialog({ open, onOpenChange, job }: JobFormDialogProps) {
                       placeholder="What the role covers, who it reports to and what success looks like."
                     />
                   </FormControl>
-                  <FormDescription>
-                    Visible to HR and managers running the pipeline. Do not include candidate
-                    details.
-                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

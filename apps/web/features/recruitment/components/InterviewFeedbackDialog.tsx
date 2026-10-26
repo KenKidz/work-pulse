@@ -23,7 +23,6 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -125,7 +124,9 @@ export function InterviewFeedbackDialog({
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Feedback notes (optional)</FormLabel>
+                  <FormLabel hint="Sensitive: visible to HR and never included in events or audit values.">
+                    Feedback notes (optional)
+                  </FormLabel>
                   <FormControl>
                     <Textarea
                       {...field}
@@ -134,9 +135,6 @@ export function InterviewFeedbackDialog({
                       placeholder="What stood out, what to probe further and how the candidate compares."
                     />
                   </FormControl>
-                  <FormDescription>
-                    Sensitive: visible to HR and never included in events or audit values.
-                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

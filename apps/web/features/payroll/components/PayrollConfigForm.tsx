@@ -18,7 +18,6 @@ import { Card } from "@/components/ui/card";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -114,7 +113,7 @@ export function PayrollConfigForm({ canEdit }: { canEdit: boolean }) {
                   name="currency"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Currency</FormLabel>
+                      <FormLabel hint="One currency for the whole tenant.">Currency</FormLabel>
                       <FormControl>
                         <Input
                           {...field}
@@ -128,7 +127,6 @@ export function PayrollConfigForm({ canEdit }: { canEdit: boolean }) {
                           onChange={(event) => field.onChange(event.target.value.toUpperCase())}
                         />
                       </FormControl>
-                      <FormDescription>One currency for the whole tenant.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -139,7 +137,9 @@ export function PayrollConfigForm({ canEdit }: { canEdit: boolean }) {
                   name="standard_monthly_hours"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Standard monthly hours</FormLabel>
+                      <FormLabel hint="Used to derive the hourly rate.">
+                        Standard monthly hours
+                      </FormLabel>
                       <FormControl>
                         <Input
                           {...field}
@@ -157,7 +157,6 @@ export function PayrollConfigForm({ canEdit }: { canEdit: boolean }) {
                           }
                         />
                       </FormControl>
-                      <FormDescription>Used to derive the hourly rate.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -168,7 +167,9 @@ export function PayrollConfigForm({ canEdit }: { canEdit: boolean }) {
                   name="overtime_multiplier"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Overtime multiplier</FormLabel>
+                      <FormLabel hint="Applied to verified overtime hours.">
+                        Overtime multiplier
+                      </FormLabel>
                       <FormControl>
                         <Input
                           {...field}
@@ -186,7 +187,6 @@ export function PayrollConfigForm({ canEdit }: { canEdit: boolean }) {
                           }
                         />
                       </FormControl>
-                      <FormDescription>Applied to verified overtime hours.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}

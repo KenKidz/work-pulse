@@ -125,6 +125,15 @@
   `items-start` is mandatory: a description or error message on only one field
   makes that `FormItem` taller, and without it the sibling item stretches and
   its label/control stack shifts down out of line.
+- **Field hints are tooltips:** explanatory copy about one field is passed to
+  `FormLabel` as `hint` and opens in a tooltip from a 24×24 info trigger beside
+  the label; never render it as an always-visible `FormDescription` line.
+  `FormMessage` errors stay inline below the control. Keep the hint text in the
+  DOM as the control's `aria-describedby` description, keep the trigger a real
+  button with an accessible name and no submit behaviour, and keep the label
+  row height unchanged (the trigger uses negative vertical margins). Dialog
+  intros stay in `DialogDescription`; guidance covering several fields stays
+  visible at group level. Exemplar: `JobFormDialog.tsx` (`Openings`, `Description`).
 - **Mono data labels:** employee codes and timezones use `font-mono`, which
   resolves to Fira Code.
 - **One control language (Button / Input / Select / Textarea):** every

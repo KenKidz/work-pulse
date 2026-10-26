@@ -19,7 +19,6 @@ import { Card } from "@/components/ui/card";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -135,7 +134,15 @@ export function SalaryForm({ canEdit }: { canEdit: boolean }) {
                   name="employee_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{directory.canRead ? "Employee" : "Employee ID"}</FormLabel>
+                      <FormLabel
+                        hint={
+                          directory.canRead
+                            ? "Names come from the employee directory."
+                            : "Paste the employee’s UUID from the employee record."
+                        }
+                      >
+                        {directory.canRead ? "Employee" : "Employee ID"}
+                      </FormLabel>
                       {directory.canRead ? (
                         <Select value={field.value} onValueChange={field.onChange}>
                           <FormControl>
@@ -165,11 +172,6 @@ export function SalaryForm({ canEdit }: { canEdit: boolean }) {
                           />
                         </FormControl>
                       )}
-                      <FormDescription>
-                        {directory.canRead
-                          ? "Names come from the employee directory."
-                          : "Paste the employee’s UUID from the employee record."}
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -180,7 +182,9 @@ export function SalaryForm({ canEdit }: { canEdit: boolean }) {
                   name="amount"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Monthly base salary</FormLabel>
+                      <FormLabel hint="In the tenant currency. No proration on runs.">
+                        Monthly base salary
+                      </FormLabel>
                       <FormControl>
                         <Input
                           {...field}
@@ -196,9 +200,6 @@ export function SalaryForm({ canEdit }: { canEdit: boolean }) {
                           }
                         />
                       </FormControl>
-                      <FormDescription>
-                        In the tenant currency. No proration on runs.
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -209,11 +210,10 @@ export function SalaryForm({ canEdit }: { canEdit: boolean }) {
                   name="effective_from"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Effective from</FormLabel>
+                      <FormLabel hint="One record per employee and date.">Effective from</FormLabel>
                       <FormControl>
                         <Input {...field} value={field.value} type="date" />
                       </FormControl>
-                      <FormDescription>One record per employee and date.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}

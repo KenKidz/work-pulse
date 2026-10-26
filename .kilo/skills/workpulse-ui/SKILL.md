@@ -187,6 +187,19 @@ Authoritative list with exemplars: `.ai/conventions.md` → `Presentation rules`
   label/control stack shifts down out of line (overtime request dialog
   regression). Long dialogs `max-h-[85vh] overflow-y-auto`; width by content
   (`sm:max-w-md` confirm / `sm:max-w-lg` / `sm:max-w-xl` form).
+- **Field hints are tooltips, not visible helper lines.** Explanatory copy
+  about one field goes on the label as `hint`
+  (`<FormLabel hint="Hiring stops once this many candidates are hired.">`),
+  which renders a 24×24 info trigger beside the label and a tooltip on
+  hover/focus. Do not render it as an always-visible `FormDescription` line:
+  it lengthens every dialog, competes with the input and drifts the label
+  row. `FormMessage` stays inline below the control. Dialog-level intros stay
+  in `DialogDescription`, and guidance that governs several fields stays
+  visible at group level. The trigger is a real `type="button"` with an
+  accessible name, carries a 24×24 target (WCAG 2.2) and must not change the
+  label row height; the hint text stays in the DOM as the control's
+  `aria-describedby` description, so it is available without opening the
+  tooltip.
 - **List tables:** pass `containerLabel` to `components/ui/table.tsx` — it adds
   `role="region"`, `aria-label`, `tabIndex={0}` and a visible focus outline, so
   the swipe-only affordance has a keyboard equivalent. Render the `sm:hidden`

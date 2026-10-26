@@ -24,7 +24,6 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -165,7 +164,11 @@ export function BonusDialog({
                   name="amount"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Amount</FormLabel>
+                      <FormLabel
+                        hint={currency === null ? "In the tenant currency." : `In ${currency}.`}
+                      >
+                        Amount
+                      </FormLabel>
                       <FormControl>
                         <Input
                           {...field}
@@ -181,9 +184,6 @@ export function BonusDialog({
                           }
                         />
                       </FormControl>
-                      <FormDescription>
-                        {currency === null ? "In the tenant currency." : `In ${currency}.`}
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -194,7 +194,9 @@ export function BonusDialog({
                   name="note"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Note (optional)</FormLabel>
+                      <FormLabel hint="Stored with the bonus, never shown on the payslip.">
+                        Note (optional)
+                      </FormLabel>
                       <FormControl>
                         <Textarea
                           {...field}
@@ -203,9 +205,6 @@ export function BonusDialog({
                           placeholder="Why this bonus was added"
                         />
                       </FormControl>
-                      <FormDescription>
-                        Stored with the bonus, never shown on the payslip.
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}

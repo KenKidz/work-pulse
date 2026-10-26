@@ -24,7 +24,6 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -100,7 +99,9 @@ export function CandidateDecisionDialog({
               name="note"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Note (optional)</FormLabel>
+                  <FormLabel hint="Sensitive: visible to HR only and never included in events.">
+                    Note (optional)
+                  </FormLabel>
                   <FormControl>
                     <Textarea
                       {...field}
@@ -113,9 +114,6 @@ export function CandidateDecisionDialog({
                       }
                     />
                   </FormControl>
-                  <FormDescription>
-                    Sensitive: visible to HR only and never included in events.
-                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

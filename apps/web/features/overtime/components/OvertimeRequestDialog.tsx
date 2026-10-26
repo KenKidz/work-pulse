@@ -25,7 +25,6 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -122,7 +121,7 @@ export function OvertimeRequestDialog({ open, onOpenChange }: OvertimeRequestDia
                 name="hours"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Hours</FormLabel>
+                    <FormLabel hint="More than 0 and at most 12.">Hours</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
@@ -133,7 +132,6 @@ export function OvertimeRequestDialog({ open, onOpenChange }: OvertimeRequestDia
                         step="0.01"
                       />
                     </FormControl>
-                    <FormDescription>More than 0 and at most 12.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
