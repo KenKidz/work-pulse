@@ -7,35 +7,42 @@
 
 import { z } from "zod";
 
-export const checkInFormSchema = z.object({
-  work_mode: z.enum(["onsite", "remote"]),
-  check_in_note: z
-    .string()
-    .min(1, "Note must be at least 1 character")
-    .max(500, "Note must be at most 500 characters")
-    .nullish(),
-});
+type NoteValidation = (key: "noteMin" | "noteMax") => string;
 
-export type CheckInFormValues = z.infer<typeof checkInFormSchema>;
+export function checkInFormSchema(t: NoteValidation) {
+  return z.object({
+    work_mode: z.enum(["onsite", "remote"]),
+    check_in_note: z.string().min(1, t("noteMin")).max(500, t("noteMax")).nullish(),
+  });
+}
 
-export const checkOutFormSchema = z.object({
-  check_out_note: z
-    .string()
-    .min(1, "Note must be at least 1 character")
-    .max(500, "Note must be at most 500 characters")
-    .nullish(),
-});
+export type CheckInFormValues = z.infer<ReturnType<typeof checkInFormSchema>>;
 
-export type CheckOutFormValues = z.infer<typeof checkOutFormSchema>;
+export function checkOutFormSchema(t: NoteValidation) {
+  return z.object({
+    check_out_note: z.string().min(1, t("noteMin")).max(500, t("noteMax")).nullish(),
+  });
+}
 
-export const shiftFormSchema = z.object({
-  name: z.string().min(1, "Name is required").max(200, "Name must be at most 200 characters"),
-  start_time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Start time must be HH:MM"),
-  end_time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "End time must be HH:MM"),
-  grace_minutes: z.coerce
-    .number()
-    .int("Grace must be a whole number of minutes")
-    .min(0, "Grace cannot be negative"),
-});
+export type CheckOutFormValues = z.infer<ReturnType<typeof checkOutFormSchema>>;
 
-export type ShiftFormValues = z.infer<typeof shiftFormSchema>;
+type ShiftValidation = (
+  key:
+    | "nameRequired"
+    | "nameTooLong"
+    | "startTimeFormat"
+    | "endTimeFormat"
+    | "graceInteger"
+    | "graceNonNegative",
+) => string;
+
+export function shiftFormSchema(t: ShiftValidation) {
+  return z.object({
+    name: z.string().min(1, t("nameRequired")).max(200, t("nameTooLong")),
+    start_time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, t("startTimeFormat")),
+    end_time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, t("endTimeFormat")),
+    grace_minutes: z.coerce.number().int(t("graceInteger")).min(0, t("graceNonNegative")),
+  });
+}
+
+export type ShiftFormValues = z.infer<ReturnType<typeof shiftFormSchema>>;

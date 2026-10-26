@@ -10,6 +10,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CircleAlert } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
@@ -53,13 +54,17 @@ type OvertimeRequestDialogProps = {
 };
 
 export function OvertimeRequestDialog({ open, onOpenChange }: OvertimeRequestDialogProps) {
+  const t = useTranslations("overtime.request");
+  const common = useTranslations("common.actions");
+  const validation = useTranslations("overtime.validation");
+  const errors = useTranslations("overtime.errors");
   const createRequest = useCreateOvertimeAction();
   const [rootError, setRootError] = useState<string | null>(null);
 
   // The caller mounts the dialog fresh for every claim, so the empty defaults
   // are the initial state.
   const form = useForm<OvertimeRequestFormValues>({
-    resolver: zodResolver(overtimeRequestFormSchema),
+    resolver: zodResolver(overtimeRequestFormSchema((key) => validation(key))),
     defaultValues: EMPTY_VALUES,
   });
 
@@ -75,7 +80,7 @@ export function OvertimeRequestDialog({ open, onOpenChange }: OvertimeRequestDia
       });
       onOpenChange(false);
     } catch (error) {
-      const fieldErrors = overtimeFieldErrors(error);
+      const fieldErrors = overtimeFieldErrors(error, errors);
       for (const [field, message] of Object.entries(fieldErrors)) {
         if (field === "root") {
           setRootError(message ?? null);
@@ -93,11 +98,8 @@ export function OvertimeRequestDialog({ open, onOpenChange }: OvertimeRequestDia
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>Request overtime</DialogTitle>
-          <DialogDescription>
-            Claim hours already worked beyond your shift. Your manager approves first, then HR
-            verifies the exact hours before payroll counts them.
-          </DialogDescription>
+          <DialogTitle>{t("title")}</DialogTitle>
+          <DialogDescription>{t("description")}</DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
@@ -108,7 +110,7 @@ export function OvertimeRequestDialog({ open, onOpenChange }: OvertimeRequestDia
                 name="work_date"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Work date</FormLabel>
+                    <FormLabel>{t("workDate")}</FormLabel>
                     <FormControl>
                       <Input {...field} type="date" max={todayISO()} />
                     </FormControl>
@@ -121,7 +123,7 @@ export function OvertimeRequestDialog({ open, onOpenChange }: OvertimeRequestDia
                 name="hours"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel hint="More than 0 and at most 12.">Hours</FormLabel>
+                    <FormLabel hint={t("hoursHint")}>{t("hours")}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
@@ -143,13 +145,13 @@ export function OvertimeRequestDialog({ open, onOpenChange }: OvertimeRequestDia
               name="reason"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Reason (optional)</FormLabel>
+                  <FormLabel>{t("reason")}</FormLabel>
                   <FormControl>
                     <Textarea
                       {...field}
                       value={field.value ?? ""}
                       rows={3}
-                      placeholder="Share only what your deciders need to know."
+                      placeholder={t("reasonPlaceholder")}
                     />
                   </FormControl>
                   <FormMessage />
@@ -166,10 +168,10 @@ export function OvertimeRequestDialog({ open, onOpenChange }: OvertimeRequestDia
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
+                {common("cancel")}
               </Button>
               <Button type="submit" disabled={createRequest.isPending}>
-                {createRequest.isPending ? "Submitting…" : "Submit request"}
+                {createRequest.isPending ? t("submitting") : t("submit")}
               </Button>
             </DialogFooter>
           </form>

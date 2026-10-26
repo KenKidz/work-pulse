@@ -18,6 +18,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import Link from "next/link";
+import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import { cn } from "cn";
 
@@ -67,17 +68,12 @@ import {
   canAddBonus,
   canFinalizeRun,
   canRecalculateRun,
-  deductionKindLabel,
   isPayrollNotFoundError,
   isRunCalculated,
-  payrollErrorMessage,
-  payrollRunFailureMessage,
-  payrollRunStatusLabel,
   payrollRunStatusVariant,
-  payrollTotalsLabel,
-  payslipStatusLabel,
   payslipStatusVariant,
 } from "../labels";
+import { payrollErrorMessage, payrollRunFailureMessage } from "../errors";
 import type { PayrollRunTotals, Payslip } from "../types";
 import { BonusDialog } from "./BonusDialog";
 import { TablePagination } from "./TablePagination";
@@ -85,6 +81,12 @@ import { TablePagination } from "./TablePagination";
 const PAGE_SIZE = 100;
 
 export function RunDetail({ runId }: { runId: string }) {
+  const t = useTranslations("payroll.runDetail");
+  const common = useTranslations("common.actions");
+  const root = useTranslations("payroll");
+  const runStatus = useTranslations("payroll.status.run");
+  const errors = useTranslations("payroll.errors");
+  const locale = useLocale();
   const { canView, canOperate } = usePayrollAccess();
   const runQuery = usePayrollRun(runId, canView);
   const configQuery = usePayrollConfig(canView);
@@ -119,7 +121,7 @@ export function RunDetail({ runId }: { runId: string }) {
     return (
       <div className="flex items-center justify-center gap-2 px-6 py-10 text-sm text-muted-foreground">
         <Spinner className="size-4" />
-        <p>Checking access…</p>
+        <p>{t("checkingAccess")}</p>
       </div>
     );
   }
@@ -129,12 +131,12 @@ export function RunDetail({ runId }: { runId: string }) {
       <section className="space-y-6">
         <BackLink />
         <PageHeader
-          title="Payroll run"
-          description="Simulated payroll — timesheets, payslip lines and totals for one run."
+          title={t("title")}
+          description={t("description")}
         />
         <div className="flex items-center justify-center gap-2 px-6 py-10 text-sm text-muted-foreground">
           <Spinner className="size-4" />
-          <p>Loading payroll run…</p>
+          <p>{t("loading")}</p>
         </div>
       </section>
     );
@@ -146,26 +148,26 @@ export function RunDetail({ runId }: { runId: string }) {
       <section className="space-y-6">
         <BackLink />
         <PageHeader
-          title="Payroll run"
-          description="Simulated payroll — timesheets, payslip lines and totals for one run."
+          title={t("title")}
+          description={t("description")}
         />
         {notFound ? (
           <EmptyState
             icon={ClipboardList}
-            message="This payroll run doesn’t exist or you don’t have access to it."
+            message={t("notFound")}
           />
         ) : (
           <Alert variant="destructive">
             <CircleAlert aria-hidden="true" />
             <AlertDescription>
-              <p>Could not load this payroll run.</p>
+              <p>{t("loadError")}</p>
               <Button
                 variant="outline"
                 size="sm"
                 className="mt-2"
                 onClick={() => void runQuery.refetch()}
               >
-                Retry
+                {common("retry")}
               </Button>
             </AlertDescription>
           </Alert>
@@ -200,7 +202,7 @@ export function RunDetail({ runId }: { runId: string }) {
       await finalize.mutateAsync({ id: runId });
       setFinalizeOpen(false);
     } catch (error) {
-      setFinalizeError(payrollErrorMessage(error));
+      setFinalizeError(payrollErrorMessage(error, errors));
     }
   }
 
@@ -208,48 +210,48 @@ export function RunDetail({ runId }: { runId: string }) {
     <section className="space-y-6">
       <BackLink />
       <PageHeader
-        title={formatPeriod(run.period)}
-        description="Simulated payroll — timesheets, payslip lines and totals for this run."
+        title={formatPeriod(run.period, locale)}
+        description={t("description")}
       />
 
       <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
         <Badge variant={payrollRunStatusVariant[run.status]}>
-          {payrollRunStatusLabel[run.status]}
+          {runStatus(run.status)}
         </Badge>
         <span>
-          Created <time dateTime={run.created_at}>{formatPayrollTimestamp(run.created_at)}</time>
+          {t("created", {
+            time: formatPayrollTimestamp(run.created_at, locale),
+          })}
         </span>
         {run.calculated_at ? (
           <span>
-            Calculated{" "}
-            <time dateTime={run.calculated_at}>{formatPayrollTimestamp(run.calculated_at)}</time>
+            {t("calculated", {
+              time: formatPayrollTimestamp(run.calculated_at, locale),
+            })}
           </span>
         ) : null}
         {run.finalized_at ? (
-          <span>
-            Finalized{" "}
-            <time dateTime={run.finalized_at}>{formatPayrollTimestamp(run.finalized_at)}</time>
-          </span>
+          <span>{t("finalized", { time: formatPayrollTimestamp(run.finalized_at, locale) })}</span>
         ) : null}
         {run.supersedes_run_id ? (
           <span>
-            Correction for{" "}
+            {t("correctionFor", { link: t("previousRun") })}{" "}
             <Link
               href={`/payroll/runs/${run.supersedes_run_id}`}
               className="text-primary underline-offset-4 hover:underline"
             >
-              the previous run
+              {t("previousRun")}
             </Link>
           </span>
         ) : null}
         {run.superseded_by_run_id ? (
           <span>
-            Superseded by{" "}
+            {t("supersededBy", { link: t("laterRun") })}{" "}
             <Link
               href={`/payroll/runs/${run.superseded_by_run_id}`}
               className="text-primary underline-offset-4 hover:underline"
             >
-              a later run
+              {t("laterRun")}
             </Link>
           </span>
         ) : null}
@@ -264,13 +266,13 @@ export function RunDetail({ runId }: { runId: string }) {
               onClick={() => void onRecalculate()}
             >
               <RotateCcw />
-              Recalculate
+              {t("recalculate")}
             </Button>
           ) : null}
           {!finalized && bonusAllowed ? (
             <Button variant="outline" onClick={() => setBonusOpen(true)}>
               <Plus />
-              Add bonus
+              {t("addBonus")}
             </Button>
           ) : null}
           {!finalized ? (
@@ -282,27 +284,27 @@ export function RunDetail({ runId }: { runId: string }) {
               }}
             >
               <CheckCircle2 />
-              Finalize run
+              {t("finalize")}
             </Button>
           ) : null}
           {!finalizable && !finalized ? (
             <p className="text-xs text-muted-foreground">
-              Finalize becomes available once the calculation finishes.
+              {t("finalizeHint")}
             </p>
           ) : null}
         </div>
       ) : (
         <p className="text-xs text-muted-foreground">
-          View only — Finance, Admin and Super Admin run payroll.
+          {t("viewOnly")}
         </p>
       )}
 
       {run.status === "failed" ? (
         <Alert variant="destructive">
           <CircleAlert aria-hidden="true" />
-          <AlertTitle>Calculation failed</AlertTitle>
+          <AlertTitle>{t("failedTitle")}</AlertTitle>
           <AlertDescription>
-            <p>{payrollRunFailureMessage(run.failed_code)}</p>
+            <p>{payrollRunFailureMessage(run.failed_code, t)}</p>
           </AlertDescription>
         </Alert>
       ) : null}
@@ -311,15 +313,19 @@ export function RunDetail({ runId }: { runId: string }) {
         <Alert>
           <Info aria-hidden="true" />
           <AlertTitle>
-            {run.skipped_count} {run.skipped_count === 1 ? "employee" : "employees"} skipped
+            {t("skippedTitle", { count: run.skipped_count })}
           </AlertTitle>
           <AlertDescription>
-            <p>No salary record was effective by the period end, so no payslip was created.</p>
+            <p>{t("skippedDescription")}</p>
             <ul className="mt-2 space-y-1">
               {skipped.map((entry) => (
                 <li key={entry.employee_id}>
-                  {employeeLabel(entry.employee_id, directory.nameById)}{" "}
-                  <span className="text-muted-foreground">— no salary record</span>
+                  {employeeLabel(
+                    entry.employee_id,
+                    directory.nameById,
+                    root("employeeFallback", { id: entry.employee_id.slice(-4) }),
+                  )}{" "}
+                  <span className="text-muted-foreground">{t("skippedNoSalary")}</span>
                 </li>
               ))}
             </ul>
@@ -327,16 +333,17 @@ export function RunDetail({ runId }: { runId: string }) {
         </Alert>
       ) : null}
 
-      {run.totals ? <TotalsSummary totals={run.totals} currency={currency} /> : null}
+      {run.totals ? (
+        <TotalsSummary totals={run.totals} currency={currency} locale={locale} />
+      ) : null}
 
       <section aria-labelledby="run-timesheets-title" className="flex flex-col gap-3">
         <div className="space-y-1">
           <h2 id="run-timesheets-title" className="text-lg leading-6 font-semibold tracking-tight">
-            Timesheets
+            {t("timesheetsTitle")}
           </h2>
           <p className="max-w-2xl text-sm leading-5 text-pretty text-muted-foreground">
-            Worked hours, HR-verified overtime and approved leave. Informational only — base pay is
-            never prorated.
+            {t("timesheetsDescription")}
           </p>
         </div>
 
@@ -346,67 +353,69 @@ export function RunDetail({ runId }: { runId: string }) {
               <EmptyState
                 icon={ClipboardList}
                 message={
-                  run.status === "failed"
-                    ? "Recalculate the run to produce timesheets."
-                    : "Timesheets appear after the calculation finishes."
+                  run.status === "failed" ? t("timesheetsFailed") : t("timesheetsPending")
                 }
               />
             </div>
           ) : timesheetsQuery.isPending ? (
             <div className="flex items-center justify-center gap-2 px-6 py-10 text-sm text-muted-foreground">
               <Spinner className="size-4" />
-              <p>Loading timesheets…</p>
+              <p>{t("timesheetsLoading")}</p>
             </div>
           ) : timesheetsQuery.isError ? (
             <div className="p-4">
               <Alert variant="destructive">
                 <CircleAlert aria-hidden="true" />
                 <AlertDescription>
-                  <p>Could not load timesheets.</p>
+                  <p>{t("timesheetsLoadError")}</p>
                   <Button
                     variant="outline"
                     size="sm"
                     className="mt-2"
                     onClick={() => void timesheetsQuery.refetch()}
                   >
-                    Retry
+                    {common("retry")}
                   </Button>
                 </AlertDescription>
               </Alert>
             </div>
           ) : timesheets.length === 0 ? (
             <div className="p-4">
-              <EmptyState icon={ClipboardList} message="This run has no timesheets." />
+              <EmptyState icon={ClipboardList} message={t("timesheetsEmpty")} />
             </div>
           ) : (
             <>
               <p className="px-4 py-2 text-xs text-muted-foreground sm:hidden">
-                Swipe sideways to see every timesheet field.
+                {t("timesheetsSwipe")}
               </p>
               <Table
-                aria-label="Run timesheets"
-                containerLabel="Run timesheets. Scroll horizontally to read all columns."
+                aria-label={t("timesheetsLabel")}
+                containerLabel={t("timesheetsContainer")}
               >
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
-                    <TableHead className="pl-3">Employee</TableHead>
-                    <TableHead className="text-right">Worked hours</TableHead>
-                    <TableHead className="text-right">Overtime hours</TableHead>
-                    <TableHead className="text-right">Leave days</TableHead>
-                    <TableHead className="pr-3 text-right">Attendance days</TableHead>
+                    <TableHead className="pl-3">{t("timesheetColumns.employee")}</TableHead>
+                    <TableHead className="text-right">{t("timesheetColumns.worked")}</TableHead>
+                    <TableHead className="text-right">{t("timesheetColumns.overtime")}</TableHead>
+                    <TableHead className="text-right">{t("timesheetColumns.leave")}</TableHead>
+                    <TableHead className="pr-3 text-right">{t("timesheetColumns.attendance")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {timesheets.map((timesheet) => (
                     <TableRow key={timesheet.employee_id}>
                       <TableCell className="pl-3 font-medium">
-                        {employeeLabel(timesheet.employee_id, directory.nameById)}
+                        {employeeLabel(
+                          timesheet.employee_id,
+                          directory.nameById,
+                          root("employeeFallback", { id: timesheet.employee_id.slice(-4) }),
+                        )}
                       </TableCell>
                       <TableCell className="text-right font-mono tabular-nums">
-                        {formatHours(timesheet.worked_hours)}
+                        {formatHours(timesheet.worked_hours, locale)}
                       </TableCell>
                       <TableCell className="text-right font-mono tabular-nums">
-                        {formatHours(timesheet.overtime_hours)}
+                        {formatHours(timesheet.overtime_hours, locale)}
                       </TableCell>
                       <TableCell className="text-right font-mono tabular-nums">
                         {timesheet.leave_days}
@@ -421,7 +430,7 @@ export function RunDetail({ runId }: { runId: string }) {
               {timesheetPageInfo === null ? null : (
                 <TablePagination
                   page={timesheetPageInfo}
-                  label="timesheets"
+                  label={t("timesheetsPaginationLabel")}
                   onPageChange={setTimesheetPage}
                 />
               )}
@@ -433,11 +442,10 @@ export function RunDetail({ runId }: { runId: string }) {
       <section aria-labelledby="run-payslips-title" className="flex flex-col gap-3">
         <div className="space-y-1">
           <h2 id="run-payslips-title" className="text-lg leading-6 font-semibold tracking-tight">
-            Payslips
+            {t("payslipsTitle")}
           </h2>
           <p className="max-w-2xl text-sm leading-5 text-pretty text-muted-foreground">
-            Every payslip is provisional until finalize. A correction run marks the earlier set
-            superseded, still readable.
+            {t("payslipsDescription")}
           </p>
         </div>
 
@@ -447,57 +455,55 @@ export function RunDetail({ runId }: { runId: string }) {
               <EmptyState
                 icon={ClipboardList}
                 message={
-                  run.status === "failed"
-                    ? "Recalculate the run to produce payslips."
-                    : "Payslips appear after the calculation finishes."
+                  run.status === "failed" ? t("payslipsFailed") : t("payslipsPending")
                 }
               />
             </div>
           ) : payslipsQuery.isPending ? (
             <div className="flex items-center justify-center gap-2 px-6 py-10 text-sm text-muted-foreground">
               <Spinner className="size-4" />
-              <p>Loading payslips…</p>
+              <p>{t("payslipsLoading")}</p>
             </div>
           ) : payslipsQuery.isError ? (
             <div className="p-4">
               <Alert variant="destructive">
                 <CircleAlert aria-hidden="true" />
                 <AlertDescription>
-                  <p>Could not load payslips.</p>
+                  <p>{t("payslipsLoadError")}</p>
                   <Button
                     variant="outline"
                     size="sm"
                     className="mt-2"
                     onClick={() => void payslipsQuery.refetch()}
                   >
-                    Retry
+                    {common("retry")}
                   </Button>
                 </AlertDescription>
               </Alert>
             </div>
           ) : payslips.length === 0 ? (
             <div className="p-4">
-              <EmptyState icon={ClipboardList} message="This run has no payslips." />
+              <EmptyState icon={ClipboardList} message={t("payslipsEmpty")} />
             </div>
           ) : (
             <>
               <p className="px-4 py-2 text-xs text-muted-foreground sm:hidden">
-                Swipe sideways to see every payslip field.
+                {t("payslipsSwipe")}
               </p>
               <Table
-                aria-label="Run payslips"
-                containerLabel="Run payslips. Scroll horizontally to read all columns."
+                aria-label={t("payslipsLabel")}
+                containerLabel={t("payslipsContainer")}
               >
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
-                    <TableHead className="pl-3">Employee</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Base</TableHead>
-                    <TableHead className="text-right">Overtime</TableHead>
-                    <TableHead className="text-right">Bonuses</TableHead>
-                    <TableHead className="text-right">Deductions</TableHead>
-                    <TableHead className="text-right">Net</TableHead>
-                    <TableHead className="pr-3 text-right">Actions</TableHead>
+                    <TableHead className="pl-3">{t("timesheetColumns.employee")}</TableHead>
+                    <TableHead>{t("payslipColumns.status")}</TableHead>
+                    <TableHead className="text-right">{t("payslipColumns.base")}</TableHead>
+                    <TableHead className="text-right">{t("payslipColumns.overtime")}</TableHead>
+                    <TableHead className="text-right">{t("payslipColumns.bonuses")}</TableHead>
+                    <TableHead className="text-right">{t("payslipColumns.deductions")}</TableHead>
+                    <TableHead className="text-right">{t("payslipColumns.net")}</TableHead>
+                    <TableHead className="pr-3 text-right">{t("payslipColumns.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -524,7 +530,7 @@ export function RunDetail({ runId }: { runId: string }) {
               {payslipPageInfo === null ? null : (
                 <TablePagination
                   page={payslipPageInfo}
-                  label="payslips"
+                  label={t("payslipsPaginationLabel")}
                   onPageChange={setPayslipPage}
                 />
               )}
@@ -545,11 +551,8 @@ export function RunDetail({ runId }: { runId: string }) {
       <Dialog open={finalizeOpen} onOpenChange={setFinalizeOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Finalize payroll run?</DialogTitle>
-            <DialogDescription>
-              Finalizing issues every payslip and can’t be undone. A correction run is the only way
-              to change this month afterwards.
-            </DialogDescription>
+            <DialogTitle>{t("finalizeTitle")}</DialogTitle>
+            <DialogDescription>{t("finalizeDescription")}</DialogDescription>
           </DialogHeader>
           {finalizeError ? (
             <p role="alert" className="flex items-start gap-2 text-sm text-destructive">
@@ -559,10 +562,10 @@ export function RunDetail({ runId }: { runId: string }) {
           ) : null}
           <DialogFooter>
             <Button variant="outline" onClick={() => setFinalizeOpen(false)}>
-              Cancel
+              {common("cancel")}
             </Button>
             <Button disabled={finalize.isPending} onClick={() => void onFinalize()}>
-              {finalize.isPending ? "Finalizing…" : "Finalize payroll"}
+              {finalize.isPending ? t("finalizing") : t("finalizeConfirm")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -572,11 +575,12 @@ export function RunDetail({ runId }: { runId: string }) {
 }
 
 function BackLink() {
+  const t = useTranslations("payroll.runDetail");
   return (
     <Button asChild variant="ghost" size="sm" className="w-fit">
       <Link href="/payroll">
         <ArrowLeft />
-        Back to payroll
+        {t("backToPayroll")}
       </Link>
     </Button>
   );
@@ -585,10 +589,13 @@ function BackLink() {
 function TotalsSummary({
   totals,
   currency,
+  locale,
 }: {
   totals: PayrollRunTotals;
   currency: string | null;
+  locale: string;
 }) {
+  const labels = useTranslations("payroll.totals");
   const keys: Array<keyof PayrollRunTotals> = [
     "base",
     "overtime_pay",
@@ -602,14 +609,14 @@ function TotalsSummary({
       <dl className="grid grid-cols-2 gap-px bg-border sm:grid-cols-5">
         {keys.map((key) => (
           <div key={key} className="bg-card p-4">
-            <dt className="text-xs text-muted-foreground">{payrollTotalsLabel[key]}</dt>
+            <dt className="text-xs text-muted-foreground">{labels(key)}</dt>
             <dd
               className={cn(
                 "mt-1 font-mono tabular-nums",
                 key === "net" ? "text-lg font-semibold" : "text-sm",
               )}
             >
-              {currency === null ? "—" : formatMoney(totals[key], currency)}
+              {currency === null ? "—" : formatMoney(totals[key], currency, locale)}
             </dd>
           </div>
         ))}
@@ -633,30 +640,39 @@ function PayslipRows({
   deductionTotal: number;
   onToggle: () => void;
 }) {
-  const employee = employeeLabel(payslip.employee_id, directory);
+  const t = useTranslations("payroll.runDetail");
+  const statusT = useTranslations("payroll.status.payslip");
+  const kinds = useTranslations("payroll.kinds");
+  const root = useTranslations("payroll");
+  const locale = useLocale();
+  const employee = employeeLabel(
+    payslip.employee_id,
+    directory,
+    root("employeeFallback", { id: payslip.employee_id.slice(-4) }),
+  );
   return (
     <>
       <TableRow>
         <TableCell className="pl-3 font-medium">{employee}</TableCell>
         <TableCell>
           <Badge variant={payslipStatusVariant[payslip.status]}>
-            {payslipStatusLabel[payslip.status]}
+            {statusT(payslip.status)}
           </Badge>
         </TableCell>
         <TableCell className="text-right font-mono tabular-nums">
-          {currency === null ? "—" : formatMoney(payslip.base, currency)}
+          {currency === null ? "—" : formatMoney(payslip.base, currency, locale)}
         </TableCell>
         <TableCell className="text-right font-mono tabular-nums">
-          {currency === null ? "—" : formatMoney(payslip.overtime_pay, currency)}
+          {currency === null ? "—" : formatMoney(payslip.overtime_pay, currency, locale)}
         </TableCell>
         <TableCell className="text-right font-mono tabular-nums">
-          {currency === null ? "—" : formatMoney(payslip.bonuses, currency)}
+          {currency === null ? "—" : formatMoney(payslip.bonuses, currency, locale)}
         </TableCell>
         <TableCell className="text-right font-mono tabular-nums">
-          {currency === null ? "—" : formatMoney(deductionTotal, currency)}
+          {currency === null ? "—" : formatMoney(deductionTotal, currency, locale)}
         </TableCell>
         <TableCell className="text-right font-mono tabular-nums">
-          {currency === null ? "—" : formatMoney(payslip.net, currency)}
+          {currency === null ? "—" : formatMoney(payslip.net, currency, locale)}
         </TableCell>
         <TableCell className="pr-3 text-right">
           <Button
@@ -664,10 +680,14 @@ function PayslipRows({
             size="xs"
             className="min-h-11 sm:min-h-7"
             aria-expanded={expanded}
-            aria-label={`${expanded ? "Hide" : "Show"} payslip lines for ${employee}`}
+            aria-label={
+              expanded
+                ? t("hideLinesAria", { name: employee })
+                : t("showLinesAria", { name: employee })
+            }
             onClick={onToggle}
           >
-            {expanded ? "Hide lines" : "Show lines"}
+            {expanded ? t("hideLines") : t("showLines")}
           </Button>
         </TableCell>
       </TableRow>
@@ -675,9 +695,9 @@ function PayslipRows({
         <TableRow className="hover:bg-transparent">
           <TableCell colSpan={8} className="bg-muted/30 whitespace-normal">
             <div className="space-y-2 py-1">
-              <p className="text-xs font-medium">Deduction lines</p>
+              <p className="text-xs font-medium">{t("deductionLines")}</p>
               {(payslip.deductions ?? []).length === 0 ? (
-                <p className="text-sm text-muted-foreground">No deduction lines.</p>
+                <p className="text-sm text-muted-foreground">{t("noDeductionLines")}</p>
               ) : (
                 <ul className="space-y-1">
                   {(payslip.deductions ?? []).map((line) => (
@@ -689,27 +709,29 @@ function PayslipRows({
                         <span className="font-mono text-xs text-muted-foreground">{line.code}</span>{" "}
                         {line.name}{" "}
                         <span className="text-muted-foreground">
-                          ({deductionKindLabel[line.kind]}:{" "}
+                          ({kinds(line.kind)}:{" "}
                           {line.kind === "percent_of_base"
-                            ? `${formatHours(line.value)}% of base`
+                            ? t("percentOfBase", { value: formatHours(line.value, locale) })
                             : currency === null
-                              ? formatHours(line.value)
-                              : formatMoney(line.value, currency)}
+                              ? formatHours(line.value, locale)
+                              : formatMoney(line.value, currency, locale)}
                           )
                         </span>
                       </span>
                       <span className="font-mono text-sm tabular-nums">
-                        {currency === null ? "—" : formatMoney(line.amount, currency)}
+                        {currency === null ? "—" : formatMoney(line.amount, currency, locale)}
                       </span>
                     </li>
                   ))}
                 </ul>
               )}
               <p className="text-xs text-muted-foreground">
-                Issued{" "}
-                {payslip.issued_at === null || payslip.issued_at === undefined
-                  ? "—"
-                  : formatPayrollDate(payslip.issued_at)}
+                {t("issued", {
+                  date:
+                    payslip.issued_at === null || payslip.issued_at === undefined
+                      ? "—"
+                      : formatPayrollDate(payslip.issued_at, locale),
+                })}
               </p>
             </div>
           </TableCell>

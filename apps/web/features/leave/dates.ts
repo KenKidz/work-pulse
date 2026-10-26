@@ -19,8 +19,14 @@ export function earliestStartDate(code: LeaveTypeCode | undefined): string {
 }
 
 /** Format an API `date` (or timestamp when a display date is enough). */
-export function formatDate(value: string): string {
-  return dayjs(value).format("MMM D, YYYY");
+export function formatDate(value: string, locale = "en-US"): string {
+  const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(value);
+  return new Intl.DateTimeFormat(locale, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    ...(dateOnly ? { timeZone: "UTC" } : {}),
+  }).format(new Date(dateOnly ? `${value}T00:00:00Z` : value));
 }
 
 /** Inclusive whole-day span, or `null` until both dates parse and order. */

@@ -1,32 +1,57 @@
 /**
  * Form schemas for the organizations feature (react-hook-form + zod).
  * The server stays the authority — these mirror the pinned API contract.
+ * Factories take the translated validation copy so the schemas stay
+ * locale-agnostic.
  */
 
 import { z } from "zod";
 
-export const departmentFormSchema = z.object({
-  name: z.string().min(1, "Name is required").max(200, "Name must be at most 200 characters"),
-  // Explicit null moves the department to the root (pinned PATCH semantics).
-  parent_department_id: z.string().uuid("Select a valid parent").nullish(),
-});
+type DepartmentValidation = (
+  key: "nameRequired" | "nameTooLong" | "parentInvalid",
+) => string;
 
-export type DepartmentFormValues = z.infer<typeof departmentFormSchema>;
+export function departmentFormSchema(t: DepartmentValidation) {
+  return z.object({
+    name: z.string().min(1, t("nameRequired")).max(200, t("nameTooLong")),
+    // Explicit null moves the department to the root (pinned PATCH semantics).
+    parent_department_id: z.string().uuid(t("parentInvalid")).nullish(),
+  });
+}
 
-export const positionFormSchema = z.object({
-  title: z.string().min(1, "Title is required").max(200, "Title must be at most 200 characters"),
-  description: z.string().max(2000, "Description must be at most 2000 characters").nullish(),
-});
+export type DepartmentFormValues = z.infer<ReturnType<typeof departmentFormSchema>>;
 
-export type PositionFormValues = z.infer<typeof positionFormSchema>;
+type PositionValidation = (
+  key: "titleRequired" | "titleTooLong" | "descriptionTooLong",
+) => string;
 
-export const locationFormSchema = z.object({
-  name: z.string().min(1, "Name is required").max(200, "Name must be at most 200 characters"),
-  address: z.string().max(500, "Address must be at most 500 characters").nullish(),
-  timezone: z
-    .string()
-    .min(1, "Timezone is required")
-    .max(100, "Timezone must be at most 100 characters"),
-});
+export function positionFormSchema(t: PositionValidation) {
+  return z.object({
+    title: z.string().min(1, t("titleRequired")).max(200, t("titleTooLong")),
+    description: z.string().max(2000, t("descriptionTooLong")).nullish(),
+  });
+}
 
-export type LocationFormValues = z.infer<typeof locationFormSchema>;
+export type PositionFormValues = z.infer<ReturnType<typeof positionFormSchema>>;
+
+type LocationValidation = (
+  key:
+    | "nameRequired"
+    | "nameTooLong"
+    | "addressTooLong"
+    | "timezoneRequired"
+    | "timezoneTooLong",
+) => string;
+
+export function locationFormSchema(t: LocationValidation) {
+  return z.object({
+    name: z.string().min(1, t("nameRequired")).max(200, t("nameTooLong")),
+    address: z.string().max(500, t("addressTooLong")).nullish(),
+    timezone: z
+      .string()
+      .min(1, t("timezoneRequired"))
+      .max(100, t("timezoneTooLong")),
+  });
+}
+
+export type LocationFormValues = z.infer<ReturnType<typeof locationFormSchema>>;

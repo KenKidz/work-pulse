@@ -9,6 +9,7 @@
  */
 
 import { CircleAlert } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
@@ -23,6 +24,9 @@ type LiveStatusBannerProps = {
 };
 
 export function LiveStatusBanner({ status, updatedAt }: LiveStatusBannerProps) {
+  const t = useTranslations("realtime.live");
+  const locale = useLocale();
+
   if (status === "live") {
     return (
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-success/25 bg-success/5 px-4 py-2.5 text-sm">
@@ -35,14 +39,14 @@ export function LiveStatusBanner({ status, updatedAt }: LiveStatusBannerProps) {
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-60 motion-reduce:hidden" />
             <span className="relative inline-flex size-2.5 rounded-full bg-success" />
           </span>
-          Live
+          {t("label")}
         </span>
         <span className="text-muted-foreground">
-          Check-ins and check-outs appear here within seconds.
+          {t("description")}
         </span>
         {updatedAt > 0 ? (
           <span className="ml-auto font-mono text-xs text-muted-foreground tabular-nums">
-            Updated {formatClockTime(new Date(updatedAt).toISOString())}
+            {t("updated", { time: formatClockTime(new Date(updatedAt).toISOString(), locale) })}
           </span>
         ) : null}
       </div>
@@ -53,8 +57,8 @@ export function LiveStatusBanner({ status, updatedAt }: LiveStatusBannerProps) {
     return (
       <Alert role="status">
         <Spinner />
-        <AlertTitle>Connecting to live updates…</AlertTitle>
-        <AlertDescription>The board shows the latest snapshot meanwhile.</AlertDescription>
+        <AlertTitle>{t("connectingTitle")}</AlertTitle>
+        <AlertDescription>{t("connectingDescription")}</AlertDescription>
       </Alert>
     );
   }
@@ -62,12 +66,9 @@ export function LiveStatusBanner({ status, updatedAt }: LiveStatusBannerProps) {
   return (
     <Alert variant="destructive" role="status">
       <CircleAlert aria-hidden="true" />
-      <AlertTitle>Live updates unavailable</AlertTitle>
+      <AlertTitle>{t("unavailableTitle")}</AlertTitle>
       <AlertDescription>
-        <p>
-          Showing the latest snapshot — it refreshes about once a minute while we reconnect
-          automatically.
-        </p>
+        <p>{t("unavailableDescription")}</p>
       </AlertDescription>
     </Alert>
   );

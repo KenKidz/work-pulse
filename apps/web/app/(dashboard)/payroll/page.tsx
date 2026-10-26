@@ -1,18 +1,22 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 
 import { PageHeader } from "@/components/page-header";
 import { PayrollWorkspace } from "@/features/payroll/components/PayrollWorkspace";
 
-export const metadata: Metadata = {
-  title: "Payroll — WorkPulse",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("payroll");
+  return { title: t("metadata.payrollTitle") };
+}
 
-export default function PayrollPage() {
+export default async function PayrollPage() {
+  const t = await getTranslations("payroll");
+
   return (
     <section className="space-y-6">
       <PageHeader
-        title="Payroll"
-        description="Simulated payroll — configure pay inputs, run a closed month, inspect every line, then finalize."
+        title={t("page.payrollTitle")}
+        description={t("page.payrollDescription")}
       />
       <PayrollWorkspace />
     </section>

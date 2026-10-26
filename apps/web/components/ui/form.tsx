@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 import * as React from "react";
 import { cn } from "cn";
 import { InfoIcon } from "lucide-react";
@@ -95,6 +97,7 @@ function FormLabel({
   hint?: React.ReactNode;
 }) {
   const { error, formItemId, formDescriptionId } = useFormField();
+  const t = useTranslations("common.form");
 
   const label = (
     <Label
@@ -119,7 +122,7 @@ function FormLabel({
         <TooltipTrigger asChild>
           <button
             type="button"
-            aria-label="Show field help"
+            aria-label={t("showHelp")}
             aria-describedby={formDescriptionId}
             className="-my-1.5 inline-flex size-6 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
           >

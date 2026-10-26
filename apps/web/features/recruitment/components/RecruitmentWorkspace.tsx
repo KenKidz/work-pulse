@@ -7,6 +7,7 @@
  * Tabs are the surface's only local state (the Reports pattern). Client leaf.
  */
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { Spinner } from "@/components/ui/spinner";
@@ -20,18 +21,11 @@ import { MyInterviewsPanel } from "./MyInterviewsPanel";
 
 type RecruitmentTab = "jobs" | "candidates" | "interviews" | "mine";
 
-const MANAGEMENT_TABS: { value: RecruitmentTab; label: string }[] = [
-  { value: "jobs", label: "Jobs" },
-  { value: "candidates", label: "Candidates" },
-  { value: "interviews", label: "Interviews" },
-  { value: "mine", label: "My interviews" },
-];
-
-const INTERVIEWER_TABS: { value: RecruitmentTab; label: string }[] = [
-  { value: "mine", label: "My interviews" },
-];
+const MANAGEMENT_TABS: RecruitmentTab[] = ["jobs", "candidates", "interviews", "mine"];
+const INTERVIEWER_TABS: RecruitmentTab[] = ["mine"];
 
 export function RecruitmentWorkspace() {
+  const t = useTranslations("recruitment");
   const { canView, canManage } = useRecruitmentAccess();
   const [tab, setTab] = useState<RecruitmentTab>(canManage ? "jobs" : "mine");
 
@@ -39,7 +33,7 @@ export function RecruitmentWorkspace() {
     return (
       <div className="flex items-center justify-center gap-2 px-6 py-10 text-sm text-muted-foreground">
         <Spinner className="size-4" />
-        <p>Checking access…</p>
+        <p>{t("workspace.checkingAccess")}</p>
       </div>
     );
   }
@@ -54,12 +48,12 @@ export function RecruitmentWorkspace() {
       data-testid="recruitment-workspace"
     >
       <TabsList
-        aria-label="Recruitment section"
+        aria-label={t("tabsAria")}
         className="w-full justify-start overflow-x-auto sm:w-fit"
       >
         {tabs.map((item) => (
-          <TabsTrigger key={item.value} value={item.value} className="px-3">
-            {item.label}
+          <TabsTrigger key={item} value={item} className="px-3">
+            {t(`tabs.${item}` as never)}
           </TabsTrigger>
         ))}
       </TabsList>

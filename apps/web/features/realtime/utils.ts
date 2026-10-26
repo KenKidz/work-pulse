@@ -4,7 +4,6 @@
  * working-first ordering.
  */
 
-import { dayjs } from "@/lib/datetime";
 
 import type { Employee, EmployeeSummary, PresenceRow, PresenceRowStatus } from "./types";
 
@@ -51,9 +50,13 @@ function entryFor(
 }
 
 /** Display name with a stable identifier fallback — frames are id-only. */
-export function employeeDisplayName(employeeId: string, directory: EmployeeDirectory): string {
+export function employeeDisplayName(
+  employeeId: string,
+  directory: EmployeeDirectory,
+  fallback = `Employee …${employeeId.slice(-4)}`,
+): string {
   const name = directory.get(employeeId)?.name;
-  return name !== undefined && name.length > 0 ? name : `Employee …${employeeId.slice(-4)}`;
+  return name !== undefined && name.length > 0 ? name : fallback;
 }
 
 export function employeeCode(employeeId: string, directory: EmployeeDirectory): string | null {
@@ -71,15 +74,22 @@ export function sortPresenceRows(rows: PresenceRow[], directory: EmployeeDirecto
 }
 
 /** Clock time of a UTC timestamp rendered in the browser's local zone. */
-export function formatClockTime(iso: string): string {
-  return dayjs(iso).format("HH:mm");
+export function formatClockTime(iso: string, locale = "en-US"): string {
+  return new Intl.DateTimeFormat(locale, {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(iso));
 }
 
 /** `minutes_late` as `12m` / `1h 5m` — whole minutes per the contract. */
-export function formatMinutes(minutes: number): string {
+export function formatMinutes(
+  minutes: number,
+  hourShort = "h",
+  minuteShort = "m",
+): string {
   const hours = Math.floor(minutes / 60);
   const rest = minutes % 60;
-  if (hours === 0) return `${rest}m`;
-  if (rest === 0) return `${hours}h`;
-  return `${hours}h ${rest}m`;
+  if (hours === 0) return `${rest}${minuteShort}`;
+  if (rest === 0) return `${hours}${hourShort}`;
+  return `${hours}${hourShort} ${rest}${minuteShort}`;
 }

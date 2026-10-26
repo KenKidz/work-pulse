@@ -14,6 +14,7 @@
 
 import { Bell, CheckCheck } from "lucide-react";
 import Link from "next/link";
+import { useLocale, useTranslations } from "next-intl";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,7 +30,6 @@ import { Spinner } from "@/components/ui/spinner";
 
 import { formatNotificationTime } from "../dates";
 import { useMarkAllReadAction, useNotifications, useUnreadCount } from "../hooks/use-notifications";
-import { notificationKindLabel } from "../labels";
 import type { NotificationItem } from "../types";
 
 /** The dropdown is a glance, not the inbox: the most recent handful. */
@@ -40,6 +40,8 @@ function previewClassName(notification: NotificationItem): string {
 }
 
 export function NotificationBell() {
+  const t = useTranslations("notifications");
+  const locale = useLocale();
   const unreadQuery = useUnreadCount();
   const recentQuery = useNotifications({ page: 1, page_size: BELL_PAGE_SIZE });
   const markAll = useMarkAllReadAction();
@@ -47,7 +49,10 @@ export function NotificationBell() {
   const unreadCount = unreadQuery.data?.status === 200 ? unreadQuery.data.data.unread_count : 0;
   const showBadge = !unreadQuery.isError && unreadCount > 0;
   const badgeText = unreadCount > 99 ? "99+" : String(unreadCount);
-  const label = unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications";
+  const label =
+    unreadCount > 0
+      ? t("bell.unreadLabel", { count: unreadCount })
+      : t("bell.label");
 
   const items = recentQuery.data?.status === 200 ? recentQuery.data.data.items : [];
 
@@ -75,20 +80,22 @@ export function NotificationBell() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80 sm:w-96">
         <DropdownMenuLabel className="flex items-center justify-between gap-2">
-          <span>Notifications</span>
-          {unreadCount > 0 ? <Badge variant="secondary">{unreadCount} unread</Badge> : null}
+          <span>{t("bell.label")}</span>
+          {unreadCount > 0 ? (
+            <Badge variant="secondary">{t("bell.badgeUnread", { count: unreadCount })}</Badge>
+          ) : null}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <div className="max-h-[min(60dvh,36rem)] overflow-y-auto">
           {recentQuery.isPending ? (
             <div className="flex items-center justify-center gap-2 px-3 py-6 text-sm text-muted-foreground">
               <Spinner className="size-4" />
-              <p>Loading notifications…</p>
+              <p>{t("bell.loading")}</p>
             </div>
           ) : recentQuery.isError ? (
-            <p className="px-3 py-4 text-sm text-muted-foreground">Could not load notifications.</p>
+            <p className="px-3 py-4 text-sm text-muted-foreground">{t("bell.loadError")}</p>
           ) : items.length === 0 ? (
-            <p className="px-3 py-4 text-sm text-muted-foreground">No notifications yet.</p>
+            <p className="px-3 py-4 text-sm text-muted-foreground">{t("bell.empty")}</p>
           ) : (
             <ul className="divide-y">
               {items.map((notification) => (
@@ -121,12 +128,12 @@ export function NotificationBell() {
                         {notification.body}
                       </p>
                       <p className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                        <Badge variant="muted">{notificationKindLabel[notification.kind]}</Badge>
+                        <Badge variant="muted">{t(`kinds.${notification.kind}` as never)}</Badge>
                         <time dateTime={notification.created_at} className="font-mono tabular-nums">
-                          {formatNotificationTime(notification.created_at)}
+                          {formatNotificationTime(notification.created_at, locale)}
                         </time>
                         {notification.read_at === null ? (
-                          <span className="font-medium text-primary">Unread</span>
+                          <span className="font-medium text-primary">{t("bell.unread")}</span>
                         ) : null}
                       </p>
                     </div>
@@ -147,10 +154,10 @@ export function NotificationBell() {
           }}
         >
           <CheckCheck aria-hidden="true" />
-          {markAll.isPending ? "Marking all read…" : "Mark all read"}
+          {markAll.isPending ? t("bell.markingAll") : t("bell.markAll")}
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link href="/notifications">View all notifications</Link>
+          <Link href="/notifications">{t("bell.viewAll")}</Link>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

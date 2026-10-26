@@ -20,6 +20,7 @@ import {
   useUpdateShift,
 } from "@workpulse/api-client";
 import { ApiError } from "@workpulse/api-client/mutator/custom-fetch";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import {
@@ -45,8 +46,10 @@ export function useCurrentEmployee() {
   return useGetCurrentEmployee();
 }
 
-export function errorMessage(error: unknown): string {
-  return error instanceof ApiError ? error.message : "Something went wrong. Please try again.";
+type ErrorTranslator = (key: "generic") => string;
+
+export function errorMessage(error: unknown, t: ErrorTranslator): string {
+  return error instanceof ApiError ? error.message : t("generic");
 }
 
 /** Shared role-denied classification: the board and the shifts list both honor it. */
@@ -58,87 +61,113 @@ export type CheckFieldName = "work_mode" | "root";
 
 export type AttendanceFieldErrors = Partial<Record<CheckFieldName, string>>;
 
+type AttendanceErrorTranslator = (
+  key:
+    | "alreadyCheckedIn"
+    | "notOpen"
+    | "employeeNotActive"
+    | "employeeNotFound"
+    | "invalidWorkMode"
+    | "shiftScopeTaken"
+    | "shiftTimeInvalid"
+    | "shiftNotFound"
+    | "locationNotFound"
+    | "forbidden"
+    | "generic",
+) => string;
+
 /** Map a pinned API error code to the visible message it renders (AC12). */
-export function attendanceFieldErrors(error: unknown): AttendanceFieldErrors {
+export function attendanceFieldErrors(
+  error: unknown,
+  t: AttendanceErrorTranslator,
+): AttendanceFieldErrors {
   if (error instanceof ApiError) {
     switch (error.code) {
       case "attendance_already_checked_in":
-        return { root: "You are already checked in — the open record is shown below." };
+        return { root: t("alreadyCheckedIn") };
       case "attendance_not_open":
-        return { root: "There is no open attendance record to check out." };
+        return { root: t("notOpen") };
       case "employee_not_active":
-        return { root: "This action is blocked because the employee is not active." };
+        return { root: t("employeeNotActive") };
       case "employee_not_found":
-        return { root: "No employee record exists for the signed-in user." };
+        return { root: t("employeeNotFound") };
       case "invalid_work_mode":
-        return { root: "The work mode must be onsite or remote." };
+        return { root: t("invalidWorkMode") };
       case "shift_scope_taken":
-        return { root: "A shift already exists for this location scope." };
+        return { root: t("shiftScopeTaken") };
       case "shift_time_invalid":
-        return { root: "The shift end time must be after the start time." };
+        return { root: t("shiftTimeInvalid") };
       case "shift_not_found":
-        return { root: "The selected shift no longer exists." };
+        return { root: t("shiftNotFound") };
       case "location_not_found":
-        return { root: "The selected location no longer exists." };
+        return { root: t("locationNotFound") };
       case "forbidden":
-        return { root: "You do not have permission for this attendance action." };
+        return { root: t("forbidden") };
       default:
         return { root: error.message };
     }
   }
-  return { root: "Something went wrong. Please try again." };
+  return { root: t("generic") };
 }
 
 export function useCheckInAction() {
+  const t = useTranslations("attendance.toasts");
+  const errors = useTranslations("attendance.errors");
   const queryClient = useQueryClient();
   return useCheckIn({
     mutation: {
       onSuccess: async () => {
         await invalidateAttendanceAggregates(queryClient);
         await invalidateCurrentEmployee(queryClient);
-        toast.success("Checked in");
+        toast.success(t("checkedIn"));
       },
-      onError: (error) => toast.error(errorMessage(error)),
+      onError: (error) => toast.error(errorMessage(error, errors)),
     },
   });
 }
 
 export function useCheckOutAction() {
+  const t = useTranslations("attendance.toasts");
+  const errors = useTranslations("attendance.errors");
   const queryClient = useQueryClient();
   return useCheckOut({
     mutation: {
       onSuccess: async () => {
         await invalidateAttendanceAggregates(queryClient);
         await invalidateCurrentEmployee(queryClient);
-        toast.success("Checked out");
+        toast.success(t("checkedOut"));
       },
-      onError: (error) => toast.error(errorMessage(error)),
+      onError: (error) => toast.error(errorMessage(error, errors)),
     },
   });
 }
 
 export function useShiftCreate() {
+  const t = useTranslations("attendance.toasts");
+  const errors = useTranslations("attendance.errors");
   const queryClient = useQueryClient();
   return useCreateShift({
     mutation: {
       onSuccess: async () => {
         await invalidateShifts(queryClient);
-        toast.success("Shift created");
+        toast.success(t("shiftCreated"));
       },
-      onError: (error) => toast.error(errorMessage(error)),
+      onError: (error) => toast.error(errorMessage(error, errors)),
     },
   });
 }
 
 export function useShiftUpdate() {
+  const t = useTranslations("attendance.toasts");
+  const errors = useTranslations("attendance.errors");
   const queryClient = useQueryClient();
   return useUpdateShift({
     mutation: {
       onSuccess: async () => {
         await invalidateShifts(queryClient);
-        toast.success("Shift updated");
+        toast.success(t("shiftUpdated"));
       },
-      onError: (error) => toast.error(errorMessage(error)),
+      onError: (error) => toast.error(errorMessage(error, errors)),
     },
   });
 }

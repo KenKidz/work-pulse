@@ -6,6 +6,7 @@
  */
 
 import { Archive, ArchiveRestore, Briefcase, CircleAlert, Pencil, Plus } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -28,6 +29,7 @@ import { ArchiveStatusBadge } from "./ArchiveStatusBadge";
 import { PositionFormDialog } from "./PositionFormDialog";
 
 export function PositionsTable() {
+  const t = useTranslations();
   const [includeArchived, setIncludeArchived] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Position | null>(null);
@@ -55,14 +57,14 @@ export function PositionsTable() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Button onClick={openCreate}>
           <Plus />
-          New position
+          {t("organizations.actions.newPosition")}
         </Button>
         <Button
           variant="outline"
           aria-pressed={includeArchived}
           onClick={() => setIncludeArchived((value) => !value)}
         >
-          Include archived
+          {t("organizations.actions.includeArchived")}
         </Button>
       </div>
 
@@ -70,21 +72,21 @@ export function PositionsTable() {
         {positionsQuery.isPending ? (
           <div className="flex items-center justify-center gap-2 px-6 py-10 text-sm text-muted-foreground">
             <Spinner className="size-4" />
-            <p>Loading positions…</p>
+            <p>{t("organizations.positions.loading")}</p>
           </div>
         ) : positionsQuery.isError ? (
           <div className="p-4">
             <Alert variant="destructive">
               <CircleAlert aria-hidden="true" />
               <AlertDescription>
-                <p>Could not load positions.</p>
+                <p>{t("organizations.positions.loadError")}</p>
                 <Button
                   variant="outline"
                   size="sm"
                   className="mt-2"
                   onClick={() => void positionsQuery.refetch()}
                 >
-                  Retry
+                  {t("common.actions.retry")}
                 </Button>
               </AlertDescription>
             </Alert>
@@ -93,24 +95,24 @@ export function PositionsTable() {
           <div className="p-4">
             <EmptyState
               icon={Briefcase}
-              message="No positions yet. Create the first one to describe your job titles."
+              message={t("organizations.positions.empty")}
             />
           </div>
         ) : (
           <>
             <p className="px-4 py-2 text-xs text-muted-foreground sm:hidden">
-              Swipe sideways to see every position field.
+              {t("organizations.positions.swipe")}
             </p>
             <Table
-              aria-label="Positions"
-              containerLabel="Positions. Scroll horizontally to see every position field."
+              aria-label={t("organizations.positions.tableLabel")}
+              containerLabel={t("organizations.positions.containerLabel")}
             >
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="pl-3">Title</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="pr-3 text-right">Actions</TableHead>
+                  <TableHead className="pl-3">{t("organizations.positions.columns.title")}</TableHead>
+                  <TableHead>{t("organizations.positions.columns.description")}</TableHead>
+                  <TableHead>{t("organizations.positions.columns.status")}</TableHead>
+                  <TableHead className="pr-3 text-right">{t("organizations.positions.columns.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -129,35 +131,35 @@ export function PositionsTable() {
                           variant="ghost"
                           size="xs"
                           className="min-h-11 sm:min-h-7"
-                          aria-label={`Edit ${position.title}`}
+                          aria-label={t("organizations.positions.editAria", { title: position.title })}
                           onClick={() => openEdit(position)}
                         >
                           <Pencil />
-                          Edit
+                          {t("common.actions.edit")}
                         </Button>
                         {position.archived_at ? (
                           <Button
                             variant="ghost"
                             size="xs"
                             className="min-h-11 sm:min-h-7"
-                            aria-label={`Restore ${position.title}`}
+                            aria-label={t("organizations.positions.restoreAria", { title: position.title })}
                             disabled={restorePosition.isPending}
                             onClick={() => restorePosition.mutate({ id: position.id })}
                           >
                             <ArchiveRestore />
-                            Restore
+                            {t("common.actions.restore")}
                           </Button>
                         ) : (
                           <Button
                             variant="ghost"
                             size="xs"
                             className="min-h-11 sm:min-h-7"
-                            aria-label={`Archive ${position.title}`}
+                            aria-label={t("organizations.positions.archiveAria", { title: position.title })}
                             disabled={archivePosition.isPending}
                             onClick={() => archivePosition.mutate({ id: position.id })}
                           >
                             <Archive />
-                            Archive
+                            {t("common.actions.archive")}
                           </Button>
                         )}
                       </div>

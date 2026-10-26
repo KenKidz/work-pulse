@@ -6,6 +6,7 @@
  */
 
 import { Archive, ArchiveRestore, CircleAlert, MapPin, Pencil, Plus } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -28,6 +29,7 @@ import { ArchiveStatusBadge } from "./ArchiveStatusBadge";
 import { LocationFormDialog } from "./LocationFormDialog";
 
 export function LocationsTable() {
+  const t = useTranslations();
   const [includeArchived, setIncludeArchived] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Location | null>(null);
@@ -55,14 +57,14 @@ export function LocationsTable() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Button onClick={openCreate}>
           <Plus />
-          New location
+          {t("organizations.actions.newLocation")}
         </Button>
         <Button
           variant="outline"
           aria-pressed={includeArchived}
           onClick={() => setIncludeArchived((value) => !value)}
         >
-          Include archived
+          {t("organizations.actions.includeArchived")}
         </Button>
       </div>
 
@@ -70,21 +72,21 @@ export function LocationsTable() {
         {locationsQuery.isPending ? (
           <div className="flex items-center justify-center gap-2 px-6 py-10 text-sm text-muted-foreground">
             <Spinner className="size-4" />
-            <p>Loading locations…</p>
+            <p>{t("organizations.locations.loading")}</p>
           </div>
         ) : locationsQuery.isError ? (
           <div className="p-4">
             <Alert variant="destructive">
               <CircleAlert aria-hidden="true" />
               <AlertDescription>
-                <p>Could not load locations.</p>
+                <p>{t("organizations.locations.loadError")}</p>
                 <Button
                   variant="outline"
                   size="sm"
                   className="mt-2"
                   onClick={() => void locationsQuery.refetch()}
                 >
-                  Retry
+                  {t("common.actions.retry")}
                 </Button>
               </AlertDescription>
             </Alert>
@@ -93,25 +95,25 @@ export function LocationsTable() {
           <div className="p-4">
             <EmptyState
               icon={MapPin}
-              message="No locations yet. Create the first one with its IANA timezone."
+              message={t("organizations.locations.empty")}
             />
           </div>
         ) : (
           <>
             <p className="px-4 py-2 text-xs text-muted-foreground sm:hidden">
-              Swipe sideways to see every location field.
+              {t("organizations.locations.swipe")}
             </p>
             <Table
-              aria-label="Locations"
-              containerLabel="Locations. Scroll horizontally to see every location field."
+              aria-label={t("organizations.locations.tableLabel")}
+              containerLabel={t("organizations.locations.containerLabel")}
             >
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="pl-3">Name</TableHead>
-                  <TableHead>Address</TableHead>
-                  <TableHead>Timezone</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="pr-3 text-right">Actions</TableHead>
+                  <TableHead className="pl-3">{t("organizations.locations.columns.name")}</TableHead>
+                  <TableHead>{t("organizations.locations.columns.address")}</TableHead>
+                  <TableHead>{t("organizations.locations.columns.timezone")}</TableHead>
+                  <TableHead>{t("organizations.locations.columns.status")}</TableHead>
+                  <TableHead className="pr-3 text-right">{t("organizations.locations.columns.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -131,35 +133,35 @@ export function LocationsTable() {
                           variant="ghost"
                           size="xs"
                           className="min-h-11 sm:min-h-7"
-                          aria-label={`Edit ${location.name}`}
+                          aria-label={t("organizations.locations.editAria", { name: location.name })}
                           onClick={() => openEdit(location)}
                         >
                           <Pencil />
-                          Edit
+                          {t("common.actions.edit")}
                         </Button>
                         {location.archived_at ? (
                           <Button
                             variant="ghost"
                             size="xs"
                             className="min-h-11 sm:min-h-7"
-                            aria-label={`Restore ${location.name}`}
+                            aria-label={t("organizations.locations.restoreAria", { name: location.name })}
                             disabled={restoreLocation.isPending}
                             onClick={() => restoreLocation.mutate({ id: location.id })}
                           >
                             <ArchiveRestore />
-                            Restore
+                            {t("common.actions.restore")}
                           </Button>
                         ) : (
                           <Button
                             variant="ghost"
                             size="xs"
                             className="min-h-11 sm:min-h-7"
-                            aria-label={`Archive ${location.name}`}
+                            aria-label={t("organizations.locations.archiveAria", { name: location.name })}
                             disabled={archiveLocation.isPending}
                             onClick={() => archiveLocation.mutate({ id: location.id })}
                           >
                             <Archive />
-                            Archive
+                            {t("common.actions.archive")}
                           </Button>
                         )}
                       </div>

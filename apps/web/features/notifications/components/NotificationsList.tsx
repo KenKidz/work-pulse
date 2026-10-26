@@ -11,6 +11,7 @@
  */
 
 import { BellOff, CheckCheck, CircleAlert } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -27,7 +28,6 @@ import {
   useNotifications,
   useUnreadCount,
 } from "../hooks/use-notifications";
-import { notificationKindLabel } from "../labels";
 import type { NotificationItem } from "../types";
 
 export const NOTIFICATIONS_PAGE_SIZE = 20;
@@ -39,6 +39,9 @@ function rowClassName(notification: NotificationItem): string {
 }
 
 export function NotificationsList() {
+  const t = useTranslations("notifications");
+  const locale = useLocale();
+  const common = useTranslations("common.actions");
   const [page, setPage] = useState(1);
   const notificationsQuery = useNotifications({
     page,
@@ -54,10 +57,12 @@ export function NotificationsList() {
   const unreadCount = unreadQuery.data?.status === 200 ? unreadQuery.data.data.unread_count : 0;
 
   return (
-    <section aria-label="Notifications" className="flex flex-col gap-4">
+    <section aria-label={t("list.ariaLabel")} className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
-          {unreadCount > 0 ? `${unreadCount} unread` : "You’re all caught up"}
+          {unreadCount > 0
+            ? t("list.unreadCount", { count: unreadCount })
+            : t("list.allCaughtUp")}
         </p>
         <Button
           variant="outline"
@@ -66,7 +71,7 @@ export function NotificationsList() {
           onClick={() => markAll.mutate()}
         >
           <CheckCheck />
-          {markAll.isPending ? "Marking all read…" : "Mark all read"}
+          {markAll.isPending ? t("list.markingAll") : t("list.markAll")}
         </Button>
       </div>
 
@@ -74,21 +79,21 @@ export function NotificationsList() {
         {notificationsQuery.isPending ? (
           <div className="flex items-center justify-center gap-2 px-6 py-10 text-sm text-muted-foreground">
             <Spinner className="size-4" />
-            <p>Loading your notifications…</p>
+            <p>{t("list.loading")}</p>
           </div>
         ) : notificationsQuery.isError ? (
           <div className="p-4">
             <Alert variant="destructive">
               <CircleAlert aria-hidden="true" />
               <AlertDescription>
-                <p>Could not load your notifications.</p>
+                <p>{t("list.loadError")}</p>
                 <Button
                   variant="outline"
                   size="sm"
                   className="mt-2"
                   onClick={() => void notificationsQuery.refetch()}
                 >
-                  Retry
+                  {common("retry")}
                 </Button>
               </AlertDescription>
             </Alert>
@@ -97,7 +102,7 @@ export function NotificationsList() {
           <div className="p-4">
             <EmptyState
               icon={BellOff}
-              message="No notifications yet. Leave and attendance updates addressed to you will appear here."
+              message={t("list.empty")}
             />
           </div>
         ) : (
@@ -128,20 +133,20 @@ export function NotificationsList() {
                           </p>
                           <p className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                             <Badge variant="muted">
-                              {notificationKindLabel[notification.kind]}
+                              {t(`kinds.${notification.kind}` as never)}
                             </Badge>
                             <span
                               className={
                                 unread ? "font-medium text-primary" : "text-muted-foreground"
                               }
                             >
-                              {unread ? "Unread" : "Read"}
+                              {unread ? t("list.unread") : t("list.read")}
                             </span>
                             <time
                               dateTime={notification.created_at}
                               className="font-mono tabular-nums"
                             >
-                              {formatNotificationTime(notification.created_at)}
+                              {formatNotificationTime(notification.created_at, locale)}
                             </time>
                           </p>
                         </div>
@@ -150,11 +155,11 @@ export function NotificationsList() {
                             variant="outline"
                             size="sm"
                             className="min-h-11 shrink-0 sm:min-h-7"
-                            aria-label={`Mark read: ${notification.subject}`}
+                            aria-label={t("list.markReadAria", { subject: notification.subject })}
                             disabled={markRead.isPending}
                             onClick={() => markRead.mutate({ id: notification.id })}
                           >
-                            Mark read
+                            {t("list.markRead")}
                           </Button>
                         ) : null}
                       </div>
@@ -172,23 +177,23 @@ export function NotificationsList() {
                 <Button
                   variant="outline"
                   size="sm"
-                  aria-label="Previous page"
+                  aria-label={t("list.previousAria")}
                   disabled={pageInfo.page <= 1}
                   onClick={() => setPage(pageInfo.page - 1)}
                 >
-                  Previous
+                  {t("list.previous")}
                 </Button>
                 <span className="text-muted-foreground">
-                  Page {pageInfo.page} of {pageInfo.total_pages}
+                  {t("list.pageOf", { page: pageInfo.page, total: pageInfo.total_pages })}
                 </span>
                 <Button
                   variant="outline"
                   size="sm"
-                  aria-label="Next page"
+                  aria-label={t("list.nextAria")}
                   disabled={pageInfo.page >= pageInfo.total_pages}
                   onClick={() => setPage(pageInfo.page + 1)}
                 >
-                  Next
+                  {t("list.next")}
                 </Button>
               </div>
             ) : null}

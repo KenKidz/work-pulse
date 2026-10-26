@@ -48,6 +48,7 @@ domain map in `.ai/domain.md` is their placeholder.
 | Overtime (requests, manager approval, HR verification) | 4 | M | done | `overtime.md` |
 | Analytics & Reports (ClickHouse projections) | 4 | L | done | `analytics-reports.md` |
 | Recruitment (jobs, candidates, interviews) | 4+ | L | done | `recruitment.md` |
+| Internationalization (en + vi, next-intl) | cross-cutting | L | done | `i18n.md` |
 | Performance (goals, reviews, feedback, skills) | 4+ | M | planned | — |
 | Employee documents (presigned upload/download) | 4+ | M | planned | — |
 | Observability (OTel, Prometheus, Grafana) | 6 | M | planned | — |

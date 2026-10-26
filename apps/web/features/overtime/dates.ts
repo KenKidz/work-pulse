@@ -13,16 +13,26 @@ export function todayISO(): string {
 }
 
 /** Format an API `date` (or a timestamp when the day is enough). */
-export function formatDate(value: string): string {
-  return dayjs(value).format("MMM D, YYYY");
+export function formatDate(value: string, locale = "en-US"): string {
+  const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(value);
+  return new Intl.DateTimeFormat(locale, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    ...(dateOnly ? { timeZone: "UTC" } : {}),
+  }).format(new Date(dateOnly ? `${value}T00:00:00Z` : value));
 }
 
-const hoursFormatter = new Intl.NumberFormat("en-US", {
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 2,
-});
+const hoursFormatters = new Map<string, Intl.NumberFormat>();
 
 /** Hours with up to two decimals, never padded with zeros. */
-export function formatHours(value: number): string {
-  return hoursFormatter.format(Number(value));
+export function formatHours(value: number, locale = "en-US"): string {
+  const cached = hoursFormatters.get(locale);
+  if (cached !== undefined) return cached.format(Number(value));
+  const formatter = new Intl.NumberFormat(locale, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  });
+  hoursFormatters.set(locale, formatter);
+  return formatter.format(Number(value));
 }

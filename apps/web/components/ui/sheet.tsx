@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "cn";
@@ -67,6 +69,7 @@ function SheetContent({
   VariantProps<typeof sheetVariants> & {
     showCloseButton?: boolean;
   }) {
+  const t = useTranslations("common.actions");
   return (
     <SheetPortal data-slot="sheet-portal">
       <SheetOverlay />
@@ -82,7 +85,7 @@ function SheetContent({
             className="absolute top-3 right-3 flex size-11 items-center justify-center rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
           >
             <XIcon />
-            <span className="sr-only">Close</span>
+            <span className="sr-only">{t("close")}</span>
           </DialogPrimitive.Close>
         )}
       </DialogPrimitive.Content>

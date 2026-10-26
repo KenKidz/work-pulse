@@ -1,20 +1,7 @@
 /**
- * Human-facing labels and marks for the identity domain — the wire values are
- * never rendered (pattern from features/users/components/labels.ts, which
- * re-exports `roleLabel` from here: the auth feature owns identity display and
- * the users feature already depends on auth, never the other way around).
+ * Identity display helpers. Human-facing role labels live in the `auth.roles`
+ * message namespace; this module owns only the derivation that is not copy.
  */
-
-import type { Role } from "@workpulse/api-client/index.schemas";
-
-export const roleLabel: Record<Role, string> = {
-  employee: "Employee",
-  manager: "Manager",
-  hr: "HR",
-  finance: "Finance",
-  admin: "Admin",
-  super_admin: "Super admin",
-};
 
 /**
  * Avatar initials from the account email: the first letter of up to two words

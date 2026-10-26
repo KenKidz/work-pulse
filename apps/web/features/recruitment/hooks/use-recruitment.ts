@@ -42,6 +42,7 @@ import {
   useWithdrawCandidate,
 } from "@workpulse/api-client";
 import { ApiError } from "@workpulse/api-client/mutator/custom-fetch";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { useAuth } from "@/features/auth/components/AuthGate";
@@ -279,8 +280,11 @@ export type JobFieldName =
 export type JobFieldErrors = Partial<Record<JobFieldName, string>>;
 
 /** Map a pinned job error code to the field/dialog that renders it. */
-export function jobFieldErrors(error: unknown): JobFieldErrors {
-  const message = recruitmentErrorMessage(error);
+export function jobFieldErrors(
+  error: unknown,
+  t: (key: Parameters<typeof recruitmentErrorMessage>[1] extends (key: infer K) => string ? K : never) => string,
+): JobFieldErrors {
+  const message = recruitmentErrorMessage(error, t);
   if (error instanceof ApiError) {
     switch (error.code) {
       case "department_not_found":
@@ -297,53 +301,61 @@ export function jobFieldErrors(error: unknown): JobFieldErrors {
 }
 
 export function useJobCreate() {
+  const t = useTranslations("recruitment.toasts");
+  const errors = useTranslations("recruitment.errors");
   const queryClient = useQueryClient();
   return useCreateJob({
     mutation: {
       onSuccess: async () => {
         await invalidateJobs(queryClient);
-        toast.success("Job created");
+        toast.success(t("jobCreated"));
       },
-      onError: (error) => toast.error(recruitmentErrorMessage(error)),
+      onError: (error) => toast.error(recruitmentErrorMessage(error, errors)),
     },
   });
 }
 
 export function useJobUpdate() {
+  const t = useTranslations("recruitment.toasts");
+  const errors = useTranslations("recruitment.errors");
   const queryClient = useQueryClient();
   return useUpdateJob({
     mutation: {
       onSuccess: async () => {
         await invalidateJobs(queryClient);
-        toast.success("Job updated");
+        toast.success(t("jobUpdated"));
       },
-      onError: (error) => toast.error(recruitmentErrorMessage(error)),
+      onError: (error) => toast.error(recruitmentErrorMessage(error, errors)),
     },
   });
 }
 
 export function useJobOpen() {
+  const t = useTranslations("recruitment.toasts");
+  const errors = useTranslations("recruitment.errors");
   const queryClient = useQueryClient();
   return useOpenJob({
     mutation: {
       onSuccess: async () => {
         await invalidateJobs(queryClient);
-        toast.success("Job opened");
+        toast.success(t("jobOpened"));
       },
-      onError: (error) => toast.error(recruitmentErrorMessage(error)),
+      onError: (error) => toast.error(recruitmentErrorMessage(error, errors)),
     },
   });
 }
 
 export function useJobClose() {
+  const t = useTranslations("recruitment.toasts");
+  const errors = useTranslations("recruitment.errors");
   const queryClient = useQueryClient();
   return useCloseJob({
     mutation: {
       onSuccess: async () => {
         await invalidateJobs(queryClient);
-        toast.success("Job closed");
+        toast.success(t("jobClosed"));
       },
-      onError: (error) => toast.error(recruitmentErrorMessage(error)),
+      onError: (error) => toast.error(recruitmentErrorMessage(error, errors)),
     },
   });
 }
@@ -354,8 +366,11 @@ export type CandidateFieldName =
 export type CandidateFieldErrors = Partial<Record<CandidateFieldName, string>>;
 
 /** Map a pinned intake/edit error code to the field that renders it. */
-export function candidateFieldErrors(error: unknown): CandidateFieldErrors {
-  const message = recruitmentErrorMessage(error);
+export function candidateFieldErrors(
+  error: unknown,
+  t: Parameters<typeof recruitmentErrorMessage>[1],
+): CandidateFieldErrors {
+  const message = recruitmentErrorMessage(error, t);
   if (error instanceof ApiError) {
     switch (error.code) {
       case "candidate_already_applied":
@@ -388,8 +403,11 @@ export type HireFieldErrors = Partial<Record<HireFieldName, string>>;
  * The job's organization references are not editable here, so those failures
  * stay on the dialog root with the seam's sentence.
  */
-export function hireFieldErrors(error: unknown): HireFieldErrors {
-  const message = recruitmentErrorMessage(error);
+export function hireFieldErrors(
+  error: unknown,
+  t: Parameters<typeof recruitmentErrorMessage>[1],
+): HireFieldErrors {
+  const message = recruitmentErrorMessage(error, t);
   if (error instanceof ApiError) {
     switch (error.code) {
       case "employee_email_taken":
@@ -408,80 +426,92 @@ export function hireFieldErrors(error: unknown): HireFieldErrors {
 }
 
 export function useCandidateCreate() {
+  const t = useTranslations("recruitment.toasts");
+  const errors = useTranslations("recruitment.errors");
   const queryClient = useQueryClient();
   return useCreateCandidate({
     mutation: {
       onSuccess: async () => {
         await invalidateRecruitment(queryClient);
-        toast.success("Candidate added");
+        toast.success(t("candidateAdded"));
       },
-      onError: (error) => toast.error(recruitmentErrorMessage(error)),
+      onError: (error) => toast.error(recruitmentErrorMessage(error, errors)),
     },
   });
 }
 
 export function useCandidateUpdate() {
+  const t = useTranslations("recruitment.toasts");
+  const errors = useTranslations("recruitment.errors");
   const queryClient = useQueryClient();
   return useUpdateCandidate({
     mutation: {
       onSuccess: async () => {
         await invalidateRecruitment(queryClient);
-        toast.success("Candidate updated");
+        toast.success(t("candidateUpdated"));
       },
-      onError: (error) => toast.error(recruitmentErrorMessage(error)),
+      onError: (error) => toast.error(recruitmentErrorMessage(error, errors)),
     },
   });
 }
 
 export function useCandidateAdvance() {
+  const t = useTranslations("recruitment.toasts");
+  const errors = useTranslations("recruitment.errors");
   const queryClient = useQueryClient();
   return useAdvanceCandidate({
     mutation: {
       onSuccess: async () => {
         await invalidateRecruitment(queryClient);
-        toast.success("Candidate advanced");
+        toast.success(t("candidateAdvanced"));
       },
-      onError: (error) => toast.error(recruitmentErrorMessage(error)),
+      onError: (error) => toast.error(recruitmentErrorMessage(error, errors)),
     },
   });
 }
 
 export function useCandidateReject() {
+  const t = useTranslations("recruitment.toasts");
+  const errors = useTranslations("recruitment.errors");
   const queryClient = useQueryClient();
   return useRejectCandidate({
     mutation: {
       onSuccess: async () => {
         await invalidateRecruitment(queryClient);
-        toast.success("Candidate rejected");
+        toast.success(t("candidateRejected"));
       },
-      onError: (error) => toast.error(recruitmentErrorMessage(error)),
+      onError: (error) => toast.error(recruitmentErrorMessage(error, errors)),
     },
   });
 }
 
 export function useCandidateWithdraw() {
+  const t = useTranslations("recruitment.toasts");
+  const errors = useTranslations("recruitment.errors");
   const queryClient = useQueryClient();
   return useWithdrawCandidate({
     mutation: {
       onSuccess: async () => {
         await invalidateRecruitment(queryClient);
-        toast.success("Candidate withdrawn");
+        toast.success(t("candidateWithdrawn"));
       },
-      onError: (error) => toast.error(recruitmentErrorMessage(error)),
+      onError: (error) => toast.error(recruitmentErrorMessage(error, errors)),
     },
   });
 }
 
 export function useCandidateHire() {
+  const t = useTranslations("recruitment.toasts");
+  const errors = useTranslations("recruitment.errors");
   const queryClient = useQueryClient();
   return useHireCandidate({
     mutation: {
       onSuccess: async () => {
         // A hire also creates the Employee through the seam.
         await invalidateRecruitmentHire(queryClient);
-        toast.success("Candidate hired");
+        toast.success(t("candidateHired"));
       },
-      onError: (error) => toast.error(recruitmentErrorMessage(error)),
+      onError: (error) => toast.error(recruitmentErrorMessage(error, errors)),
     },
   });
 }
@@ -497,8 +527,11 @@ export type InterviewFieldName =
 export type InterviewFieldErrors = Partial<Record<InterviewFieldName, string>>;
 
 /** Map the pinned interview codes back to the field that caused them. */
-export function interviewFieldErrors(error: unknown): InterviewFieldErrors {
-  const message = recruitmentErrorMessage(error);
+export function interviewFieldErrors(
+  error: unknown,
+  t: Parameters<typeof recruitmentErrorMessage>[1],
+): InterviewFieldErrors {
+  const message = recruitmentErrorMessage(error, t);
   if (error instanceof ApiError) {
     switch (error.code) {
       case "interviewer_not_found":
@@ -515,32 +548,38 @@ export function interviewFieldErrors(error: unknown): InterviewFieldErrors {
 }
 
 export function useInterviewSchedule() {
+  const t = useTranslations("recruitment.toasts");
+  const errors = useTranslations("recruitment.errors");
   const queryClient = useQueryClient();
   return useScheduleInterview({
     mutation: {
       onSuccess: async () => {
         await invalidateInterviews(queryClient);
-        toast.success("Interview scheduled");
+        toast.success(t("interviewScheduled"));
       },
-      onError: (error) => toast.error(recruitmentErrorMessage(error)),
+      onError: (error) => toast.error(recruitmentErrorMessage(error, errors)),
     },
   });
 }
 
 export function useInterviewUpdate() {
+  const t = useTranslations("recruitment.toasts");
+  const errors = useTranslations("recruitment.errors");
   const queryClient = useQueryClient();
   return useUpdateInterview({
     mutation: {
       onSuccess: async () => {
         await invalidateInterviews(queryClient);
-        toast.success("Interview updated");
+        toast.success(t("interviewUpdated"));
       },
-      onError: (error) => toast.error(recruitmentErrorMessage(error)),
+      onError: (error) => toast.error(recruitmentErrorMessage(error, errors)),
     },
   });
 }
 
 export function useInterviewComplete() {
+  const t = useTranslations("recruitment.toasts");
+  const errors = useTranslations("recruitment.errors");
   const queryClient = useQueryClient();
   return useCompleteInterview({
     mutation: {
@@ -548,22 +587,24 @@ export function useInterviewComplete() {
         // Invalidation refetches the list, so the row flips to `completed`
         // without a reload (the interviewer feedback AC).
         await invalidateInterviews(queryClient);
-        toast.success("Feedback submitted");
+        toast.success(t("feedbackSubmitted"));
       },
-      onError: (error) => toast.error(recruitmentErrorMessage(error)),
+      onError: (error) => toast.error(recruitmentErrorMessage(error, errors)),
     },
   });
 }
 
 export function useInterviewCancel() {
+  const t = useTranslations("recruitment.toasts");
+  const errors = useTranslations("recruitment.errors");
   const queryClient = useQueryClient();
   return useCancelInterview({
     mutation: {
       onSuccess: async () => {
         await invalidateInterviews(queryClient);
-        toast.success("Interview cancelled");
+        toast.success(t("interviewCancelled"));
       },
-      onError: (error) => toast.error(recruitmentErrorMessage(error)),
+      onError: (error) => toast.error(recruitmentErrorMessage(error, errors)),
     },
   });
 }

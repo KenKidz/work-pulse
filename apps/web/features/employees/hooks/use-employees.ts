@@ -16,6 +16,7 @@ import {
   useUpdateEmployee,
 } from "@workpulse/api-client";
 import { ApiError } from "@workpulse/api-client/mutator/custom-fetch";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { invalidateEmployeeAggregates, invalidateEmployees } from "../api";
@@ -29,8 +30,10 @@ export function useEmployee(id: string) {
   return useGetEmployee(id);
 }
 
-export function errorMessage(error: unknown): string {
-  return error instanceof ApiError ? error.message : "Something went wrong. Please try again.";
+type ErrorTranslator = (key: "generic") => string;
+
+export function errorMessage(error: unknown, t: ErrorTranslator): string {
+  return error instanceof ApiError ? error.message : t("generic");
 }
 
 export type EmployeeFieldName =
@@ -51,94 +54,118 @@ export type EmployeeFieldErrors = Partial<
   Record<EmployeeFieldName | TransferFieldName | "root", string>
 >;
 
+type EmployeeErrorTranslator = (
+  key:
+    | "emailTaken"
+    | "codeTaken"
+    | "managerInvalid"
+    | "selfManager"
+    | "transferTargetArchived"
+    | "departmentNotFound"
+    | "positionNotFound"
+    | "locationNotFound"
+    | "transferEffectiveInvalid"
+    | "employmentOverlap"
+    | "alreadyTerminated"
+    | "forbidden"
+    | "generic",
+) => string;
+
 /** Map a stable API error code to the field it belongs to (AC12). */
-export function employeeFieldErrors(error: unknown): EmployeeFieldErrors {
+export function employeeFieldErrors(error: unknown, t: EmployeeErrorTranslator): EmployeeFieldErrors {
   if (error instanceof ApiError) {
     switch (error.code) {
       case "employee_email_taken":
-        return { email: "An employee with this email already exists." };
+        return { email: t("emailTaken") };
       case "employee_code_taken":
-        return { root: "This employee code is already used by another employee." };
+        return { root: t("codeTaken") };
       case "employee_manager_invalid":
-        return { manager_id: "The selected manager must be an active employee." };
+        return { manager_id: t("managerInvalid") };
       case "employee_self_manager":
-        return { manager_id: "An employee cannot be their own manager." };
+        return { manager_id: t("selfManager") };
       case "transfer_target_archived":
-        return { root: "The selected department, position or location is archived." };
+        return { root: t("transferTargetArchived") };
       case "department_not_found":
-        return { department_id: "The selected department no longer exists." };
+        return { department_id: t("departmentNotFound") };
       case "position_not_found":
-        return { position_id: "The selected position no longer exists." };
+        return { position_id: t("positionNotFound") };
       case "location_not_found":
-        return { location_id: "The selected location no longer exists." };
+        return { location_id: t("locationNotFound") };
       case "employee_transfer_effective_invalid":
-        return {
-          effective_from:
-            "The effective date must be within employment — not before the hire date and not in the future.",
-        };
+        return { effective_from: t("transferEffectiveInvalid") };
       case "employment_period_overlap":
-        return { effective_from: "This effective date overlaps an existing employment period." };
+        return { effective_from: t("employmentOverlap") };
       case "employee_already_terminated":
-        return { root: "This employee has already been terminated." };
+        return { root: t("alreadyTerminated") };
       case "forbidden":
-        return { root: "You do not have permission to manage employees." };
+        return { root: t("forbidden") };
       default:
         return { root: error.message };
     }
   }
-  return { root: "Something went wrong. Please try again." };
+  return { root: t("generic") };
 }
 
 export function useEmployeeCreate() {
+  const t = useTranslations("employees.toasts");
+  const errors = useTranslations("employees.errors");
   const queryClient = useQueryClient();
   return useCreateEmployee({
     mutation: {
       onSuccess: async (_data, variables) => {
         await invalidateEmployees(queryClient);
         const code = variables.data.employee_code;
-        toast.success(code ? `Employee ${code} created` : "Employee created");
+        toast.success(
+          code ? t("createdWithCode", { code }) : t("created"),
+        );
       },
-      onError: (error) => toast.error(errorMessage(error)),
+      onError: (error) => toast.error(errorMessage(error, errors)),
     },
   });
 }
 
 export function useEmployeeUpdate() {
+  const t = useTranslations("employees.toasts");
+  const errors = useTranslations("employees.errors");
   const queryClient = useQueryClient();
   return useUpdateEmployee({
     mutation: {
       onSuccess: async (_data, variables) => {
         await invalidateEmployees(queryClient);
         await invalidateEmployeeAggregates(queryClient, variables.id);
-        toast.success("Employee updated");
+        toast.success(t("updated"));
       },
-      onError: (error) => toast.error(errorMessage(error)),
+      onError: (error) => toast.error(errorMessage(error, errors)),
     },
   });
 }
 
 export function useEmployeeTransfer() {
+  const t = useTranslations("employees.toasts");
+  const errors = useTranslations("employees.errors");
   const queryClient = useQueryClient();
   return useTransferEmployee({
     mutation: {
       onSuccess: async (_data, variables) => {
         await invalidateEmployeeAggregates(queryClient, variables.id);
-        toast.success("Transfer recorded");
+        toast.success(t("transferRecorded"));
       },
-      onError: (error) => toast.error(errorMessage(error)),
+      onError: (error) => toast.error(errorMessage(error, errors)),
     },
   });
 }
 
 export function useEmployeeTerminate() {
+  const t = useTranslations("employees.toasts");
+  const errors = useTranslations("employees.errors");
   const queryClient = useQueryClient();
   return useTerminateEmployee({
     mutation: {
       onSuccess: async (_data, variables) => {
         await invalidateEmployeeAggregates(queryClient, variables.id);
-        toast.success("Employee terminated");
+        toast.success(t("terminated"));
       },
-      onError: (error) => toast.error(errorMessage(error)),
+      onError: (error) => toast.error(errorMessage(error, errors)),
     },
   });
 }

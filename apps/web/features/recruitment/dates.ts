@@ -6,9 +6,15 @@
 
 import { dayjs } from "@/lib/datetime";
 
-/** A UTC ISO timestamp in the browser's local zone. */
-export function formatRecruitmentTimestamp(value: string): string {
-  return dayjs(value).format("MMM D, YYYY HH:mm");
+/** A UTC ISO timestamp in the browser's local zone and the active locale. */
+export function formatRecruitmentTimestamp(value: string, locale = "en-US"): string {
+  return new Intl.DateTimeFormat(locale, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
 }
 
 /**

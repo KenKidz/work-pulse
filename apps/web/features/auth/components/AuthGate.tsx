@@ -10,6 +10,7 @@
 
 import { logout } from "@workpulse/api-client";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { createContext, useContext, useEffect, type ReactNode } from "react";
 
 import { Spinner } from "@/components/ui/spinner";
@@ -31,6 +32,7 @@ export function useAuth(): AuthState {
 }
 
 export function AuthGate({ children }: { children: ReactNode }) {
+  const t = useTranslations("auth.gate");
   const router = useRouter();
   const query = useCurrentUser();
   const user = query.data?.status === 200 ? query.data.data : null;
@@ -65,7 +67,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
       // The Spinner carries its own role="status"; the text explains it.
       <div className="flex min-h-dvh flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
         <Spinner className="size-4" />
-        <p>Checking your session…</p>
+        <p>{t("checkingSession")}</p>
       </div>
     );
   }

@@ -6,9 +6,8 @@
  * the footer repeats the plain-language caveats. Client leaf.
  */
 
+import { useTranslations } from "next-intl";
 import { cn } from "cn";
-
-import { absentCountHint, countsOverlapHint, onLeaveCountHint } from "@/lib/attendance-copy";
 
 import type { RealtimeBoardCounts } from "../types";
 
@@ -34,53 +33,56 @@ function CountCell({ label, value, valueClassName, testId }: CountCellProps) {
 }
 
 export function LiveCounts({ counts }: { counts: RealtimeBoardCounts }) {
+  const t = useTranslations("realtime.counts");
+  const countsT = useTranslations("attendance.counts");
+
   return (
     <section
-      aria-label="Presence counts"
+      aria-label={t("ariaLabel")}
       className="rounded-md border border-border bg-card shadow-none"
     >
       <dl className="grid grid-cols-2 gap-x-4 gap-y-5 p-4 sm:grid-cols-3 sm:p-5 lg:grid-cols-6">
         <CountCell
-          label="On site"
+          label={countsT("present")}
           value={counts.present}
           valueClassName="text-success"
           testId="count-present"
         />
         <CountCell
-          label="Remote"
+          label={countsT("remote")}
           value={counts.remote}
           valueClassName="text-info"
           testId="count-remote"
         />
         <CountCell
-          label="Late"
+          label={countsT("late")}
           value={counts.late}
           valueClassName="text-warning"
           testId="count-late"
         />
         <CountCell
-          label="Absent"
+          label={countsT("absent")}
           value={counts.absent}
           valueClassName="text-destructive"
           testId="count-absent"
         />
         <CountCell
-          label="Checked out"
+          label={countsT("checkedOut")}
           value={counts.checked_out}
           valueClassName="text-foreground"
           testId="count-checked-out"
         />
         <CountCell
-          label="On leave"
+          label={countsT("onLeave")}
           value={counts.on_leave}
           valueClassName="text-muted-foreground"
           testId="count-on-leave"
         />
       </dl>
       <div className="border-t border-border px-4 py-3 text-xs leading-5 text-muted-foreground sm:px-5">
-        <p>{countsOverlapHint}</p>
+        <p>{countsT("overlapHint")}</p>
         <p>
-          {absentCountHint} {onLeaveCountHint}
+          {countsT("absentHint")} {countsT("onLeaveHint")}
         </p>
       </div>
     </section>

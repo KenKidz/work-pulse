@@ -8,6 +8,7 @@
 
 import { CircleAlert, Search, UserPlus, Users } from "lucide-react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -39,7 +40,7 @@ import { useDepartments } from "@/features/organizations/hooks/use-departments";
 import { usePositions } from "@/features/organizations/hooks/use-positions";
 import { useLocations } from "@/features/organizations/hooks/use-locations";
 
-import { employmentTypeLabel, statusLabel, statusVariant } from "../components/labels";
+import { statusVariant } from "../components/labels";
 import { useEmployees } from "../hooks/use-employees";
 import type { EmployeeStatus, ListEmployeesParams } from "../types";
 import { EmployeeFormDialog } from "./EmployeeFormDialog";
@@ -58,13 +59,15 @@ function FiltersRow({
   params: ListEmployeesParams;
   onChange: (next: Partial<ListEmployeesParams>) => void;
 }) {
+  const t = useTranslations("employees");
+
   return (
     <div className="flex flex-wrap items-center gap-2" data-testid="employee-filters">
       <div className="relative w-full sm:w-64">
         <Search className="absolute top-1/2 left-2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          aria-label="Search employees"
-          placeholder="Search name, email or code"
+          aria-label={t("filters.searchAria")}
+          placeholder={t("filters.searchPlaceholder")}
           className="w-full pl-8"
           value={params.q ?? ""}
           onChange={(event) => onChange({ q: event.target.value || undefined })}
@@ -77,11 +80,11 @@ function FiltersRow({
           onChange({ department_id: value === ANY ? undefined : value, page: 1 })
         }
       >
-        <SelectTrigger aria-label="Filter by department" className="w-full sm:w-48">
-          <SelectValue placeholder="All departments" />
+        <SelectTrigger aria-label={t("filters.departmentAria")} className="w-full sm:w-48">
+          <SelectValue placeholder={t("filters.allDepartments")} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value={ANY}>All departments</SelectItem>
+          <SelectItem value={ANY}>{t("filters.allDepartments")}</SelectItem>
           <DepartmentsOptions />
         </SelectContent>
       </Select>
@@ -92,11 +95,11 @@ function FiltersRow({
           onChange({ position_id: value === ANY ? undefined : value, page: 1 })
         }
       >
-        <SelectTrigger aria-label="Filter by position" className="w-full sm:w-48">
-          <SelectValue placeholder="All positions" />
+        <SelectTrigger aria-label={t("filters.positionAria")} className="w-full sm:w-48">
+          <SelectValue placeholder={t("filters.allPositions")} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value={ANY}>All positions</SelectItem>
+          <SelectItem value={ANY}>{t("filters.allPositions")}</SelectItem>
           <PositionsOptions />
         </SelectContent>
       </Select>
@@ -107,11 +110,11 @@ function FiltersRow({
           onChange({ location_id: value === ANY ? undefined : value, page: 1 })
         }
       >
-        <SelectTrigger aria-label="Filter by location" className="w-full sm:w-48">
-          <SelectValue placeholder="All locations" />
+        <SelectTrigger aria-label={t("filters.locationAria")} className="w-full sm:w-48">
+          <SelectValue placeholder={t("filters.allLocations")} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value={ANY}>All locations</SelectItem>
+          <SelectItem value={ANY}>{t("filters.allLocations")}</SelectItem>
           <LocationsOptions />
         </SelectContent>
       </Select>
@@ -122,14 +125,14 @@ function FiltersRow({
           onChange({ status: value === ANY ? undefined : (value as EmployeeStatus), page: 1 })
         }
       >
-        <SelectTrigger aria-label="Filter by status" className="w-full sm:w-40">
-          <SelectValue placeholder="All statuses" />
+        <SelectTrigger aria-label={t("filters.statusAria")} className="w-full sm:w-40">
+          <SelectValue placeholder={t("filters.allStatuses")} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value={ANY}>All statuses</SelectItem>
-          <SelectItem value="active">Active</SelectItem>
-          <SelectItem value="on_leave">On leave</SelectItem>
-          <SelectItem value="terminated">Terminated</SelectItem>
+          <SelectItem value={ANY}>{t("filters.allStatuses")}</SelectItem>
+          <SelectItem value="active">{t("status.active")}</SelectItem>
+          <SelectItem value="on_leave">{t("status.on_leave")}</SelectItem>
+          <SelectItem value="terminated">{t("status.terminated")}</SelectItem>
         </SelectContent>
       </Select>
 
@@ -139,11 +142,11 @@ function FiltersRow({
           onChange({ manager_id: value === ANY ? undefined : value, page: 1 })
         }
       >
-        <SelectTrigger aria-label="Filter by manager" className="w-full sm:w-48">
-          <SelectValue placeholder="All managers" />
+        <SelectTrigger aria-label={t("filters.managerAria")} className="w-full sm:w-48">
+          <SelectValue placeholder={t("filters.allManagers")} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value={ANY}>All managers</SelectItem>
+          <SelectItem value={ANY}>{t("filters.allManagers")}</SelectItem>
           <ManagerOptions />
         </SelectContent>
       </Select>
@@ -213,6 +216,8 @@ function LocationsOptions() {
 export const EMPLOYEES_PAGE_SIZE = 20;
 
 export function EmployeesTable() {
+  const t = useTranslations("employees");
+  const common = useTranslations("common.actions");
   const [params, setParams] = useState<ListEmployeesParams>({
     page: 1,
     page_size: EMPLOYEES_PAGE_SIZE,
@@ -245,7 +250,7 @@ export function EmployeesTable() {
         <FiltersRow params={{ ...params, q: searchInput }} onChange={change} />
         <Button className="ml-auto" onClick={() => setDialogOpen(true)}>
           <UserPlus />
-          New employee
+          {t("table.newEmployee")}
         </Button>
       </div>
 
@@ -253,21 +258,21 @@ export function EmployeesTable() {
         {employeesQuery.isPending ? (
           <div className="flex items-center justify-center gap-2 px-6 py-10 text-sm text-muted-foreground">
             <Spinner className="size-4" />
-            <p>Loading employees…</p>
+            <p>{t("table.loading")}</p>
           </div>
         ) : employeesQuery.isError ? (
           <div className="p-4">
             <Alert variant="destructive">
               <CircleAlert aria-hidden="true" />
               <AlertDescription>
-                <p>Could not load employees.</p>
+                <p>{t("table.loadError")}</p>
                 <Button
                   variant="outline"
                   size="sm"
                   className="mt-2"
                   onClick={() => void employeesQuery.refetch()}
                 >
-                  Retry
+                  {common("retry")}
                 </Button>
               </AlertDescription>
             </Alert>
@@ -276,25 +281,25 @@ export function EmployeesTable() {
           <div className="p-4">
             <EmptyState
               icon={Users}
-              message="No employees match. Create the first employee record to build the workforce."
+              message={t("table.empty")}
             />
           </div>
         ) : (
           <>
             <p className="px-4 py-2 text-xs text-muted-foreground sm:hidden">
-              Swipe sideways to see every employee field.
+              {t("table.swipe")}
             </p>
             <Table
-              aria-label="Employees"
-              containerLabel="Employees. Scroll horizontally to read all columns."
+              aria-label={t("table.label")}
+              containerLabel={t("table.containerLabel")}
             >
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="pl-3">Code</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead className="pr-3">Status</TableHead>
+                  <TableHead className="pl-3">{t("table.columns.code")}</TableHead>
+                  <TableHead>{t("table.columns.name")}</TableHead>
+                  <TableHead>{t("table.columns.email")}</TableHead>
+                  <TableHead>{t("table.columns.type")}</TableHead>
+                  <TableHead className="pr-3">{t("table.columns.status")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -312,10 +317,10 @@ export function EmployeesTable() {
                       </Link>
                     </TableCell>
                     <TableCell className="text-muted-foreground">{employee.email}</TableCell>
-                    <TableCell>{employmentTypeLabel[employee.employment_type]}</TableCell>
+                    <TableCell>{t(`types.${employee.employment_type}`)}</TableCell>
                     <TableCell className="pr-3">
                       <Badge variant={statusVariant[employee.status]} data-status={employee.status}>
-                        {statusLabel[employee.status]}
+                        {t(`status.${employee.status}`)}
                       </Badge>
                     </TableCell>
                   </TableRow>
@@ -328,23 +333,23 @@ export function EmployeesTable() {
                 <Button
                   variant="outline"
                   size="sm"
-                  aria-label="Previous page"
+                  aria-label={t("table.previousAria")}
                   disabled={page.page <= 1}
                   onClick={() => change({ page: page.page - 1 })}
                 >
-                  Previous
+                  {t("table.previous")}
                 </Button>
                 <span className="text-muted-foreground">
-                  Page {page.page} of {page.total_pages}
+                  {t("table.pageOf", { page: page.page, total: page.total_pages })}
                 </span>
                 <Button
                   variant="outline"
                   size="sm"
-                  aria-label="Next page"
+                  aria-label={t("table.nextAria")}
                   disabled={page.page >= page.total_pages}
                   onClick={() => change({ page: page.page + 1 })}
                 >
-                  Next
+                  {t("table.next")}
                 </Button>
               </div>
             ) : null}

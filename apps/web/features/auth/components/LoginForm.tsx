@@ -12,6 +12,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CircleAlert, Eye, EyeOff } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 
@@ -30,19 +31,23 @@ import { z } from "zod";
 
 import { authErrorMessage, useCurrentUser, useLogin } from "../hooks/use-auth";
 
-const loginFormSchema = z.object({
-  email: z.string().min(1, "Email is required").email("Enter a valid email"),
-  password: z.string().min(1, "Password is required"),
-});
-
-type LoginFormValues = z.infer<typeof loginFormSchema>;
-
 export function LoginForm() {
+  const t = useTranslations("auth.login");
+  const validation = useTranslations("auth.validation");
+  const errors = useTranslations("auth.errors");
   const router = useRouter();
   const login = useLogin();
   const currentUser = useCurrentUser();
   const [formError, setFormError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+
+  const loginFormSchema = z.object({
+    email: z
+      .string()
+      .min(1, validation("emailRequired"))
+      .email(validation("emailInvalid")),
+    password: z.string().min(1, validation("passwordRequired")),
+  });
 
   const resolved = currentUser.data?.status === 200;
 
@@ -53,19 +58,19 @@ export function LoginForm() {
     }
   }, [resolved, router]);
 
-  const form = useForm<LoginFormValues>({
+  const form = useForm<z.infer<typeof loginFormSchema>>({
     resolver: zodResolver(loginFormSchema),
     defaultValues: { email: "", password: "" },
   });
 
-  async function onSubmit(values: LoginFormValues) {
+  async function onSubmit(values: z.infer<typeof loginFormSchema>) {
     setFormError(null);
     try {
       await login.mutateAsync({ data: values });
       router.push("/dashboard");
     } catch (error) {
       // The user stays on the page; the error renders below (AC13).
-      setFormError(authErrorMessage(error));
+      setFormError(authErrorMessage(error, errors));
     }
   }
 
@@ -77,12 +82,12 @@ export function LoginForm() {
           name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email</FormLabel>
+              <FormLabel>{t("email")}</FormLabel>
               <FormControl>
                 <Input
                   {...field}
                   type="email"
-                  placeholder="you@workpulse.test"
+                  placeholder={t("emailPlaceholder")}
                   autoComplete="email"
                   autoFocus
                 />
@@ -96,7 +101,7 @@ export function LoginForm() {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Password</FormLabel>
+              <FormLabel>{t("password")}</FormLabel>
               <div className="relative">
                 <FormControl>
                   <Input
@@ -111,7 +116,7 @@ export function LoginForm() {
                   variant="ghost"
                   size="icon"
                   className="absolute top-1/2 right-1 size-11 -translate-y-1/2 sm:size-9"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-label={showPassword ? t("hidePassword") : t("showPassword")}
                   aria-pressed={showPassword}
                   onClick={() => setShowPassword((visible) => !visible)}
                 >
@@ -133,7 +138,7 @@ export function LoginForm() {
         ) : null}
 
         <Button type="submit" className="w-full min-h-11" disabled={login.isPending}>
-          {login.isPending ? "Signing in…" : "Sign in"}
+          {login.isPending ? t("signingIn") : t("signIn")}
         </Button>
       </form>
     </Form>

@@ -13,9 +13,11 @@ import {
   salaryFormSchema,
 } from "@/features/payroll/schema";
 
+const t = (key: string) => key;
+
 describe("payrollConfigFormSchema", () => {
   it("accepts a three-letter currency and positive numbers", () => {
-    const result = payrollConfigFormSchema.safeParse({
+    const result = payrollConfigFormSchema(t).safeParse({
       currency: "USD",
       standard_monthly_hours: "160",
       overtime_multiplier: "1.5",
@@ -29,21 +31,21 @@ describe("payrollConfigFormSchema", () => {
 
   it("rejects a lowercase currency and zero values", () => {
     expect(
-      payrollConfigFormSchema.safeParse({
+      payrollConfigFormSchema(t).safeParse({
         currency: "usd",
         standard_monthly_hours: 160,
         overtime_multiplier: 1.5,
       }).success,
     ).toBe(false);
     expect(
-      payrollConfigFormSchema.safeParse({
+      payrollConfigFormSchema(t).safeParse({
         currency: "USD",
         standard_monthly_hours: 0,
         overtime_multiplier: 1.5,
       }).success,
     ).toBe(false);
     expect(
-      payrollConfigFormSchema.safeParse({
+      payrollConfigFormSchema(t).safeParse({
         currency: "USD",
         standard_monthly_hours: 160,
         overtime_multiplier: 0,
@@ -61,21 +63,21 @@ describe("deductionFormSchema", () => {
 
   it("accepts percent-of-base within 0.01..100", () => {
     expect(
-      deductionFormSchema.safeParse({
+      deductionFormSchema(t).safeParse({
         ...base,
         kind: "percent_of_base",
         value: "10",
       }).success,
     ).toBe(true);
     expect(
-      deductionFormSchema.safeParse({
+      deductionFormSchema(t).safeParse({
         ...base,
         kind: "percent_of_base",
         value: "0.01",
       }).success,
     ).toBe(true);
     expect(
-      deductionFormSchema.safeParse({
+      deductionFormSchema(t).safeParse({
         ...base,
         kind: "percent_of_base",
         value: "100",
@@ -85,14 +87,14 @@ describe("deductionFormSchema", () => {
 
   it("rejects percent-of-base outside the range", () => {
     expect(
-      deductionFormSchema.safeParse({
+      deductionFormSchema(t).safeParse({
         ...base,
         kind: "percent_of_base",
         value: "0",
       }).success,
     ).toBe(false);
     expect(
-      deductionFormSchema.safeParse({
+      deductionFormSchema(t).safeParse({
         ...base,
         kind: "percent_of_base",
         value: "100.01",
@@ -102,14 +104,14 @@ describe("deductionFormSchema", () => {
 
   it("requires at least 0.01 for a fixed amount", () => {
     expect(
-      deductionFormSchema.safeParse({
+      deductionFormSchema(t).safeParse({
         ...base,
         kind: "fixed_amount",
         value: "0.005",
       }).success,
     ).toBe(false);
     expect(
-      deductionFormSchema.safeParse({
+      deductionFormSchema(t).safeParse({
         ...base,
         kind: "fixed_amount",
         value: "0.01",
@@ -123,7 +125,7 @@ describe("salaryFormSchema", () => {
 
   it("accepts a cent amount on a valid date", () => {
     expect(
-      salaryFormSchema.safeParse({
+      salaryFormSchema(t).safeParse({
         employee_id: employee,
         amount: "0.01",
         effective_from: "2026-01-01",
@@ -133,21 +135,21 @@ describe("salaryFormSchema", () => {
 
   it("rejects a sub-cent amount, an invalid date and a malformed id", () => {
     expect(
-      salaryFormSchema.safeParse({
+      salaryFormSchema(t).safeParse({
         employee_id: employee,
         amount: "0.009",
         effective_from: "2026-01-01",
       }).success,
     ).toBe(false);
     expect(
-      salaryFormSchema.safeParse({
+      salaryFormSchema(t).safeParse({
         employee_id: employee,
         amount: "10",
         effective_from: "2026-13-01",
       }).success,
     ).toBe(false);
     expect(
-      salaryFormSchema.safeParse({
+      salaryFormSchema(t).safeParse({
         employee_id: "not-a-uuid",
         amount: "10",
         effective_from: "2026-01-01",
@@ -158,9 +160,9 @@ describe("salaryFormSchema", () => {
 
 describe("runFormSchema", () => {
   it("accepts a calendar month and rejects month 13", () => {
-    expect(runFormSchema.safeParse({ period: "2026-09" }).success).toBe(true);
-    expect(runFormSchema.safeParse({ period: "2026-13" }).success).toBe(false);
-    expect(runFormSchema.safeParse({ period: "2026-9" }).success).toBe(false);
+    expect(runFormSchema(t).safeParse({ period: "2026-09" }).success).toBe(true);
+    expect(runFormSchema(t).safeParse({ period: "2026-13" }).success).toBe(false);
+    expect(runFormSchema(t).safeParse({ period: "2026-9" }).success).toBe(false);
   });
 });
 
@@ -169,14 +171,14 @@ describe("bonusFormSchema", () => {
 
   it("caps the note at 200 characters", () => {
     expect(
-      bonusFormSchema.safeParse({
+      bonusFormSchema(t).safeParse({
         employee_id: employee,
         amount: "25",
         note: "a".repeat(200),
       }).success,
     ).toBe(true);
     expect(
-      bonusFormSchema.safeParse({
+      bonusFormSchema(t).safeParse({
         employee_id: employee,
         amount: "25",
         note: "a".repeat(201),

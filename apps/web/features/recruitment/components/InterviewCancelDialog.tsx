@@ -9,6 +9,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CircleAlert } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
@@ -50,11 +51,15 @@ export function InterviewCancelDialog({
   interview,
   candidateName,
 }: InterviewCancelDialogProps) {
+  const t = useTranslations("recruitment.cancel");
+  const common = useTranslations("recruitment.actions");
+  const validation = useTranslations("recruitment.validation");
+  const errors = useTranslations("recruitment.errors");
   const cancelInterview = useInterviewCancel();
   const [error, setError] = useState<string | null>(null);
 
   const form = useForm<CandidateDecisionValues>({
-    resolver: zodResolver(candidateDecisionSchema),
+    resolver: zodResolver(candidateDecisionSchema((key) => validation(key))),
     defaultValues: { note: "" },
   });
 
@@ -67,7 +72,7 @@ export function InterviewCancelDialog({
       });
       onOpenChange(false);
     } catch (failure) {
-      setError(recruitmentErrorMessage(failure));
+      setError(recruitmentErrorMessage(failure, errors));
     }
   }
 
@@ -75,11 +80,12 @@ export function InterviewCancelDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Cancel interview</DialogTitle>
+          <DialogTitle>{t("title")}</DialogTitle>
           <DialogDescription>
-            Cancel the interview with {candidateName ?? "this candidate"} on{" "}
-            {formatRecruitmentTimestamp(interview.scheduled_at)}? This is terminal — the
-            conversation cannot be re-opened.
+            {t("description", {
+              name: candidateName ?? "",
+              time: formatRecruitmentTimestamp(interview.scheduled_at),
+            })}
           </DialogDescription>
         </DialogHeader>
 
@@ -90,15 +96,13 @@ export function InterviewCancelDialog({
               name="note"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel hint="Sensitive: visible to HR only and never included in events.">
-                    Note (optional)
-                  </FormLabel>
+                  <FormLabel hint={t("noteHint")}>{t("note")}</FormLabel>
                   <FormControl>
                     <Textarea
                       {...field}
                       value={field.value}
                       rows={3}
-                      placeholder="Why the conversation is no longer happening."
+                      placeholder={t("notePlaceholder")}
                     />
                   </FormControl>
                   <FormMessage />
@@ -115,10 +119,10 @@ export function InterviewCancelDialog({
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Keep interview
+                {common("keepInterview")}
               </Button>
               <Button type="submit" variant="destructive" disabled={cancelInterview.isPending}>
-                {cancelInterview.isPending ? "Cancelling…" : "Cancel interview"}
+                {cancelInterview.isPending ? t("cancelling") : t("cancelAction")}
               </Button>
             </DialogFooter>
           </form>

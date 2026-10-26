@@ -10,6 +10,7 @@
  */
 
 import { CalendarClock, CircleAlert } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -29,7 +30,6 @@ import {
 
 import { formatRecruitmentTimestamp } from "../dates";
 import {
-  interviewStatusLabel,
   interviewStatusVariant,
   isForbiddenError,
   organizationLabel,
@@ -47,6 +47,11 @@ import { RecruitmentPagination } from "./RecruitmentPagination";
 export const MY_INTERVIEWS_PAGE_SIZE = 20;
 
 export function MyInterviewsPanel() {
+  const t = useTranslations("recruitment.myInterviews");
+  const common = useTranslations("recruitment.actions");
+  const statusLabels = useTranslations("recruitment.status.interview");
+  const fallbacks = useTranslations("recruitment.fallbacks");
+  const locale = useLocale();
   const [params, setParams] = useState<ListInterviewsParams>({
     page: 1,
     page_size: MY_INTERVIEWS_PAGE_SIZE,
@@ -64,7 +69,11 @@ export function MyInterviewsPanel() {
   const pageOutOfRange = page !== null && page.page > Math.max(page.total_pages, 1);
 
   function candidateLabel(interview: Interview): string {
-    return organizationLabel(candidateDirectory.candidateNames, interview.candidate_id, "Candidate");
+    return organizationLabel(
+      candidateDirectory.candidateNames,
+      interview.candidate_id,
+      fallbacks("candidate", { id: interview.candidate_id.slice(-4) }),
+    );
   }
 
   return (
@@ -81,7 +90,7 @@ export function MyInterviewsPanel() {
         {interviewsQuery.isPending ? (
           <div className="flex items-center justify-center gap-2 px-6 py-10 text-sm text-muted-foreground">
             <Spinner className="size-4" />
-            <p>Loading your interviews…</p>
+            <p>{t("loading")}</p>
           </div>
         ) : interviewsQuery.isError ? (
           <div className="p-4">
@@ -100,7 +109,7 @@ export function MyInterviewsPanel() {
                     className="mt-2"
                     onClick={() => void interviewsQuery.refetch()}
                   >
-                    Retry
+                    {common("retry")}
                   </Button>
                 )}
               </AlertDescription>
@@ -110,7 +119,7 @@ export function MyInterviewsPanel() {
           <div className="p-4">
             <EmptyState
               icon={CalendarClock}
-              message="No interviews are assigned to you yet. When HR schedules one, it appears here."
+              message={t("empty")}
             />
             {pageOutOfRange ? (
               <div className="mt-3 flex justify-center">
@@ -127,21 +136,21 @@ export function MyInterviewsPanel() {
         ) : (
           <>
             <p className="px-4 py-2 text-xs text-muted-foreground sm:hidden">
-              Swipe sideways to see every interview field.
+              {t("swipe")}
             </p>
             <Table
-              aria-label="My interviews"
-              containerLabel="My interviews. Scroll horizontally to read all columns."
+              aria-label={t("label")}
+              containerLabel={t("containerLabel")}
             >
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="pl-3">Candidate</TableHead>
-                  <TableHead>Job</TableHead>
-                  <TableHead>Scheduled</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Rating</TableHead>
-                  <TableHead>Feedback</TableHead>
-                  <TableHead className="pr-3 text-right">Actions</TableHead>
+                  <TableHead className="pl-3">{t("columns.candidate")}</TableHead>
+                  <TableHead>{t("columns.job")}</TableHead>
+                  <TableHead>{t("columns.scheduled")}</TableHead>
+                  <TableHead>{t("columns.status")}</TableHead>
+                  <TableHead>{t("columns.rating")}</TableHead>
+                  <TableHead>{t("columns.feedback")}</TableHead>
+                  <TableHead className="pr-3 text-right">{t("columns.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -155,11 +164,15 @@ export function MyInterviewsPanel() {
                     >
                       <TableCell className="pl-3 font-medium">{name}</TableCell>
                       <TableCell>
-                        {organizationLabel(jobDirectory.jobNames, interview.job_id, "Job")}
+                        {organizationLabel(
+                          jobDirectory.jobNames,
+                          interview.job_id,
+                          fallbacks("job", { id: interview.job_id.slice(-4) }),
+                        )}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         <time dateTime={interview.scheduled_at}>
-                          {formatRecruitmentTimestamp(interview.scheduled_at)}
+                          {formatRecruitmentTimestamp(interview.scheduled_at, locale)}
                         </time>
                       </TableCell>
                       <TableCell>
@@ -167,7 +180,7 @@ export function MyInterviewsPanel() {
                           variant={interviewStatusVariant[interview.status]}
                           data-status={interview.status}
                         >
-                          {interviewStatusLabel[interview.status]}
+                          {statusLabels(interview.status)}
                         </Badge>
                       </TableCell>
                       <TableCell className="font-mono tabular-nums">
@@ -190,7 +203,7 @@ export function MyInterviewsPanel() {
                             variant="ghost"
                             size="xs"
                             className="min-h-11 sm:min-h-7"
-                            aria-label={`Submit feedback for ${name}`}
+                            aria-label={t("submitFeedbackAria", { name })}
                             onClick={() => setFeedback(interview)}
                           >
                             Submit feedback

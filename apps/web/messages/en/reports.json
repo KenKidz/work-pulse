@@ -1,0 +1,103 @@
+{
+  "metadataTitle": "Reports — WorkPulse",
+  "pageTitle": "Reports",
+  "pageDescription": "Verified overtime, attendance, leave and headcount over time — projected from the workforce event stream, never read from the operational tables.",
+  "tabs": {
+    "overtime": "Overtime",
+    "attendance": "Attendance",
+    "leave": "Leave",
+    "headcount": "Headcount"
+  },
+  "tabDescriptions": {
+    "overtime": "Verified hours, claim counts and hours per active employee.",
+    "attendance": "Check-ins, worked time and lateness.",
+    "leave": "Approved leave days and requests.",
+    "headcount": "Active headcount at each bucket end, plus joiners and leavers."
+  },
+  "empty": {
+    "overtime": "No verified overtime in this range. Claims appear here after HR verifies them.",
+    "attendance": "No attendance in this range. Check-ins appear here once they are recorded.",
+    "leave": "No approved leave in this range. Approved requests appear here.",
+    "headcount": "No headcount in this range — no employee was employed during these buckets."
+  },
+  "dimensions": {
+    "department": "Department",
+    "location": "Location",
+    "position": "Position",
+    "seniority": "Seniority",
+    "leave_type": "Leave type"
+  },
+  "intervals": {
+    "day": "Daily",
+    "week": "Weekly",
+    "month": "Monthly",
+    "total": "Whole range"
+  },
+  "seniority": {
+    "lt_1y": "< 1 year",
+    "1_3y": "1–<3 years",
+    "3_5y": "3–<5 years",
+    "5y_plus": "5+ years",
+    "unknown": "Unknown"
+  },
+  "filters": {
+    "fromDate": "From date",
+    "toDate": "To date",
+    "to": "to",
+    "interval": "Interval",
+    "intervalAria": "Interval",
+    "groupBy": "Group by: {dimensions}",
+    "groupByAria": "Group by dimensions",
+    "groupByInOrder": "Group by (in row order)",
+    "departmentAria": "Filter by department",
+    "allDepartments": "All departments",
+    "locationAria": "Filter by location",
+    "allLocations": "All locations",
+    "positionAria": "Filter by position",
+    "allPositions": "All positions",
+    "truncated": "Some filter options are hidden because this workspace has more than {limit} departments, positions or locations."
+  },
+  "report": {
+    "loading": "Loading report…",
+    "unavailableTitle": "Report unavailable",
+    "accessDeniedTitle": "Access denied",
+    "retry": "Try again",
+    "chartAria": "{metric} by {group}, charted from the same rows shown in the table below.",
+    "chartHidden": "Chart shows the first {shown} groups; the table has all {total}.",
+    "tableSwipe": "Swipe sideways to see every metric field.",
+    "tableContainer": "Report rows. Scroll sideways to see every metric.",
+    "period": "Period",
+    "total": "Total",
+    "weekOf": "Week of {date}",
+    "rowLimit": "Showing the first {shown} of {total} rows. Narrow the date range or grouping to see the rest."
+  },
+  "metrics": {
+    "verified_hours": "Verified hours",
+    "verified_request_count": "Requests",
+    "verified_day_count": "Verified days",
+    "active_employee_count": "Active employees",
+    "hours_per_employee": "Hours per employee",
+    "checkin_count": "Check-ins",
+    "worked_day_count": "Worked days",
+    "worked_minutes": "Worked time",
+    "late_count": "Late check-ins",
+    "late_rate": "Late rate",
+    "avg_minutes_late": "Avg minutes late",
+    "approved_day_count": "Approved days",
+    "approved_request_count": "Approved requests",
+    "headcount": "Headcount",
+    "joiners": "Joiners",
+    "leavers": "Leavers"
+  },
+  "units": {
+    "hourShort": "h",
+    "minuteShort": "m"
+  },
+  "errors": {
+    "unavailable": "Reports are temporarily unavailable because the analytics store is not answering. Try again in a moment.",
+    "forbidden": "You do not have access to reports.",
+    "invalid": "These report filters are not valid. Check the date range and grouping.",
+    "generic": "The report could not be loaded. Please try again."
+  },
+  "tabsAria": "Report kind"
+}

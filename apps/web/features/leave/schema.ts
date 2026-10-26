@@ -7,24 +7,34 @@
 
 import { z } from "zod";
 
-const dateString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Choose a valid date");
+type LeaveRequestValidation = (
+  key: "dateInvalid" | "typeRequired" | "reasonTooLong" | "endBeforeStart",
+) => string;
 
-export const leaveRequestFormSchema = z
-  .object({
-    leave_type_id: z.string().min(1, "Select a leave type"),
-    start_date: dateString,
-    end_date: dateString,
-    reason: z.string().max(500, "Reason must be at most 500 characters").optional(),
-  })
-  .refine((values) => values.end_date >= values.start_date, {
-    path: ["end_date"],
-    message: "End date must be on or after the start date",
+export function leaveRequestFormSchema(t: LeaveRequestValidation) {
+  const dateString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, t("dateInvalid"));
+
+  return z
+    .object({
+      leave_type_id: z.string().min(1, t("typeRequired")),
+      start_date: dateString,
+      end_date: dateString,
+      reason: z.string().max(500, t("reasonTooLong")).optional(),
+    })
+    .refine((values) => values.end_date >= values.start_date, {
+      path: ["end_date"],
+      message: t("endBeforeStart"),
+    });
+}
+
+export type LeaveRequestFormValues = z.infer<ReturnType<typeof leaveRequestFormSchema>>;
+
+type LeaveDecisionValidation = (key: "noteTooLong") => string;
+
+export function leaveDecisionFormSchema(t: LeaveDecisionValidation) {
+  return z.object({
+    decision_note: z.string().max(500, t("noteTooLong")).optional(),
   });
+}
 
-export type LeaveRequestFormValues = z.infer<typeof leaveRequestFormSchema>;
-
-export const leaveDecisionFormSchema = z.object({
-  decision_note: z.string().max(500, "Note must be at most 500 characters").optional(),
-});
-
-export type LeaveDecisionFormValues = z.infer<typeof leaveDecisionFormSchema>;
+export type LeaveDecisionFormValues = z.infer<ReturnType<typeof leaveDecisionFormSchema>>;

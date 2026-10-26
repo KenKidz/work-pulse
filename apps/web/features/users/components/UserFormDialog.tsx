@@ -42,6 +42,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+import { useTranslations } from "next-intl";
+
 import { useEmployees } from "@/features/employees/hooks/use-employees";
 
 import {
@@ -51,7 +53,7 @@ import {
   type UserFieldName,
 } from "../hooks/use-users";
 import { userCreateSchema, userEditSchema, type UserCreateValues } from "../schema";
-import { ALL_ROLES, roleLabel } from "./labels";
+import { ALL_ROLES } from "./labels";
 
 const NO_EMPLOYEE = "none";
 
@@ -68,6 +70,10 @@ type UserFormDialogProps = {
 };
 
 export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps) {
+  const roles = useTranslations("auth.roles");
+  const t = useTranslations("users");
+  const common = useTranslations("common.actions");
+  const errors = useTranslations("users.errors");
   const isEdit = user !== null;
   const [rootError, setRootError] = useState<string | null>(null);
   const createUser = useUserCreate();
@@ -78,7 +84,9 @@ export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps
   // password field (not rendered there) cannot block the PATCH.
   const form = useForm<UserCreateValues>({
     resolver: zodResolver(
-      isEdit ? userEditSchema : userCreateSchema,
+      isEdit
+        ? userEditSchema((key) => t(`form.validation.${key}`))
+        : userCreateSchema((key) => t(`form.validation.${key}`)),
     ) as unknown as Resolver<UserCreateValues>,
     defaultValues: {
       email: user?.email ?? "",
@@ -113,7 +121,7 @@ export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps
       }
       onOpenChange(false);
     } catch (error) {
-      const fieldErrors = userFieldErrors(error);
+      const fieldErrors = userFieldErrors(error, errors);
       for (const [field, message] of Object.entries(fieldErrors)) {
         if (field === "root") {
           setRootError(message ?? null);
@@ -131,11 +139,9 @@ export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit user" : "New user"}</DialogTitle>
+          <DialogTitle>{isEdit ? t("form.editTitle") : t("form.createTitle")}</DialogTitle>
           <DialogDescription>
-            {isEdit
-              ? "Email, role and the employee link apply on the next request — sessions re-resolve per request."
-              : "Create an account with an initial password; roles are the fixed six."}
+            {isEdit ? t("form.editDescription") : t("form.createDescription")}
           </DialogDescription>
         </DialogHeader>
 
@@ -146,12 +152,12 @@ export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel>{t("form.email")}</FormLabel>
                   <FormControl>
                     <Input
                       {...field}
                       type="email"
-                      placeholder="alex@workpulse.test"
+                      placeholder={t("form.emailPlaceholder")}
                       autoComplete="off"
                     />
                   </FormControl>
@@ -166,7 +172,7 @@ export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password</FormLabel>
+                    <FormLabel>{t("form.password")}</FormLabel>
                     <FormControl>
                       <Input {...field} type="password" autoComplete="new-password" />
                     </FormControl>
@@ -182,17 +188,17 @@ export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps
                 name="role"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Role</FormLabel>
+                    <FormLabel>{t("form.role")}</FormLabel>
                     <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a role" />
+                          <SelectValue placeholder={t("form.rolePlaceholder")} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         {ALL_ROLES.map((role) => (
                           <SelectItem key={role} value={role}>
-                            {roleLabel[role]}
+                            {roles(role)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -206,7 +212,7 @@ export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps
                 name="employee_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Employee link (optional)</FormLabel>
+                    <FormLabel>{t("form.employeeLink")}</FormLabel>
                     <EmployeeLinkPicker
                       value={field.value ?? null}
                       onChange={(value) => field.onChange(value)}
@@ -225,10 +231,10 @@ export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
+                {common("cancel")}
               </Button>
               <Button type="submit" disabled={mutation.isPending}>
-                {isEdit ? "Save changes" : "Create user"}
+                {isEdit ? t("form.saveChanges") : t("form.createUser")}
               </Button>
             </DialogFooter>
           </form>
@@ -252,6 +258,7 @@ function EmployeeLinkPicker({
   value: string | null;
   onChange: (value: string | null) => void;
 }) {
+  const t = useTranslations("users");
   const employeesQuery = useEmployees({ page_size: 100 });
   const employeeOptions = employeesQuery.data?.status === 200 ? employeesQuery.data.data.items : [];
 
@@ -262,11 +269,11 @@ function EmployeeLinkPicker({
     >
       <FormControl>
         <SelectTrigger>
-          <SelectValue placeholder="No employee" />
+          <SelectValue placeholder={t("form.noEmployee")} />
         </SelectTrigger>
       </FormControl>
       <SelectContent>
-        <SelectItem value={NO_EMPLOYEE}>No employee</SelectItem>
+        <SelectItem value={NO_EMPLOYEE}>{t("form.noEmployee")}</SelectItem>
         {employeeOptions.map((option) => (
           <SelectItem key={option.id} value={option.id}>
             {option.first_name} {option.last_name}

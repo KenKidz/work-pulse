@@ -8,18 +8,20 @@
 import { cn } from "cn";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 const TABS = [
-  { href: "/settings/organization/departments", label: "Departments" },
-  { href: "/settings/organization/positions", label: "Positions" },
-  { href: "/settings/organization/locations", label: "Locations" },
+  { href: "/settings/organization/departments", key: "departments" },
+  { href: "/settings/organization/positions", key: "positions" },
+  { href: "/settings/organization/locations", key: "locations" },
 ] as const;
 
 export function OrganizationNav() {
+  const t = useTranslations("organizations.settings");
   const pathname = usePathname();
 
   return (
-    <nav aria-label="Organization settings" className="flex gap-4 border-b">
+    <nav aria-label={t("navLabel")} className="flex gap-4 border-b">
       {TABS.map((tab) => {
         const active = pathname.startsWith(tab.href);
         return (
@@ -34,7 +36,7 @@ export function OrganizationNav() {
                 : "border-transparent text-muted-foreground hover:border-border hover:text-foreground",
             )}
           >
-            {tab.label}
+            {t(tab.key)}
           </Link>
         );
       })}

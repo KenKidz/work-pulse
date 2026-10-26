@@ -7,6 +7,7 @@
  */
 
 import { CircleAlert, Pencil, Plus, Receipt } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -27,7 +28,7 @@ import {
 import { formatHours, formatMoney } from "../format";
 import { usePayrollConfig } from "../hooks/use-payroll-config";
 import { usePayrollDeductions } from "../hooks/use-payroll-deductions";
-import { deductionKindLabel } from "../labels";
+
 import type { PayrollDeduction } from "../types";
 import { DeductionFormDialog } from "./DeductionFormDialog";
 import { PayrollSectionHeader } from "./PayrollSectionHeader";
@@ -35,6 +36,10 @@ import { PayrollSectionHeader } from "./PayrollSectionHeader";
 const DEDUCTIONS_SECTION_ID = "payroll-deductions-title";
 
 export function DeductionLinesTable({ canEdit }: { canEdit: boolean }) {
+  const t = useTranslations("payroll.deductions");
+  const common = useTranslations("common.actions");
+  const kinds = useTranslations("payroll.kinds");
+  const locale = useLocale();
   const deductionsQuery = usePayrollDeductions();
   const configQuery = usePayrollConfig();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -57,13 +62,13 @@ export function DeductionLinesTable({ canEdit }: { canEdit: boolean }) {
     <section aria-labelledby={DEDUCTIONS_SECTION_ID} className="flex flex-col gap-4">
       <PayrollSectionHeader
         id={DEDUCTIONS_SECTION_ID}
-        title="Deduction lines"
-        description="Tenant-wide rules, itemised on every payslip. Inactive lines are kept for history and appear on no payslip."
+        title={t("title")}
+        description={t("description")}
       >
         {canEdit ? (
           <Button onClick={openCreate}>
             <Plus />
-            New deduction line
+            {t("new")}
           </Button>
         ) : null}
       </PayrollSectionHeader>
@@ -72,21 +77,21 @@ export function DeductionLinesTable({ canEdit }: { canEdit: boolean }) {
         {deductionsQuery.isPending ? (
           <div className="flex items-center justify-center gap-2 px-6 py-10 text-sm text-muted-foreground">
             <Spinner className="size-4" />
-            <p>Loading deduction lines…</p>
+            <p>{t("loading")}</p>
           </div>
         ) : deductionsQuery.isError ? (
           <div className="p-4">
             <Alert variant="destructive">
               <CircleAlert aria-hidden="true" />
               <AlertDescription>
-                <p>Could not load deduction lines.</p>
+                <p>{t("loadError")}</p>
                 <Button
                   variant="outline"
                   size="sm"
                   className="mt-2"
                   onClick={() => void deductionsQuery.refetch()}
                 >
-                  Retry
+                  {common("retry")}
                 </Button>
               </AlertDescription>
             </Alert>
@@ -95,26 +100,26 @@ export function DeductionLinesTable({ canEdit }: { canEdit: boolean }) {
           <div className="p-4">
             <EmptyState
               icon={Receipt}
-              message="No deduction lines yet. Add the rules that should itemise on every payslip."
+              message={t("empty")}
             />
           </div>
         ) : (
           <>
             <p className="px-4 py-2 text-xs text-muted-foreground sm:hidden">
-              Swipe sideways to see every deduction field.
+              {t("swipe")}
             </p>
             <Table
-              aria-label="Deduction lines"
-              containerLabel="Deduction lines. Scroll horizontally to read all columns."
+              aria-label={t("label")}
+              containerLabel={t("containerLabel")}
             >
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="pl-3">Code</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Kind</TableHead>
-                  <TableHead className="text-right">Value</TableHead>
-                  <TableHead>Status</TableHead>
-                  {canEdit ? <TableHead className="pr-3 text-right">Actions</TableHead> : null}
+                  <TableHead className="pl-3">{t("columns.code")}</TableHead>
+                  <TableHead>{t("columns.name")}</TableHead>
+                  <TableHead>{t("columns.kind")}</TableHead>
+                  <TableHead className="text-right">{t("columns.value")}</TableHead>
+                  <TableHead>{t("columns.status")}</TableHead>
+                  {canEdit ? <TableHead className="pr-3 text-right">{t("columns.actions")}</TableHead> : null}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -123,18 +128,18 @@ export function DeductionLinesTable({ canEdit }: { canEdit: boolean }) {
                     <TableCell className="pl-3 font-mono text-xs">{deduction.code}</TableCell>
                     <TableCell className="font-medium">{deduction.name}</TableCell>
                     <TableCell className="text-muted-foreground">
-                      {deductionKindLabel[deduction.kind]}
+                      {kinds(deduction.kind)}
                     </TableCell>
                     <TableCell className="text-right font-mono tabular-nums">
                       {deduction.kind === "percent_of_base"
-                        ? `${formatHours(deduction.value)}%`
+                        ? `${formatHours(deduction.value, locale)}%`
                         : currency === null
-                          ? formatHours(deduction.value)
-                          : formatMoney(deduction.value, currency)}
+                          ? formatHours(deduction.value, locale)
+                          : formatMoney(deduction.value, currency, locale)}
                     </TableCell>
                     <TableCell>
                       <Badge variant={deduction.active ? "success" : "muted"}>
-                        {deduction.active ? "Active" : "Inactive"}
+                        {deduction.active ? t("active") : t("inactive")}
                       </Badge>
                     </TableCell>
                     {canEdit ? (
@@ -143,11 +148,11 @@ export function DeductionLinesTable({ canEdit }: { canEdit: boolean }) {
                           variant="ghost"
                           size="xs"
                           className="min-h-11 sm:min-h-7"
-                          aria-label={`Edit ${deduction.name}`}
+                          aria-label={t("editAria", { name: deduction.name })}
                           onClick={() => openEdit(deduction)}
                         >
                           <Pencil />
-                          Edit
+                          {t("edit")}
                         </Button>
                       </TableCell>
                     ) : null}

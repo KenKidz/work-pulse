@@ -20,6 +20,7 @@ import {
   useWithdrawLeaveRequest,
 } from "@workpulse/api-client";
 import { ApiError } from "@workpulse/api-client/mutator/custom-fetch";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { invalidateLeaveAggregates } from "../api";
@@ -52,8 +53,10 @@ export function useLeaveDirectory({
   return { employees, me };
 }
 
-export function errorMessage(error: unknown): string {
-  return error instanceof ApiError ? error.message : "Something went wrong. Please try again.";
+type ErrorTranslator = (key: "generic") => string;
+
+export function errorMessage(error: unknown, t: ErrorTranslator): string {
+  return error instanceof ApiError ? error.message : t("generic");
 }
 
 /** Shared role-denied classification for read surfaces. */
@@ -65,128 +68,150 @@ export type LeaveFieldName = "leave_type_id" | "start_date" | "end_date" | "root
 
 export type LeaveFieldErrors = Partial<Record<LeaveFieldName, string>>;
 
+type LeaveErrorTranslator = (
+  key:
+    | "overlaps"
+    | "startTooOld"
+    | "insufficientBalance"
+    | "typeNotFound"
+    | "employeeNotActive"
+    | "employeeNotFound"
+    | "forbiddenRequest"
+    | "generic",
+) => string;
+
 /** Map a pinned submit error code to the field/dialog that renders it. */
-export function leaveFieldErrors(error: unknown): LeaveFieldErrors {
+export function leaveFieldErrors(error: unknown, t: LeaveErrorTranslator): LeaveFieldErrors {
   if (error instanceof ApiError) {
     switch (error.code) {
       case "leave_overlaps":
-        return {
-          start_date: "This range overlaps a pending or approved leave request.",
-        };
+        return { start_date: t("overlaps") };
       case "leave_start_too_old":
-        return {
-          start_date:
-            "Annual and unpaid leave must start today or later; sick leave can start up to 7 days ago.",
-        };
+        return { start_date: t("startTooOld") };
       case "leave_insufficient_balance":
-        return {
-          root: "This request is longer than the remaining balance for that leave type.",
-        };
+        return { root: t("insufficientBalance") };
       case "leave_type_not_found":
-        return {
-          leave_type_id: "The selected leave type no longer exists.",
-        };
+        return { leave_type_id: t("typeNotFound") };
       case "employee_not_active":
-        return {
-          root: "This employee is not active, so leave can’t be requested.",
-        };
+        return { root: t("employeeNotActive") };
       case "employee_not_found":
-        return { root: "No employee record is linked to your account." };
+        return { root: t("employeeNotFound") };
       case "forbidden":
-        return { root: "You don’t have permission to request leave." };
+        return { root: t("forbiddenRequest") };
       default:
         return { root: error.message };
     }
   }
-  return { root: "Something went wrong. Please try again." };
+  return { root: t("generic") };
 }
 
+type DecisionErrorTranslator = (
+  key:
+    | "selfDecision"
+    | "notPending"
+    | "balanceChanged"
+    | "requestNotFound"
+    | "generic",
+) => string;
+
 /** Decision failures render inside the approve/reject dialog. */
-export function leaveDecisionError(error: unknown): string {
+export function leaveDecisionError(error: unknown, t: DecisionErrorTranslator): string {
   if (error instanceof ApiError) {
     switch (error.code) {
       case "forbidden":
         // Role-denied attempts never reach the inbox; a 403 here is the
         // server refusing self-approval (the request owner is the actor).
-        return "You can’t decide your own leave request.";
+        return t("selfDecision");
       case "leave_not_pending":
-        return "This request is no longer pending. Refresh the list and try again.";
+        return t("notPending");
       case "leave_insufficient_balance":
-        return "The employee’s remaining balance no longer covers this request.";
+        return t("balanceChanged");
       case "leave_request_not_found":
-        return "This request is no longer available.";
+        return t("requestNotFound");
       default:
         return error.message;
     }
   }
-  return "Something went wrong. Please try again.";
+  return t("generic");
 }
 
+type WithdrawErrorTranslator = (
+  key: "forbiddenWithdraw" | "notPending" | "requestNotFound" | "generic",
+) => string;
+
 /** Withdraw failures render above the request table. */
-export function leaveWithdrawError(error: unknown): string {
+export function leaveWithdrawError(error: unknown, t: WithdrawErrorTranslator): string {
   if (error instanceof ApiError) {
     switch (error.code) {
       case "forbidden":
-        return "You can only withdraw your own leave request.";
+        return t("forbiddenWithdraw");
       case "leave_not_pending":
-        return "This request is no longer pending. Refresh the list and try again.";
+        return t("notPending");
       case "leave_request_not_found":
-        return "This request is no longer available.";
+        return t("requestNotFound");
       default:
         return error.message;
     }
   }
-  return "Something went wrong. Please try again.";
+  return t("generic");
 }
 
 export function useCreateLeaveAction() {
+  const t = useTranslations("leave.toasts");
+  const errors = useTranslations("leave.errors");
   const queryClient = useQueryClient();
   return useCreateLeaveRequest({
     mutation: {
       onSuccess: async () => {
         await invalidateLeaveAggregates(queryClient);
-        toast.success("Request submitted");
+        toast.success(t("submitted"));
       },
-      onError: (error) => toast.error(errorMessage(error)),
+      onError: (error) => toast.error(errorMessage(error, errors)),
     },
   });
 }
 
 export function useApproveLeaveAction() {
+  const t = useTranslations("leave.toasts");
+  const errors = useTranslations("leave.errors");
   const queryClient = useQueryClient();
   return useApproveLeaveRequest({
     mutation: {
       onSuccess: async () => {
         await invalidateLeaveAggregates(queryClient);
-        toast.success("Request approved");
+        toast.success(t("approved"));
       },
-      onError: (error) => toast.error(errorMessage(error)),
+      onError: (error) => toast.error(errorMessage(error, errors)),
     },
   });
 }
 
 export function useRejectLeaveAction() {
+  const t = useTranslations("leave.toasts");
+  const errors = useTranslations("leave.errors");
   const queryClient = useQueryClient();
   return useRejectLeaveRequest({
     mutation: {
       onSuccess: async () => {
         await invalidateLeaveAggregates(queryClient);
-        toast.success("Request rejected");
+        toast.success(t("rejected"));
       },
-      onError: (error) => toast.error(errorMessage(error)),
+      onError: (error) => toast.error(errorMessage(error, errors)),
     },
   });
 }
 
 export function useWithdrawLeaveAction() {
+  const t = useTranslations("leave.toasts");
+  const errors = useTranslations("leave.errors");
   const queryClient = useQueryClient();
   return useWithdrawLeaveRequest({
     mutation: {
       onSuccess: async () => {
         await invalidateLeaveAggregates(queryClient);
-        toast.success("Request withdrawn");
+        toast.success(t("withdrawn"));
       },
-      onError: (error) => toast.error(errorMessage(error)),
+      onError: (error) => toast.error(errorMessage(error, errors)),
     },
   });
 }

@@ -27,15 +27,11 @@ import {
   useWithdrawOvertimeRequest,
 } from "@workpulse/api-client";
 import { ApiError } from "@workpulse/api-client/mutator/custom-fetch";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { invalidateOvertimeRequests } from "../api";
-import {
-  OVERTIME_ERROR_MESSAGES,
-  isOvertimeDeciding,
-  isOvertimePayrollBound,
-  overtimeErrorMessage,
-} from "../labels";
+import { isOvertimeDeciding, isOvertimePayrollBound } from "../labels";
 import type { ListOvertimeRequestsParams } from "../types";
 
 /** The decision cadence: a peer is waiting on the row. */
@@ -109,139 +105,179 @@ export function useOvertimeDirectory({
   }, [employeesQuery.data, meQuery.data]);
 }
 
-/** Every pinned failure code has a sentence (labels.ts owns the dictionary). */
-export { OVERTIME_ERROR_MESSAGES, overtimeErrorMessage };
-
 export type OvertimeFieldName = "work_date" | "hours" | "reason" | "root";
 
 export type OvertimeFieldErrors = Partial<Record<OvertimeFieldName, string>>;
 
+type FieldErrorTranslator = (
+  key:
+    | "overlaps"
+    | "futureDate"
+    | "employeeNotActive"
+    | "employeeNotFound"
+    | "forbiddenClaim"
+    | "generic",
+) => string;
+
 /** Map a pinned submit error code to the field/dialog that renders it. */
-export function overtimeFieldErrors(error: unknown): OvertimeFieldErrors {
+export function overtimeFieldErrors(
+  error: unknown,
+  t: FieldErrorTranslator,
+): OvertimeFieldErrors {
   if (error instanceof ApiError) {
     switch (error.code) {
       case "overtime_overlaps":
-        return {
-          work_date: "You already have an open overtime request for that date.",
-        };
+        return { work_date: t("overlaps") };
       case "overtime_work_date_in_future":
-        return {
-          work_date:
-            "Choose today or an earlier date — overtime is claimed for hours already worked.",
-        };
+        return { work_date: t("futureDate") };
       case "employee_not_active":
-        return {
-          root: "Your employee record isn’t active, so overtime can’t be claimed.",
-        };
+        return { root: t("employeeNotActive") };
       case "employee_not_found":
-        return { root: "No employee record is linked to your account." };
+        return { root: t("employeeNotFound") };
       case "forbidden":
-        return { root: "You don’t have permission to claim overtime." };
+        return { root: t("forbiddenClaim") };
       default:
-        return { root: overtimeErrorMessage(error) };
+        return { root: error.message };
     }
   }
-  return { root: "Something went wrong. Please try again." };
+  return { root: t("generic") };
 }
 
+type DecisionErrorTranslator = (
+  key:
+    | "selfDecision"
+    | "notRequested"
+    | "notManagerApproved"
+    | "notOpen"
+    | "requestNotFound"
+    | "generic",
+) => string;
+
 /** Decision failures render inside the approve/verify/reject dialog. */
-export function overtimeDecisionError(error: unknown): string {
+export function overtimeDecisionError(error: unknown, t: DecisionErrorTranslator): string {
   if (error instanceof ApiError) {
     switch (error.code) {
       case "forbidden":
         // Role-denied attempts never reach a decision surface; a 403 here is
         // the server refusing self-decision (the requester is the actor).
-        return "You can’t decide your own overtime request.";
+        return t("selfDecision");
       case "overtime_not_requested":
+        return t("notRequested");
       case "overtime_not_manager_approved":
+        return t("notManagerApproved");
       case "overtime_not_open":
-        return overtimeErrorMessage(error);
+        return t("notOpen");
       case "overtime_request_not_found":
-        return OVERTIME_ERROR_MESSAGES.overtime_request_not_found ?? "Request not found.";
+        return t("requestNotFound");
       default:
-        return overtimeErrorMessage(error);
+        if (error.status === 403) return t("selfDecision");
+        if (error.status === 404) return t("requestNotFound");
+        return error.message;
     }
   }
-  return "Something went wrong. Please try again.";
+  return t("generic");
 }
 
+type WithdrawErrorTranslator = (
+  key: "forbiddenWithdraw" | "notOpen" | "requestNotFound" | "generic",
+) => string;
+
 /** Withdraw failures render above the request table. */
-export function overtimeWithdrawError(error: unknown): string {
+export function overtimeWithdrawError(error: unknown, t: WithdrawErrorTranslator): string {
   if (error instanceof ApiError) {
     switch (error.code) {
       case "forbidden":
-        return "You can only withdraw your own overtime request.";
+        return t("forbiddenWithdraw");
       case "overtime_not_open":
+        return t("notOpen");
       case "overtime_request_not_found":
-        return overtimeErrorMessage(error);
+        return t("requestNotFound");
       default:
-        return overtimeErrorMessage(error);
+        if (error.status === 403) return t("forbiddenWithdraw");
+        if (error.status === 404) return t("requestNotFound");
+        return error.message;
     }
   }
-  return "Something went wrong. Please try again.";
+  return t("generic");
+}
+
+type ErrorTranslator = (key: "generic") => string;
+
+function errorMessage(error: unknown, t: ErrorTranslator): string {
+  return error instanceof ApiError ? error.message : t("generic");
 }
 
 export function useCreateOvertimeAction() {
+  const t = useTranslations("overtime.toasts");
+  const errors = useTranslations("overtime.errors");
   const queryClient = useQueryClient();
   return useCreateOvertimeRequest({
     mutation: {
       onSuccess: async () => {
         await invalidateOvertimeRequests(queryClient);
-        toast.success("Overtime request submitted");
+        toast.success(t("submitted"));
       },
-      onError: (error) => toast.error(overtimeErrorMessage(error)),
+      onError: (error) => toast.error(errorMessage(error, errors)),
     },
   });
 }
 
 export function useApproveOvertimeAction() {
+  const t = useTranslations("overtime.toasts");
+  const errors = useTranslations("overtime.errors");
   const queryClient = useQueryClient();
   return useApproveOvertimeRequest({
     mutation: {
       onSuccess: async () => {
         await invalidateOvertimeRequests(queryClient);
-        toast.success("Overtime approved");
+        toast.success(t("approved"));
       },
-      onError: (error) => toast.error(overtimeErrorMessage(error)),
+      onError: (error) => toast.error(errorMessage(error, errors)),
     },
   });
 }
 
 export function useVerifyOvertimeAction() {
+  const t = useTranslations("overtime.toasts");
+  const errors = useTranslations("overtime.errors");
   const queryClient = useQueryClient();
   return useVerifyOvertimeRequest({
     mutation: {
       onSuccess: async () => {
         await invalidateOvertimeRequests(queryClient);
-        toast.success("Overtime verified");
+        toast.success(t("verified"));
       },
-      onError: (error) => toast.error(overtimeErrorMessage(error)),
+      onError: (error) => toast.error(errorMessage(error, errors)),
     },
   });
 }
 
 export function useRejectOvertimeAction() {
+  const t = useTranslations("overtime.toasts");
+  const errors = useTranslations("overtime.errors");
   const queryClient = useQueryClient();
   return useRejectOvertimeRequest({
     mutation: {
       onSuccess: async () => {
         await invalidateOvertimeRequests(queryClient);
-        toast.success("Overtime rejected");
+        toast.success(t("rejected"));
       },
-      onError: (error) => toast.error(overtimeErrorMessage(error)),
+      onError: (error) => toast.error(errorMessage(error, errors)),
     },
   });
 }
 
 export function useWithdrawOvertimeAction() {
+  const t = useTranslations("overtime.toasts");
+  const errors = useTranslations("overtime.errors");
   const queryClient = useQueryClient();
   return useWithdrawOvertimeRequest({
     mutation: {
       onSuccess: async () => {
         await invalidateOvertimeRequests(queryClient);
-        toast.success("Overtime request withdrawn");
+        toast.success(t("withdrawn"));
       },
-      onError: (error) => toast.error(overtimeErrorMessage(error)),
+      onError: (error) => toast.error(errorMessage(error, errors)),
     },
   });
 }

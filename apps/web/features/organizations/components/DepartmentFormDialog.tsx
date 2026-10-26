@@ -6,6 +6,7 @@
  */
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
@@ -59,6 +60,8 @@ export function DepartmentFormDialog({
   onOpenChange,
   department,
 }: DepartmentFormDialogProps) {
+  const t = useTranslations();
+  const errors = useTranslations("organizations.errors");
   const isEdit = department !== null;
   const [rootError, setRootError] = useState<string | null>(null);
   const createDepartment = useDepartmentCreate();
@@ -73,7 +76,7 @@ export function DepartmentFormDialog({
   ).filter((option) => option.id !== department?.id);
 
   const form = useForm<DepartmentFormValues>({
-    resolver: zodResolver(departmentFormSchema),
+    resolver: zodResolver(departmentFormSchema((key) => t(`organizations.departments.validation.${key}`))),
     defaultValues: {
       name: department?.name ?? "",
       parent_department_id: department?.parent_department_id ?? null,
@@ -95,7 +98,7 @@ export function DepartmentFormDialog({
       }
       onOpenChange(false);
     } catch (error) {
-      const fieldErrors = departmentFieldErrors(error);
+      const fieldErrors = departmentFieldErrors(error, errors);
       for (const [field, message] of Object.entries(fieldErrors)) {
         if (field === "root") {
           setRootError(message ?? null);
@@ -113,11 +116,11 @@ export function DepartmentFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit department" : "New department"}</DialogTitle>
+          <DialogTitle>{isEdit ? t("organizations.departments.editTitle") : t("organizations.departments.createTitle")}</DialogTitle>
           <DialogDescription>
             {isEdit
-              ? "Rename the department or move it in the hierarchy."
-              : "Departments can be nested under a parent department."}
+              ? t("organizations.departments.editDescription")
+              : t("organizations.departments.createDescription")}
           </DialogDescription>
         </DialogHeader>
 
@@ -128,9 +131,9 @@ export function DepartmentFormDialog({
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Name</FormLabel>
+                  <FormLabel>{t("organizations.departments.name")}</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="Engineering" autoComplete="off" />
+                    <Input {...field} placeholder={t("organizations.departments.namePlaceholder")} autoComplete="off" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -142,18 +145,18 @@ export function DepartmentFormDialog({
               name="parent_department_id"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Parent department</FormLabel>
+                  <FormLabel>{t("organizations.departments.parent")}</FormLabel>
                   <Select
                     value={field.value ?? NO_PARENT}
                     onValueChange={(value) => field.onChange(value === NO_PARENT ? null : value)}
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a parent" />
+                        <SelectValue placeholder={t("organizations.departments.parentPlaceholder")} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value={NO_PARENT}>No parent (root)</SelectItem>
+                      <SelectItem value={NO_PARENT}>{t("organizations.departments.noParent")}</SelectItem>
                       {parentOptions.map((option) => (
                         <SelectItem key={option.id} value={option.id}>
                           {option.name}
@@ -174,10 +177,10 @@ export function DepartmentFormDialog({
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
+                {t("common.actions.cancel")}
               </Button>
               <Button type="submit" disabled={mutation.isPending}>
-                {isEdit ? "Save changes" : "Create department"}
+                {isEdit ? t("organizations.actions.saveChanges") : t("organizations.actions.createDepartment")}
               </Button>
             </DialogFooter>
           </form>

@@ -22,28 +22,45 @@ function isCalendarDate(value: string): boolean {
   );
 }
 
-const dateString = z.string().refine(isCalendarDate, "Choose a valid date");
+type OvertimeRequestValidation = (
+  key:
+    | "dateInvalid"
+    | "hoursRequired"
+    | "hoursDecimals"
+    | "hoursPositive"
+    | "hoursMax"
+    | "reasonTooLong",
+) => string;
 
-/** Hours stay a string in the form so the two-decimal rule is checked on input. */
-const hoursString = z
-  .string()
-  .min(1, "Enter the hours worked")
-  .regex(/^\d{1,2}(\.\d{1,2})?$/, "Use hours with at most two decimals")
-  .refine((value) => Number(value) > 0, "Hours must be greater than zero")
-  .refine((value) => Number(value) <= 12, "Hours must be at most 12");
+export function overtimeRequestFormSchema(t: OvertimeRequestValidation) {
+  const dateString = z.string().refine(isCalendarDate, t("dateInvalid"));
 
-const reasonField = z.string().max(500, "Reason must be at most 500 characters").optional();
+  /** Hours stay a string in the form so the two-decimal rule is checked on input. */
+  const hoursString = z
+    .string()
+    .min(1, t("hoursRequired"))
+    .regex(/^\d{1,2}(\.\d{1,2})?$/, t("hoursDecimals"))
+    .refine((value) => Number(value) > 0, t("hoursPositive"))
+    .refine((value) => Number(value) <= 12, t("hoursMax"));
 
-export const overtimeRequestFormSchema = z.object({
-  work_date: dateString,
-  hours: hoursString,
-  reason: reasonField,
-});
+  return z.object({
+    work_date: dateString,
+    hours: hoursString,
+    reason: z.string().max(500, t("reasonTooLong")).optional(),
+  });
+}
 
-export type OvertimeRequestFormValues = z.infer<typeof overtimeRequestFormSchema>;
+export type OvertimeRequestFormValues = z.infer<ReturnType<typeof overtimeRequestFormSchema>>;
 
-export const overtimeDecisionFormSchema = z.object({
-  note: z.string().max(500, "Note must be at most 500 characters").optional(),
-});
+type OvertimeDecisionValidation = (key: "noteTooLong") => string;
 
-export type OvertimeDecisionFormValues = z.infer<typeof overtimeDecisionFormSchema>;
+export function overtimeDecisionFormSchema(t: OvertimeDecisionValidation) {
+  return z.object({
+    note: z.string().max(500, t("noteTooLong")).optional(),
+  });
+}
+
+export type OvertimeDecisionFormValues = z.infer<
+  ReturnType<typeof overtimeDecisionFormSchema>
+>;
+

@@ -9,6 +9,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CircleAlert } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
@@ -51,13 +52,17 @@ export function CandidateDecisionDialog({
   candidate,
   action,
 }: CandidateDecisionDialogProps) {
+  const t = useTranslations("recruitment.candidateDecision");
+  const common = useTranslations("recruitment.actions");
+  const validation = useTranslations("recruitment.validation");
+  const errors = useTranslations("recruitment.errors");
   const rejectCandidate = useCandidateReject();
   const withdrawCandidate = useCandidateWithdraw();
   const mutation = action === "reject" ? rejectCandidate : withdrawCandidate;
   const [error, setError] = useState<string | null>(null);
 
   const form = useForm<CandidateDecisionValues>({
-    resolver: zodResolver(candidateDecisionSchema),
+    resolver: zodResolver(candidateDecisionSchema((key) => validation(key))),
     defaultValues: { note: "" },
   });
 
@@ -76,7 +81,7 @@ export function CandidateDecisionDialog({
       }
       onOpenChange(false);
     } catch (failure) {
-      setError(recruitmentErrorMessage(failure));
+      setError(recruitmentErrorMessage(failure, errors));
     }
   }
 
@@ -84,11 +89,11 @@ export function CandidateDecisionDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{isReject ? "Reject candidate" : "Withdraw candidate"}</DialogTitle>
+          <DialogTitle>{isReject ? t("rejectTitle") : t("withdrawTitle")}</DialogTitle>
           <DialogDescription>
             {isReject
-              ? `Reject ${name}? This is terminal — a later comeback is a new candidate row.`
-              : `Record that ${name} withdrew. This is terminal — the candidate can no longer be moved.`}
+              ? t("rejectDescription", { name })
+              : t("withdrawDescription", { name })}
           </DialogDescription>
         </DialogHeader>
 
@@ -99,18 +104,14 @@ export function CandidateDecisionDialog({
               name="note"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel hint="Sensitive: visible to HR only and never included in events.">
-                    Note (optional)
-                  </FormLabel>
+                  <FormLabel hint={t("noteHint")}>{t("note")}</FormLabel>
                   <FormControl>
                     <Textarea
                       {...field}
                       value={field.value}
                       rows={4}
                       placeholder={
-                        isReject
-                          ? "Why this candidate is no longer moving forward."
-                          : "What the candidate told you, if anything."
+                        isReject ? t("rejectNotePlaceholder") : t("withdrawNotePlaceholder")
                       }
                     />
                   </FormControl>
@@ -128,7 +129,7 @@ export function CandidateDecisionDialog({
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
+                {common("cancel")}
               </Button>
               <Button
                 type="submit"
@@ -137,11 +138,11 @@ export function CandidateDecisionDialog({
               >
                 {mutation.isPending
                   ? isReject
-                    ? "Rejecting…"
-                    : "Withdrawing…"
+                    ? t("rejecting")
+                    : t("withdrawing")
                   : isReject
-                    ? "Reject candidate"
-                    : "Withdraw candidate"}
+                    ? t("rejectAction")
+                    : t("withdrawAction")}
               </Button>
             </DialogFooter>
           </form>

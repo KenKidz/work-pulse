@@ -12,6 +12,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CircleAlert, LogIn } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { cn } from "cn";
@@ -35,7 +36,6 @@ import {
   useCheckInAction,
   useCheckOutAction,
 } from "../hooks/use-attendance";
-import { workModeLabel } from "./labels";
 import { checkInFormSchema, type CheckInFormValues } from "../schema";
 import { formatClockTime } from "./dates";
 
@@ -45,12 +45,17 @@ type CheckInPanelProps = {
 };
 
 export function CheckInPanel({ openRecord }: CheckInPanelProps) {
+  const t = useTranslations("attendance.checkIn");
+  const locale = useLocale();
+  const workModes = useTranslations("attendance.workModes");
+  const validation = useTranslations("attendance.validation");
+  const errors = useTranslations("attendance.errors");
   const [rootError, setRootError] = useState<string | null>(null);
   const checkIn = useCheckInAction();
   const checkOut = useCheckOutAction();
 
   const form = useForm<CheckInFormValues>({
-    resolver: zodResolver(checkInFormSchema),
+    resolver: zodResolver(checkInFormSchema((key) => validation(key))),
     defaultValues: {
       work_mode: "onsite",
       check_in_note: null,
@@ -68,7 +73,7 @@ export function CheckInPanel({ openRecord }: CheckInPanelProps) {
       });
       form.reset({ work_mode: "onsite", check_in_note: null });
     } catch (error) {
-      setRootError(attendanceFieldErrors(error).root ?? errorMessage(error));
+      setRootError(attendanceFieldErrors(error, errors).root ?? errorMessage(error, errors));
     }
   }
 
@@ -77,15 +82,15 @@ export function CheckInPanel({ openRecord }: CheckInPanelProps) {
     try {
       await checkOut.mutateAsync({ id: openRecord?.id ?? "", data: { check_out_note: null } });
     } catch (error) {
-      setRootError(attendanceFieldErrors(error).root ?? errorMessage(error));
+      setRootError(attendanceFieldErrors(error, errors).root ?? errorMessage(error, errors));
     }
   }
 
   return (
     <Card data-testid="check-in-panel" className="gap-0 rounded-md border-border py-0 shadow-none">
       <CardHeader className="px-5 pt-5 pb-3">
-        <CardTitle>Your attendance</CardTitle>
-        <CardDescription>Your check-in time is recorded automatically.</CardDescription>
+        <CardTitle>{t("title")}</CardTitle>
+        <CardDescription>{t("description")}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4 px-5 pb-5">
         {openRecord ? (
@@ -99,13 +104,16 @@ export function CheckInPanel({ openRecord }: CheckInPanelProps) {
               </span>
               <div>
                 <p role="status" className="font-medium">
-                  You’re checked in {openRecord.work_mode === "remote" ? "remotely" : "on site"}
-                  {openRecord.late ? " and late" : ""}.
+                  {t("checkedIn", {
+                    mode:
+                      openRecord.work_mode === "remote" ? t("remotely") : t("onSite"),
+                    late: openRecord.late ? t("lateSuffix") : "",
+                  })}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Since{" "}
+                  {t("since")}{" "}
                   <time dateTime={openRecord.checked_in_at}>
-                    {formatClockTime(openRecord.checked_in_at)}
+                    {formatClockTime(openRecord.checked_in_at, locale)}
                   </time>
                 </p>
               </div>
@@ -115,7 +123,7 @@ export function CheckInPanel({ openRecord }: CheckInPanelProps) {
               onClick={() => void onCheckOut()}
               disabled={checkOut.isPending}
             >
-              {checkOut.isPending ? "Checking out…" : "Check out"}
+              {checkOut.isPending ? t("checkingOut") : t("checkOut")}
             </Button>
           </div>
         ) : (
@@ -130,11 +138,11 @@ export function CheckInPanel({ openRecord }: CheckInPanelProps) {
                 name="work_mode"
                 render={({ field }) => (
                   <FormItem className="gap-1.5">
-                    <FormLabel>Work mode</FormLabel>
+                    <FormLabel>{t("workMode")}</FormLabel>
                     <FormControl>
                       <div
                         role="radiogroup"
-                        aria-label="Work mode"
+                        aria-label={t("workModeAria")}
                         className="grid grid-cols-2 gap-1"
                       >
                         {(["onsite", "remote"] as const).map((mode) => (
@@ -152,7 +160,7 @@ export function CheckInPanel({ openRecord }: CheckInPanelProps) {
                                 : "border-input bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground",
                             )}
                           >
-                            {workModeLabel[mode]}
+                            {workModes(mode)}
                           </button>
                         ))}
                       </div>
@@ -167,7 +175,7 @@ export function CheckInPanel({ openRecord }: CheckInPanelProps) {
                 name="check_in_note"
                 render={({ field }) => (
                   <FormItem className="gap-1.5">
-                    <FormLabel>Note (optional)</FormLabel>
+                    <FormLabel>{t("note")}</FormLabel>
                     <FormControl>
                       <Textarea
                         {...field}
@@ -182,7 +190,7 @@ export function CheckInPanel({ openRecord }: CheckInPanelProps) {
               />
 
               <Button type="submit" disabled={checkIn.isPending} className="min-h-11 sm:px-5">
-                {checkIn.isPending ? "Checking in…" : "Check in"}
+                {checkIn.isPending ? t("checkingIn") : t("checkIn")}
               </Button>
             </form>
           </Form>

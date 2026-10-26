@@ -160,6 +160,29 @@
   components in `components/ui/` or composing shadcn primitives.
 - Gates in `make check-web`: `tsc --noEmit` + ESLint + Vitest.
 
+## Internationalization (i18n)
+
+- `apps/web` is bilingual (English default, Vietnamese) through `next-intl`.
+  The locale is the `wp_locale` cookie; URLs stay locale-agnostic.
+- All user-facing copy — JSX text, `aria-label`, placeholder, `title`,
+  validation message, toast, empty/error state, metadata — comes from
+  `apps/web/messages/<locale>/<surface>.json`. No hardcoded English in
+  components, schemas, label maps or error helpers.
+- Client Components use `useTranslations` / `useLocale`; Server Components use
+  `getTranslations` / `getLocale` / `getFormatter` from `next-intl/server`.
+- Feature schemas are factories taking the translated validation copy:
+  `departmentFormSchema((key) => t("...validation." + key))`. Error helpers
+  take a translator and map stable API codes, never raw server text.
+- Every catalog key exists in **both** locales; `tests/i18n/catalog.test.ts`
+  enforces parity and non-empty values.
+- Dates, numbers, percentages and money use `Intl` with the active locale.
+  Pure helpers accept an explicit `locale` (e.g. `formatPayrollDate(value,
+  locale)`); do not use a module-level locale.
+- When adding a surface, add its JSON file to both `messages/<locale>/index.ts`
+  files and to the feature spec.
+- Tests render through `tests/mocks/next-intl.tsx`, which resolves the real
+  English catalog; keep English assertions aligned with the catalog.
+
 ## API
 
 - Prefix: `/api/v1`. One router module per domain:

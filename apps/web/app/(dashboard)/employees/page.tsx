@@ -1,18 +1,22 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 
 import { PageHeader } from "@/components/page-header";
 import { EmployeesTable } from "@/features/employees/components/EmployeesTable";
 
-export const metadata: Metadata = {
-  title: "Employees — WorkPulse",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("employees");
+  return { title: t("metadataTitle") };
+}
 
-export default function EmployeesPage() {
+export default async function EmployeesPage() {
+  const t = await getTranslations("employees");
+
   return (
     <section className="space-y-6">
       <PageHeader
-        title="Employees"
-        description="The workforce record — who works where, in what role, since when."
+        title={t("title")}
+        description={t("description")}
       />
       <EmployeesTable />
     </section>

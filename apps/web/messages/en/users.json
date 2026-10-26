@@ -1,0 +1,95 @@
+{
+  "metadataTitle": "Users — WorkPulse",
+  "title": "Users",
+  "description": "Accounts, roles and employee links — who can sign in, and as what.",
+  "filters": {
+    "searchAria": "Search users",
+    "searchPlaceholder": "Search email",
+    "roleAria": "Filter by role",
+    "allRoles": "All roles",
+    "statusAria": "Filter by status",
+    "allStatuses": "All statuses",
+    "active": "Active",
+    "inactive": "Inactive"
+  },
+  "table": {
+    "checkingAccess": "Checking access…",
+    "loading": "Loading users…",
+    "loadError": "Could not load users.",
+    "empty": "No users match. Create the first account to give someone access.",
+    "swipe": "Swipe sideways to see every user field.",
+    "label": "Users",
+    "containerLabel": "Users. Scroll horizontally to read all columns.",
+    "columns": {
+      "email": "Email",
+      "role": "Role",
+      "employee": "Employee",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "employeeFallback": "Employee …{id}",
+    "edit": "Edit",
+    "editAria": "Edit {email}",
+    "resetPassword": "Reset password",
+    "resetAria": "Reset password for {email}",
+    "deactivate": "Deactivate",
+    "deactivateAria": "Deactivate {email}",
+    "activate": "Activate",
+    "activateAria": "Activate {email}",
+    "newUser": "New user",
+    "previous": "Previous",
+    "previousAria": "Previous page",
+    "next": "Next",
+    "nextAria": "Next page",
+    "pageOf": "Page {page} of {total}"
+  },
+  "form": {
+    "createTitle": "New user",
+    "editTitle": "Edit user",
+    "createDescription": "Create an account with an initial password; roles are the fixed six.",
+    "editDescription": "Email, role and the employee link apply on the next request — sessions re-resolve per request.",
+    "email": "Email",
+    "emailPlaceholder": "alex@workpulse.test",
+    "password": "Password",
+    "role": "Role",
+    "rolePlaceholder": "Select a role",
+    "employeeLink": "Employee link (optional)",
+    "noEmployee": "No employee",
+    "createUser": "Create user",
+    "saveChanges": "Save changes",
+    "validation": {
+      "emailRequired": "Email is required",
+      "emailInvalid": "Enter a valid email",
+      "passwordMin": "Password must be at least 10 characters",
+      "roleRequired": "Select a role",
+      "employeeInvalid": "Select a valid employee"
+    }
+  },
+  "deactivate": {
+    "title": "Deactivate user",
+    "description": "{email} loses access immediately — sign-in is rejected and every session stops resolving. Their account and history are kept; activation restores access.",
+    "confirm": "Deactivate"
+  },
+  "reset": {
+    "title": "Reset password",
+    "description": "Set a new password for {email}. It applies immediately and signs out every existing session of the account.",
+    "newPassword": "New password",
+    "confirm": "Reset password"
+  },
+  "errors": {
+    "generic": "Something went wrong. Please try again.",
+    "emailTaken": "A user with this email already exists.",
+    "employeeLinkTaken": "This employee is already linked to a user.",
+    "employeeNotFound": "The selected employee no longer exists.",
+    "lastAdmin": "The last active admin or super admin cannot be deactivated.",
+    "userNotFound": "This user no longer exists.",
+    "forbidden": "You do not have permission to manage users."
+  },
+  "toasts": {
+    "userCreated": "User created",
+    "userUpdated": "User updated",
+    "userActivated": "User activated",
+    "userDeactivated": "User deactivated",
+    "passwordReset": "Password reset"
+  }
+}

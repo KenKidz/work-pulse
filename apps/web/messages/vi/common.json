@@ -1,0 +1,70 @@
+{
+  "appName": "WorkPulse",
+  "actions": {
+    "save": "Lưu",
+    "cancel": "Hủy",
+    "close": "Đóng",
+    "create": "Tạo",
+    "edit": "Sửa",
+    "delete": "Xóa",
+    "confirm": "Xác nhận",
+    "back": "Quay lại",
+    "retry": "Thử lại",
+    "refresh": "Làm mới",
+    "dismiss": "Bỏ qua",
+    "search": "Tìm kiếm",
+    "clear": "Xóa",
+    "apply": "Áp dụng",
+    "reset": "Đặt lại",
+    "remove": "Gỡ bỏ",
+    "view": "Xem",
+    "open": "Mở",
+    "submit": "Gửi",
+    "continue": "Tiếp tục",
+    "show": "Hiện",
+    "hide": "Ẩn",
+    "archive": "Lưu trữ",
+    "restore": "Khôi phục"
+  },
+  "states": {
+    "loading": "Đang tải…",
+    "saving": "Đang lưu…",
+    "sending": "Đang gửi…",
+    "checkingSession": "Đang kiểm tra phiên đăng nhập…",
+    "somethingWentWrong": "Đã xảy ra lỗi. Vui lòng thử lại.",
+    "forbidden": "Bạn không có quyền thực hiện thao tác này.",
+    "notFound": "Mục này không còn khả dụng.",
+    "noResults": "Chưa có nội dung để hiển thị."
+  },
+  "locale": {
+    "label": "Ngôn ngữ",
+    "en": "English",
+    "vi": "Tiếng Việt"
+  },
+  "theme": {
+    "switchToLight": "Chuyển sang giao diện sáng",
+    "switchToDark": "Chuyển sang giao diện tối"
+  },
+  "aria": {
+    "main": "Chính",
+    "openNavigation": "Mở menu điều hướng",
+    "close": "Đóng",
+    "accountMenu": "Menu tài khoản của {email}"
+  },
+  "date": {
+    "present": "Hiện tại"
+  },
+  "validation": {
+    "required": "Trường này là bắt buộc.",
+    "email": "Nhập một email hợp lệ.",
+    "number": "Nhập một số.",
+    "positiveNumber": "Nhập một số lớn hơn 0.",
+    "invalid": "Kiểm tra các trường được đánh dấu và thử lại."
+  },
+  "table": {
+    "swipeHint": "Vuốt ngang để xem mọi trường {label}."
+  },
+  "form": {
+    "showHelp": "Hiện trợ giúp cho trường"
+  }
+}

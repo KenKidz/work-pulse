@@ -7,11 +7,11 @@
  * reuses its cached result. Tabs are the surface's only local state.
  */
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import { REPORT_TAB_LABELS } from "../labels";
 import { REPORT_KINDS, type ReportFiltersState, type ReportKind } from "../types";
 import { defaultReportFilters, effectiveGroupBy, toReportParams } from "../utils";
 import {
@@ -25,6 +25,7 @@ import { ReportFilters } from "./ReportFilters";
 import { ReportPanel } from "./ReportPanel";
 
 export function ReportsWorkspace() {
+  const t = useTranslations("reports");
   const [kind, setKind] = useState<ReportKind>("overtime");
   const [filters, setFilters] = useState<ReportFiltersState>(defaultReportFilters);
 
@@ -61,10 +62,10 @@ export function ReportsWorkspace() {
       data-testid="reports-workspace"
     >
       <div className="flex flex-col gap-3">
-        <TabsList aria-label="Report kind" className="w-full justify-start sm:w-fit">
+        <TabsList aria-label={t("tabsAria")} className="w-full justify-start sm:w-fit">
           {REPORT_KINDS.map((reportKind) => (
             <TabsTrigger key={reportKind} value={reportKind} className="px-3">
-              {REPORT_TAB_LABELS[reportKind]}
+              {t(`tabs.${reportKind}` as never)}
             </TabsTrigger>
           ))}
         </TabsList>

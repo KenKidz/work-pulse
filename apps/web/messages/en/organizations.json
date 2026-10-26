@@ -1,0 +1,142 @@
+{
+  "settings": {
+    "title": "Organization",
+    "description": "Departments, positions and locations your workforce hangs off.",
+    "navLabel": "Organization settings",
+    "departments": "Departments",
+    "positions": "Positions",
+    "locations": "Locations"
+  },
+  "status": {
+    "archived": "Archived",
+    "active": "Active"
+  },
+  "actions": {
+    "newDepartment": "New department",
+    "newPosition": "New position",
+    "newLocation": "New location",
+    "includeArchived": "Include archived",
+    "saveChanges": "Save changes",
+    "createDepartment": "Create department",
+    "createPosition": "Create position",
+    "createLocation": "Create location"
+  },
+  "departments": {
+    "loading": "Loading departments…",
+    "loadError": "Could not load departments.",
+    "empty": "No departments yet. Create the first one to structure your organization.",
+    "swipe": "Swipe sideways to see every department field.",
+    "tableLabel": "Departments",
+    "containerLabel": "Departments. Scroll horizontally to see every department field.",
+    "columns": {
+      "name": "Name",
+      "parent": "Parent",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "editAria": "Edit {name}",
+    "archiveAria": "Archive {name}",
+    "restoreAria": "Restore {name}",
+    "createTitle": "New department",
+    "editTitle": "Edit department",
+    "createDescription": "Departments can be nested under a parent department.",
+    "editDescription": "Rename the department or move it in the hierarchy.",
+    "name": "Name",
+    "namePlaceholder": "Engineering",
+    "parent": "Parent department",
+    "parentPlaceholder": "Select a parent",
+    "noParent": "No parent (root)",
+    "validation": {
+      "nameRequired": "Name is required",
+      "nameTooLong": "Name must be at most 200 characters",
+      "parentInvalid": "Select a valid parent"
+    }
+  },
+  "positions": {
+    "loading": "Loading positions…",
+    "loadError": "Could not load positions.",
+    "empty": "No positions yet. Create the first one to describe your job titles.",
+    "swipe": "Swipe sideways to see every position field.",
+    "tableLabel": "Positions",
+    "containerLabel": "Positions. Scroll horizontally to see every position field.",
+    "columns": {
+      "title": "Title",
+      "description": "Description",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "editAria": "Edit {title}",
+    "archiveAria": "Archive {title}",
+    "restoreAria": "Restore {title}",
+    "createTitle": "New position",
+    "editTitle": "Edit position",
+    "description": "Positions are tenant-global — the same title can span departments.",
+    "title": "Title",
+    "titlePlaceholder": "Senior Nurse",
+    "descriptionField": "Description",
+    "descriptionPlaceholder": "What this position does",
+    "validation": {
+      "titleRequired": "Title is required",
+      "titleTooLong": "Title must be at most 200 characters",
+      "descriptionTooLong": "Description must be at most 2000 characters"
+    }
+  },
+  "locations": {
+    "loading": "Loading locations…",
+    "loadError": "Could not load locations.",
+    "empty": "No locations yet. Create the first one with its IANA timezone.",
+    "swipe": "Swipe sideways to see every location field.",
+    "tableLabel": "Locations",
+    "containerLabel": "Locations. Scroll horizontally to see every location field.",
+    "columns": {
+      "name": "Name",
+      "address": "Address",
+      "timezone": "Timezone",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "editAria": "Edit {name}",
+    "archiveAria": "Archive {name}",
+    "restoreAria": "Restore {name}",
+    "createTitle": "New location",
+    "editTitle": "Edit location",
+    "description": "Attendance lateness is evaluated in the location's timezone.",
+    "name": "Name",
+    "namePlaceholder": "Ho Chi Minh Office",
+    "address": "Address",
+    "addressPlaceholder": "Street, city, country",
+    "timezone": "Timezone",
+    "timezonePlaceholder": "Asia/Ho_Chi_Minh",
+    "validation": {
+      "nameRequired": "Name is required",
+      "nameTooLong": "Name must be at most 200 characters",
+      "addressTooLong": "Address must be at most 500 characters",
+      "timezoneRequired": "Timezone is required",
+      "timezoneTooLong": "Timezone must be at most 100 characters"
+    }
+  },
+  "errors": {
+    "generic": "Something went wrong. Please try again.",
+    "departmentNameTaken": "This name is already used by another department.",
+    "departmentCycle": "This parent would create a cycle in the hierarchy.",
+    "departmentNotFound": "The selected parent department no longer exists.",
+    "positionTitleTaken": "This title is already used by another position.",
+    "locationNameTaken": "This name is already used by another location.",
+    "invalidTimezone": "Enter a valid IANA timezone, e.g. Asia/Ho_Chi_Minh.",
+    "forbidden": "You do not have permission to manage organization data."
+  },
+  "toasts": {
+    "departmentCreated": "Department created",
+    "departmentUpdated": "Department updated",
+    "departmentArchived": "Department archived",
+    "departmentRestored": "Department restored",
+    "positionCreated": "Position created",
+    "positionUpdated": "Position updated",
+    "positionArchived": "Position archived",
+    "positionRestored": "Position restored",
+    "locationCreated": "Location created",
+    "locationUpdated": "Location updated",
+    "locationArchived": "Location archived",
+    "locationRestored": "Location restored"
+  }
+}

@@ -11,61 +11,48 @@ import {
   useListPayrollDeductions,
   useUpdatePayrollDeduction,
 } from "@workpulse/api-client";
-import { ApiError } from "@workpulse/api-client/mutator/custom-fetch";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { invalidatePayrollDeductions } from "../api";
-import { payrollErrorMessage } from "../labels";
+import { payrollErrorMessage } from "../errors";
 
-export type DeductionFieldName = "code" | "name" | "value" | "root";
-
-export type DeductionFieldErrors = Partial<Record<DeductionFieldName, string>>;
-
-/** Map a stable deduction error code onto the field that caused it. */
-export function deductionFieldErrors(error: unknown): DeductionFieldErrors {
-  if (error instanceof ApiError) {
-    switch (error.code) {
-      case "payroll_deduction_code_taken":
-        return { code: "This code is already used by another deduction line." };
-      case "validation_error":
-        return { value: "Choose a value that matches the deduction type." };
-      case "payroll_deduction_not_found":
-        return { root: "This deduction line is no longer available." };
-      case "forbidden":
-        return { root: "You don’t have permission to configure deductions." };
-      default:
-        return { root: payrollErrorMessage(error) };
-    }
-  }
-  return { root: "Something went wrong. Please try again." };
-}
+export { deductionFieldErrors } from "../errors";
+export type {
+  DeductionFieldErrors,
+  DeductionFieldName,
+} from "../errors";
 
 export function usePayrollDeductions() {
   return useListPayrollDeductions();
 }
 
 export function usePayrollDeductionCreate() {
+  const t = useTranslations("payroll.toasts");
+  const errors = useTranslations("payroll.errors");
   const queryClient = useQueryClient();
   return useCreatePayrollDeduction({
     mutation: {
       onSuccess: async () => {
         await invalidatePayrollDeductions(queryClient);
-        toast.success("Deduction line created");
+        toast.success(t("deductionCreated"));
       },
-      onError: (error) => toast.error(payrollErrorMessage(error)),
+      onError: (error) => toast.error(payrollErrorMessage(error, errors)),
     },
   });
 }
 
 export function usePayrollDeductionUpdate() {
+  const t = useTranslations("payroll.toasts");
+  const errors = useTranslations("payroll.errors");
   const queryClient = useQueryClient();
   return useUpdatePayrollDeduction({
     mutation: {
       onSuccess: async () => {
         await invalidatePayrollDeductions(queryClient);
-        toast.success("Deduction line updated");
+        toast.success(t("deductionUpdated"));
       },
-      onError: (error) => toast.error(payrollErrorMessage(error)),
+      onError: (error) => toast.error(payrollErrorMessage(error, errors)),
     },
   });
 }

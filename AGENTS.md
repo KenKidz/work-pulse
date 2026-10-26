@@ -22,7 +22,8 @@ Installed so far:
 
 - Frontend: Next.js (App Router) + TypeScript strict, Tailwind CSS v4 + shadcn/ui,
   TanStack Query, orval-generated `@workpulse/api-client`, react-hook-form + zod,
-  Zustand, dayjs, Recharts (Reports charts only) — `apps/web/` (ADR 0005)
+  Zustand, dayjs, next-intl (en + vi), Recharts (Reports charts only) —
+  `apps/web/` (ADR 0005)
 - Backend: FastAPI + SQLAlchemy 2.0 (async) + Alembic, managed by uv —
   `apps/api/` (ADR 0006)
 - AuthN: argon2id passwords + DB-backed opaque sessions (`wp_session` cookie),

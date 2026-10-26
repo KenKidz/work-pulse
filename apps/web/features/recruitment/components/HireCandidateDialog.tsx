@@ -10,6 +10,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CircleAlert } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
@@ -40,7 +41,7 @@ import {
 } from "@/components/ui/select";
 
 import { todayISO } from "../dates";
-import { employmentTypeLabel, recruitmentErrorMessage } from "../labels";
+import { recruitmentErrorMessage } from "../labels";
 import {
   hireFieldErrors,
   useActiveEmployees,
@@ -65,12 +66,17 @@ export function HireCandidateDialog({
   candidate,
   jobTitle,
 }: HireCandidateDialogProps) {
+  const t = useTranslations("recruitment.hire");
+  const common = useTranslations("recruitment.actions");
+  const validation = useTranslations("recruitment.validation");
+  const errors = useTranslations("recruitment.errors");
+  const types = useTranslations("recruitment.types");
   const hireCandidate = useCandidateHire();
   const managers = useActiveEmployees();
   const [rootError, setRootError] = useState<string | null>(null);
 
   const form = useForm<HireFormValues>({
-    resolver: zodResolver(hireFormSchema),
+    resolver: zodResolver(hireFormSchema((key) => validation(key))),
     defaultValues: {
       employment_type: "full_time",
       hired_at: todayISO(),
@@ -102,10 +108,10 @@ export function HireCandidateDialog({
       await hireCandidate.mutateAsync({ candidateId: candidate.id, data });
       onOpenChange(false);
     } catch (error) {
-      const fieldErrors = hireFieldErrors(error);
+      const fieldErrors = hireFieldErrors(error, errors);
       for (const [field, message] of Object.entries(fieldErrors)) {
         if (field === "root") {
-          setRootError(message ?? recruitmentErrorMessage(error));
+          setRootError(message ?? recruitmentErrorMessage(error, errors));
         } else {
           form.setError(field as Exclude<HireFieldName, "root">, {
             type: "server",
@@ -120,11 +126,8 @@ export function HireCandidateDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>Hire candidate</DialogTitle>
-          <DialogDescription>
-            Create the Employee record for {name} from “{jobTitle}”. The department, position and
-            location come from the job.
-          </DialogDescription>
+          <DialogTitle>{t("title")}</DialogTitle>
+          <DialogDescription>{t("description", { name, job: jobTitle })}</DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
@@ -135,24 +138,21 @@ export function HireCandidateDialog({
                 name="employment_type"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Employment type</FormLabel>
+                    <FormLabel>{t("employmentType")}</FormLabel>
                     <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a type" />
+                          <SelectValue placeholder={t("selectType")} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {(
-                          Object.entries(employmentTypeLabel) as [
-                            HireFormValues["employment_type"],
-                            string,
-                          ][]
-                        ).map(([value, label]) => (
-                          <SelectItem key={value} value={value}>
-                            {label}
-                          </SelectItem>
-                        ))}
+                        {(["full_time", "part_time", "contract", "intern"] as const).map(
+                          (value) => (
+                            <SelectItem key={value} value={value}>
+                              {types(value)}
+                            </SelectItem>
+                          ),
+                        )}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -164,7 +164,7 @@ export function HireCandidateDialog({
                 name="hired_at"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel hint="Today or earlier.">Hire date</FormLabel>
+                    <FormLabel hint={t("hireDateHint")}>{t("hireDate")}</FormLabel>
                     <FormControl>
                       <Input {...field} value={field.value} type="date" max={todayISO()} />
                     </FormControl>
@@ -180,15 +180,15 @@ export function HireCandidateDialog({
                 name="manager_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Manager (optional)</FormLabel>
+                    <FormLabel>{t("manager")}</FormLabel>
                     <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="No manager" />
+                          <SelectValue placeholder={t("noManager")} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value={NO_MANAGER}>No manager</SelectItem>
+                        <SelectItem value={NO_MANAGER}>{t("noManager")}</SelectItem>
                         {managers.map((manager) => (
                           <SelectItem key={manager.id} value={manager.id}>
                             {manager.first_name} {manager.last_name}
@@ -205,9 +205,7 @@ export function HireCandidateDialog({
                 name="employee_code"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel hint="Generated automatically if left empty.">
-                      Employee code (optional)
-                    </FormLabel>
+                    <FormLabel hint={t("employeeCodeHint")}>{t("employeeCode")}</FormLabel>
                     <FormControl>
                       <Input {...field} value={field.value} className="font-mono" />
                     </FormControl>
@@ -220,7 +218,7 @@ export function HireCandidateDialog({
             <div className="space-y-2 border-t pt-4">
               <p className="text-sm font-medium">Contact details</p>
               <p className="text-xs text-muted-foreground">
-                Leave a field empty to use the candidate record.
+                {t("overrideNote")}
               </p>
             </div>
 
@@ -230,7 +228,7 @@ export function HireCandidateDialog({
                 name="first_name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>First name</FormLabel>
+                    <FormLabel>{t("firstName")}</FormLabel>
                     <FormControl>
                       <Input {...field} value={field.value} placeholder={candidate.first_name} />
                     </FormControl>
@@ -243,7 +241,7 @@ export function HireCandidateDialog({
                 name="last_name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Last name</FormLabel>
+                    <FormLabel>{t("lastName")}</FormLabel>
                     <FormControl>
                       <Input {...field} value={field.value} placeholder={candidate.last_name} />
                     </FormControl>
@@ -259,7 +257,7 @@ export function HireCandidateDialog({
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel>{t("email")}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
@@ -278,14 +276,14 @@ export function HireCandidateDialog({
                 name="phone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Phone</FormLabel>
+                    <FormLabel>{t("phone")}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
                         value={field.value}
                         type="tel"
                         autoComplete="off"
-                        placeholder={candidate.phone ?? "No phone"}
+                        placeholder={candidate.phone ?? t("noPhone")}
                       />
                     </FormControl>
                     <FormMessage />
@@ -303,10 +301,10 @@ export function HireCandidateDialog({
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
+                {common("cancel")}
               </Button>
               <Button type="submit" disabled={hireCandidate.isPending}>
-                {hireCandidate.isPending ? "Hiring…" : "Hire candidate"}
+                {hireCandidate.isPending ? t("hiring") : t("hireAction")}
               </Button>
             </DialogFooter>
           </form>

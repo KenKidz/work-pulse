@@ -9,6 +9,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CircleAlert } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 
@@ -72,6 +73,11 @@ export function CandidateFormDialog({
   jobTitle,
   jobsPending = false,
 }: CandidateFormDialogProps) {
+  const t = useTranslations("recruitment.candidateForm");
+  const common = useTranslations("recruitment.actions");
+  const validation = useTranslations("recruitment.validation");
+  const errors = useTranslations("recruitment.errors");
+  const sources = useTranslations("recruitment.sources");
   const isEdit = candidate !== null;
   const [rootError, setRootError] = useState<string | null>(null);
   const createCandidate = useCandidateCreate();
@@ -89,7 +95,7 @@ export function CandidateFormDialog({
   // the hidden form state (it is a valid uuid and never submitted), so the
   // shared intake shape validates without a resolver cast.
   const form = useForm<CandidateCreateValues>({
-    resolver: zodResolver(candidateCreateSchema),
+    resolver: zodResolver(candidateCreateSchema((key) => validation(key))),
     defaultValues: {
       job_id: candidate?.job_id ?? defaultJobId ?? "",
       first_name: candidate?.first_name ?? "",
@@ -131,7 +137,7 @@ export function CandidateFormDialog({
       }
       onOpenChange(false);
     } catch (error) {
-      const fieldErrors = candidateFieldErrors(error);
+      const fieldErrors = candidateFieldErrors(error, errors);
       for (const [field, message] of Object.entries(fieldErrors)) {
         if (field === "root" || (field === "job_id" && isEdit)) {
           setRootError(message ?? null);
@@ -149,11 +155,9 @@ export function CandidateFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit candidate" : "New candidate"}</DialogTitle>
+          <DialogTitle>{isEdit ? t("editTitle") : t("createTitle")}</DialogTitle>
           <DialogDescription>
-            {isEdit
-              ? "Update the candidate's contact details. Stage moves and hiring are separate actions."
-              : "Add an application to an open job. Intake is HR-entered — candidates never sign in to WorkPulse."}
+            {isEdit ? t("editDescription") : t("createDescription")}
           </DialogDescription>
         </DialogHeader>
 
@@ -170,19 +174,19 @@ export function CandidateFormDialog({
                 name="job_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel hint="Only open jobs accept new candidates.">Job</FormLabel>
+                    <FormLabel hint={t("jobHint")}>{t("job")}</FormLabel>
                     {openJobs.length === 0 ? (
                       <p className="text-sm text-muted-foreground">
                         {jobsPending
-                          ? "Loading open jobs…"
-                          : "No job is open. Open a job first — candidates can only be added to an open job."}
+                          ? t("loadingOpenJobs")
+                          : t("noOpenJobs")}
                       </p>
                     ) : (
                       <>
                         <Select value={field.value} onValueChange={field.onChange}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select an open job" />
+                              <SelectValue placeholder={t("selectOpenJob")} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -207,7 +211,7 @@ export function CandidateFormDialog({
                 name="first_name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>First name</FormLabel>
+                    <FormLabel>{t("firstName")}</FormLabel>
                     <FormControl>
                       <Input {...field} value={field.value} />
                     </FormControl>
@@ -220,7 +224,7 @@ export function CandidateFormDialog({
                 name="last_name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Last name</FormLabel>
+                    <FormLabel>{t("lastName")}</FormLabel>
                     <FormControl>
                       <Input {...field} value={field.value} />
                     </FormControl>
@@ -236,7 +240,7 @@ export function CandidateFormDialog({
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel>{t("email")}</FormLabel>
                     <FormControl>
                       <Input {...field} value={field.value} type="email" autoComplete="off" />
                     </FormControl>
@@ -249,7 +253,7 @@ export function CandidateFormDialog({
                 name="phone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Phone (optional)</FormLabel>
+                    <FormLabel>{t("phone")}</FormLabel>
                     <FormControl>
                       <Input {...field} value={field.value} type="tel" autoComplete="off" />
                     </FormControl>
@@ -264,18 +268,18 @@ export function CandidateFormDialog({
               name="source"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Source</FormLabel>
+                  <FormLabel>{t("source")}</FormLabel>
                   <Select value={field.value} onValueChange={field.onChange}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="How did they reach us?" />
+                        <SelectValue placeholder={t("sourcePlaceholder")} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="referral">Referral</SelectItem>
-                      <SelectItem value="job_board">Job board</SelectItem>
-                      <SelectItem value="agency">Agency</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
+                      <SelectItem value="referral">{sources("referral")}</SelectItem>
+                      <SelectItem value="job_board">{sources("job_board")}</SelectItem>
+                      <SelectItem value="agency">{sources("agency")}</SelectItem>
+                      <SelectItem value="other">{sources("other")}</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -288,15 +292,13 @@ export function CandidateFormDialog({
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel hint="Sensitive: visible to HR only and never included in events.">
-                    Notes (optional)
-                  </FormLabel>
+                  <FormLabel hint={t("notesHint")}>{t("notes")}</FormLabel>
                   <FormControl>
                     <Textarea
                       {...field}
                       value={field.value}
                       rows={4}
-                      placeholder="Context for the hiring team — never shared with the candidate."
+                      placeholder={t("notesPlaceholder")}
                     />
                   </FormControl>
                   <FormMessage />
@@ -313,7 +315,7 @@ export function CandidateFormDialog({
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
+                {common("cancel")}
               </Button>
               <Button
                 type="submit"
@@ -321,11 +323,11 @@ export function CandidateFormDialog({
               >
                 {mutation.isPending
                   ? isEdit
-                    ? "Saving…"
-                    : "Adding…"
+                    ? t("saving")
+                    : t("adding")
                   : isEdit
-                    ? "Save changes"
-                    : "Add candidate"}
+                    ? t("save")
+                    : t("add")}
               </Button>
             </DialogFooter>
           </form>

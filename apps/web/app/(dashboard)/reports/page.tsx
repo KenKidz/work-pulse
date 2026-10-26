@@ -1,18 +1,22 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 
 import { PageHeader } from "@/components/page-header";
 import { ReportsWorkspace } from "@/features/reports/components/ReportsWorkspace";
 
-export const metadata: Metadata = {
-  title: "Reports — WorkPulse",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("reports");
+  return { title: t("metadataTitle") };
+}
 
-export default function ReportsPage() {
+export default async function ReportsPage() {
+  const t = await getTranslations("reports");
+
   return (
     <section className="space-y-6">
       <PageHeader
-        title="Reports"
-        description="Verified overtime, attendance, leave and headcount over time — projected from the workforce event stream, never read from the operational tables."
+        title={t("pageTitle")}
+        description={t("pageDescription")}
       />
       <ReportsWorkspace />
     </section>

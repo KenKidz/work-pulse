@@ -11,21 +11,34 @@ export function todayISO(): string {
   return dayjs().format("YYYY-MM-DD");
 }
 
-/** Format an API `date` (`YYYY-MM-DD` or full ISO) as a display string. */
-export function formatDate(value: string): string {
-  return dayjs(value).format("MMM D, YYYY");
+/** Format an API `date` (`YYYY-MM-DD` or full ISO) in the active locale. */
+export function formatDate(value: string, locale = "en-US"): string {
+  const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(value);
+  return new Intl.DateTimeFormat(locale, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    ...(dateOnly ? { timeZone: "UTC" } : {}),
+  }).format(new Date(dateOnly ? `${value}T00:00:00Z` : value));
 }
 
-/** Clock time of a UTC timestamp rendered in the browser's local zone. */
-export function formatClockTime(iso: string): string {
-  return dayjs(iso).format("HH:mm");
+/** Clock time of a UTC timestamp in the browser's local zone and locale. */
+export function formatClockTime(iso: string, locale = "en-US"): string {
+  return new Intl.DateTimeFormat(locale, {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(iso));
 }
 
 /** `duration_minutes` as `1h 23m` (never negative — floored at close). */
-export function formatDuration(minutes: number): string {
+export function formatDuration(
+  minutes: number,
+  hourShort = "h",
+  minuteShort = "m",
+): string {
   const hours = Math.floor(minutes / 60);
   const rest = minutes % 60;
-  if (hours === 0) return `${rest}m`;
-  if (rest === 0) return `${hours}h`;
-  return `${hours}h ${rest}m`;
+  if (hours === 0) return `${rest}${minuteShort}`;
+  if (rest === 0) return `${hours}${hourShort}`;
+  return `${hours}${hourShort} ${rest}${minuteShort}`;
 }

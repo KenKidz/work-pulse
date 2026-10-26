@@ -10,6 +10,7 @@
  */
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useForm, type Resolver } from "react-hook-form";
 
@@ -68,6 +69,9 @@ type EmployeeFormDialogProps = {
 };
 
 export function EmployeeFormDialog({ open, onOpenChange, employee }: EmployeeFormDialogProps) {
+  const t = useTranslations("employees");
+  const common = useTranslations("common.actions");
+  const errors = useTranslations("employees.errors");
   const isEdit = employee !== null;
   const [rootError, setRootError] = useState<string | null>(null);
   const createEmployee = useEmployeeCreate();
@@ -93,7 +97,9 @@ export function EmployeeFormDialog({ open, onOpenChange, employee }: EmployeeFor
   // pinned PATCH of name/email/phone.
   const form = useForm<EmployeeCreateValues>({
     resolver: zodResolver(
-      isEdit ? employeeProfileSchema : employeeCreateSchema,
+      isEdit
+        ? employeeProfileSchema((key) => t(`form.validation.${key}`))
+        : employeeCreateSchema((key) => t(`form.validation.${key}`)),
     ) as unknown as Resolver<EmployeeCreateValues>,
     defaultValues: {
       first_name: employee?.first_name ?? "",
@@ -141,7 +147,7 @@ export function EmployeeFormDialog({ open, onOpenChange, employee }: EmployeeFor
       }
       onOpenChange(false);
     } catch (error) {
-      const fieldErrors = employeeFieldErrors(error);
+      const fieldErrors = employeeFieldErrors(error, errors);
       for (const [field, message] of Object.entries(fieldErrors)) {
         if (field === "root") {
           setRootError(message ?? null);
@@ -159,11 +165,9 @@ export function EmployeeFormDialog({ open, onOpenChange, employee }: EmployeeFor
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit employee" : "New employee"}</DialogTitle>
+          <DialogTitle>{isEdit ? t("form.editTitle") : t("form.createTitle")}</DialogTitle>
           <DialogDescription>
-            {isEdit
-              ? "Corrections apply to profile fields; assignment changes go through transfers."
-              : "Create the employee record and open their first employment period."}
+            {isEdit ? t("form.editDescription") : t("form.createDescription")}
           </DialogDescription>
         </DialogHeader>
 
@@ -175,9 +179,9 @@ export function EmployeeFormDialog({ open, onOpenChange, employee }: EmployeeFor
                 name="first_name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>First name</FormLabel>
+                    <FormLabel>{t("form.firstName")}</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="Alex" autoComplete="off" />
+                      <Input {...field} placeholder={t("form.firstNamePlaceholder")} autoComplete="off" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -188,9 +192,9 @@ export function EmployeeFormDialog({ open, onOpenChange, employee }: EmployeeFor
                 name="last_name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Last name</FormLabel>
+                    <FormLabel>{t("form.lastName")}</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="Nguyen" autoComplete="off" />
+                      <Input {...field} placeholder={t("form.lastNamePlaceholder")} autoComplete="off" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -203,12 +207,12 @@ export function EmployeeFormDialog({ open, onOpenChange, employee }: EmployeeFor
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel>{t("form.email")}</FormLabel>
                   <FormControl>
                     <Input
                       {...field}
                       type="email"
-                      placeholder="alex@example.com"
+                      placeholder={t("form.emailPlaceholder")}
                       autoComplete="off"
                     />
                   </FormControl>
@@ -222,7 +226,7 @@ export function EmployeeFormDialog({ open, onOpenChange, employee }: EmployeeFor
               name="phone"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Phone (optional)</FormLabel>
+                  <FormLabel>{t("form.phone")}</FormLabel>
                   <FormControl>
                     <Input {...field} value={field.value ?? ""} autoComplete="off" />
                   </FormControl>
@@ -239,11 +243,11 @@ export function EmployeeFormDialog({ open, onOpenChange, employee }: EmployeeFor
                     name="department_id"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Department</FormLabel>
+                        <FormLabel>{t("form.department")}</FormLabel>
                         <Select value={field.value} onValueChange={field.onChange}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select a department" />
+                              <SelectValue placeholder={t("form.selectDepartment")} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -263,11 +267,11 @@ export function EmployeeFormDialog({ open, onOpenChange, employee }: EmployeeFor
                     name="position_id"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Position</FormLabel>
+                        <FormLabel>{t("form.position")}</FormLabel>
                         <Select value={field.value} onValueChange={field.onChange}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select a position" />
+                              <SelectValue placeholder={t("form.selectPosition")} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -290,11 +294,11 @@ export function EmployeeFormDialog({ open, onOpenChange, employee }: EmployeeFor
                     name="location_id"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Location</FormLabel>
+                        <FormLabel>{t("form.location")}</FormLabel>
                         <Select value={field.value} onValueChange={field.onChange}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select a location" />
+                              <SelectValue placeholder={t("form.selectLocation")} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -314,7 +318,7 @@ export function EmployeeFormDialog({ open, onOpenChange, employee }: EmployeeFor
                     name="manager_id"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Manager (optional)</FormLabel>
+                        <FormLabel>{t("form.manager")}</FormLabel>
                         <Select
                           value={field.value ?? NO_MANAGER}
                           onValueChange={(value) =>
@@ -323,11 +327,11 @@ export function EmployeeFormDialog({ open, onOpenChange, employee }: EmployeeFor
                         >
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="No manager" />
+                              <SelectValue placeholder={t("form.noManager")} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value={NO_MANAGER}>No manager</SelectItem>
+                            <SelectItem value={NO_MANAGER}>{t("form.noManager")}</SelectItem>
                             {managerChoices.map((option) => (
                               <SelectItem key={option.id} value={option.id}>
                                 {option.first_name} {option.last_name}
@@ -347,18 +351,18 @@ export function EmployeeFormDialog({ open, onOpenChange, employee }: EmployeeFor
                     name="employment_type"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Employment type</FormLabel>
+                        <FormLabel>{t("form.employmentType")}</FormLabel>
                         <Select value={field.value} onValueChange={field.onChange}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select a type" />
+                              <SelectValue placeholder={t("form.selectType")} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="full_time">Full-time</SelectItem>
-                            <SelectItem value="part_time">Part-time</SelectItem>
-                            <SelectItem value="contract">Contract</SelectItem>
-                            <SelectItem value="intern">Intern</SelectItem>
+                            <SelectItem value="full_time">{t("types.full_time")}</SelectItem>
+                            <SelectItem value="part_time">{t("types.part_time")}</SelectItem>
+                            <SelectItem value="contract">{t("types.contract")}</SelectItem>
+                            <SelectItem value="intern">{t("types.intern")}</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -370,7 +374,7 @@ export function EmployeeFormDialog({ open, onOpenChange, employee }: EmployeeFor
                     name="hired_at"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Hire date</FormLabel>
+                        <FormLabel>{t("form.hireDate")}</FormLabel>
                         <FormControl>
                           <Input {...field} type="date" />
                         </FormControl>
@@ -390,10 +394,10 @@ export function EmployeeFormDialog({ open, onOpenChange, employee }: EmployeeFor
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
+                {common("cancel")}
               </Button>
               <Button type="submit" disabled={mutation.isPending}>
-                {isEdit ? "Save changes" : "Create employee"}
+                {isEdit ? t("form.saveChanges") : t("form.createEmployee")}
               </Button>
             </DialogFooter>
           </form>

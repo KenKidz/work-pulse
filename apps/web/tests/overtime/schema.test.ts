@@ -14,8 +14,10 @@ const BASE = {
   reason: "Quarter close",
 };
 
+const t = (key: string) => key;
+
 function parse(overrides: Record<string, string> = {}) {
-  return overtimeRequestFormSchema.safeParse({ ...BASE, ...overrides });
+  return overtimeRequestFormSchema(t).safeParse({ ...BASE, ...overrides });
 }
 
 describe("overtimeRequestFormSchema", () => {
@@ -47,7 +49,7 @@ describe("overtimeRequestFormSchema", () => {
 
   it("accepts an omitted or empty reason but bounds a present one", () => {
     expect(
-      overtimeRequestFormSchema.safeParse({
+      overtimeRequestFormSchema(t).safeParse({
         work_date: BASE.work_date,
         hours: BASE.hours,
       }).success,
@@ -60,8 +62,8 @@ describe("overtimeRequestFormSchema", () => {
 
 describe("overtimeDecisionFormSchema", () => {
   it("accepts an omitted or bounded note and rejects an oversized one", () => {
-    expect(overtimeDecisionFormSchema.safeParse({}).success).toBe(true);
-    expect(overtimeDecisionFormSchema.safeParse({ note: "x".repeat(500) }).success).toBe(true);
-    expect(overtimeDecisionFormSchema.safeParse({ note: "x".repeat(501) }).success).toBe(false);
+    expect(overtimeDecisionFormSchema(t).safeParse({}).success).toBe(true);
+    expect(overtimeDecisionFormSchema(t).safeParse({ note: "x".repeat(500) }).success).toBe(true);
+    expect(overtimeDecisionFormSchema(t).safeParse({ note: "x".repeat(501) }).success).toBe(false);
   });
 });

@@ -1,18 +1,22 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 
 import { PageHeader } from "@/components/page-header";
 import { RecruitmentWorkspace } from "@/features/recruitment/components/RecruitmentWorkspace";
 
-export const metadata: Metadata = {
-  title: "Recruitment — WorkPulse",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("recruitment");
+  return { title: t("metadataTitle") };
+}
 
-export default function RecruitmentPage() {
+export default async function RecruitmentPage() {
+  const t = await getTranslations("recruitment");
+
   return (
     <section className="space-y-6">
       <PageHeader
-        title="Recruitment"
-        description="Open jobs, move candidates through the pipeline and schedule interviews — hiring creates the employee record in one audited flow."
+        title={t("pageTitle")}
+        description={t("pageDescription")}
       />
       <RecruitmentWorkspace />
     </section>

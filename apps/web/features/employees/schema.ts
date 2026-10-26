@@ -8,32 +8,46 @@
 import { z } from "zod";
 
 /** Edit (PATCH) touches profile fields only — pinned PATCH scope. */
-export const employeeProfileSchema = z.object({
-  first_name: z
-    .string()
-    .min(1, "First name is required")
-    .max(200, "First name must be at most 200 characters"),
-  last_name: z
-    .string()
-    .min(1, "Last name is required")
-    .max(200, "Last name must be at most 200 characters"),
-  email: z.string().min(1, "Email is required").email("Enter a valid email"),
-  phone: z.string().max(50, "Phone must be at most 50 characters").nullish(),
-});
+type EmployeeValidation = (
+  key:
+    | "firstNameRequired"
+    | "firstNameTooLong"
+    | "lastNameRequired"
+    | "lastNameTooLong"
+    | "emailRequired"
+    | "emailInvalid"
+    | "phoneTooLong"
+    | "departmentRequired"
+    | "positionRequired"
+    | "locationRequired"
+    | "managerInvalid"
+    | "hireDateRequired",
+) => string;
 
-export type EmployeeProfileValues = z.infer<typeof employeeProfileSchema>;
+export function employeeProfileSchema(t: EmployeeValidation) {
+  return z.object({
+    first_name: z.string().min(1, t("firstNameRequired")).max(200, t("firstNameTooLong")),
+    last_name: z.string().min(1, t("lastNameRequired")).max(200, t("lastNameTooLong")),
+    email: z.string().min(1, t("emailRequired")).email(t("emailInvalid")),
+    phone: z.string().max(50, t("phoneTooLong")).nullish(),
+  });
+}
+
+export type EmployeeProfileValues = z.infer<ReturnType<typeof employeeProfileSchema>>;
 
 /** Create pins the full `CreateEmployee` shape (assignment + hire data). */
-export const employeeCreateSchema = employeeProfileSchema.extend({
-  department_id: z.string().uuid("Select a department"),
-  position_id: z.string().uuid("Select a position"),
-  location_id: z.string().uuid("Select a location"),
-  manager_id: z.string().uuid("Select a valid manager").nullish(),
-  employment_type: z.enum(["full_time", "part_time", "contract", "intern"]),
-  hired_at: z.string().min(1, "Hire date is required"),
-});
+export function employeeCreateSchema(t: EmployeeValidation) {
+  return employeeProfileSchema(t).extend({
+    department_id: z.string().uuid(t("departmentRequired")),
+    position_id: z.string().uuid(t("positionRequired")),
+    location_id: z.string().uuid(t("locationRequired")),
+    manager_id: z.string().uuid(t("managerInvalid")).nullish(),
+    employment_type: z.enum(["full_time", "part_time", "contract", "intern"]),
+    hired_at: z.string().min(1, t("hireDateRequired")),
+  });
+}
 
-export type EmployeeCreateValues = z.infer<typeof employeeCreateSchema>;
+export type EmployeeCreateValues = z.infer<ReturnType<typeof employeeCreateSchema>>;
 
 /**
  * Transfer form — position/location/manager hold the sentinel values
@@ -41,28 +55,37 @@ export type EmployeeCreateValues = z.infer<typeof employeeCreateSchema>;
  * until submit converts them to omitted fields / explicit null. The API
  * rejects explicit null for position/location, so "keep" must omit the key.
  */
-export const transferFormSchema = z.object({
-  department_id: z.string().uuid("Select a department"),
-  position_id: z.string(),
-  location_id: z.string(),
-  manager_id: z.string(),
-  effective_from: z.string().min(1, "Effective date is required"),
-  reason: z.string().max(500, "Reason must be at most 500 characters").nullish(),
-});
+type TransferValidation = (
+  key: "departmentRequired" | "effectiveRequired" | "reasonTooLong",
+) => string;
+
+export function transferFormSchema(t: TransferValidation) {
+  return z.object({
+    department_id: z.string().uuid(t("departmentRequired")),
+    position_id: z.string(),
+    location_id: z.string(),
+    manager_id: z.string(),
+    effective_from: z.string().min(1, t("effectiveRequired")),
+    reason: z.string().max(500, t("reasonTooLong")).nullish(),
+  });
+}
 
 /** "Keep the current assignment" sentinel (field is omitted on submit). */
 export const TRANSFER_KEEP = "keep";
 /** "No manager" sentinel — submitted as an explicit null manager. */
 export const TRANSFER_NO_MANAGER = "none";
 
-export type TransferFormValues = z.infer<typeof transferFormSchema>;
+export type TransferFormValues = z.infer<ReturnType<typeof transferFormSchema>>;
 
-export const terminationFormSchema = z.object({
-  effective_date: z.string().min(1, "Effective date is required"),
-  reason: z
-    .string()
-    .min(1, "A reason is required")
-    .max(500, "Reason must be at most 500 characters"),
-});
+type TerminationValidation = (
+  key: "effectiveRequired" | "reasonRequired" | "reasonTooLong",
+) => string;
 
-export type TerminationFormValues = z.infer<typeof terminationFormSchema>;
+export function terminationFormSchema(t: TerminationValidation) {
+  return z.object({
+    effective_date: z.string().min(1, t("effectiveRequired")),
+    reason: z.string().min(1, t("reasonRequired")).max(500, t("reasonTooLong")),
+  });
+}
+
+export type TerminationFormValues = z.infer<ReturnType<typeof terminationFormSchema>>;

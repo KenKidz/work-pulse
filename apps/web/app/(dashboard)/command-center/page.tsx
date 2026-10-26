@@ -1,18 +1,22 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 
 import { PageHeader } from "@/components/page-header";
 import { CommandCenter } from "@/features/realtime/components/CommandCenter";
 
-export const metadata: Metadata = {
-  title: "Command center — WorkPulse",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("realtime");
+  return { title: t("metadataTitle") };
+}
 
-export default function CommandCenterPage() {
+export default async function CommandCenterPage() {
+  const t = await getTranslations("realtime");
+
   return (
     <section className="space-y-6">
       <PageHeader
-        title="Command center"
-        description="Watch presence arrive in real time — who’s on site, who’s remote, who’s late, and every check-in and check-out in between."
+        title={t("pageTitle")}
+        description={t("pageDescription")}
       />
       <CommandCenter />
     </section>

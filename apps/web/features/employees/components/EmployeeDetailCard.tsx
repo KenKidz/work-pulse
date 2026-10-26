@@ -8,6 +8,7 @@
 
 import { ArrowLeft, CircleAlert, Pencil, Repeat, UserMinus } from "lucide-react";
 import Link from "next/link";
+import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -22,13 +23,13 @@ import { usePositions } from "@/features/organizations/hooks/use-positions";
 import { formatDate } from "./dates";
 import { EmployeeFormDialog } from "./EmployeeFormDialog";
 import { EmploymentHistory } from "./EmploymentHistory";
-import { employmentTypeLabel, statusLabel, statusVariant } from "./labels";
+import { statusVariant } from "./labels";
 import { TerminateDialog } from "./TerminateDialog";
 import { TransferDialog } from "./TransferDialog";
 import { useEmployee, useEmployees } from "../hooks/use-employees";
 import type { EmployeeDetail } from "../types";
 
-function useLookups() {
+function useLookups(t: ReturnType<typeof useTranslations<"employees">>) {
   // History can reference archived organization data, so lookups include it.
   const departmentsQuery = useDepartments({ include_archived: true, page_size: 100 });
   const positionsQuery = usePositions({ include_archived: true, page_size: 100 });
@@ -42,11 +43,11 @@ function useLookups() {
 
   return {
     departmentName: (id: string) =>
-      departments.find((entry) => entry.id === id)?.name ?? "Unknown department",
+      departments.find((entry) => entry.id === id)?.name ?? t("detail.unknownDepartment"),
     positionTitle: (id: string) =>
-      positions.find((entry) => entry.id === id)?.title ?? "Unknown position",
+      positions.find((entry) => entry.id === id)?.title ?? t("detail.unknownPosition"),
     locationName: (id: string) =>
-      locations.find((entry) => entry.id === id)?.name ?? "Unknown location",
+      locations.find((entry) => entry.id === id)?.name ?? t("detail.unknownLocation"),
     colleagueName: (id: string) => {
       const found = colleagues.find((entry) => entry.id === id);
       return found ? `${found.first_name} ${found.last_name}` : null;
@@ -64,18 +65,20 @@ function DetailRow({ label, children }: { label: string; children: React.ReactNo
 }
 
 export function EmployeeDetailCard({ id }: { id: string }) {
+  const t = useTranslations("employees");
+  const locale = useLocale();
   const [editOpen, setEditOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
   const [terminateOpen, setTerminateOpen] = useState(false);
 
   const employeeQuery = useEmployee(id);
-  const lookups = useLookups();
+  const lookups = useLookups(t);
 
   if (employeeQuery.isPending) {
     return (
       <div className="flex items-center justify-center gap-2 rounded-lg border border-dashed px-6 py-10 text-sm text-muted-foreground">
         <Spinner className="size-4" />
-        <p>Loading employee…</p>
+        <p>{t("detail.loading")}</p>
       </div>
     );
   }
@@ -86,11 +89,11 @@ export function EmployeeDetailCard({ id }: { id: string }) {
         <Alert variant="destructive">
           <CircleAlert aria-hidden="true" />
           <AlertDescription>
-            <p>Could not load this employee. It may not exist.</p>
+            <p>{t("detail.loadError")}</p>
           </AlertDescription>
         </Alert>
         <Button asChild variant="outline" size="sm">
-          <Link href="/employees">Back to employees</Link>
+          <Link href="/employees">{t("detail.backToEmployees")}</Link>
         </Button>
       </div>
     );
@@ -129,34 +132,34 @@ export function EmployeeDetailCard({ id }: { id: string }) {
               <p className="mt-1.5 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                 <span className="font-mono text-xs">{employee.employee_code}</span>
                 <Badge variant={statusVariant[employee.status]}>
-                  {statusLabel[employee.status]}
+                  {t(`status.${employee.status}`)}
                 </Badge>
               </p>
             </div>
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" aria-label="Edit profile" onClick={() => setEditOpen(true)}>
+          <Button variant="outline" aria-label={t("detail.editProfileAria")} onClick={() => setEditOpen(true)}>
             <Pencil />
-            Edit profile
+            {t("detail.editProfile")}
           </Button>
           <Button
             variant="outline"
-            aria-label="Transfer employee"
+            aria-label={t("detail.transferAria")}
             disabled={terminated}
             onClick={() => setTransferOpen(true)}
           >
             <Repeat />
-            Transfer
+            {t("detail.transfer")}
           </Button>
           <Button
             variant="destructive"
-            aria-label="Terminate employee"
+            aria-label={t("detail.terminateAria")}
             disabled={terminated}
             onClick={() => setTerminateOpen(true)}
           >
             <UserMinus />
-            Terminate
+            {t("detail.terminate")}
           </Button>
         </div>
       </div>
@@ -165,9 +168,9 @@ export function EmployeeDetailCard({ id }: { id: string }) {
         <Alert variant="destructive">
           <AlertDescription>
             <p>
-              This employee was terminated
-              {employee.terminated_at ? ` on ${formatDate(employee.terminated_at)}` : ""}. Transfers
-              and further termination are disabled.
+              {employee.terminated_at
+                ? t("detail.terminatedOn", { date: formatDate(employee.terminated_at, locale) })
+                : t("detail.terminated")}
             </p>
           </AlertDescription>
         </Alert>
@@ -176,17 +179,17 @@ export function EmployeeDetailCard({ id }: { id: string }) {
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Profile</CardTitle>
+            <CardTitle>{t("detail.profile")}</CardTitle>
           </CardHeader>
           <CardContent>
             <dl className="divide-y">
-              <DetailRow label="Email">{employee.email}</DetailRow>
-              <DetailRow label="Phone">{employee.phone ?? "—"}</DetailRow>
-              <DetailRow label="Employment type">
-                {employmentTypeLabel[employee.employment_type]}
+              <DetailRow label={t("detail.email")}>{employee.email}</DetailRow>
+              <DetailRow label={t("detail.phone")}>{employee.phone ?? "—"}</DetailRow>
+              <DetailRow label={t("detail.employmentType")}>
+                {t(`types.${employee.employment_type}`)}
               </DetailRow>
-              <DetailRow label="Hired on">{formatDate(employee.hired_at)}</DetailRow>
-              <DetailRow label="Manager">
+              <DetailRow label={t("detail.hiredOn")}>{formatDate(employee.hired_at, locale)}</DetailRow>
+              <DetailRow label={t("detail.manager")}>
                 {employee.manager_id ? (
                   <Link
                     className="underline-offset-4 hover:underline"
@@ -204,35 +207,33 @@ export function EmployeeDetailCard({ id }: { id: string }) {
 
         <Card>
           <CardHeader>
-            <CardTitle>Current assignment</CardTitle>
+            <CardTitle>{t("detail.currentAssignment")}</CardTitle>
           </CardHeader>
           <CardContent>
             {employee.current_employment ? (
               <dl className="divide-y">
-                <DetailRow label="Department">
+                <DetailRow label={t("detail.department")}>
                   {lookups.departmentName(employee.current_employment.department_id)}
                 </DetailRow>
-                <DetailRow label="Position">
+                <DetailRow label={t("detail.position")}>
                   {lookups.positionTitle(employee.current_employment.position_id)}
                 </DetailRow>
-                <DetailRow label="Location">
+                <DetailRow label={t("detail.location")}>
                   {lookups.locationName(employee.current_employment.location_id)}
                 </DetailRow>
-                <DetailRow label="Since">
-                  {formatDate(employee.current_employment.effective_from)}
+                <DetailRow label={t("detail.since")}>
+                  {formatDate(employee.current_employment.effective_from, locale)}
                 </DetailRow>
               </dl>
             ) : (
-              <p className="text-sm text-muted-foreground">
-                No open employment period — the record is historical.
-              </p>
+              <p className="text-sm text-muted-foreground">{t("detail.noOpenPeriod")}</p>
             )}
           </CardContent>
         </Card>
       </div>
 
       <section>
-        <h2 className="mb-3 text-lg font-semibold tracking-tight">Employment history</h2>
+        <h2 className="mb-3 text-lg font-semibold tracking-tight">{t("detail.history")}</h2>
         <EmploymentHistory
           employments={employee.employments}
           departmentName={lookups.departmentName}

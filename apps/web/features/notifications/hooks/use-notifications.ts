@@ -15,6 +15,7 @@ import {
   useMarkNotificationRead,
 } from "@workpulse/api-client";
 import { ApiError } from "@workpulse/api-client/mutator/custom-fetch";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { invalidateNotifications } from "../api";
@@ -32,42 +33,53 @@ export function useUnreadCount() {
   return useGetNotificationUnreadCount({ query: { refetchOnWindowFocus: true } });
 }
 
-export function notificationErrorMessage(error: unknown): string {
+type NotificationErrorTranslator = (
+  key: "notFound" | "unauthorized" | "generic",
+) => string;
+
+export function notificationErrorMessage(
+  error: unknown,
+  t: NotificationErrorTranslator,
+): string {
   if (error instanceof ApiError) {
     switch (error.code) {
       case "notification_not_found":
-        return "This notification is no longer available.";
+        return t("notFound");
       case "unauthorized":
-        return "Your session expired. Sign in again to continue.";
+        return t("unauthorized");
       default:
         return error.message;
     }
   }
-  return "Something went wrong. Please try again.";
+  return t("generic");
 }
 
 export function useMarkReadAction() {
+  const t = useTranslations("notifications.toasts");
+  const errors = useTranslations("notifications.errors");
   const queryClient = useQueryClient();
   return useMarkNotificationRead({
     mutation: {
       onSuccess: async () => {
         await invalidateNotifications(queryClient);
-        toast.success("Notification marked read");
+        toast.success(t("markedRead"));
       },
-      onError: (error) => toast.error(notificationErrorMessage(error)),
+      onError: (error) => toast.error(notificationErrorMessage(error, errors)),
     },
   });
 }
 
 export function useMarkAllReadAction() {
+  const t = useTranslations("notifications.toasts");
+  const errors = useTranslations("notifications.errors");
   const queryClient = useQueryClient();
   return useMarkAllNotificationsRead({
     mutation: {
       onSuccess: async () => {
         await invalidateNotifications(queryClient);
-        toast.success("All notifications marked read");
+        toast.success(t("allMarkedRead"));
       },
-      onError: (error) => toast.error(notificationErrorMessage(error)),
+      onError: (error) => toast.error(notificationErrorMessage(error, errors)),
     },
   });
 }

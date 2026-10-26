@@ -1,0 +1,33 @@
+{
+  "dashboard": "Bảng điều khiển",
+  "employees": "Nhân viên",
+  "attendance": "Chấm công",
+  "organization": "Tổ chức",
+  "leave": "Nghỉ phép",
+  "overtime": "Tăng ca",
+  "payroll": "Bảng lương",
+  "myPayslips": "Phiếu lương của tôi",
+  "reports": "Báo cáo",
+  "recruitment": "Tuyển dụng",
+  "commandCenter": "Trung tâm chỉ huy",
+  "users": "Người dùng",
+  "menu": "Menu",
+  "menuDescription": "Đi tới một màn hình WorkPulse.",
+  "destinations": {
+    "employees": {
+      "label": "Nhân viên",
+      "blurb": "Hồ sơ nhân sự — ai làm ở đâu, vai trò gì, từ khi nào.",
+      "summary": "Tạo, điều chuyển và chấm dứt — hồ sơ lao động chỉ ghi thêm."
+    },
+    "attendance": {
+      "label": "Chấm công",
+      "blurb": "Chấm công, theo dõi ngày làm việc và tra cứu lịch sử có thể kiểm toán.",
+      "summary": "Bảng ngày trực tiếp: số liệu, hoạt động gần đây và hồ sơ có thể kiểm toán."
+    },
+    "organization": {
+      "label": "Tổ chức",
+      "blurb": "Phòng ban, chức danh và địa điểm làm nền cho đội ngũ của bạn.",
+      "summary": "Phòng ban, chức danh và địa điểm — kèm lưu trữ và khôi phục."
+    }
+  }
+}

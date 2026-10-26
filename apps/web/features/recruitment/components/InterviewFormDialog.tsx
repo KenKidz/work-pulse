@@ -10,6 +10,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CircleAlert } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 
@@ -70,6 +71,10 @@ export function InterviewFormDialog({
   candidatesPending = false,
   candidateName,
 }: InterviewFormDialogProps) {
+  const t = useTranslations("recruitment.interviewForm");
+  const common = useTranslations("recruitment.actions");
+  const validation = useTranslations("recruitment.validation");
+  const errors = useTranslations("recruitment.errors");
   const isEdit = interview !== null;
   const [rootError, setRootError] = useState<string | null>(null);
   const scheduleInterview = useInterviewSchedule();
@@ -80,7 +85,7 @@ export function InterviewFormDialog({
   const defaultCandidateId = candidates.length === 1 ? candidates[0]?.id : "";
 
   const form = useForm<InterviewScheduleValues>({
-    resolver: zodResolver(interviewScheduleSchema),
+    resolver: zodResolver(interviewScheduleSchema((key) => validation(key))),
     defaultValues: {
       candidate_id: interview?.candidate_id ?? defaultCandidateId ?? "",
       interviewer_id: interview?.interviewer_id ?? "",
@@ -139,7 +144,7 @@ export function InterviewFormDialog({
       }
       onOpenChange(false);
     } catch (error) {
-      const fieldErrors = interviewFieldErrors(error);
+      const fieldErrors = interviewFieldErrors(error, errors);
       for (const [field, message] of Object.entries(fieldErrors)) {
         if (field === "root" || field === "candidate_id") {
           setRootError(message ?? null);
@@ -157,11 +162,9 @@ export function InterviewFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Reschedule interview" : "Schedule interview"}</DialogTitle>
+          <DialogTitle>{isEdit ? t("editTitle") : t("createTitle")}</DialogTitle>
           <DialogDescription>
-            {isEdit
-              ? "Move the conversation, re-assign the interviewer or update its notes while it is scheduled."
-              : "Schedule a conversation with an interviewing candidate. Only the assigned interviewer files the feedback."}
+            {isEdit ? t("editDescription") : t("createDescription")}
           </DialogDescription>
         </DialogHeader>
 
@@ -178,21 +181,19 @@ export function InterviewFormDialog({
                 name="candidate_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel hint="Only interviewing candidates can be scheduled.">
-                      Candidate
-                    </FormLabel>
+                    <FormLabel hint={t("candidateHint")}>{t("candidate")}</FormLabel>
                     {candidates.length === 0 ? (
                       <p className="text-sm text-muted-foreground">
                         {candidatesPending
-                          ? "Loading candidates…"
-                          : "No candidate is interviewing. Advance a candidate to interviewing first."}
+                          ? t("loadingCandidates")
+                          : t("noCandidates")}
                       </p>
                     ) : (
                       <>
                         <Select value={field.value} onValueChange={field.onChange}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select a candidate" />
+                              <SelectValue placeholder={t("selectCandidate")} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -217,11 +218,11 @@ export function InterviewFormDialog({
                 name="interviewer_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel hint="Any active employee can interview.">Interviewer</FormLabel>
+                    <FormLabel hint={t("interviewerHint")}>{t("interviewer")}</FormLabel>
                     <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select an employee" />
+                          <SelectValue placeholder={t("selectEmployee")} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -241,7 +242,7 @@ export function InterviewFormDialog({
                 name="scheduled_at"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel hint="Your local time; stored in UTC.">Scheduled at</FormLabel>
+                    <FormLabel hint={t("scheduledAtHint")}>{t("scheduledAt")}</FormLabel>
                     <FormControl>
                       <Input {...field} value={field.value} type="datetime-local" />
                     </FormControl>
@@ -256,15 +257,13 @@ export function InterviewFormDialog({
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel hint="Sensitive: never included in events or audit values.">
-                    Notes (optional)
-                  </FormLabel>
+                  <FormLabel hint={t("notesHint")}>{t("notes")}</FormLabel>
                   <FormControl>
                     <Textarea
                       {...field}
                       value={field.value}
                       rows={4}
-                      placeholder="Context for the conversation — visible to HR and the interviewer."
+                      placeholder={t("notesPlaceholder")}
                     />
                   </FormControl>
                   <FormMessage />
@@ -281,7 +280,7 @@ export function InterviewFormDialog({
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
+                {common("cancel")}
               </Button>
               <Button
                 type="submit"
@@ -289,11 +288,11 @@ export function InterviewFormDialog({
               >
                 {mutation.isPending
                   ? isEdit
-                    ? "Saving…"
-                    : "Scheduling…"
+                    ? t("saving")
+                    : t("scheduling")
                   : isEdit
-                    ? "Save changes"
-                    : "Schedule interview"}
+                    ? t("save")
+                    : t("schedule")}
               </Button>
             </DialogFooter>
           </form>

@@ -11,6 +11,7 @@
  */
 
 import { Users } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,30 +25,38 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-import { presenceStatusLabel, presenceStatusVariant } from "../labels";
+import { presenceStatusVariant } from "../labels";
 import type { PresenceRow, PresenceRowStatus } from "../types";
 import type { EmployeeDirectory } from "../utils";
 import { employeeCode, employeeDisplayName, formatClockTime, formatMinutes } from "../utils";
 
 function StatusBadge({ status }: { status: PresenceRowStatus }) {
-  return <Badge variant={presenceStatusVariant[status]}>{presenceStatusLabel[status]}</Badge>;
+  const t = useTranslations("realtime.status");
+  return <Badge variant={presenceStatusVariant[status]}>{t(status)}</Badge>;
 }
 
 function LateBadge({ row }: { row: PresenceRow }) {
+  const t = useTranslations("realtime.presence");
+  const units = useTranslations("realtime.units");
   return (
     <Badge variant="warning">
-      {row.minutes_late != null ? `Late · ${formatMinutes(row.minutes_late)}` : "Late"}
+      {row.minutes_late != null
+        ? t("lateMinutes", {
+          minutes: formatMinutes(row.minutes_late, units("hourShort"), units("minuteShort")),
+        })
+        : t("late")}
     </Badge>
   );
 }
 
 function SinceText({ since }: { since: string | null | undefined }) {
+  const locale = useLocale();
   if (!since) {
     return <span className="font-mono text-xs text-muted-foreground">—</span>;
   }
   return (
     <time dateTime={since} className="font-mono text-xs text-muted-foreground tabular-nums">
-      {formatClockTime(since)}
+      {formatClockTime(since, locale)}
     </time>
   );
 }
@@ -59,20 +68,22 @@ export function PresenceTable({
   rows: PresenceRow[];
   directory: EmployeeDirectory;
 }) {
+  const t = useTranslations("realtime.presence");
+  const root = useTranslations("realtime");
+  const locale = useLocale();
+
   return (
     <Card data-testid="presence-table" className="gap-0 rounded-md border-border py-0 shadow-none">
       <CardHeader className="px-5 pt-5 pb-4">
-        <CardTitle>Who’s working now</CardTitle>
-        <CardDescription>
-          Today’s presence for everyone in your scope — rows update as check-ins happen.
-        </CardDescription>
+        <CardTitle>{t("title")}</CardTitle>
+        <CardDescription>{t("description")}</CardDescription>
       </CardHeader>
 
       {rows.length === 0 ? (
         <CardContent className="px-5 pb-5">
           <EmptyState
             icon={Users}
-            message="No one is on the board yet today — check-ins appear here the moment they happen."
+            message={t("empty")}
           />
         </CardContent>
       ) : (
@@ -84,12 +95,12 @@ export function PresenceTable({
               wall's glance surface, no sideways scroll. */}
           <div
             role="region"
-            aria-label="Presence list. Scroll to see everyone."
+            aria-label={t("regionLabel")}
             tabIndex={0}
             data-testid="presence-table-mobile-scroll"
             className="max-h-[min(60dvh,36rem)] overflow-y-auto focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:hidden"
           >
-            <ul aria-label="Presence" data-testid="presence-table-mobile" className="flex flex-col">
+            <ul aria-label={t("listLabel")} data-testid="presence-table-mobile" className="flex flex-col">
               {rows.map((row) => {
                 const code = employeeCode(row.employee_id, directory);
                 return (
@@ -99,7 +110,11 @@ export function PresenceTable({
                   >
                     <div className="flex items-baseline justify-between gap-x-3">
                       <span className="min-w-0 font-medium break-words">
-                        {employeeDisplayName(row.employee_id, directory)}
+                        {employeeDisplayName(
+                          row.employee_id,
+                          directory,
+                          root("employeeFallback", { id: row.employee_id.slice(-4) }),
+                        )}
                       </span>
                       <SinceText since={row.since} />
                     </div>
@@ -120,16 +135,16 @@ export function PresenceTable({
 
           <div className="hidden sm:block" data-testid="presence-table-desktop">
             <Table
-              aria-label="Presence"
-              containerLabel="Presence. Scroll to read every row and column."
+              aria-label={t("listLabel")}
+              containerLabel={t("containerLabel")}
               containerClassName="max-h-[min(60dvh,36rem)] overflow-y-auto"
             >
               <TableHeader sticky>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="pl-5">Employee</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Late</TableHead>
-                  <TableHead className="pr-5">Since</TableHead>
+                  <TableHead className="pl-5">{t("columns.employee")}</TableHead>
+                  <TableHead>{t("columns.status")}</TableHead>
+                  <TableHead>{t("columns.late")}</TableHead>
+                  <TableHead className="pr-5">{t("columns.since")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -140,7 +155,11 @@ export function PresenceTable({
                       <TableCell className="pl-5">
                         <div className="flex flex-col">
                           <span className="font-medium">
-                            {employeeDisplayName(row.employee_id, directory)}
+                            {employeeDisplayName(
+                          row.employee_id,
+                          directory,
+                          root("employeeFallback", { id: row.employee_id.slice(-4) }),
+                        )}
                           </span>
                           {code ? (
                             <span className="font-mono text-xs text-muted-foreground">{code}</span>
@@ -158,7 +177,7 @@ export function PresenceTable({
                         )}
                       </TableCell>
                       <TableCell className="pr-5 font-mono text-xs text-muted-foreground tabular-nums">
-                        {row.since ? formatClockTime(row.since) : "—"}
+                        {row.since ? formatClockTime(row.since, locale) : "—"}
                       </TableCell>
                     </TableRow>
                   );

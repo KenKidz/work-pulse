@@ -18,11 +18,20 @@ import {
   useListRunTimesheets,
   useRecalculatePayrollRun,
 } from "@workpulse/api-client";
-import { ApiError } from "@workpulse/api-client/mutator/custom-fetch";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { invalidatePayrollRun, invalidatePayrollRunSummary, payrollRunsQueryKey } from "../api";
-import { isRunInProgress, payrollErrorMessage } from "../labels";
+import { isRunInProgress } from "../labels";
+import { payrollErrorMessage } from "../errors";
+
+export { bonusFieldErrors, runFieldErrors } from "../errors";
+export type {
+  BonusFieldErrors,
+  BonusFieldName,
+  RunFieldErrors,
+  RunFieldName,
+} from "../errors";
 import type {
   ListPayrollRunsParams,
   ListRunPayslipsParams,
@@ -31,47 +40,6 @@ import type {
 
 /** One poll cadence for the worker-driven surfaces. */
 export const PAYROLL_POLL_INTERVAL = 2500;
-
-export type RunFieldName = "period" | "root";
-
-export type RunFieldErrors = Partial<Record<RunFieldName, string>>;
-
-/** Create-run failures belong to the period field; the rest are lifecycle guards. */
-export function runFieldErrors(error: unknown): RunFieldErrors {
-  if (error instanceof ApiError) {
-    switch (error.code) {
-      case "payroll_period_not_closed":
-        return { period: "That month hasn’t ended yet. Choose a closed month." };
-      case "payroll_period_open":
-        return { period: "A run for this month is still open. Finalize it first." };
-      case "forbidden":
-        return { root: "You don’t have permission to run payroll." };
-      default:
-        return { root: payrollErrorMessage(error) };
-    }
-  }
-  return { root: "Something went wrong. Please try again." };
-}
-
-export type BonusFieldName = "employee_id" | "amount" | "note" | "root";
-
-export type BonusFieldErrors = Partial<Record<BonusFieldName, string>>;
-
-export function bonusFieldErrors(error: unknown): BonusFieldErrors {
-  if (error instanceof ApiError) {
-    switch (error.code) {
-      case "payroll_employee_not_in_run":
-        return { employee_id: "That employee isn’t part of this run." };
-      case "payroll_run_finalized":
-        return { root: "This run is finalized and can no longer change." };
-      case "forbidden":
-        return { root: "You don’t have permission to add bonuses." };
-      default:
-        return { root: payrollErrorMessage(error) };
-    }
-  }
-  return { root: "Something went wrong. Please try again." };
-}
 
 export function usePayrollRuns(params?: ListPayrollRunsParams) {
   return useListPayrollRuns(params, {
@@ -109,32 +77,38 @@ export function useRunPayslips(id: string, params?: ListRunPayslipsParams, enabl
 }
 
 export function usePayrollRunCreate() {
+  const t = useTranslations("payroll.toasts");
+  const errors = useTranslations("payroll.errors");
   const queryClient = useQueryClient();
   return useCreatePayrollRun({
     mutation: {
       onSuccess: async () => {
         await queryClient.invalidateQueries({ queryKey: payrollRunsQueryKey });
-        toast.success("Payroll run queued");
+        toast.success(t("runQueued"));
       },
-      onError: (error) => toast.error(payrollErrorMessage(error)),
+      onError: (error) => toast.error(payrollErrorMessage(error, errors)),
     },
   });
 }
 
 export function usePayrollRunRecalculate(runId: string) {
+  const t = useTranslations("payroll.toasts");
+  const errors = useTranslations("payroll.errors");
   const queryClient = useQueryClient();
   return useRecalculatePayrollRun({
     mutation: {
       onSuccess: async () => {
         await invalidatePayrollRun(queryClient, runId);
-        toast.success("Payroll run queued for recalculation");
+        toast.success(t("runRecalculated"));
       },
-      onError: (error) => toast.error(payrollErrorMessage(error)),
+      onError: (error) => toast.error(payrollErrorMessage(error, errors)),
     },
   });
 }
 
 export function usePayrollRunFinalize(runId: string) {
+  const t = useTranslations("payroll.toasts");
+  const errors = useTranslations("payroll.errors");
   const queryClient = useQueryClient();
   return useFinalizePayrollRun({
     mutation: {
@@ -145,14 +119,16 @@ export function usePayrollRunFinalize(runId: string) {
         if (response.status === 200 && response.data.supersedes_run_id) {
           await invalidatePayrollRun(queryClient, response.data.supersedes_run_id);
         }
-        toast.success("Payroll run finalized");
+        toast.success(t("runFinalized"));
       },
-      onError: (error) => toast.error(payrollErrorMessage(error)),
+      onError: (error) => toast.error(payrollErrorMessage(error, errors)),
     },
   });
 }
 
 export function useRunBonusCreate(runId: string) {
+  const t = useTranslations("payroll.toasts");
+  const errors = useTranslations("payroll.errors");
   const queryClient = useQueryClient();
   return useCreateRunBonus({
     mutation: {
@@ -160,9 +136,9 @@ export function useRunBonusCreate(runId: string) {
         // A bonus is an input: the payslip set and timesheets only change
         // after an explicit recalculation.
         await invalidatePayrollRunSummary(queryClient, runId);
-        toast.success("Bonus added. Recalculate the run to include it.");
+        toast.success(t("bonusAdded"));
       },
-      onError: (error) => toast.error(payrollErrorMessage(error)),
+      onError: (error) => toast.error(payrollErrorMessage(error, errors)),
     },
   });
 }

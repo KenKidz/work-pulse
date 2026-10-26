@@ -10,7 +10,13 @@ export function todayISO(): string {
   return dayjs().format("YYYY-MM-DD");
 }
 
-/** Format an API `date` (`YYYY-MM-DD` or full ISO) as a display string. */
-export function formatDate(value: string): string {
-  return dayjs(value).format("MMM D, YYYY");
+/** Format an API `date` (`YYYY-MM-DD` or full ISO) in the active locale. */
+export function formatDate(value: string, locale = "en-US"): string {
+  const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(value);
+  return new Intl.DateTimeFormat(locale, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    ...(dateOnly ? { timeZone: "UTC" } : {}),
+  }).format(new Date(dateOnly ? `${value}T00:00:00Z` : value));
 }

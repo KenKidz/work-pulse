@@ -1,0 +1,33 @@
+{
+  "dashboard": "Dashboard",
+  "employees": "Employees",
+  "attendance": "Attendance",
+  "organization": "Organization",
+  "leave": "Leave",
+  "overtime": "Overtime",
+  "payroll": "Payroll",
+  "myPayslips": "My payslips",
+  "reports": "Reports",
+  "recruitment": "Recruitment",
+  "commandCenter": "Command center",
+  "users": "Users",
+  "menu": "Menu",
+  "menuDescription": "Go to a WorkPulse surface.",
+  "destinations": {
+    "employees": {
+      "label": "Employees",
+      "blurb": "The workforce record — who works where, in what role, since when.",
+      "summary": "Create, transfer and terminate — the append-only employment record."
+    },
+    "attendance": {
+      "label": "Attendance",
+      "blurb": "Check in, watch the day unfold, inspect the auditable record.",
+      "summary": "The live day board: counts, recent activity and the auditable records."
+    },
+    "organization": {
+      "label": "Organization",
+      "blurb": "Departments, positions and locations your workforce hangs off.",
+      "summary": "Departments, positions and locations — with archive and restore."
+    }
+  }
+}

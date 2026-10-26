@@ -10,6 +10,7 @@
 
 import { CircleAlert } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useEffect, useMemo } from "react";
 
 import { useGetCurrentEmployee } from "@workpulse/api-client";
@@ -34,6 +35,8 @@ import { PresenceTable } from "./PresenceTable";
 export const DIRECTORY_PAGE_SIZE = 100;
 
 export function CommandCenter({ socketFactory }: { socketFactory?: SocketFactory } = {}) {
+  const t = useTranslations("realtime.commandCenter");
+  const common = useTranslations("common.actions");
   const router = useRouter();
   const { user } = useAuth();
   const allowed = COMMAND_CENTER_ROLES.includes(user.role);
@@ -79,7 +82,7 @@ export function CommandCenter({ socketFactory }: { socketFactory?: SocketFactory
     return (
       <div className="flex items-center justify-center gap-2 px-6 py-10 text-sm text-muted-foreground">
         <Spinner className="size-4" />
-        <p>Checking access…</p>
+        <p>{t("checkingAccess")}</p>
       </div>
     );
   }
@@ -93,19 +96,17 @@ export function CommandCenter({ socketFactory }: { socketFactory?: SocketFactory
       {boardQuery.isPending ? (
         <div className="flex items-center justify-center gap-2 rounded-md border border-dashed px-6 py-10 text-sm text-muted-foreground">
           <Spinner className="size-4" />
-          <p>Loading the live board…</p>
+          <p>{t("loading")}</p>
         </div>
       ) : boardQuery.isError ? (
         <Alert variant="destructive">
           <CircleAlert aria-hidden="true" />
           <AlertTitle>
-            {denied ? "Command center unavailable" : "Could not load the live board"}
+            {denied ? t("deniedTitle") : t("errorTitle")}
           </AlertTitle>
           <AlertDescription>
             <p>
-              {denied
-                ? "Managers, HR and admins can watch the live workforce board."
-                : "The board snapshot could not be loaded."}
+              {denied ? t("denied") : t("loadError")}
             </p>
             {!denied ? (
               <Button
@@ -114,7 +115,7 @@ export function CommandCenter({ socketFactory }: { socketFactory?: SocketFactory
                 className="mt-2"
                 onClick={() => void boardQuery.refetch()}
               >
-                Retry
+                {common("retry")}
               </Button>
             ) : null}
           </AlertDescription>

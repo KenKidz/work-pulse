@@ -7,6 +7,8 @@
  * visibility are redirected by `usePayrollAccess`. Client leaf.
  */
 
+import { useTranslations } from "next-intl";
+
 import { Spinner } from "@/components/ui/spinner";
 
 import { DeductionLinesTable } from "./DeductionLinesTable";
@@ -16,13 +18,14 @@ import { SalaryForm } from "./SalaryForm";
 import { usePayrollAccess } from "../hooks/use-payroll-access";
 
 export function PayrollWorkspace() {
+  const t = useTranslations("payroll.workspace");
   const { canView, canOperate } = usePayrollAccess();
 
   if (!canView) {
     return (
       <div className="flex items-center justify-center gap-2 px-6 py-10 text-sm text-muted-foreground">
         <Spinner className="size-4" />
-        <p>Checking access…</p>
+        <p>{t("checkingAccess")}</p>
       </div>
     );
   }

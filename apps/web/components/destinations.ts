@@ -20,49 +20,41 @@ import { PAYROLL_VIEW_ROLES } from "@/features/payroll/roles";
 import { RECRUITMENT_NAV_ROLES } from "@/features/recruitment/roles";
 import { REPORT_READ_ROLES } from "@/features/reports/roles";
 
+/** The translation key (inside the `nav` namespace) for a destination. */
+export type DestinationKey = "employees" | "attendance" | "organization";
+
 export type Destination = {
   href: string;
-  /** Short label for navigation. */
-  label: string;
+  key: DestinationKey;
   icon: LucideIcon;
-  /** Landing-page blurb. */
-  blurb: string;
-  /** Dashboard one-line summary. */
-  summary: string;
 };
 
 /**
  * The Phase 1 surfaces — single source of truth for the primary navigation,
- * the landing cards and the dashboard cards, so routes, labels and icons
+ * the landing cards and the dashboard cards, so routes, icons and copy keys
  * cannot drift between them.
  */
 export const DESTINATIONS: Destination[] = [
-  {
-    href: "/employees",
-    label: "Employees",
-    icon: Users,
-    blurb: "The workforce record — who works where, in what role, since when.",
-    summary: "Create, transfer and terminate — the append-only employment record.",
-  },
-  {
-    href: "/attendance",
-    label: "Attendance",
-    icon: CalendarClock,
-    blurb: "Check in, watch the day unfold, inspect the auditable record.",
-    summary: "The live day board: counts, recent activity and the auditable records.",
-  },
-  {
-    href: "/settings/organization",
-    label: "Organization",
-    icon: Building2,
-    blurb: "Departments, positions and locations your workforce hangs off.",
-    summary: "Departments, positions and locations — with archive and restore.",
-  },
+  { href: "/employees", key: "employees", icon: Users },
+  { href: "/attendance", key: "attendance", icon: CalendarClock },
+  { href: "/settings/organization", key: "organization", icon: Building2 },
 ];
+
+export type NavKey =
+  | "dashboard"
+  | DestinationKey
+  | "leave"
+  | "overtime"
+  | "payroll"
+  | "myPayslips"
+  | "reports"
+  | "recruitment"
+  | "commandCenter"
+  | "users";
 
 export type NavItem = {
   href: string;
-  label: string;
+  key: NavKey;
   icon: LucideIcon;
   /** Restricted to these roles when present; everyone sees the rest. */
   roles?: Role[];
@@ -107,38 +99,38 @@ export function activeNavHref(pathname: string, items: NavItem[]): string | null
  * `ensure_can_read_presence`, payroll policies) stays the authority.
  */
 export const NAV_ITEMS: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  ...DESTINATIONS.map(({ href, label, icon }) => ({ href, label, icon })),
-  { href: "/leave", label: "Leave", icon: CalendarDays },
-  { href: "/overtime", label: "Overtime", icon: Timer },
+  { href: "/dashboard", key: "dashboard", icon: LayoutDashboard },
+  ...DESTINATIONS.map(({ href, key, icon }) => ({ href, key, icon })),
+  { href: "/leave", key: "leave", icon: CalendarDays },
+  { href: "/overtime", key: "overtime", icon: Timer },
   {
     href: "/payroll",
-    label: "Payroll",
+    key: "payroll",
     icon: Banknote,
     roles: PAYROLL_VIEW_ROLES,
   },
-  { href: "/payroll/my-payslips", label: "My payslips", icon: ReceiptText },
+  { href: "/payroll/my-payslips", key: "myPayslips", icon: ReceiptText },
   {
     href: "/reports",
-    label: "Reports",
+    key: "reports",
     icon: ChartColumn,
     roles: REPORT_READ_ROLES,
   },
   {
     href: "/recruitment",
-    label: "Recruitment",
+    key: "recruitment",
     icon: BriefcaseBusiness,
     roles: RECRUITMENT_NAV_ROLES,
   },
   {
     href: "/command-center",
-    label: "Command center",
+    key: "commandCenter",
     icon: MonitorDot,
     roles: COMMAND_CENTER_ROLES,
   },
   {
     href: "/settings/users",
-    label: "Users",
+    key: "users",
     icon: UserCog,
     roles: MANAGE_USER_ROLES,
   },

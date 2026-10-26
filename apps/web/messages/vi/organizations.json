@@ -1,0 +1,142 @@
+{
+  "settings": {
+    "title": "Tổ chức",
+    "description": "Phòng ban, chức danh và địa điểm làm nền cho đội ngũ của bạn.",
+    "navLabel": "Cài đặt tổ chức",
+    "departments": "Phòng ban",
+    "positions": "Chức danh",
+    "locations": "Địa điểm"
+  },
+  "status": {
+    "archived": "Đã lưu trữ",
+    "active": "Đang hoạt động"
+  },
+  "actions": {
+    "newDepartment": "Phòng ban mới",
+    "newPosition": "Chức danh mới",
+    "newLocation": "Địa điểm mới",
+    "includeArchived": "Bao gồm mục đã lưu trữ",
+    "saveChanges": "Lưu thay đổi",
+    "createDepartment": "Tạo phòng ban",
+    "createPosition": "Tạo chức danh",
+    "createLocation": "Tạo địa điểm"
+  },
+  "departments": {
+    "loading": "Đang tải phòng ban…",
+    "loadError": "Không thể tải phòng ban.",
+    "empty": "Chưa có phòng ban. Hãy tạo phòng ban đầu tiên để xây dựng cơ cấu tổ chức.",
+    "swipe": "Vuốt ngang để xem mọi trường của phòng ban.",
+    "tableLabel": "Phòng ban",
+    "containerLabel": "Phòng ban. Cuộn ngang để xem mọi trường của phòng ban.",
+    "columns": {
+      "name": "Tên",
+      "parent": "Phòng ban cha",
+      "status": "Trạng thái",
+      "actions": "Thao tác"
+    },
+    "editAria": "Sửa {name}",
+    "archiveAria": "Lưu trữ {name}",
+    "restoreAria": "Khôi phục {name}",
+    "createTitle": "Phòng ban mới",
+    "editTitle": "Sửa phòng ban",
+    "createDescription": "Phòng ban có thể được lồng dưới một phòng ban cha.",
+    "editDescription": "Đổi tên phòng ban hoặc di chuyển trong cấu trúc.",
+    "name": "Tên",
+    "namePlaceholder": "Kỹ thuật",
+    "parent": "Phòng ban cha",
+    "parentPlaceholder": "Chọn phòng ban cha",
+    "noParent": "Không có phòng ban cha (gốc)",
+    "validation": {
+      "nameRequired": "Tên là bắt buộc",
+      "nameTooLong": "Tên không được dài quá 200 ký tự",
+      "parentInvalid": "Chọn phòng ban cha hợp lệ"
+    }
+  },
+  "positions": {
+    "loading": "Đang tải chức danh…",
+    "loadError": "Không thể tải chức danh.",
+    "empty": "Chưa có chức danh. Hãy tạo chức danh đầu tiên để mô tả vị trí công việc.",
+    "swipe": "Vuốt ngang để xem mọi trường của chức danh.",
+    "tableLabel": "Chức danh",
+    "containerLabel": "Chức danh. Cuộn ngang để xem mọi trường của chức danh.",
+    "columns": {
+      "title": "Chức danh",
+      "description": "Mô tả",
+      "status": "Trạng thái",
+      "actions": "Thao tác"
+    },
+    "editAria": "Sửa {title}",
+    "archiveAria": "Lưu trữ {title}",
+    "restoreAria": "Khôi phục {title}",
+    "createTitle": "Chức danh mới",
+    "editTitle": "Sửa chức danh",
+    "description": "Chức danh là toàn tổ chức — cùng một chức danh có thể thuộc nhiều phòng ban.",
+    "title": "Chức danh",
+    "titlePlaceholder": "Điều dưỡng chính",
+    "descriptionField": "Mô tả",
+    "descriptionPlaceholder": "Công việc của chức danh này",
+    "validation": {
+      "titleRequired": "Chức danh là bắt buộc",
+      "titleTooLong": "Chức danh không được dài quá 200 ký tự",
+      "descriptionTooLong": "Mô tả không được dài quá 2000 ký tự"
+    }
+  },
+  "locations": {
+    "loading": "Đang tải địa điểm…",
+    "loadError": "Không thể tải địa điểm.",
+    "empty": "Chưa có địa điểm. Hãy tạo địa điểm đầu tiên kèm múi giờ IANA.",
+    "swipe": "Vuốt ngang để xem mọi trường của địa điểm.",
+    "tableLabel": "Địa điểm",
+    "containerLabel": "Địa điểm. Cuộn ngang để xem mọi trường của địa điểm.",
+    "columns": {
+      "name": "Tên",
+      "address": "Địa chỉ",
+      "timezone": "Múi giờ",
+      "status": "Trạng thái",
+      "actions": "Thao tác"
+    },
+    "editAria": "Sửa {name}",
+    "archiveAria": "Lưu trữ {name}",
+    "restoreAria": "Khôi phục {name}",
+    "createTitle": "Địa điểm mới",
+    "editTitle": "Sửa địa điểm",
+    "description": "Việc tính đi muộn được đánh giá theo múi giờ của địa điểm.",
+    "name": "Tên",
+    "namePlaceholder": "Văn phòng Hồ Chí Minh",
+    "address": "Địa chỉ",
+    "addressPlaceholder": "Đường, thành phố, quốc gia",
+    "timezone": "Múi giờ",
+    "timezonePlaceholder": "Asia/Ho_Chi_Minh",
+    "validation": {
+      "nameRequired": "Tên là bắt buộc",
+      "nameTooLong": "Tên không được dài quá 200 ký tự",
+      "addressTooLong": "Địa chỉ không được dài quá 500 ký tự",
+      "timezoneRequired": "Múi giờ là bắt buộc",
+      "timezoneTooLong": "Múi giờ không được dài quá 100 ký tự"
+    }
+  },
+  "errors": {
+    "generic": "Đã xảy ra lỗi. Vui lòng thử lại.",
+    "departmentNameTaken": "Tên này đã được dùng bởi phòng ban khác.",
+    "departmentCycle": "Phòng ban cha này sẽ tạo vòng lặp trong cấu trúc.",
+    "departmentNotFound": "Phòng ban cha đã chọn không còn tồn tại.",
+    "positionTitleTaken": "Chức danh này đã được dùng bởi chức danh khác.",
+    "locationNameTaken": "Tên này đã được dùng bởi địa điểm khác.",
+    "invalidTimezone": "Nhập múi giờ IANA hợp lệ, ví dụ Asia/Ho_Chi_Minh.",
+    "forbidden": "Bạn không có quyền quản lý dữ liệu tổ chức."
+  },
+  "toasts": {
+    "departmentCreated": "Đã tạo phòng ban",
+    "departmentUpdated": "Đã cập nhật phòng ban",
+    "departmentArchived": "Đã lưu trữ phòng ban",
+    "departmentRestored": "Đã khôi phục phòng ban",
+    "positionCreated": "Đã tạo chức danh",
+    "positionUpdated": "Đã cập nhật chức danh",
+    "positionArchived": "Đã lưu trữ chức danh",
+    "positionRestored": "Đã khôi phục chức danh",
+    "locationCreated": "Đã tạo địa điểm",
+    "locationUpdated": "Đã cập nhật địa điểm",
+    "locationArchived": "Đã lưu trữ địa điểm",
+    "locationRestored": "Đã khôi phục địa điểm"
+  }
+}

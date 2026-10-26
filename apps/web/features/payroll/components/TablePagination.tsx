@@ -6,6 +6,8 @@
  * second page, and both buttons carry the table-specific accessible name.
  */
 
+import { useTranslations } from "next-intl";
+
 import { Button } from "@/components/ui/button";
 
 import type { Page } from "../types";
@@ -18,6 +20,8 @@ type TablePaginationProps = {
 };
 
 export function TablePagination({ page, label, onPageChange }: TablePaginationProps) {
+  const t = useTranslations("payroll.pagination");
+
   if (page.total_pages <= 1) return null;
 
   return (
@@ -26,24 +30,24 @@ export function TablePagination({ page, label, onPageChange }: TablePaginationPr
         variant="outline"
         size="sm"
         className="min-h-11 sm:min-h-8"
-        aria-label={`Previous page of ${label}`}
+        aria-label={t("previousAria", { label })}
         disabled={page.page <= 1}
         onClick={() => onPageChange(page.page - 1)}
       >
-        Previous
+        {t("previous")}
       </Button>
       <span className="text-muted-foreground">
-        Page {page.page} of {page.total_pages}
+        {t("pageOf", { page: page.page, total: page.total_pages })}
       </span>
       <Button
         variant="outline"
         size="sm"
         className="min-h-11 sm:min-h-8"
-        aria-label={`Next page of ${label}`}
+        aria-label={t("nextAria", { label })}
         disabled={page.page >= page.total_pages}
         onClick={() => onPageChange(page.page + 1)}
       >
-        Next
+        {t("next")}
       </Button>
     </div>
   );

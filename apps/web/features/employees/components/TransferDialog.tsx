@@ -8,6 +8,7 @@
  */
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
@@ -72,6 +73,9 @@ export function TransferDialog({
   employeeId,
   currentDepartmentId,
 }: TransferDialogProps) {
+  const t = useTranslations("employees");
+  const common = useTranslations("common.actions");
+  const errors = useTranslations("employees.errors");
   const [rootError, setRootError] = useState<string | null>(null);
   const transfer = useEmployeeTransfer();
 
@@ -93,7 +97,7 @@ export function TransferDialog({
       : [];
 
   const form = useForm<TransferFormValues>({
-    resolver: zodResolver(transferFormSchema),
+    resolver: zodResolver(transferFormSchema((key) => t(`transfer.validation.${key}`))),
     defaultValues: {
       department_id: currentDepartmentId,
       position_id: KEEP,
@@ -128,7 +132,7 @@ export function TransferDialog({
       });
       onOpenChange(false);
     } catch (error) {
-      const fieldErrors = employeeFieldErrors(error);
+      const fieldErrors = employeeFieldErrors(error, errors);
       for (const [field, message] of Object.entries(fieldErrors)) {
         if (field === "root") {
           setRootError(message ?? null);
@@ -146,11 +150,8 @@ export function TransferDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Transfer employee</DialogTitle>
-          <DialogDescription>
-            Closes the current employment period and opens a new one at the effective date. Fields
-            left as &quot;keep&quot; inherit the current assignment.
-          </DialogDescription>
+          <DialogTitle>{t("transfer.title")}</DialogTitle>
+          <DialogDescription>{t("transfer.description")}</DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
@@ -160,11 +161,11 @@ export function TransferDialog({
               name="department_id"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Department</FormLabel>
+                  <FormLabel>{t("transfer.department")}</FormLabel>
                   <Select value={field.value} onValueChange={field.onChange}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a department" />
+                        <SelectValue placeholder={t("transfer.selectDepartment")} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -186,15 +187,15 @@ export function TransferDialog({
                 name="position_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Position</FormLabel>
+                    <FormLabel>{t("transfer.position")}</FormLabel>
                     <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Keep current" />
+                          <SelectValue placeholder={t("transfer.keepCurrent")} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value={KEEP}>Keep current</SelectItem>
+                        <SelectItem value={KEEP}>{t("transfer.keepCurrent")}</SelectItem>
                         {positionOptions.map((option) => (
                           <SelectItem key={option.id} value={option.id}>
                             {option.title}
@@ -211,15 +212,15 @@ export function TransferDialog({
                 name="location_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Location</FormLabel>
+                    <FormLabel>{t("transfer.location")}</FormLabel>
                     <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Keep current" />
+                          <SelectValue placeholder={t("transfer.keepCurrent")} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value={KEEP}>Keep current</SelectItem>
+                        <SelectItem value={KEEP}>{t("transfer.keepCurrent")}</SelectItem>
                         {locationOptions.map((option) => (
                           <SelectItem key={option.id} value={option.id}>
                             {option.name}
@@ -238,16 +239,16 @@ export function TransferDialog({
               name="manager_id"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Manager</FormLabel>
+                  <FormLabel>{t("transfer.manager")}</FormLabel>
                   <Select value={field.value} onValueChange={field.onChange}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Keep current" />
+                        <SelectValue placeholder={t("transfer.keepCurrent")} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value={KEEP}>Keep current</SelectItem>
-                      <SelectItem value={NO_MANAGER}>No manager</SelectItem>
+                      <SelectItem value={KEEP}>{t("transfer.keepCurrent")}</SelectItem>
+                      <SelectItem value={NO_MANAGER}>{t("transfer.noManager")}</SelectItem>
                       {managerChoices.map((option) => (
                         <SelectItem key={option.id} value={option.id}>
                           {option.first_name} {option.last_name}
@@ -265,7 +266,7 @@ export function TransferDialog({
               name="effective_from"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Effective from</FormLabel>
+                  <FormLabel>{t("transfer.effectiveFrom")}</FormLabel>
                   <FormControl>
                     <Input {...field} type="date" max={todayISO()} />
                   </FormControl>
@@ -279,7 +280,7 @@ export function TransferDialog({
               name="reason"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Reason (optional)</FormLabel>
+                  <FormLabel>{t("transfer.reason")}</FormLabel>
                   <FormControl>
                     <Textarea {...field} value={field.value ?? ""} rows={2} />
                   </FormControl>
@@ -296,10 +297,10 @@ export function TransferDialog({
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
+                {common("cancel")}
               </Button>
               <Button type="submit" disabled={transfer.isPending}>
-                Record transfer
+                {t("transfer.recordTransfer")}
               </Button>
             </DialogFooter>
           </form>

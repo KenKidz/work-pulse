@@ -1,24 +1,16 @@
 /**
- * Human-facing labels for pinned realtime enums — wire values are never
- * rendered. Badge tones follow the semantic status tokens; the hint copy
- * repeats ADR 0009's overlapping-counts rule on the wall.
+ * Presence status tones for the wall. Human-facing labels live in the
+ * `realtime.status` / `realtime.activity` message namespaces; wire values
+ * never reach the DOM (workpulse-ui §6).
  */
 
 import type { ComponentProps } from "react";
 
 import type { Badge } from "@/components/ui/badge";
 
-import type { PresenceRowStatus, RealtimeActivityEntryAction } from "./types";
+import type { PresenceRowStatus } from "./types";
 
 type BadgeVariant = ComponentProps<typeof Badge>["variant"];
-
-export const presenceStatusLabel: Record<PresenceRowStatus, string> = {
-  present: "On site",
-  remote: "Remote",
-  checked_out: "Checked out",
-  absent: "Absent",
-  on_leave: "On leave",
-};
 
 export const presenceStatusVariant: Record<PresenceRowStatus, BadgeVariant> = {
   present: "success",
@@ -26,9 +18,4 @@ export const presenceStatusVariant: Record<PresenceRowStatus, BadgeVariant> = {
   checked_out: "outline",
   absent: "destructive",
   on_leave: "secondary",
-};
-
-export const activityActionLabel: Record<RealtimeActivityEntryAction, string> = {
-  checked_in: "checked in",
-  checked_out: "checked out",
 };

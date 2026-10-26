@@ -7,6 +7,8 @@
  * the table is the accessible, exact view).
  */
 
+import { useLocale, useTranslations } from "next-intl";
+
 import {
   CartesianGrid,
   Legend,
@@ -37,6 +39,9 @@ function seriesColor(index: number): string {
 const MAX_CHART_SERIES = 12;
 
 export function ReportCharts({ report }: { report: NormalizedReport }) {
+  const t = useTranslations("reports.report");
+  const units = useTranslations("reports.units");
+  const locale = useLocale();
   const { chart } = report;
   if (chart.points.length === 0) return null;
 
@@ -47,7 +52,10 @@ export function ReportCharts({ report }: { report: NormalizedReport }) {
     <div data-testid="report-chart" className="w-full">
       <div
         role="img"
-        aria-label={`${chart.metric.label} by ${report.groupColumnLabel.toLowerCase()}, charted from the same rows shown in the table below.`}
+        aria-label={t("chartAria", {
+          metric: chart.metric.label,
+          group: report.groupColumnLabel.toLowerCase(),
+        })}
         className="h-80 w-full"
       >
         <ResponsiveContainer width="100%" height="100%">
@@ -65,10 +73,26 @@ export function ReportCharts({ report }: { report: NormalizedReport }) {
               tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
               tickLine={false}
               axisLine={false}
-              tickFormatter={(value) => formatMetricAxis(Number(value), chart.metric.format)}
+              tickFormatter={(value) =>
+                formatMetricAxis(
+                  Number(value),
+                  chart.metric.format,
+                  locale,
+                  units("hourShort"),
+                  units("minuteShort"),
+                )
+              }
             />
             <Tooltip
-              formatter={(value) => formatMetricValue(Number(value), chart.metric.format)}
+              formatter={(value) =>
+                formatMetricValue(
+                  Number(value),
+                  chart.metric.format,
+                  locale,
+                  units("hourShort"),
+                  units("minuteShort"),
+                )
+              }
               contentStyle={{
                 background: "var(--popover)",
                 border: "1px solid var(--border)",
@@ -99,7 +123,7 @@ export function ReportCharts({ report }: { report: NormalizedReport }) {
       </div>
       {hiddenSeries > 0 ? (
         <p className="mt-2 text-xs text-muted-foreground">
-          Chart shows the first {MAX_CHART_SERIES} groups; the table has all {chart.series.length}.
+          {t("chartHidden", { shown: MAX_CHART_SERIES, total: chart.series.length })}
         </p>
       ) : null}
     </div>

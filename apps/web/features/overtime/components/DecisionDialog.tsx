@@ -10,6 +10,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CircleAlert } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
@@ -49,24 +50,6 @@ export type OvertimeDecisionTarget = {
   mode: OvertimeDecisionMode;
 };
 
-const TITLES: Record<OvertimeDecisionMode, string> = {
-  approve: "Approve overtime request",
-  verify: "Verify overtime request",
-  reject: "Reject overtime request",
-};
-
-const PENDING_LABELS: Record<OvertimeDecisionMode, string> = {
-  approve: "Approving…",
-  verify: "Verifying…",
-  reject: "Rejecting…",
-};
-
-const SUBMIT_LABELS: Record<OvertimeDecisionMode, string> = {
-  approve: "Approve request",
-  verify: "Verify request",
-  reject: "Reject request",
-};
-
 export function DecisionDialog({
   target,
   employeeName,
@@ -76,6 +59,10 @@ export function DecisionDialog({
   employeeName: string;
   onClose: () => void;
 }) {
+  const t = useTranslations("overtime");
+  const locale = useLocale();
+  const common = useTranslations("common.actions");
+  const errors = useTranslations("overtime.errors");
   const approve = useApproveOvertimeAction();
   const verify = useVerifyOvertimeAction();
   const reject = useRejectOvertimeAction();
@@ -83,7 +70,7 @@ export function DecisionDialog({
   const [rootError, setRootError] = useState<string | null>(null);
 
   const form = useForm<OvertimeDecisionFormValues>({
-    resolver: zodResolver(overtimeDecisionFormSchema),
+    resolver: zodResolver(overtimeDecisionFormSchema((key) => t(`validation.${key}`))),
     defaultValues: { note: "" },
   });
 
@@ -96,17 +83,23 @@ export function DecisionDialog({
       });
       onClose();
     } catch (error) {
-      setRootError(overtimeDecisionError(error));
+      setRootError(overtimeDecisionError(error, errors));
     }
   }
 
   const { request } = target;
-  const description =
+  const description = t(
     target.mode === "verify"
-      ? `${employeeName} · ${formatDate(request.work_date)} · ${formatHours(request.hours)} hours. Payroll counts these hours exactly as requested; HR cannot adjust them.`
+      ? "decision.verifyDescription"
       : target.mode === "approve"
-        ? `${employeeName} · ${formatDate(request.work_date)} · ${formatHours(request.hours)} hours. The request then waits for HR verification.`
-        : `${employeeName} · ${formatDate(request.work_date)} · ${formatHours(request.hours)} hours. The requester must submit a new claim.`;
+        ? "decision.approveDescription"
+        : "decision.rejectDescription",
+    {
+      name: employeeName,
+      date: formatDate(request.work_date, locale),
+      hours: formatHours(request.hours, locale),
+    },
+  );
 
   return (
     <Dialog
@@ -117,7 +110,13 @@ export function DecisionDialog({
     >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{TITLES[target.mode]}</DialogTitle>
+          <DialogTitle>{
+            target.mode === "approve"
+              ? t("decision.approveTitle")
+              : target.mode === "verify"
+                ? t("decision.verifyTitle")
+                : t("decision.rejectTitle")
+          }</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
@@ -128,13 +127,13 @@ export function DecisionDialog({
               name="note"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Decision note (optional)</FormLabel>
+                  <FormLabel>{t("decision.note")}</FormLabel>
                   <FormControl>
                     <Textarea
                       {...field}
                       value={field.value ?? ""}
                       rows={3}
-                      placeholder="Explain the decision for the requester."
+                      placeholder={t("decision.notePlaceholder")}
                     />
                   </FormControl>
                   <FormMessage />
@@ -151,14 +150,24 @@ export function DecisionDialog({
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={onClose}>
-                Cancel
+                {common("cancel")}
               </Button>
               <Button
                 type="submit"
                 variant={target.mode === "reject" ? "destructive" : "default"}
                 disabled={mutation.isPending}
               >
-                {mutation.isPending ? PENDING_LABELS[target.mode] : SUBMIT_LABELS[target.mode]}
+                {mutation.isPending
+                  ? target.mode === "approve"
+                    ? t("decision.approving")
+                    : target.mode === "verify"
+                      ? t("decision.verifying")
+                      : t("decision.rejecting")
+                  : target.mode === "approve"
+                    ? t("decision.approveRequest")
+                    : target.mode === "verify"
+                      ? t("decision.verifyRequest")
+                      : t("decision.rejectRequest")}
               </Button>
             </DialogFooter>
           </form>

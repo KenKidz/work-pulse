@@ -3,17 +3,21 @@
 /**
  * Primary navigation for the dashboard shell. Client leaf: the active item is
  * derived from the pathname; `aria-current="page"` marks it for assistive
- * technology too. Destinations come from the shared catalog.
+ * technology too. Destinations come from the shared catalog and their labels
+ * from the `nav` message namespace.
  */
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { cn } from "cn";
 
 import { activeNavHref, NAV_ITEMS } from "@/components/destinations";
 import { useAuth } from "@/features/auth/components/AuthGate";
 
 export function MainNav({ className }: { className?: string }) {
+  const t = useTranslations("nav");
+  const common = useTranslations("common.aria");
   const pathname = usePathname();
   const { user } = useAuth();
   const items = NAV_ITEMS.filter(
@@ -22,10 +26,7 @@ export function MainNav({ className }: { className?: string }) {
   const activeHref = activeNavHref(pathname, items);
 
   return (
-    <nav
-      aria-label="Main"
-      className={cn("flex min-w-0 flex-1 items-center gap-1 overflow-x-auto", className)}
-    >
+    <nav aria-label={common("main")} className={cn("flex min-w-0 flex-1 items-center gap-1 overflow-x-auto", className)}>
       {items.map((item) => {
         const active = item.href === activeHref;
         return (
@@ -41,7 +42,7 @@ export function MainNav({ className }: { className?: string }) {
             )}
           >
             <item.icon className="size-4" aria-hidden="true" />
-            {item.label}
+            {t(item.key)}
           </Link>
         );
       })}

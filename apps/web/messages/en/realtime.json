@@ -1,0 +1,65 @@
+{
+  "metadataTitle": "Command center — WorkPulse",
+  "pageTitle": "Command center",
+  "pageDescription": "Watch presence arrive in real time — who’s on site, who’s remote, who’s late, and every check-in and check-out in between.",
+  "status": {
+    "present": "On site",
+    "remote": "Remote",
+    "checked_out": "Checked out",
+    "absent": "Absent",
+    "on_leave": "On leave"
+  },
+  "activity": {
+    "checked_in": "checked in",
+    "checked_out": "checked out"
+  },
+  "live": {
+    "label": "Live",
+    "description": "Check-ins and check-outs appear here within seconds.",
+    "updated": "Updated {time}",
+    "connectingTitle": "Connecting to live updates…",
+    "connectingDescription": "The board shows the latest snapshot meanwhile.",
+    "unavailableTitle": "Live updates unavailable",
+    "unavailableDescription": "Showing the latest snapshot — it refreshes about once a minute while we reconnect automatically."
+  },
+  "counts": {
+    "ariaLabel": "Presence counts"
+  },
+  "presence": {
+    "title": "Who’s working now",
+    "description": "Today’s presence for everyone in your scope — rows update as check-ins happen.",
+    "empty": "No one is on the board yet today — check-ins appear here the moment they happen.",
+    "regionLabel": "Presence list. Scroll to see everyone.",
+    "listLabel": "Presence",
+    "containerLabel": "Presence. Scroll to read every row and column.",
+    "columns": {
+      "employee": "Employee",
+      "status": "Status",
+      "late": "Late",
+      "since": "Since"
+    },
+    "late": "Late",
+    "lateMinutes": "Late · {minutes}"
+  },
+  "activityRail": {
+    "title": "Live activity",
+    "description": "Check-ins and check-outs, newest first.",
+    "empty": "Nothing yet today — the rail fills as people check in and out.",
+    "regionLabel": "Live activity feed. Scroll for older entries.",
+    "listLabel": "Live activity",
+    "announcer": "{name} {action} at {time}"
+  },
+  "commandCenter": {
+    "checkingAccess": "Checking access…",
+    "loading": "Loading the live board…",
+    "deniedTitle": "Command center unavailable",
+    "errorTitle": "Could not load the live board",
+    "denied": "Managers, HR and admins can watch the live workforce board.",
+    "loadError": "The board snapshot could not be loaded."
+  },
+  "employeeFallback": "Employee …{id}",
+  "units": {
+    "hourShort": "h",
+    "minuteShort": "m"
+  }
+}

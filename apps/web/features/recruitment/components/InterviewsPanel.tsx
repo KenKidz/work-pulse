@@ -9,6 +9,7 @@
  */
 
 import { CalendarClock, CircleAlert, Plus } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -37,7 +38,6 @@ import { useAuth } from "@/features/auth/components/AuthGate";
 
 import { formatRecruitmentTimestamp } from "../dates";
 import {
-  interviewStatusLabel,
   interviewStatusVariant,
   isForbiddenError,
   organizationLabel,
@@ -62,6 +62,12 @@ export const INTERVIEWS_PAGE_SIZE = 20;
 const STATUS_ORDER: InterviewStatus[] = ["scheduled", "completed", "cancelled"];
 
 export function InterviewsPanel() {
+  const t = useTranslations("recruitment.interviews");
+  const common = useTranslations("recruitment.actions");
+  const statusLabels = useTranslations("recruitment.status.interview");
+  const fallbacks = useTranslations("recruitment.fallbacks");
+  const locale = useLocale();
+  const errors = useTranslations("recruitment.errors");
   const { user } = useAuth();
   const [params, setParams] = useState<ListInterviewsParams>({
     page: 1,
@@ -106,13 +112,15 @@ export function InterviewsPanel() {
   }
 
   function candidateLabel(interview: Interview): string {
-    return organizationLabel(candidateDirectory.candidateNames, interview.candidate_id, "Candidate");
+    return organizationLabel(
+      candidateDirectory.candidateNames,
+      interview.candidate_id,
+      fallbacks("candidate", { id: interview.candidate_id.slice(-4) }),
+    );
   }
 
   function emptyMessage(): string {
-    return filtersActive
-      ? "No interviews match these filters. Clear a filter to see the full schedule."
-      : "No interviews yet. Schedule one for an interviewing candidate.";
+    return filtersActive ? t("emptyFiltered") : t("empty");
   }
 
   return (
@@ -127,14 +135,14 @@ export function InterviewsPanel() {
             })
           }
         >
-          <SelectTrigger aria-label="Filter by status" className="w-full sm:w-44">
-            <SelectValue placeholder="All statuses" />
+          <SelectTrigger aria-label={t("filters.statusAria")} className="w-full sm:w-44">
+            <SelectValue placeholder={t("filters.allStatuses")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ANY}>All statuses</SelectItem>
+            <SelectItem value={ANY}>{t("filters.allStatuses")}</SelectItem>
             {STATUS_ORDER.map((status) => (
               <SelectItem key={status} value={status}>
-                {interviewStatusLabel[status]}
+                {statusLabels(status)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -146,11 +154,11 @@ export function InterviewsPanel() {
             change({ job_id: value === ANY ? undefined : value, page: 1 })
           }
         >
-          <SelectTrigger aria-label="Filter by job" className="w-full sm:w-56">
-            <SelectValue placeholder="All jobs" />
+          <SelectTrigger aria-label={t("filters.jobAria")} className="w-full sm:w-56">
+            <SelectValue placeholder={t("filters.allJobs")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ANY}>All jobs</SelectItem>
+            <SelectItem value={ANY}>{t("filters.allJobs")}</SelectItem>
             {jobDirectory.jobs.map((job) => (
               <SelectItem key={job.id} value={job.id}>
                 {job.title}
@@ -161,7 +169,7 @@ export function InterviewsPanel() {
 
         <Button className="ml-auto" onClick={openSchedule}>
           <Plus />
-          Schedule interview
+          {common("schedule")}
         </Button>
       </div>
 
@@ -169,7 +177,7 @@ export function InterviewsPanel() {
         {interviewsQuery.isPending ? (
           <div className="flex items-center justify-center gap-2 px-6 py-10 text-sm text-muted-foreground">
             <Spinner className="size-4" />
-            <p>Loading interviews…</p>
+            <p>{t("loading")}</p>
           </div>
         ) : interviewsQuery.isError ? (
           <div className="p-4">
@@ -178,8 +186,8 @@ export function InterviewsPanel() {
               <AlertDescription>
                 <p>
                   {isForbiddenError(interviewsQuery.error)
-                    ? "You don't have permission to manage recruitment."
-                    : "Could not load interviews."}
+                    ? errors("denied")
+                    : t("loadError")}
                 </p>
                 {isForbiddenError(interviewsQuery.error) ? null : (
                   <Button
@@ -188,7 +196,7 @@ export function InterviewsPanel() {
                     className="mt-2"
                     onClick={() => void interviewsQuery.refetch()}
                   >
-                    Retry
+                    {common("retry")}
                   </Button>
                 )}
               </AlertDescription>
@@ -200,7 +208,7 @@ export function InterviewsPanel() {
             {pageOutOfRange ? (
               <div className="mt-3 flex justify-center">
                 <Button variant="outline" size="sm" onClick={() => change({ page: 1 })}>
-                  Back to first page
+                  {common("backToFirstPage")}
                 </Button>
               </div>
             ) : null}
@@ -208,22 +216,22 @@ export function InterviewsPanel() {
         ) : (
           <>
             <p className="px-4 py-2 text-xs text-muted-foreground sm:hidden">
-              Swipe sideways to see every interview field.
+              {t("swipe")}
             </p>
             <Table
-              aria-label="Interviews"
-              containerLabel="Interviews. Scroll horizontally to read all columns."
+              aria-label={t("label")}
+              containerLabel={t("containerLabel")}
             >
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="pl-3">Candidate</TableHead>
-                  <TableHead>Job</TableHead>
-                  <TableHead>Interviewer</TableHead>
-                  <TableHead>Scheduled</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Rating</TableHead>
-                  <TableHead>Notes</TableHead>
-                  <TableHead className="pr-3 text-right">Actions</TableHead>
+                  <TableHead className="pl-3">{t("columns.candidate")}</TableHead>
+                  <TableHead>{t("columns.job")}</TableHead>
+                  <TableHead>{t("columns.interviewer")}</TableHead>
+                  <TableHead>{t("columns.scheduled")}</TableHead>
+                  <TableHead>{t("columns.status")}</TableHead>
+                  <TableHead>{t("columns.rating")}</TableHead>
+                  <TableHead>{t("columns.notes")}</TableHead>
+                  <TableHead className="pr-3 text-right">{t("columns.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -249,12 +257,12 @@ export function InterviewsPanel() {
                         {organizationLabel(
                           interviewerNames,
                           interview.interviewer_id,
-                          "Employee",
+                          fallbacks("employee", { id: interview.interviewer_id.slice(-4) }),
                         )}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         <time dateTime={interview.scheduled_at}>
-                          {formatRecruitmentTimestamp(interview.scheduled_at)}
+                          {formatRecruitmentTimestamp(interview.scheduled_at, locale)}
                         </time>
                       </TableCell>
                       <TableCell>
@@ -262,7 +270,7 @@ export function InterviewsPanel() {
                           variant={interviewStatusVariant[interview.status]}
                           data-status={interview.status}
                         >
-                          {interviewStatusLabel[interview.status]}
+                          {statusLabels(interview.status)}
                         </Badge>
                       </TableCell>
                       <TableCell className="font-mono tabular-nums">
@@ -288,29 +296,29 @@ export function InterviewsPanel() {
                                   variant="ghost"
                                   size="xs"
                                   className="min-h-11 sm:min-h-7"
-                                  aria-label={`Submit feedback for ${name}`}
+                                  aria-label={t("submitFeedbackAria", { name })}
                                   onClick={() => setFeedback(interview)}
                                 >
-                                  Feedback
+                                  {common("feedback")}
                                 </Button>
                               ) : null}
                               <Button
                                 variant="ghost"
                                 size="xs"
                                 className="min-h-11 sm:min-h-7"
-                                aria-label={`Reschedule interview with ${name}`}
+                                aria-label={t("rescheduleAria", { name })}
                                 onClick={() => openEdit(interview)}
                               >
-                                Reschedule
+                                {common("reschedule")}
                               </Button>
                               <Button
                                 variant="ghost"
                                 size="xs"
                                 className="min-h-11 sm:min-h-7"
-                                aria-label={`Cancel interview with ${name}`}
+                                aria-label={t("cancelAria", { name })}
                                 onClick={() => setCancelling(interview)}
                               >
-                                Cancel
+                                {common("cancel")}
                               </Button>
                             </>
                           )}
@@ -324,7 +332,7 @@ export function InterviewsPanel() {
             {page === null ? null : (
               <RecruitmentPagination
                 page={page}
-                label="interviews"
+                label={t("paginationLabel")}
                 onPageChange={(nextPage) => change({ page: nextPage })}
               />
             )}

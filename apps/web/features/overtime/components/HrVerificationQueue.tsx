@@ -12,6 +12,7 @@
  */
 
 import { CircleAlert, Inbox } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -36,7 +37,6 @@ import {
   OVERTIME_HR_STEP_ROLES,
   isForbiddenError,
   overtimeEmployeeLabel,
-  overtimeStatusLabel,
   overtimeStatusVariant,
 } from "../labels";
 import type { OvertimeRequest, Page } from "../types";
@@ -54,6 +54,8 @@ export function HrVerificationQueue() {
 }
 
 function HrVerificationQueueTable({ currentEmployeeId }: { currentEmployeeId: string | null }) {
+  const t = useTranslations("overtime");
+  const common = useTranslations("common.actions");
   const [target, setTarget] = useState<OvertimeDecisionTarget | null>(null);
   const [pendingPage, setPendingPage] = useState(1);
   const [verifiedPage, setVerifiedPage] = useState(1);
@@ -95,11 +97,10 @@ function HrVerificationQueueTable({ currentEmployeeId }: { currentEmployeeId: st
     <section aria-labelledby="hr-verification-title" className="flex flex-col gap-4">
       <div className="space-y-1">
         <h2 id="hr-verification-title" className="text-lg leading-6 font-semibold tracking-tight">
-          HR verification
+          {t("hr.title")}
         </h2>
         <p className="max-w-2xl text-sm leading-5 text-pretty text-muted-foreground">
-          Manager-approved claims waiting for HR verification, and verified rows still inside
-          payroll’s un-verify window.
+          {t("hr.description")}
         </p>
       </div>
 
@@ -110,24 +111,24 @@ function HrVerificationQueueTable({ currentEmployeeId }: { currentEmployeeId: st
         {loading ? (
           <div className="flex items-center justify-center gap-2 px-6 py-10 text-sm text-muted-foreground">
             <Spinner className="size-4" />
-            <p>Loading overtime requests…</p>
+            <p>{t("hr.loading")}</p>
           </div>
         ) : failed ? (
           <div className="p-4">
             <Alert variant="destructive">
               <CircleAlert aria-hidden="true" />
               <AlertTitle>
-                {denied ? "Verification unavailable" : "Could not load overtime requests"}
+                {denied ? t("hr.deniedTitle") : t("hr.errorTitle")}
               </AlertTitle>
               <AlertDescription>
                 <p>
                   {denied
-                    ? "HR, admins and super admins verify overtime requests."
-                    : "The verification queue could not be loaded."}
+                    ? t("hr.denied")
+                    : t("hr.loadError")}
                 </p>
                 {!denied ? (
                   <Button variant="outline" size="sm" className="mt-2" onClick={retry}>
-                    Retry
+                    {common("retry")}
                   </Button>
                 ) : null}
               </AlertDescription>
@@ -137,19 +138,19 @@ function HrVerificationQueueTable({ currentEmployeeId }: { currentEmployeeId: st
           <div className="p-4">
             <EmptyState
               icon={Inbox}
-              message="No overtime requests are waiting for HR verification."
+              message={t("hr.empty")}
             />
           </div>
         ) : (
           <>
             <QueueTable
               section="pending"
-              title="Awaiting verification"
-              description="Manager-approved claims. Verify accepts the requested hours exactly."
-              emptyMessage="Nothing is waiting for HR verification."
+              title={t("hr.pendingTitle")}
+              description={t("hr.pendingDescription")}
+              emptyMessage={t("hr.pendingEmpty")}
               rows={pending}
               pageInfo={pendingPageInfo}
-              paginationLabel="overtime requests awaiting HR verification"
+              paginationLabel={t("hr.pendingPaginationLabel")}
               onPageChange={setPendingPage}
               currentEmployeeId={currentEmployeeId}
               directory={directory}
@@ -157,12 +158,12 @@ function HrVerificationQueueTable({ currentEmployeeId }: { currentEmployeeId: st
             />
             <QueueTable
               section="verified"
-              title="Verified — payroll un-verify window"
-              description="Payroll counts these rows. Reject before a finalize to un-verify one."
-              emptyMessage="No verified rows inside the payroll un-verify window."
+              title={t("hr.verifiedTitle")}
+              description={t("hr.verifiedDescription")}
+              emptyMessage={t("hr.verifiedEmpty")}
               rows={verified}
               pageInfo={verifiedPageInfo}
-              paginationLabel="verified overtime requests"
+              paginationLabel={t("hr.verifiedPaginationLabel")}
               onPageChange={setVerifiedPage}
               currentEmployeeId={currentEmployeeId}
               directory={directory}
@@ -175,7 +176,11 @@ function HrVerificationQueueTable({ currentEmployeeId }: { currentEmployeeId: st
       {target !== null ? (
         <DecisionDialog
           target={target}
-          employeeName={overtimeEmployeeLabel(target.request.employee_id, directory)}
+          employeeName={overtimeEmployeeLabel(
+            target.request.employee_id,
+            directory,
+            t("employeeFallback", { id: target.request.employee_id.slice(-4) }),
+          )}
           onClose={() => setTarget(null)}
         />
       ) : null}
@@ -208,10 +213,11 @@ function QueueTable({
   directory: ReadonlyMap<string, string>;
   onTarget: (target: OvertimeDecisionTarget) => void;
 }) {
+  const t = useTranslations("overtime.hr");
+  const root = useTranslations("overtime");
+  const locale = useLocale();
   const pending = section === "pending";
-  const tableLabel = pending
-    ? "Overtime requests awaiting HR verification"
-    : "Verified overtime requests inside the un-verify window";
+  const tableLabel = pending ? t("pendingLabel") : t("verifiedLabel");
 
   return (
     <div className="border-b last:border-b-0">
@@ -227,7 +233,7 @@ function QueueTable({
       ) : (
         <>
           <p className="px-4 py-2 text-xs text-muted-foreground sm:hidden">
-            Swipe sideways to see every request field.
+            {t("swipe")}
           </p>
           <Table
             aria-label={tableLabel}
@@ -235,18 +241,22 @@ function QueueTable({
           >
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead className="pl-3">Employee</TableHead>
-                <TableHead>Work date</TableHead>
-                <TableHead>Hours</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Reason</TableHead>
-                <TableHead>Manager note</TableHead>
-                <TableHead className="pr-3 text-right">Actions</TableHead>
+                <TableHead className="pl-3">{t("columns.employee")}</TableHead>
+                <TableHead>{t("columns.workDate")}</TableHead>
+                <TableHead>{t("columns.hours")}</TableHead>
+                <TableHead>{t("columns.status")}</TableHead>
+                <TableHead>{t("columns.reason")}</TableHead>
+                <TableHead>{t("columns.managerNote")}</TableHead>
+                <TableHead className="pr-3 text-right">{t("columns.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {rows.map((request) => {
-                const name = overtimeEmployeeLabel(request.employee_id, directory);
+                const name = overtimeEmployeeLabel(
+                  request.employee_id,
+                  directory,
+                  root("employeeFallback", { id: request.employee_id.slice(-4) }),
+                );
                 const own = request.employee_id === currentEmployeeId;
                 return (
                   <TableRow
@@ -255,13 +265,13 @@ function QueueTable({
                     data-status={request.status}
                   >
                     <TableCell className="pl-3 font-medium">{name}</TableCell>
-                    <TableCell className="tabular-nums">{formatDate(request.work_date)}</TableCell>
+                    <TableCell className="tabular-nums">{formatDate(request.work_date, locale)}</TableCell>
                     <TableCell className="font-mono tabular-nums">
-                      {formatHours(request.hours)}
+                      {formatHours(request.hours, locale)}
                     </TableCell>
                     <TableCell>
                       <Badge variant={overtimeStatusVariant[request.status]}>
-                        {overtimeStatusLabel[request.status]}
+                        {root(`status.${request.status}` as never)}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
@@ -285,7 +295,7 @@ function QueueTable({
                     <TableCell className="pr-3 text-right">
                       {own ? (
                         <span className="text-xs text-muted-foreground">
-                          Your own request — someone else must decide.
+                          {t("ownRequest")}
                         </span>
                       ) : (
                         <div className="flex justify-end gap-2">
@@ -294,20 +304,20 @@ function QueueTable({
                               variant="outline"
                               size="sm"
                               className="min-h-11 sm:min-h-7"
-                              aria-label={`Verify overtime request for ${name}`}
+                              aria-label={t("verifyAria", { name })}
                               onClick={() => onTarget({ request, mode: "verify" })}
                             >
-                              Verify
+                              {t("verify")}
                             </Button>
                           ) : null}
                           <Button
                             variant="outline"
                             size="sm"
                             className="min-h-11 sm:min-h-7"
-                            aria-label={`Reject overtime request for ${name}`}
+                            aria-label={t("rejectAria", { name })}
                             onClick={() => onTarget({ request, mode: "reject" })}
                           >
-                            Reject
+                            {t("reject")}
                           </Button>
                         </div>
                       )}

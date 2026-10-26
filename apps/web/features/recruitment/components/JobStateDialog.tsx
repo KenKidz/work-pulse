@@ -7,6 +7,7 @@
  */
 
 import { CircleAlert } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,9 @@ type JobStateDialogProps = {
 };
 
 export function JobStateDialog({ open, onOpenChange, job, action }: JobStateDialogProps) {
+  const t = useTranslations("recruitment.jobState");
+  const common = useTranslations("recruitment.actions");
+  const errors = useTranslations("recruitment.errors");
   const openJob = useJobOpen();
   const closeJob = useJobClose();
   const mutation = action === "open" ? openJob : closeJob;
@@ -44,7 +48,7 @@ export function JobStateDialog({ open, onOpenChange, job, action }: JobStateDial
       await mutation.mutateAsync({ jobId: job.id });
       onOpenChange(false);
     } catch (failure) {
-      setError(recruitmentErrorMessage(failure));
+      setError(recruitmentErrorMessage(failure, errors));
     }
   }
 
@@ -54,11 +58,11 @@ export function JobStateDialog({ open, onOpenChange, job, action }: JobStateDial
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{isOpening ? "Open job" : "Close job"}</DialogTitle>
+          <DialogTitle>{isOpening ? t("openTitle") : t("closeTitle")}</DialogTitle>
           <DialogDescription>
             {isOpening
-              ? `Open “${job.title}” so HR can add candidates and hire against its openings.`
-              : `Close “${job.title}”? Closing is terminal — the job cannot be re-opened, and new candidates and hires will be refused. Candidates already in the pipeline can still be moved.`}
+              ? t("openDescription", { title: job.title })
+              : t("closeDescription", { title: job.title })}
           </DialogDescription>
         </DialogHeader>
 
@@ -71,7 +75,7 @@ export function JobStateDialog({ open, onOpenChange, job, action }: JobStateDial
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {common("cancel")}
           </Button>
           <Button
             type="button"
@@ -81,11 +85,11 @@ export function JobStateDialog({ open, onOpenChange, job, action }: JobStateDial
           >
             {mutation.isPending
               ? isOpening
-                ? "Opening…"
-                : "Closing…"
+                ? t("opening")
+                : t("closing")
               : isOpening
-                ? "Open job"
-                : "Close job"}
+                ? t("openTitle")
+                : t("closeTitle")}
           </Button>
         </DialogFooter>
       </DialogContent>

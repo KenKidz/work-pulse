@@ -10,6 +10,7 @@
 
 import { CircleAlert, ReceiptText } from "lucide-react";
 import Link from "next/link";
+import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -29,12 +30,15 @@ import {
 
 import { formatAmount, formatPeriod, formatPayrollTimestamp } from "../format";
 import { useMyPayslips } from "../hooks/use-my-payslips";
-import { payslipStatusLabel, payslipStatusVariant } from "../labels";
+import { payslipStatusVariant } from "../labels";
 import { TablePagination } from "./TablePagination";
 
 const MY_PAYSLIPS_PAGE_SIZE = 20;
 
 export function MyPayslipsTable() {
+  const t = useTranslations("payroll");
+  const payslipStatus = useTranslations("payroll.status.payslip");
+  const locale = useLocale();
   const [page, setPage] = useState(1);
   const payslipsQuery = useMyPayslips({ page, page_size: MY_PAYSLIPS_PAGE_SIZE });
 
@@ -46,14 +50,14 @@ export function MyPayslipsTable() {
       {payslipsQuery.isPending ? (
         <div className="flex items-center justify-center gap-2 px-6 py-10 text-sm text-muted-foreground">
           <Spinner className="size-4" />
-          <p>Loading your payslips…</p>
+          <p>{t("payslipDetail.loading")}</p>
         </div>
       ) : payslipsQuery.isError ? (
         <div className="p-4">
           <Alert variant="destructive">
             <CircleAlert aria-hidden="true" />
             <AlertDescription>
-              <p>Could not load your payslips.</p>
+              <p>{t("payslipDetail.loadError")}</p>
               <Button
                 variant="outline"
                 size="sm"
@@ -69,25 +73,25 @@ export function MyPayslipsTable() {
         <div className="p-4">
           <EmptyState
             icon={ReceiptText}
-            message="No payslips yet. They appear here after a payroll run is finalized."
+            message={t("myPayslips.empty")}
           />
         </div>
       ) : (
         <>
           <p className="px-4 py-2 text-xs text-muted-foreground sm:hidden">
-            Swipe sideways to see every payslip field.
+            {t("myPayslips.swipe")}
           </p>
           <Table
-            aria-label="My payslips"
-            containerLabel="My payslips. Scroll horizontally to read all columns."
+            aria-label={t("myPayslips.label")}
+            containerLabel={t("myPayslips.containerLabel")}
           >
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead className="pl-3">Month</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Net pay</TableHead>
-                <TableHead>Issued</TableHead>
-                <TableHead className="pr-3 text-right">Actions</TableHead>
+                <TableHead className="pl-3">{t("myPayslips.columns.month")}</TableHead>
+                <TableHead>{t("myPayslips.columns.status")}</TableHead>
+                <TableHead className="text-right">{t("myPayslips.columns.net")}</TableHead>
+                <TableHead>{t("myPayslips.columns.issued")}</TableHead>
+                <TableHead className="pr-3 text-right">{t("myPayslips.columns.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -97,21 +101,21 @@ export function MyPayslipsTable() {
                   data-testid="my-payslip-row"
                   data-status={payslip.status}
                 >
-                  <TableCell className="pl-3 font-medium">{formatPeriod(payslip.period)}</TableCell>
+                  <TableCell className="pl-3 font-medium">{formatPeriod(payslip.period, locale)}</TableCell>
                   <TableCell>
                     <Badge variant={payslipStatusVariant[payslip.status]}>
-                      {payslipStatusLabel[payslip.status]}
+                      {payslipStatus(payslip.status)}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right font-mono tabular-nums">
-                    {formatAmount(payslip.net)}
+                    {formatAmount(payslip.net, locale)}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {payslip.issued_at === null || payslip.issued_at === undefined ? (
                       "—"
                     ) : (
                       <time dateTime={payslip.issued_at}>
-                        {formatPayrollTimestamp(payslip.issued_at)}
+                        {formatPayrollTimestamp(payslip.issued_at, locale)}
                       </time>
                     )}
                   </TableCell>
@@ -119,9 +123,9 @@ export function MyPayslipsTable() {
                     <Button asChild variant="ghost" size="xs" className="min-h-11 sm:min-h-7">
                       <Link
                         href={`/payroll/my-payslips/${payslip.id}`}
-                        aria-label={`View ${payslipStatusLabel[payslip.status].toLowerCase()} ${formatPeriod(payslip.period)} payslip`}
+                        aria-label={`View ${payslipStatus(payslip.status).toLowerCase()} ${formatPeriod(payslip.period, locale)} payslip`}
                       >
-                        View
+                        {t("myPayslips.view")}
                       </Link>
                     </Button>
                   </TableCell>
@@ -130,7 +134,7 @@ export function MyPayslipsTable() {
             </TableBody>
           </Table>
           {pageInfo === null ? null : (
-            <TablePagination page={pageInfo} label="my payslips" onPageChange={setPage} />
+            <TablePagination page={pageInfo} label={t("myPayslips.paginationLabel")} onPageChange={setPage} />
           )}
         </>
       )}

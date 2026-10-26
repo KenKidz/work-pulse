@@ -9,6 +9,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CircleAlert } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
@@ -72,11 +73,15 @@ export function BonusDialog({
   currency,
   directory,
 }: BonusDialogProps) {
+  const t = useTranslations("payroll.bonus");
+  const root = useTranslations("payroll");
+  const validation = useTranslations("payroll.validation");
+  const errors = useTranslations("payroll.errors");
   const [rootError, setRootError] = useState<string | null>(null);
   const createBonus = useRunBonusCreate(runId);
 
   const form = useForm<BonusFormValues>({
-    resolver: zodResolver(bonusFormSchema),
+    resolver: zodResolver(bonusFormSchema((key) => validation(key))),
     defaultValues: EMPTY_BONUS,
   });
 
@@ -101,7 +106,7 @@ export function BonusDialog({
       });
       handleOpenChange(false);
     } catch (error) {
-      const fieldErrors = bonusFieldErrors(error);
+      const fieldErrors = bonusFieldErrors(error, errors);
       for (const [field, message] of Object.entries(fieldErrors)) {
         if (field === "root") {
           setRootError(message ?? null);
@@ -119,17 +124,12 @@ export function BonusDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Add bonus</DialogTitle>
-          <DialogDescription>
-            The bonus joins this run’s next calculation. Recalculate after adding it to see the
-            updated payslips.
-          </DialogDescription>
+          <DialogTitle>{t("title")}</DialogTitle>
+          <DialogDescription>{t("description")}</DialogDescription>
         </DialogHeader>
 
         {payslips.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            This run has no payslips yet, so there is no employee to bonus.
-          </p>
+          <p className="text-sm text-muted-foreground">{t("noPayslips")}</p>
         ) : (
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" noValidate>
@@ -138,17 +138,21 @@ export function BonusDialog({
                 name="employee_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Employee</FormLabel>
+                    <FormLabel>{t("employee")}</FormLabel>
                     <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
-                        <SelectTrigger aria-label="Employee">
-                          <SelectValue placeholder="Select an employee in this run" />
+                        <SelectTrigger aria-label={t("employee")}>
+                          <SelectValue placeholder={t("selectEmployee")} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         {payslips.map((payslip) => (
                           <SelectItem key={payslip.id} value={payslip.employee_id}>
-                            {employeeLabel(payslip.employee_id, directory)}
+                            {employeeLabel(
+                              payslip.employee_id,
+                              directory,
+                              root("employeeFallback", { id: payslip.employee_id.slice(-4) }),
+                            )}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -165,9 +169,13 @@ export function BonusDialog({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel
-                        hint={currency === null ? "In the tenant currency." : `In ${currency}.`}
+                        hint={
+                          currency === null
+                            ? t("amountHint")
+                            : t("amountHintCurrency", { currency })
+                        }
                       >
-                        Amount
+                        {t("amount")}
                       </FormLabel>
                       <FormControl>
                         <Input
@@ -194,15 +202,13 @@ export function BonusDialog({
                   name="note"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel hint="Stored with the bonus, never shown on the payslip.">
-                        Note (optional)
-                      </FormLabel>
+                      <FormLabel hint={t("noteHint")}>{t("note")}</FormLabel>
                       <FormControl>
                         <Textarea
                           {...field}
                           value={field.value ?? ""}
                           rows={2}
-                          placeholder="Why this bonus was added"
+                          placeholder={t("notePlaceholder")}
                         />
                       </FormControl>
                       <FormMessage />
@@ -223,7 +229,7 @@ export function BonusDialog({
                   Cancel
                 </Button>
                 <Button type="submit" disabled={createBonus.isPending}>
-                  Add bonus
+                  {t("add")}
                 </Button>
               </DialogFooter>
             </form>

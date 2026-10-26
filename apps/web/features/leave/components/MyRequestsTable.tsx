@@ -8,6 +8,7 @@
  */
 
 import { CalendarPlus, CircleAlert, Inbox } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -28,13 +29,17 @@ import { useAuth } from "@/features/auth/components/AuthGate";
 
 import { formatDate } from "../dates";
 import { leaveWithdrawError, useLeaveRequests, useWithdrawLeaveAction } from "../hooks/use-leave";
-import { leaveStatusLabel, leaveStatusVariant, leaveTypeLabel } from "../labels";
+import { leaveStatusVariant } from "../labels";
 import type { LeaveRequest } from "../types";
 import { LeaveRequestDialog } from "./LeaveRequestDialog";
 
 export const MY_REQUESTS_PAGE_SIZE = 20;
 
 export function MyRequestsTable() {
+  const t = useTranslations("leave");
+  const locale = useLocale();
+  const common = useTranslations("common.actions");
+  const errors = useTranslations("leave.errors");
   const { user } = useAuth();
   const employeeId = user.employee_id ?? null;
   const [page, setPage] = useState(1);
@@ -56,7 +61,7 @@ export function MyRequestsTable() {
     try {
       await withdraw.mutateAsync({ id: request.id });
     } catch (error) {
-      setActionError(leaveWithdrawError(error));
+      setActionError(leaveWithdrawError(error, errors));
     }
   }
 
@@ -64,13 +69,13 @@ export function MyRequestsTable() {
     return (
       <section aria-labelledby="my-requests-title" className="flex flex-col gap-4">
         <h2 id="my-requests-title" className="text-lg leading-6 font-semibold tracking-tight">
-          My requests
+          {t("myRequests.title")}
         </h2>
         <Card className="gap-0 rounded-md border-border py-0 shadow-none">
           <div className="p-4">
             <EmptyState
               icon={Inbox}
-              message="Your account isn’t linked to an employee record, so you can’t request leave."
+              message={t("myRequests.noEmployee")}
             />
           </div>
         </Card>
@@ -83,10 +88,10 @@ export function MyRequestsTable() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="space-y-1">
           <h2 id="my-requests-title" className="text-lg leading-6 font-semibold tracking-tight">
-            My requests
+            {t("myRequests.title")}
           </h2>
           <p className="max-w-2xl text-sm leading-5 text-pretty text-muted-foreground">
-            Submit time off and follow each request to its decision.
+            {t("myRequests.description")}
           </p>
         </div>
         <Button
@@ -98,7 +103,7 @@ export function MyRequestsTable() {
           }}
         >
           <CalendarPlus />
-          Request leave
+          {t("myRequests.requestLeave")}
         </Button>
       </div>
 
@@ -113,21 +118,21 @@ export function MyRequestsTable() {
         {requestsQuery.isPending ? (
           <div className="flex items-center justify-center gap-2 px-6 py-10 text-sm text-muted-foreground">
             <Spinner className="size-4" />
-            <p>Loading your leave requests…</p>
+            <p>{t("myRequests.loading")}</p>
           </div>
         ) : requestsQuery.isError ? (
           <div className="p-4">
             <Alert variant="destructive">
               <CircleAlert aria-hidden="true" />
               <AlertDescription>
-                <p>Could not load your leave requests.</p>
+                <p>{t("myRequests.loadError")}</p>
                 <Button
                   variant="outline"
                   size="sm"
                   className="mt-2"
                   onClick={() => void requestsQuery.refetch()}
                 >
-                  Retry
+                  {common("retry")}
                 </Button>
               </AlertDescription>
             </Alert>
@@ -136,37 +141,37 @@ export function MyRequestsTable() {
           <div className="p-4">
             <EmptyState
               icon={CalendarPlus}
-              message="No leave requests yet. Request leave and it will appear here."
+              message={t("myRequests.empty")}
             />
           </div>
         ) : (
           <>
             <p className="px-4 py-2 text-xs text-muted-foreground sm:hidden">
-              Swipe sideways to see every request field.
+              {t("myRequests.swipe")}
             </p>
             <Table
-              aria-label="My leave requests"
-              containerLabel="My leave requests. Scroll horizontally to read all columns."
+              aria-label={t("myRequests.label")}
+              containerLabel={t("myRequests.containerLabel")}
             >
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="pl-3">Type</TableHead>
-                  <TableHead>Dates</TableHead>
-                  <TableHead>Days</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Reason</TableHead>
-                  <TableHead>Requested</TableHead>
-                  <TableHead className="pr-3 text-right">Actions</TableHead>
+                  <TableHead className="pl-3">{t("myRequests.columns.type")}</TableHead>
+                  <TableHead>{t("myRequests.columns.dates")}</TableHead>
+                  <TableHead>{t("myRequests.columns.days")}</TableHead>
+                  <TableHead>{t("myRequests.columns.status")}</TableHead>
+                  <TableHead>{t("myRequests.columns.reason")}</TableHead>
+                  <TableHead>{t("myRequests.columns.requested")}</TableHead>
+                  <TableHead className="pr-3 text-right">{t("myRequests.columns.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {requests.map((request) => (
                   <TableRow key={request.id}>
                     <TableCell className="pl-3">
-                      {leaveTypeLabel[request.leave_type_code]}
+                      {t(`types.${request.leave_type_code}`)}
                     </TableCell>
                     <TableCell className="text-sm tabular-nums">
-                      {formatDate(request.start_date)} – {formatDate(request.end_date)}
+                      {formatDate(request.start_date, locale)} – {formatDate(request.end_date, locale)}
                     </TableCell>
                     <TableCell className="tabular-nums">{request.days}</TableCell>
                     <TableCell>
@@ -174,7 +179,7 @@ export function MyRequestsTable() {
                         variant={leaveStatusVariant[request.status]}
                         data-status={request.status}
                       >
-                        {leaveStatusLabel[request.status]}
+                        {t(`status.${request.status}`)}
                       </Badge>
                       {request.decision_note ? (
                         <span
@@ -195,7 +200,7 @@ export function MyRequestsTable() {
                       )}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground tabular-nums">
-                      {formatDate(request.created_at)}
+                      {formatDate(request.created_at, locale)}
                     </TableCell>
                     <TableCell className="pr-3 text-right">
                       {request.status === "pending" ? (
@@ -203,11 +208,11 @@ export function MyRequestsTable() {
                           variant="outline"
                           size="sm"
                           className="min-h-11 sm:min-h-7"
-                          aria-label={`Withdraw leave request starting ${request.start_date}`}
+                          aria-label={t("myRequests.withdrawAria", { date: request.start_date })}
                           disabled={withdraw.isPending}
                           onClick={() => void onWithdraw(request)}
                         >
-                          Withdraw
+                          {t("myRequests.withdraw")}
                         </Button>
                       ) : (
                         <span className="text-xs text-muted-foreground">—</span>
@@ -223,23 +228,23 @@ export function MyRequestsTable() {
                 <Button
                   variant="outline"
                   size="sm"
-                  aria-label="Previous page"
+                  aria-label={t("myRequests.previousAria")}
                   disabled={pageInfo.page <= 1}
                   onClick={() => setPage(pageInfo.page - 1)}
                 >
-                  Previous
+                  {t("myRequests.previous")}
                 </Button>
                 <span className="text-muted-foreground">
-                  Page {pageInfo.page} of {pageInfo.total_pages}
+                  {t("myRequests.pageOf", { page: pageInfo.page, total: pageInfo.total_pages })}
                 </span>
                 <Button
                   variant="outline"
                   size="sm"
-                  aria-label="Next page"
+                  aria-label={t("myRequests.nextAria")}
                   disabled={pageInfo.page >= pageInfo.total_pages}
                   onClick={() => setPage(pageInfo.page + 1)}
                 >
-                  Next
+                  {t("myRequests.next")}
                 </Button>
               </div>
             ) : null}

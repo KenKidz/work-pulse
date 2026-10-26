@@ -3,6 +3,7 @@
  * code survives, and job errors land on the field that caused them.
  */
 
+import { createTranslator } from "use-intl";
 import { describe, expect, it } from "vitest";
 
 import { ApiError } from "@workpulse/api-client/mutator/custom-fetch";
@@ -13,11 +14,42 @@ import {
   jobFieldErrors,
 } from "@/features/recruitment/hooks/use-recruitment";
 import {
-  RECRUITMENT_ERROR_MESSAGES,
   isForbiddenError,
   organizationLabel,
   recruitmentErrorMessage,
 } from "@/features/recruitment/labels";
+import type { RecruitmentErrorKey } from "@/features/recruitment/labels";
+import messages from "@/messages/en";
+
+const t = createTranslator({ locale: "en", messages, namespace: "recruitment.errors" });
+
+const CODE_TO_KEY: Record<string, RecruitmentErrorKey> = {
+  job_not_found: "jobNotFound",
+  candidate_not_found: "candidateNotFound",
+  interview_not_found: "interviewNotFound",
+  interviewer_not_found: "interviewerNotFound",
+  job_not_draft: "jobNotDraft",
+  job_not_open: "jobNotOpen",
+  job_openings_filled: "jobOpeningsFilled",
+  candidate_already_applied: "candidateAlreadyApplied",
+  candidate_stage_conflict: "candidateStageConflict",
+  candidate_not_open: "candidateNotOpen",
+  interview_not_scheduled: "interviewNotScheduled",
+  interviewer_not_active: "interviewerNotActive",
+  employee_email_taken: "employeeEmailTaken",
+  employee_code_taken: "employeeCodeTaken",
+  employee_manager_invalid: "employeeManagerInvalid",
+  department_not_found: "departmentNotFound",
+  position_not_found: "positionNotFound",
+  location_not_found: "locationNotFound",
+  recruitment_denied: "denied",
+  validation_error: "validation",
+  forbidden: "forbidden",
+};
+
+function messageFor(code: string): string {
+  return t(CODE_TO_KEY[code] ?? "generic");
+}
 
 const PINNED_CODES = [
   "job_not_found",
@@ -46,25 +78,21 @@ const PINNED_CODES = [
 describe("recruitment error messages", () => {
   it("maps every pinned code to a sentence and never echoes the code", () => {
     for (const code of PINNED_CODES) {
-      const message = RECRUITMENT_ERROR_MESSAGES[code];
+      const message = messageFor(code);
       expect(message, code).toBeTruthy();
       expect(message, code).not.toContain(code);
-      expect(recruitmentErrorMessage(new ApiError(409, code, "raw server text")), code).toBe(
+      expect(recruitmentErrorMessage(new ApiError(409, code, "raw server text"), t), code).toBe(
         message,
       );
     }
   });
 
   it("falls back by status and for non-API failures", () => {
-    expect(recruitmentErrorMessage(new ApiError(404, null, "gone"))).toBe(
-      "This item is no longer available.",
+    expect(recruitmentErrorMessage(new ApiError(404, null, "gone"), t)).toBe(t("notFound"));
+    expect(recruitmentErrorMessage(new ApiError(403, null, "denied"), t)).toBe(
+      t("forbidden"),
     );
-    expect(recruitmentErrorMessage(new ApiError(403, null, "denied"))).toBe(
-      "You don't have permission to do that.",
-    );
-    expect(recruitmentErrorMessage(new Error("boom"))).toBe(
-      "Something went wrong. Please try again.",
-    );
+    expect(recruitmentErrorMessage(new Error("boom"), t)).toBe(t("generic"));
   });
 
   it("classifies a 403 or recruitment_denied as a denied action", () => {
@@ -77,21 +105,24 @@ describe("recruitment error messages", () => {
 describe("job form error mapping", () => {
   it("puts a missing organization reference on its own field", () => {
     expect(
-      jobFieldErrors(new ApiError(404, "department_not_found", "Department not found")),
+      jobFieldErrors(
+        new ApiError(404, "department_not_found", "Department not found"),
+        t,
+      ),
     ).toEqual({
-      department_id: RECRUITMENT_ERROR_MESSAGES.department_not_found,
+      department_id: t("departmentNotFound"),
     });
-    expect(jobFieldErrors(new ApiError(404, "position_not_found", "Position not found"))).toEqual({
-      position_id: RECRUITMENT_ERROR_MESSAGES.position_not_found,
+    expect(jobFieldErrors(new ApiError(404, "position_not_found", "Position not found"), t)).toEqual({
+      position_id: t("positionNotFound"),
     });
-    expect(jobFieldErrors(new ApiError(404, "location_not_found", "Location not found"))).toEqual({
-      location_id: RECRUITMENT_ERROR_MESSAGES.location_not_found,
+    expect(jobFieldErrors(new ApiError(404, "location_not_found", "Location not found"), t)).toEqual({
+      location_id: t("locationNotFound"),
     });
   });
 
   it("keeps a job transition failure on the dialog root", () => {
-    expect(jobFieldErrors(new ApiError(409, "job_not_open", "Job is closed"))).toEqual({
-      root: RECRUITMENT_ERROR_MESSAGES.job_not_open,
+    expect(jobFieldErrors(new ApiError(409, "job_not_open", "Job is closed"), t)).toEqual({
+      root: t("jobNotOpen"),
     });
   });
 });
@@ -100,10 +131,18 @@ describe("organizationLabel", () => {
   const names = new Map([["01900000-0000-7000-8000-000000000d01", "Engineering"]]);
 
   it("resolves a known reference and falls back to the id tail", () => {
-    expect(organizationLabel(names, "01900000-0000-7000-8000-000000000d01", "Department")).toBe(
+    expect(organizationLabel(
+        names,
+        "01900000-0000-7000-8000-000000000d01",
+        "Department …0d01",
+      )).toBe(
       "Engineering",
     );
-    expect(organizationLabel(names, "01900000-0000-7000-8000-000000000d99", "Department")).toBe(
+    expect(organizationLabel(
+        names,
+        "01900000-0000-7000-8000-000000000d99",
+        "Department …0d99",
+      )).toBe(
       "Department …0d99",
     );
   });
@@ -112,21 +151,24 @@ describe("organizationLabel", () => {
 describe("candidate error mapping", () => {
   it("puts a duplicate application on the email field", () => {
     expect(
-      candidateFieldErrors(new ApiError(409, "candidate_already_applied", "Duplicate")),
-    ).toEqual({ email: RECRUITMENT_ERROR_MESSAGES.candidate_already_applied });
+      candidateFieldErrors(
+        new ApiError(409, "candidate_already_applied", "Duplicate"),
+        t,
+      ),
+    ).toEqual({ email: t("candidateAlreadyApplied") });
   });
 
   it("puts an intake job conflict on the job field", () => {
-    expect(candidateFieldErrors(new ApiError(409, "job_not_open", "Job is closed"))).toEqual({
-      job_id: RECRUITMENT_ERROR_MESSAGES.job_not_open,
+    expect(candidateFieldErrors(new ApiError(409, "job_not_open", "Job is closed"), t)).toEqual({
+      job_id: t("jobNotOpen"),
     });
-    expect(candidateFieldErrors(new ApiError(404, "job_not_found", "Gone"))).toEqual({
-      job_id: RECRUITMENT_ERROR_MESSAGES.job_not_found,
+    expect(candidateFieldErrors(new ApiError(404, "job_not_found", "Gone"), t)).toEqual({
+      job_id: t("jobNotFound"),
     });
   });
 
   it("keeps an unknown intake failure on the dialog root", () => {
-    expect(candidateFieldErrors(new ApiError(400, "unexpected", "boom"))).toEqual({
+    expect(candidateFieldErrors(new ApiError(400, "unexpected", "boom"), t)).toEqual({
       root: "boom",
     });
   });
@@ -134,23 +176,23 @@ describe("candidate error mapping", () => {
 
 describe("hire error mapping", () => {
   it("maps the seam's email/code/manager codes to their fields", () => {
-    expect(hireFieldErrors(new ApiError(409, "employee_email_taken", "Taken"))).toEqual({
-      email: RECRUITMENT_ERROR_MESSAGES.employee_email_taken,
+    expect(hireFieldErrors(new ApiError(409, "employee_email_taken", "Taken"), t)).toEqual({
+      email: t("employeeEmailTaken"),
     });
-    expect(hireFieldErrors(new ApiError(409, "employee_code_taken", "Taken"))).toEqual({
-      employee_code: RECRUITMENT_ERROR_MESSAGES.employee_code_taken,
+    expect(hireFieldErrors(new ApiError(409, "employee_code_taken", "Taken"), t)).toEqual({
+      employee_code: t("employeeCodeTaken"),
     });
-    expect(hireFieldErrors(new ApiError(400, "employee_manager_invalid", "Invalid"))).toEqual({
-      manager_id: RECRUITMENT_ERROR_MESSAGES.employee_manager_invalid,
+    expect(hireFieldErrors(new ApiError(400, "employee_manager_invalid", "Invalid"), t)).toEqual({
+      manager_id: t("employeeManagerInvalid"),
     });
   });
 
   it("keeps capacity/stage failures on the dialog root", () => {
-    expect(hireFieldErrors(new ApiError(409, "job_openings_filled", "Full"))).toEqual({
-      root: RECRUITMENT_ERROR_MESSAGES.job_openings_filled,
+    expect(hireFieldErrors(new ApiError(409, "job_openings_filled", "Full"), t)).toEqual({
+      root: t("jobOpeningsFilled"),
     });
-    expect(hireFieldErrors(new ApiError(409, "candidate_stage_conflict", "Moved"))).toEqual({
-      root: RECRUITMENT_ERROR_MESSAGES.candidate_stage_conflict,
+    expect(hireFieldErrors(new ApiError(409, "candidate_stage_conflict", "Moved"), t)).toEqual({
+      root: t("candidateStageConflict"),
     });
   });
 });

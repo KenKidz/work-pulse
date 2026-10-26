@@ -10,6 +10,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CircleAlert } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
@@ -42,12 +43,16 @@ type RunFormDialogProps = {
 };
 
 export function RunFormDialog({ open, onOpenChange }: RunFormDialogProps) {
+  const t = useTranslations("payroll.runForm");
+  const common = useTranslations("common.actions");
+  const validation = useTranslations("payroll.validation");
+  const errors = useTranslations("payroll.errors");
   const router = useRouter();
   const createRun = usePayrollRunCreate();
   const [rootError, setRootError] = useState<string | null>(null);
 
   const form = useForm<RunFormValues>({
-    resolver: zodResolver(runFormSchema),
+    resolver: zodResolver(runFormSchema((key) => validation(key))),
     defaultValues: { period: lastClosedPeriod() },
   });
 
@@ -68,7 +73,7 @@ export function RunFormDialog({ open, onOpenChange }: RunFormDialogProps) {
         router.push(`/payroll/runs/${response.data.id}`);
       }
     } catch (error) {
-      const fieldErrors = runFieldErrors(error);
+      const fieldErrors = runFieldErrors(error, errors);
       for (const [field, message] of Object.entries(fieldErrors)) {
         if (field === "root") {
           setRootError(message ?? null);
@@ -86,11 +91,8 @@ export function RunFormDialog({ open, onOpenChange }: RunFormDialogProps) {
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Start payroll run</DialogTitle>
-          <DialogDescription>
-            A run covers one whole calendar month and can only start after it has ended. Calculation
-            happens in the background.
-          </DialogDescription>
+          <DialogTitle>{t("title")}</DialogTitle>
+          <DialogDescription>{t("description")}</DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
@@ -100,7 +102,7 @@ export function RunFormDialog({ open, onOpenChange }: RunFormDialogProps) {
               name="period"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel hint="Closed months only, in YYYY-MM form.">Month</FormLabel>
+                  <FormLabel hint={t("monthHint")}>{t("month")}</FormLabel>
                   <FormControl>
                     <Input {...field} value={field.value} type="month" max={lastClosedPeriod()} />
                   </FormControl>
@@ -118,10 +120,10 @@ export function RunFormDialog({ open, onOpenChange }: RunFormDialogProps) {
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
-                Cancel
+                {common("cancel")}
               </Button>
               <Button type="submit" disabled={createRun.isPending}>
-                {createRun.isPending ? "Starting…" : "Start run"}
+                {createRun.isPending ? t("starting") : t("startRun")}
               </Button>
             </DialogFooter>
           </form>

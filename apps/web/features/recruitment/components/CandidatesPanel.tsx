@@ -36,12 +36,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+import { useLocale, useTranslations } from "next-intl";
+
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 
 import { formatRecruitmentTimestamp } from "../dates";
 import {
-  candidateSourceLabel,
-  candidateStatusLabel,
   candidateStatusVariant,
   isCandidateOpen,
   isForbiddenError,
@@ -86,13 +86,16 @@ function CandidateFilters({
   jobs: Job[];
   onChange: (next: Partial<ListCandidatesParams>) => void;
 }) {
+  const t = useTranslations("recruitment.candidates.filters");
+  const statusLabels = useTranslations("recruitment.status.candidate");
+
   return (
     <div className="flex flex-wrap items-center gap-2" data-testid="candidate-filters">
       <div className="relative w-full sm:w-64">
         <Search className="absolute top-1/2 left-2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          aria-label="Search candidates"
-          placeholder="Search by name"
+          aria-label={t("searchAria")}
+          placeholder={t("searchPlaceholder")}
           className="w-full pl-8"
           value={params.q ?? ""}
           onChange={(event) => onChange({ q: event.target.value || undefined })}
@@ -103,11 +106,11 @@ function CandidateFilters({
         value={params.job_id ?? ANY}
         onValueChange={(value) => onChange({ job_id: value === ANY ? undefined : value, page: 1 })}
       >
-        <SelectTrigger aria-label="Filter by job" className="w-full sm:w-56">
-          <SelectValue placeholder="All jobs" />
+        <SelectTrigger aria-label={t("jobAria")} className="w-full sm:w-56">
+          <SelectValue placeholder={t("allJobs")} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value={ANY}>All jobs</SelectItem>
+          <SelectItem value={ANY}>{t("allJobs")}</SelectItem>
           {jobs.map((job) => (
             <SelectItem key={job.id} value={job.id}>
               {job.title}
@@ -125,14 +128,14 @@ function CandidateFilters({
           })
         }
       >
-        <SelectTrigger aria-label="Filter by status" className="w-full sm:w-44">
-          <SelectValue placeholder="All statuses" />
+        <SelectTrigger aria-label={t("statusAria")} className="w-full sm:w-44">
+          <SelectValue placeholder={t("allStatuses")} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value={ANY}>All statuses</SelectItem>
+          <SelectItem value={ANY}>{t("allStatuses")}</SelectItem>
           {STATUS_ORDER.map((status) => (
             <SelectItem key={status} value={status}>
-              {candidateStatusLabel[status]}
+              {statusLabels(status)}
             </SelectItem>
           ))}
         </SelectContent>
@@ -148,6 +151,13 @@ function candidateName(candidate: Candidate): string {
 type DecisionState = { candidate: Candidate; action: CandidateDecisionAction };
 
 export function CandidatesPanel() {
+  const t = useTranslations("recruitment.candidates");
+  const common = useTranslations("recruitment.actions");
+  const status = useTranslations("recruitment.status.candidate");
+  const sources = useTranslations("recruitment.sources");
+  const fallbacks = useTranslations("recruitment.fallbacks");
+  const locale = useLocale();
+  const errors = useTranslations("recruitment.errors");
   const [params, setParams] = useState<ListCandidatesParams>({
     page: 1,
     page_size: CANDIDATES_PAGE_SIZE,
@@ -195,12 +205,12 @@ export function CandidatesPanel() {
 
   function emptyMessage(): string {
     if (params.job_id !== undefined && params.status === undefined && searchInput.trim() === "") {
-      return "No candidates for this job yet. Add a candidate to start the pipeline.";
+      return t("emptyForJob");
     }
     if (filtersActive) {
-      return "No candidates match these filters. Clear a filter or search for another name.";
+      return t("emptyFiltered");
     }
-    return "No candidates yet. Add a candidate to an open job to start the pipeline.";
+    return t("empty");
   }
 
   return (
@@ -213,7 +223,7 @@ export function CandidatesPanel() {
         />
         <Button className="ml-auto" onClick={openCreate}>
           <Plus />
-          New candidate
+          {common("newCandidate")}
         </Button>
       </div>
 
@@ -221,7 +231,7 @@ export function CandidatesPanel() {
         {candidatesQuery.isPending ? (
           <div className="flex items-center justify-center gap-2 px-6 py-10 text-sm text-muted-foreground">
             <Spinner className="size-4" />
-            <p>Loading candidates…</p>
+            <p>{t("loading")}</p>
           </div>
         ) : candidatesQuery.isError ? (
           <div className="p-4">
@@ -230,8 +240,8 @@ export function CandidatesPanel() {
               <AlertDescription>
                 <p>
                   {isForbiddenError(candidatesQuery.error)
-                    ? "You don't have permission to manage recruitment."
-                    : "Could not load candidates."}
+                    ? errors("denied")
+                    : t("loadError")}
                 </p>
                 {isForbiddenError(candidatesQuery.error) ? null : (
                   <Button
@@ -240,7 +250,7 @@ export function CandidatesPanel() {
                     className="mt-2"
                     onClick={() => void candidatesQuery.refetch()}
                   >
-                    Retry
+                    {common("retry")}
                   </Button>
                 )}
               </AlertDescription>
@@ -252,7 +262,7 @@ export function CandidatesPanel() {
             {pageOutOfRange ? (
               <div className="mt-3 flex justify-center">
                 <Button variant="outline" size="sm" onClick={() => change({ page: 1 })}>
-                  Back to first page
+                  {common("backToFirstPage")}
                 </Button>
               </div>
             ) : null}
@@ -260,21 +270,21 @@ export function CandidatesPanel() {
         ) : (
           <>
             <p className="px-4 py-2 text-xs text-muted-foreground sm:hidden">
-              Swipe sideways to see every candidate field.
+              {t("swipe")}
             </p>
             <Table
-              aria-label="Candidates"
-              containerLabel="Candidates. Scroll horizontally to read all columns."
+              aria-label={t("label")}
+              containerLabel={t("containerLabel")}
             >
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="pl-3">Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Job</TableHead>
-                  <TableHead>Source</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Applied</TableHead>
-                  <TableHead className="pr-3 text-right">Actions</TableHead>
+                  <TableHead className="pl-3">{t("columns.name")}</TableHead>
+                  <TableHead>{t("columns.email")}</TableHead>
+                  <TableHead>{t("columns.job")}</TableHead>
+                  <TableHead>{t("columns.source")}</TableHead>
+                  <TableHead>{t("columns.status")}</TableHead>
+                  <TableHead>{t("columns.applied")}</TableHead>
+                  <TableHead className="pr-3 text-right">{t("columns.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -292,20 +302,24 @@ export function CandidatesPanel() {
                       <TableCell className="pl-3 font-medium">{name}</TableCell>
                       <TableCell className="text-muted-foreground">{candidate.email}</TableCell>
                       <TableCell>
-                        {organizationLabel(directory.jobNames, candidate.job_id, "Job")}
+                        {organizationLabel(
+                          directory.jobNames,
+                          candidate.job_id,
+                          fallbacks("job", { id: candidate.job_id.slice(-4) }),
+                        )}
                       </TableCell>
-                      <TableCell>{candidateSourceLabel[candidate.source]}</TableCell>
+                      <TableCell>{sources(candidate.source)}</TableCell>
                       <TableCell>
                         <Badge
                           variant={candidateStatusVariant[candidate.status]}
                           data-status={candidate.status}
                         >
-                          {candidateStatusLabel[candidate.status]}
+                          {status(candidate.status)}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         <time dateTime={candidate.created_at}>
-                          {formatRecruitmentTimestamp(candidate.created_at)}
+                          {formatRecruitmentTimestamp(candidate.created_at, locale)}
                         </time>
                       </TableCell>
                       <TableCell className="pr-3 text-right">
@@ -314,21 +328,21 @@ export function CandidatesPanel() {
                             variant="ghost"
                             size="xs"
                             className="min-h-11 sm:min-h-7"
-                            aria-label={`Edit ${name}`}
+                            aria-label={t("editAria", { name })}
                             onClick={() => openEdit(candidate)}
                           >
-                            Edit
+                            {common("edit")}
                           </Button>
                           {next === null ? null : (
                             <Button
                               variant="ghost"
                               size="xs"
                               className="min-h-11 sm:min-h-7"
-                              aria-label={`Advance ${name}`}
+                              aria-label={t("advanceAria", { name })}
                               disabled={advanceCandidate.isPending}
                               onClick={() => advanceCandidate.mutate({ candidateId: candidate.id })}
                             >
-                              Advance
+                              {common("advance")}
                             </Button>
                           )}
                           {open ? (
@@ -336,10 +350,10 @@ export function CandidatesPanel() {
                               variant="ghost"
                               size="xs"
                               className="min-h-11 sm:min-h-7"
-                              aria-label={`Reject ${name}`}
+                              aria-label={t("rejectAria", { name })}
                               onClick={() => setDecision({ candidate, action: "reject" })}
                             >
-                              Reject
+                              {common("reject")}
                             </Button>
                           ) : null}
                           {open ? (
@@ -347,10 +361,10 @@ export function CandidatesPanel() {
                               variant="ghost"
                               size="xs"
                               className="min-h-11 sm:min-h-7"
-                              aria-label={`Withdraw ${name}`}
+                              aria-label={t("withdrawAria", { name })}
                               onClick={() => setDecision({ candidate, action: "withdraw" })}
                             >
-                              Withdraw
+                              {common("withdraw")}
                             </Button>
                           ) : null}
                           {candidate.status === "offered" && !jobClosed ? (
@@ -358,10 +372,10 @@ export function CandidatesPanel() {
                               variant="ghost"
                               size="xs"
                               className="min-h-11 sm:min-h-7"
-                              aria-label={`Hire ${name}`}
+                              aria-label={t("hireAria", { name })}
                               onClick={() => setHiring(candidate)}
                             >
-                              Hire
+                              {common("hire")}
                             </Button>
                           ) : null}
                           {candidate.employee_id === null ||
@@ -373,10 +387,10 @@ export function CandidatesPanel() {
                               asChild
                             >
                               <Link
-                                aria-label={`View employee ${name}`}
+                                aria-label={t("viewEmployeeAria", { name })}
                                 href={`/employees/${candidate.employee_id}`}
                               >
-                                Employee
+                                {common("viewEmployee")}
                               </Link>
                             </Button>
                           )}
@@ -390,7 +404,7 @@ export function CandidatesPanel() {
             {page === null ? null : (
               <RecruitmentPagination
                 page={page}
-                label="candidates"
+                label={t("paginationLabel")}
                 onPageChange={(nextPage) => change({ page: nextPage })}
               />
             )}
@@ -411,7 +425,11 @@ export function CandidatesPanel() {
           jobTitle={
             editing === null
               ? undefined
-              : organizationLabel(directory.jobNames, editing.job_id, "Job")
+              : organizationLabel(
+                directory.jobNames,
+                editing.job_id,
+                fallbacks("job", { id: editing.job_id.slice(-4) }),
+              )
           }
         />
       ) : null}
@@ -434,7 +452,11 @@ export function CandidatesPanel() {
             if (!open) setHiring(null);
           }}
           candidate={hiring}
-          jobTitle={organizationLabel(directory.jobNames, hiring.job_id, "Job")}
+          jobTitle={organizationLabel(
+            directory.jobNames,
+            hiring.job_id,
+            fallbacks("job", { id: hiring.job_id.slice(-4) }),
+          )}
         />
       )}
     </div>

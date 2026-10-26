@@ -37,6 +37,8 @@ import {
 
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 
+import { useTranslations } from "next-intl";
+
 import { useAuth } from "@/features/auth/components/AuthGate";
 import { MANAGE_USER_ROLES } from "@/components/destinations";
 
@@ -45,7 +47,7 @@ import type { ListUsersParams, Role, User } from "../types";
 import { DeactivateDialog } from "./DeactivateDialog";
 import { ResetPasswordDialog } from "./ResetPasswordDialog";
 import { UserFormDialog } from "./UserFormDialog";
-import { ALL_ROLES, accountStatusLabel, accountStatusVariant, roleLabel } from "./labels";
+import { ALL_ROLES, accountStatusVariant } from "./labels";
 
 export const ANY = "any";
 
@@ -64,13 +66,16 @@ function FiltersRow({
   params: ListUsersParams;
   onChange: (next: Partial<ListUsersParams>) => void;
 }) {
+  const roles = useTranslations("auth.roles");
+  const t = useTranslations("users");
+
   return (
     <div className="flex flex-wrap items-center gap-2" data-testid="user-filters">
       <div className="relative w-full sm:w-64">
         <Search className="absolute top-1/2 left-2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          aria-label="Search users"
-          placeholder="Search email"
+          aria-label={t("filters.searchAria")}
+          placeholder={t("filters.searchPlaceholder")}
           className="w-full pl-8"
           value={params.q ?? ""}
           onChange={(event) => onChange({ q: event.target.value || undefined })}
@@ -83,14 +88,14 @@ function FiltersRow({
           onChange({ role: value === ANY ? undefined : (value as Role), page: 1 })
         }
       >
-        <SelectTrigger aria-label="Filter by role" className="w-full sm:w-44">
-          <SelectValue placeholder="All roles" />
+        <SelectTrigger aria-label={t("filters.roleAria")} className="w-full sm:w-44">
+          <SelectValue placeholder={t("filters.allRoles")} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value={ANY}>All roles</SelectItem>
+          <SelectItem value={ANY}>{t("filters.allRoles")}</SelectItem>
           {ALL_ROLES.map((role) => (
             <SelectItem key={role} value={role}>
-              {roleLabel[role]}
+              {roles(role)}
             </SelectItem>
           ))}
         </SelectContent>
@@ -105,13 +110,13 @@ function FiltersRow({
           })
         }
       >
-        <SelectTrigger aria-label="Filter by status" className="w-full sm:w-40">
-          <SelectValue placeholder="All statuses" />
+        <SelectTrigger aria-label={t("filters.statusAria")} className="w-full sm:w-40">
+          <SelectValue placeholder={t("filters.allStatuses")} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value={ANY}>All statuses</SelectItem>
-          <SelectItem value="active">Active</SelectItem>
-          <SelectItem value="inactive">Inactive</SelectItem>
+          <SelectItem value={ANY}>{t("filters.allStatuses")}</SelectItem>
+          <SelectItem value="active">{t("filters.active")}</SelectItem>
+          <SelectItem value="inactive">{t("filters.inactive")}</SelectItem>
         </SelectContent>
       </Select>
     </div>
@@ -129,6 +134,9 @@ type UsersTableState = {
 };
 
 export function UsersTable() {
+  const roles = useTranslations("auth.roles");
+  const t = useTranslations("users");
+  const common = useTranslations("common.actions");
   const router = useRouter();
   const { user } = useAuth();
   const [params, setParams] = useState<ListUsersParams>({ page: 1, page_size: USERS_PAGE_SIZE });
@@ -176,7 +184,7 @@ export function UsersTable() {
     return (
       <div className="flex items-center justify-center gap-2 px-6 py-10 text-sm text-muted-foreground">
         <Spinner className="size-4" />
-        <p>Checking access…</p>
+        <p>{t("table.checkingAccess")}</p>
       </div>
     );
   }
@@ -192,7 +200,7 @@ export function UsersTable() {
           }
         >
           <UserPlus />
-          New user
+          {t("table.newUser")}
         </Button>
       </div>
 
@@ -200,21 +208,21 @@ export function UsersTable() {
         {usersQuery.isPending ? (
           <div className="flex items-center justify-center gap-2 px-6 py-10 text-sm text-muted-foreground">
             <Spinner className="size-4" />
-            <p>Loading users…</p>
+            <p>{t("table.loading")}</p>
           </div>
         ) : usersQuery.isError ? (
           <div className="p-4">
             <Alert variant="destructive">
               <CircleAlert aria-hidden="true" />
               <AlertDescription>
-                <p>Could not load users.</p>
+                <p>{t("table.loadError")}</p>
                 <Button
                   variant="outline"
                   size="sm"
                   className="mt-2"
                   onClick={() => void usersQuery.refetch()}
                 >
-                  Retry
+                  {common("retry")}
                 </Button>
               </AlertDescription>
             </Alert>
@@ -223,36 +231,36 @@ export function UsersTable() {
           <div className="p-4">
             <EmptyState
               icon={Users}
-              message="No users match. Create the first account to give someone access."
+              message={t("table.empty")}
             />
           </div>
         ) : (
           <>
             <p className="px-4 py-2 text-xs text-muted-foreground sm:hidden">
-              Swipe sideways to see every user field.
+              {t("table.swipe")}
             </p>
             <Table
-              aria-label="Users"
-              containerLabel="Users. Scroll horizontally to read all columns."
+              aria-label={t("table.label")}
+              containerLabel={t("table.containerLabel")}
             >
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="pl-3">Email</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Employee</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="pr-3 text-right">Actions</TableHead>
+                  <TableHead className="pl-3">{t("table.columns.email")}</TableHead>
+                  <TableHead>{t("table.columns.role")}</TableHead>
+                  <TableHead>{t("table.columns.employee")}</TableHead>
+                  <TableHead>{t("table.columns.status")}</TableHead>
+                  <TableHead className="pr-3 text-right">{t("table.columns.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {users.map((row) => (
                   <TableRow key={row.id}>
                     <TableCell className="pl-3 font-medium">{row.email}</TableCell>
-                    <TableCell>{roleLabel[row.role]}</TableCell>
+                    <TableCell>{roles(row.role)}</TableCell>
                     <TableCell>
                       {row.employee_id ? (
                         <span className="text-sm text-muted-foreground">
-                          Employee …{row.employee_id.slice(-4)}
+                          {t("table.employeeFallback", { id: row.employee_id.slice(-4) })}
                         </span>
                       ) : (
                         <span className="text-sm text-muted-foreground">—</span>
@@ -263,7 +271,7 @@ export function UsersTable() {
                         variant={accountStatusVariant(row.active)}
                         data-status={row.active ? "active" : "inactive"}
                       >
-                        {accountStatusLabel(row.active)}
+                        {row.active ? t("filters.active") : t("filters.inactive")}
                       </Badge>
                     </TableCell>
                     <TableCell className="pr-3 text-right">
@@ -272,7 +280,7 @@ export function UsersTable() {
                           variant="ghost"
                           size="xs"
                           className="min-h-11 sm:min-h-7"
-                          aria-label={`Edit ${row.email}`}
+                          aria-label={t("table.editAria", { email: row.email })}
                           onClick={() =>
                             setState({
                               editing: row,
@@ -282,13 +290,13 @@ export function UsersTable() {
                             })
                           }
                         >
-                          Edit
+                          {t("table.edit")}
                         </Button>
                         <Button
                           variant="ghost"
                           size="xs"
                           className="min-h-11 sm:min-h-7"
-                          aria-label={`Reset password for ${row.email}`}
+                          aria-label={t("table.resetAria", { email: row.email })}
                           onClick={() =>
                             setState({
                               editing: null,
@@ -298,14 +306,14 @@ export function UsersTable() {
                             })
                           }
                         >
-                          Reset password
+                          {t("table.resetPassword")}
                         </Button>
                         {row.active ? (
                           <Button
                             variant="ghost"
                             size="xs"
                             className="min-h-11 sm:min-h-7"
-                            aria-label={`Deactivate ${row.email}`}
+                            aria-label={t("table.deactivateAria", { email: row.email })}
                             onClick={() =>
                               setState({
                                 editing: null,
@@ -315,20 +323,20 @@ export function UsersTable() {
                               })
                             }
                           >
-                            Deactivate
+                            {t("table.deactivate")}
                           </Button>
                         ) : (
                           <Button
                             variant="ghost"
                             size="xs"
                             className="min-h-11 sm:min-h-7"
-                            aria-label={`Activate ${row.email}`}
+                            aria-label={t("table.activateAria", { email: row.email })}
                             disabled={activate.isPending}
                             onClick={() =>
                               void activate.mutateAsync({ id: row.id }).catch(() => undefined)
                             }
                           >
-                            Activate
+                            {t("table.activate")}
                           </Button>
                         )}
                       </div>
@@ -343,23 +351,23 @@ export function UsersTable() {
                 <Button
                   variant="outline"
                   size="sm"
-                  aria-label="Previous page"
+                  aria-label={t("table.previousAria")}
                   disabled={page.page <= 1}
                   onClick={() => change({ page: page.page - 1 })}
                 >
-                  Previous
+                  {t("table.previous")}
                 </Button>
                 <span className="text-muted-foreground">
-                  Page {page.page} of {page.total_pages}
+                  {t("table.pageOf", { page: page.page, total: page.total_pages })}
                 </span>
                 <Button
                   variant="outline"
                   size="sm"
-                  aria-label="Next page"
+                  aria-label={t("table.nextAria")}
                   disabled={page.page >= page.total_pages}
                   onClick={() => change({ page: page.page + 1 })}
                 >
-                  Next
+                  {t("table.next")}
                 </Button>
               </div>
             ) : null}

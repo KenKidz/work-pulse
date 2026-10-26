@@ -1,0 +1,65 @@
+{
+  "metadataTitle": "Trung tâm chỉ huy — WorkPulse",
+  "pageTitle": "Trung tâm chỉ huy",
+  "pageDescription": "Theo dõi hiện diện theo thời gian thực — ai ở văn phòng, ai làm từ xa, ai đi muộn, và mọi lượt vào ca, ra ca.",
+  "status": {
+    "present": "Tại văn phòng",
+    "remote": "Từ xa",
+    "checked_out": "Đã ra ca",
+    "absent": "Vắng mặt",
+    "on_leave": "Đang nghỉ phép"
+  },
+  "activity": {
+    "checked_in": "đã vào ca",
+    "checked_out": "đã ra ca"
+  },
+  "live": {
+    "label": "Trực tiếp",
+    "description": "Các lượt vào ca và ra ca xuất hiện ở đây trong vài giây.",
+    "updated": "Cập nhật {time}",
+    "connectingTitle": "Đang kết nối cập nhật trực tiếp…",
+    "connectingDescription": "Bảng vẫn hiển thị ảnh chụp mới nhất trong lúc chờ.",
+    "unavailableTitle": "Không thể cập nhật trực tiếp",
+    "unavailableDescription": "Đang hiển thị ảnh chụp mới nhất — bảng tự làm mới khoảng mỗi phút trong khi kết nối lại."
+  },
+  "counts": {
+    "ariaLabel": "Số liệu hiện diện"
+  },
+  "presence": {
+    "title": "Ai đang làm việc",
+    "description": "Hiện diện hôm nay của mọi người trong phạm vi của bạn — các dòng cập nhật khi có người chấm công.",
+    "empty": "Chưa có ai trên bảng hôm nay — lượt chấm công sẽ xuất hiện ngay khi diễn ra.",
+    "regionLabel": "Danh sách hiện diện. Cuộn để xem mọi người.",
+    "listLabel": "Hiện diện",
+    "containerLabel": "Hiện diện. Cuộn để đọc mọi dòng và cột.",
+    "columns": {
+      "employee": "Nhân viên",
+      "status": "Trạng thái",
+      "late": "Đi muộn",
+      "since": "Từ lúc"
+    },
+    "late": "Đi muộn",
+    "lateMinutes": "Đi muộn · {minutes}"
+  },
+  "activityRail": {
+    "title": "Hoạt động trực tiếp",
+    "description": "Các lượt vào ca và ra ca, mới nhất trước.",
+    "empty": "Hôm nay chưa có gì — danh sách sẽ đầy dần khi mọi người vào và ra ca.",
+    "regionLabel": "Dòng hoạt động trực tiếp. Cuộn để xem mục cũ hơn.",
+    "listLabel": "Hoạt động trực tiếp",
+    "announcer": "{name} {action} lúc {time}"
+  },
+  "commandCenter": {
+    "checkingAccess": "Đang kiểm tra quyền truy cập…",
+    "loading": "Đang tải bảng trực tiếp…",
+    "deniedTitle": "Trung tâm chỉ huy không khả dụng",
+    "errorTitle": "Không thể tải bảng trực tiếp",
+    "denied": "Quản lý, nhân sự và quản trị viên có thể theo dõi bảng nhân sự trực tiếp.",
+    "loadError": "Không thể tải ảnh chụp bảng."
+  },
+  "employeeFallback": "Nhân viên …{id}",
+  "units": {
+    "hourShort": "giờ",
+    "minuteShort": "phút"
+  }
+}

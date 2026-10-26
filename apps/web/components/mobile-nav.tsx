@@ -10,6 +10,7 @@
 import { Menu, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { cn } from "cn";
 
@@ -27,6 +28,8 @@ import {
 } from "@/components/ui/sheet";
 
 export function MobileNav() {
+  const t = useTranslations("nav");
+  const common = useTranslations("common.aria");
   const pathname = usePathname();
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
@@ -42,7 +45,7 @@ export function MobileNav() {
           variant="ghost"
           size="icon"
           className="size-11 md:hidden"
-          aria-label="Open navigation menu"
+          aria-label={common("openNavigation")}
           aria-expanded={open}
         >
           <Menu aria-hidden="true" />
@@ -51,16 +54,16 @@ export function MobileNav() {
       <SheetContent side="right" showCloseButton={false}>
         <SheetHeader className="h-16 py-0">
           <div className="flex flex-col gap-1">
-            <SheetTitle>Menu</SheetTitle>
-            <SheetDescription className="sr-only">Go to a WorkPulse surface.</SheetDescription>
+            <SheetTitle>{t("menu")}</SheetTitle>
+            <SheetDescription className="sr-only">{t("menuDescription")}</SheetDescription>
           </div>
           <SheetClose asChild>
-            <Button variant="ghost" size="icon" className="size-11" aria-label="Close">
+            <Button variant="ghost" size="icon" className="size-11" aria-label={common("close")}>
               <X aria-hidden="true" />
             </Button>
           </SheetClose>
         </SheetHeader>
-        <nav aria-label="Main" className="flex flex-col gap-1 p-3">
+        <nav aria-label={common("main")} className="flex flex-col gap-1 p-3">
           {items.map((item) => {
             const active = item.href === activeHref;
             return (
@@ -77,7 +80,7 @@ export function MobileNav() {
                 )}
               >
                 <item.icon className="size-4 shrink-0" aria-hidden="true" />
-                {item.label}
+                {t(item.key)}
               </Link>
             );
           })}

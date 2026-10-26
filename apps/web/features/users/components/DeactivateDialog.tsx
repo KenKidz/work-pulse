@@ -7,6 +7,7 @@
  * Client leaf.
  */
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,9 @@ type DeactivateDialogProps = {
 };
 
 export function DeactivateDialog({ open, onOpenChange, user }: DeactivateDialogProps) {
+  const t = useTranslations("users");
+  const common = useTranslations("common.actions");
+  const errors = useTranslations("users.errors");
   const [rootError, setRootError] = useState<string | null>(null);
   const deactivate = useUserDeactivate();
 
@@ -41,7 +45,7 @@ export function DeactivateDialog({ open, onOpenChange, user }: DeactivateDialogP
       onOpenChange(false);
     } catch (error) {
       // Deactivation errors are root-level: there is nothing to fix per-field.
-      setRootError(userFieldErrors(error).root ?? null);
+      setRootError(userFieldErrors(error, errors).root ?? null);
     }
   }
 
@@ -55,10 +59,9 @@ export function DeactivateDialog({ open, onOpenChange, user }: DeactivateDialogP
     >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Deactivate user</DialogTitle>
+          <DialogTitle>{t("deactivate.title")}</DialogTitle>
           <DialogDescription>
-            {user?.email} loses access immediately — sign-in is rejected and every session stops
-            resolving. Their account and history are kept; activation restores access.
+            {t("deactivate.description", { email: user?.email ?? "" })}
           </DialogDescription>
         </DialogHeader>
 
@@ -70,7 +73,7 @@ export function DeactivateDialog({ open, onOpenChange, user }: DeactivateDialogP
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {common("cancel")}
           </Button>
           <Button
             type="button"
@@ -78,7 +81,7 @@ export function DeactivateDialog({ open, onOpenChange, user }: DeactivateDialogP
             disabled={deactivate.isPending}
             onClick={() => void onConfirm()}
           >
-            Deactivate
+            {t("deactivate.confirm")}
           </Button>
         </DialogFooter>
       </DialogContent>

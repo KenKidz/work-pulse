@@ -1,0 +1,95 @@
+{
+  "metadataTitle": "Người dùng — WorkPulse",
+  "title": "Người dùng",
+  "description": "Tài khoản, vai trò và liên kết nhân viên — ai có thể đăng nhập, với vai trò gì.",
+  "filters": {
+    "searchAria": "Tìm người dùng",
+    "searchPlaceholder": "Tìm email",
+    "roleAria": "Lọc theo vai trò",
+    "allRoles": "Tất cả vai trò",
+    "statusAria": "Lọc theo trạng thái",
+    "allStatuses": "Tất cả trạng thái",
+    "active": "Đang hoạt động",
+    "inactive": "Ngừng hoạt động"
+  },
+  "table": {
+    "checkingAccess": "Đang kiểm tra quyền truy cập…",
+    "loading": "Đang tải người dùng…",
+    "loadError": "Không thể tải người dùng.",
+    "empty": "Không có người dùng phù hợp. Hãy tạo tài khoản đầu tiên để cấp quyền truy cập.",
+    "swipe": "Vuốt ngang để xem mọi trường của người dùng.",
+    "label": "Người dùng",
+    "containerLabel": "Người dùng. Cuộn ngang để đọc mọi cột.",
+    "columns": {
+      "email": "Email",
+      "role": "Vai trò",
+      "employee": "Nhân viên",
+      "status": "Trạng thái",
+      "actions": "Thao tác"
+    },
+    "employeeFallback": "Nhân viên …{id}",
+    "edit": "Sửa",
+    "editAria": "Sửa {email}",
+    "resetPassword": "Đặt lại mật khẩu",
+    "resetAria": "Đặt lại mật khẩu cho {email}",
+    "deactivate": "Ngừng kích hoạt",
+    "deactivateAria": "Ngừng kích hoạt {email}",
+    "activate": "Kích hoạt",
+    "activateAria": "Kích hoạt {email}",
+    "newUser": "Người dùng mới",
+    "previous": "Trước",
+    "previousAria": "Trang trước",
+    "next": "Tiếp",
+    "nextAria": "Trang tiếp",
+    "pageOf": "Trang {page} / {total}"
+  },
+  "form": {
+    "createTitle": "Người dùng mới",
+    "editTitle": "Sửa người dùng",
+    "createDescription": "Tạo tài khoản với mật khẩu ban đầu; có sáu vai trò cố định.",
+    "editDescription": "Email, vai trò và liên kết nhân viên áp dụng từ yêu cầu tiếp theo — phiên được phân giải lại theo từng yêu cầu.",
+    "email": "Email",
+    "emailPlaceholder": "alex@workpulse.test",
+    "password": "Mật khẩu",
+    "role": "Vai trò",
+    "rolePlaceholder": "Chọn vai trò",
+    "employeeLink": "Liên kết nhân viên (tùy chọn)",
+    "noEmployee": "Không liên kết",
+    "createUser": "Tạo người dùng",
+    "saveChanges": "Lưu thay đổi",
+    "validation": {
+      "emailRequired": "Email là bắt buộc",
+      "emailInvalid": "Nhập một email hợp lệ",
+      "passwordMin": "Mật khẩu phải có ít nhất 10 ký tự",
+      "roleRequired": "Chọn vai trò",
+      "employeeInvalid": "Chọn nhân viên hợp lệ"
+    }
+  },
+  "deactivate": {
+    "title": "Ngừng kích hoạt người dùng",
+    "description": "{email} mất quyền truy cập ngay lập tức — đăng nhập bị từ chối và mọi phiên ngừng phân giải. Tài khoản và lịch sử vẫn được giữ; kích hoạt lại sẽ khôi phục quyền truy cập.",
+    "confirm": "Ngừng kích hoạt"
+  },
+  "reset": {
+    "title": "Đặt lại mật khẩu",
+    "description": "Đặt mật khẩu mới cho {email}. Mật khẩu áp dụng ngay và đăng xuất mọi phiên hiện có của tài khoản.",
+    "newPassword": "Mật khẩu mới",
+    "confirm": "Đặt lại mật khẩu"
+  },
+  "errors": {
+    "generic": "Đã xảy ra lỗi. Vui lòng thử lại.",
+    "emailTaken": "Đã có người dùng dùng email này.",
+    "employeeLinkTaken": "Nhân viên này đã được liên kết với một người dùng.",
+    "employeeNotFound": "Nhân viên đã chọn không còn tồn tại.",
+    "lastAdmin": "Không thể ngừng kích hoạt quản trị viên hoặc quản trị cấp cao cuối cùng.",
+    "userNotFound": "Người dùng này không còn tồn tại.",
+    "forbidden": "Bạn không có quyền quản lý người dùng."
+  },
+  "toasts": {
+    "userCreated": "Đã tạo người dùng",
+    "userUpdated": "Đã cập nhật người dùng",
+    "userActivated": "Đã kích hoạt người dùng",
+    "userDeactivated": "Đã ngừng kích hoạt người dùng",
+    "passwordReset": "Đã đặt lại mật khẩu"
+  }
+}

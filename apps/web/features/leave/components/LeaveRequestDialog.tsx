@@ -10,6 +10,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CircleAlert } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 
@@ -62,6 +63,10 @@ type LeaveRequestDialogProps = {
 };
 
 export function LeaveRequestDialog({ open, onOpenChange }: LeaveRequestDialogProps) {
+  const t = useTranslations("leave.request");
+  const common = useTranslations("common.actions");
+  const validation = useTranslations("leave.validation");
+  const errors = useTranslations("leave.errors");
   const typesQuery = useLeaveTypes();
   const createRequest = useCreateLeaveAction();
   const [rootError, setRootError] = useState<string | null>(null);
@@ -69,7 +74,7 @@ export function LeaveRequestDialog({ open, onOpenChange }: LeaveRequestDialogPro
   // The dialog is mounted fresh for every request (caller renders it only
   // while open), so the empty defaults are the initial state.
   const form = useForm<LeaveRequestFormValues>({
-    resolver: zodResolver(leaveRequestFormSchema),
+    resolver: zodResolver(leaveRequestFormSchema((key) => validation(key))),
     defaultValues: EMPTY_VALUES,
   });
 
@@ -94,7 +99,7 @@ export function LeaveRequestDialog({ open, onOpenChange }: LeaveRequestDialogPro
       });
       onOpenChange(false);
     } catch (error) {
-      const fieldErrors = leaveFieldErrors(error);
+      const fieldErrors = leaveFieldErrors(error, errors);
       for (const [field, message] of Object.entries(fieldErrors)) {
         if (field === "root") {
           setRootError(message ?? null);
@@ -112,10 +117,8 @@ export function LeaveRequestDialog({ open, onOpenChange }: LeaveRequestDialogPro
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>Request leave</DialogTitle>
-          <DialogDescription>
-            Whole calendar days, inclusive of both dates. Your manager or HR decides the request.
-          </DialogDescription>
+          <DialogTitle>{t("title")}</DialogTitle>
+          <DialogDescription>{t("description")}</DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
@@ -125,13 +128,13 @@ export function LeaveRequestDialog({ open, onOpenChange }: LeaveRequestDialogPro
               name="leave_type_id"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Leave type</FormLabel>
+                  <FormLabel>{t("leaveType")}</FormLabel>
                   <Select value={field.value} onValueChange={field.onChange}>
                     <FormControl>
                       <SelectTrigger disabled={typesQuery.isPending}>
                         <SelectValue
                           placeholder={
-                            typesQuery.isPending ? "Loading leave types…" : "Select a leave type"
+                            typesQuery.isPending ? t("loadingTypes") : t("selectType")
                           }
                         />
                       </SelectTrigger>
@@ -151,21 +154,21 @@ export function LeaveRequestDialog({ open, onOpenChange }: LeaveRequestDialogPro
 
             {selectedType && !selectedType.counts_against_balance ? (
               <p className="-mt-2 text-xs text-muted-foreground">
-                This type doesn’t use a leave balance.
+                {t("noBalance")}
               </p>
             ) : null}
 
             {typesQuery.isError ? (
               <div className="flex flex-wrap items-center gap-2 text-sm text-destructive">
                 <CircleAlert className="size-4 shrink-0" aria-hidden="true" />
-                <p role="alert">Could not load leave types.</p>
+                <p role="alert">{t("loadTypesError")}</p>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => void typesQuery.refetch()}
                 >
-                  Retry
+                  {common("retry")}
                 </Button>
               </div>
             ) : null}
@@ -176,7 +179,7 @@ export function LeaveRequestDialog({ open, onOpenChange }: LeaveRequestDialogPro
                 name="start_date"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Start date</FormLabel>
+                    <FormLabel>{t("startDate")}</FormLabel>
                     <FormControl>
                       <Input {...field} type="date" min={earliestStart} />
                     </FormControl>
@@ -189,7 +192,7 @@ export function LeaveRequestDialog({ open, onOpenChange }: LeaveRequestDialogPro
                 name="end_date"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>End date</FormLabel>
+                    <FormLabel>{t("endDate")}</FormLabel>
                     <FormControl>
                       <Input {...field} type="date" min={startDate || earliestStart} />
                     </FormControl>
@@ -201,7 +204,7 @@ export function LeaveRequestDialog({ open, onOpenChange }: LeaveRequestDialogPro
 
             {days !== null ? (
               <p className="text-xs text-muted-foreground">
-                {days} {days === 1 ? "inclusive day" : "inclusive days"}.
+                {t("inclusiveDays", { days })}
               </p>
             ) : null}
 
@@ -210,13 +213,13 @@ export function LeaveRequestDialog({ open, onOpenChange }: LeaveRequestDialogPro
               name="reason"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Reason (optional)</FormLabel>
+                  <FormLabel>{t("reason")}</FormLabel>
                   <FormControl>
                     <Textarea
                       {...field}
                       value={field.value ?? ""}
                       rows={3}
-                      placeholder="Share only what your decider needs to know."
+                      placeholder={t("reasonPlaceholder")}
                     />
                   </FormControl>
                   <FormMessage />
@@ -233,10 +236,10 @@ export function LeaveRequestDialog({ open, onOpenChange }: LeaveRequestDialogPro
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
+                {common("cancel")}
               </Button>
               <Button type="submit" disabled={createRequest.isPending}>
-                {createRequest.isPending ? "Submitting…" : "Submit request"}
+                {createRequest.isPending ? t("submitting") : t("submit")}
               </Button>
             </DialogFooter>
           </form>

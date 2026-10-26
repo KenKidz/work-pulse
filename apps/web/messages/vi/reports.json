@@ -1,0 +1,103 @@
+{
+  "metadataTitle": "Báo cáo — WorkPulse",
+  "pageTitle": "Báo cáo",
+  "pageDescription": "Tăng ca đã xác minh, chấm công, nghỉ phép và số lượng nhân sự theo thời gian — chiếu từ dòng sự kiện nhân sự, không đọc trực tiếp từ bảng vận hành.",
+  "tabs": {
+    "overtime": "Tăng ca",
+    "attendance": "Chấm công",
+    "leave": "Nghỉ phép",
+    "headcount": "Nhân sự"
+  },
+  "tabDescriptions": {
+    "overtime": "Giờ đã xác minh, số yêu cầu và giờ trên mỗi nhân viên đang hoạt động.",
+    "attendance": "Chấm công vào, thời gian đã làm và đi muộn.",
+    "leave": "Ngày nghỉ phép đã duyệt và số yêu cầu.",
+    "headcount": "Số nhân sự đang hoạt động cuối mỗi kỳ, cùng người vào và người rời."
+  },
+  "empty": {
+    "overtime": "Không có tăng ca đã xác minh trong khoảng này. Yêu cầu sẽ xuất hiện sau khi nhân sự xác minh.",
+    "attendance": "Không có chấm công trong khoảng này. Lượt chấm công sẽ xuất hiện khi được ghi nhận.",
+    "leave": "Không có nghỉ phép đã duyệt trong khoảng này. Yêu cầu đã duyệt sẽ xuất hiện ở đây.",
+    "headcount": "Không có số lượng nhân sự trong khoảng này — không có nhân viên nào đang làm trong các kỳ."
+  },
+  "dimensions": {
+    "department": "Phòng ban",
+    "location": "Địa điểm",
+    "position": "Chức danh",
+    "seniority": "Thâm niên",
+    "leave_type": "Loại phép"
+  },
+  "intervals": {
+    "day": "Theo ngày",
+    "week": "Theo tuần",
+    "month": "Theo tháng",
+    "total": "Toàn khoảng"
+  },
+  "seniority": {
+    "lt_1y": "Dưới 1 năm",
+    "1_3y": "1–dưới 3 năm",
+    "3_5y": "3–dưới 5 năm",
+    "5y_plus": "Từ 5 năm",
+    "unknown": "Không xác định"
+  },
+  "filters": {
+    "fromDate": "Từ ngày",
+    "toDate": "Đến ngày",
+    "to": "đến",
+    "interval": "Khoảng thời gian",
+    "intervalAria": "Khoảng thời gian",
+    "groupBy": "Nhóm theo: {dimensions}",
+    "groupByAria": "Nhóm theo chiều dữ liệu",
+    "groupByInOrder": "Nhóm theo (theo thứ tự dòng)",
+    "departmentAria": "Lọc theo phòng ban",
+    "allDepartments": "Tất cả phòng ban",
+    "locationAria": "Lọc theo địa điểm",
+    "allLocations": "Tất cả địa điểm",
+    "positionAria": "Lọc theo chức danh",
+    "allPositions": "Tất cả chức danh",
+    "truncated": "Một số tùy chọn bị ẩn vì không gian làm việc có hơn {limit} phòng ban, chức danh hoặc địa điểm."
+  },
+  "report": {
+    "loading": "Đang tải báo cáo…",
+    "unavailableTitle": "Báo cáo không khả dụng",
+    "accessDeniedTitle": "Không có quyền truy cập",
+    "retry": "Thử lại",
+    "chartAria": "{metric} theo {group}, được vẽ từ cùng các dòng hiển thị trong bảng bên dưới.",
+    "chartHidden": "Biểu đồ chỉ hiển thị {shown} nhóm đầu; bảng có đủ {total} nhóm.",
+    "tableSwipe": "Vuốt ngang để xem mọi trường số liệu.",
+    "tableContainer": "Các dòng báo cáo. Cuộn ngang để xem mọi số liệu.",
+    "period": "Kỳ",
+    "total": "Tổng",
+    "weekOf": "Tuần {date}",
+    "rowLimit": "Đang hiển thị {shown} trên {total} dòng. Hãy thu hẹp khoảng ngày hoặc cách nhóm để xem phần còn lại."
+  },
+  "metrics": {
+    "verified_hours": "Giờ đã xác minh",
+    "verified_request_count": "Số yêu cầu",
+    "verified_day_count": "Số ngày đã xác minh",
+    "active_employee_count": "Nhân viên đang hoạt động",
+    "hours_per_employee": "Giờ trên mỗi nhân viên",
+    "checkin_count": "Lượt chấm công",
+    "worked_day_count": "Ngày đã làm",
+    "worked_minutes": "Thời gian đã làm",
+    "late_count": "Lượt đi muộn",
+    "late_rate": "Tỷ lệ đi muộn",
+    "avg_minutes_late": "Số phút muộn trung bình",
+    "approved_day_count": "Số ngày đã duyệt",
+    "approved_request_count": "Số yêu cầu đã duyệt",
+    "headcount": "Số nhân sự",
+    "joiners": "Người vào",
+    "leavers": "Người rời"
+  },
+  "units": {
+    "hourShort": "giờ",
+    "minuteShort": "phút"
+  },
+  "errors": {
+    "unavailable": "Báo cáo tạm thời không khả dụng vì kho phân tích không phản hồi. Hãy thử lại sau ít phút.",
+    "forbidden": "Bạn không có quyền truy cập báo cáo.",
+    "invalid": "Bộ lọc báo cáo không hợp lệ. Hãy kiểm tra khoảng ngày và cách nhóm.",
+    "generic": "Không thể tải báo cáo. Vui lòng thử lại."
+  },
+  "tabsAria": "Loại báo cáo"
+}

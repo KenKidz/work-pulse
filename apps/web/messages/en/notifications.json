@@ -1,0 +1,52 @@
+{
+  "metadataTitle": "Notifications — WorkPulse",
+  "pageTitle": "Notifications",
+  "pageDescription": "Leave and attendance updates addressed to you. Mark items read as you go.",
+  "kinds": {
+    "leave_requested": "Leave request",
+    "leave_approved": "Leave approved",
+    "leave_rejected": "Leave rejected",
+    "leave_withdrawn": "Leave withdrawn",
+    "attendance_late": "Late check-in"
+  },
+  "bell": {
+    "label": "Notifications",
+    "unreadLabel": "Notifications, {count} unread",
+    "badgeUnread": "{count} unread",
+    "loading": "Loading notifications…",
+    "loadError": "Could not load notifications.",
+    "empty": "No notifications yet.",
+    "unread": "Unread",
+    "markingAll": "Marking all read…",
+    "markAll": "Mark all read",
+    "viewAll": "View all notifications"
+  },
+  "list": {
+    "ariaLabel": "Notifications",
+    "unreadCount": "{count} unread",
+    "allCaughtUp": "You’re all caught up",
+    "markingAll": "Marking all read…",
+    "markAll": "Mark all read",
+    "loading": "Loading your notifications…",
+    "loadError": "Could not load your notifications.",
+    "empty": "No notifications yet. Leave and attendance updates addressed to you will appear here.",
+    "unread": "Unread",
+    "read": "Read",
+    "markRead": "Mark read",
+    "markReadAria": "Mark read: {subject}",
+    "previous": "Previous",
+    "previousAria": "Previous page",
+    "next": "Next",
+    "nextAria": "Next page",
+    "pageOf": "Page {page} of {total}"
+  },
+  "errors": {
+    "notFound": "This notification is no longer available.",
+    "unauthorized": "Your session expired. Sign in again to continue.",
+    "generic": "Something went wrong. Please try again."
+  },
+  "toasts": {
+    "markedRead": "Notification marked read",
+    "allMarkedRead": "All notifications marked read"
+  }
+}

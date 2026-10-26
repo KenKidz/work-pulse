@@ -10,6 +10,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CircleAlert, Coins, Plus } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
@@ -71,6 +72,12 @@ const EMPTY_SALARY = {
 };
 
 export function SalaryForm({ canEdit }: { canEdit: boolean }) {
+  const t = useTranslations("payroll.salary");
+  const root = useTranslations("payroll");
+  const common = useTranslations("common.actions");
+  const validation = useTranslations("payroll.validation");
+  const errors = useTranslations("payroll.errors");
+  const locale = useLocale();
   const [page, setPage] = useState(1);
   const [rootError, setRootError] = useState<string | null>(null);
   const salaryQuery = usePayrollSalaries({ page, page_size: SALARY_PAGE_SIZE });
@@ -78,7 +85,7 @@ export function SalaryForm({ canEdit }: { canEdit: boolean }) {
   const directory = usePayrollDirectory();
 
   const form = useForm<SalaryFormValues>({
-    resolver: zodResolver(salaryFormSchema),
+    resolver: zodResolver(salaryFormSchema((key) => validation(key))),
     defaultValues: EMPTY_SALARY,
   });
 
@@ -98,7 +105,7 @@ export function SalaryForm({ canEdit }: { canEdit: boolean }) {
       setPage(1);
       form.reset({ ...EMPTY_SALARY, effective_from: values.effective_from });
     } catch (error) {
-      const fieldErrors = salaryFieldErrors(error);
+      const fieldErrors = salaryFieldErrors(error, errors);
       for (const [field, message] of Object.entries(fieldErrors)) {
         if (field === "root") {
           setRootError(message ?? null);
@@ -116,8 +123,8 @@ export function SalaryForm({ canEdit }: { canEdit: boolean }) {
     <section aria-labelledby={SALARIES_SECTION_ID} className="flex flex-col gap-4">
       <PayrollSectionHeader
         id={SALARIES_SECTION_ID}
-        title="Salary records"
-        description="Append-only effective dates. A run uses the record effective on its last day; a new record never rewrites history."
+        title={t("title")}
+        description={t("description")}
       />
 
       {canEdit ? (
@@ -136,21 +143,19 @@ export function SalaryForm({ canEdit }: { canEdit: boolean }) {
                     <FormItem>
                       <FormLabel
                         hint={
-                          directory.canRead
-                            ? "Names come from the employee directory."
-                            : "Paste the employee’s UUID from the employee record."
+                          directory.canRead ? t("employeeHint") : t("employeeIdHint")
                         }
                       >
-                        {directory.canRead ? "Employee" : "Employee ID"}
+                        {directory.canRead ? t("employee") : t("employeeId")}
                       </FormLabel>
                       {directory.canRead ? (
                         <Select value={field.value} onValueChange={field.onChange}>
                           <FormControl>
                             <SelectTrigger
                               disabled={directory.employees.length === 0}
-                              aria-label="Employee"
+                              aria-label={t("employee")}
                             >
-                              <SelectValue placeholder="Select an employee" />
+                              <SelectValue placeholder={t("selectEmployee")} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -182,9 +187,7 @@ export function SalaryForm({ canEdit }: { canEdit: boolean }) {
                   name="amount"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel hint="In the tenant currency. No proration on runs.">
-                        Monthly base salary
-                      </FormLabel>
+                      <FormLabel hint={t("amountHint")}>{t("amount")}</FormLabel>
                       <FormControl>
                         <Input
                           {...field}
@@ -210,7 +213,7 @@ export function SalaryForm({ canEdit }: { canEdit: boolean }) {
                   name="effective_from"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel hint="One record per employee and date.">Effective from</FormLabel>
+                      <FormLabel hint={t("effectiveHint")}>{t("effectiveFrom")}</FormLabel>
                       <FormControl>
                         <Input {...field} value={field.value} type="date" />
                       </FormControl>
@@ -230,7 +233,7 @@ export function SalaryForm({ canEdit }: { canEdit: boolean }) {
               <div className="flex justify-end">
                 <Button type="submit" disabled={createSalary.isPending}>
                   <Plus />
-                  Add salary record
+                  {t("add")}
                 </Button>
               </div>
             </form>
@@ -242,21 +245,21 @@ export function SalaryForm({ canEdit }: { canEdit: boolean }) {
         {salaryQuery.isPending ? (
           <div className="flex items-center justify-center gap-2 px-6 py-10 text-sm text-muted-foreground">
             <Spinner className="size-4" />
-            <p>Loading salary records…</p>
+            <p>{t("loading")}</p>
           </div>
         ) : salaryQuery.isError ? (
           <div className="p-4">
             <Alert variant="destructive">
               <CircleAlert aria-hidden="true" />
               <AlertDescription>
-                <p>Could not load salary records.</p>
+                <p>{t("loadError")}</p>
                 <Button
                   variant="outline"
                   size="sm"
                   className="mt-2"
                   onClick={() => void salaryQuery.refetch()}
                 >
-                  Retry
+                  {common("retry")}
                 </Button>
               </AlertDescription>
             </Alert>
@@ -265,39 +268,43 @@ export function SalaryForm({ canEdit }: { canEdit: boolean }) {
           <div className="p-4">
             <EmptyState
               icon={Coins}
-              message="No salary records yet. Add one for each employee before running payroll."
+              message={t("empty")}
             />
           </div>
         ) : (
           <>
             <p className="px-4 py-2 text-xs text-muted-foreground sm:hidden">
-              Swipe sideways to see every salary field.
+              {t("swipe")}
             </p>
             <Table
-              aria-label="Salary records"
-              containerLabel="Salary records. Scroll horizontally to read all columns."
+              aria-label={t("label")}
+              containerLabel={t("containerLabel")}
             >
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="pl-3">Employee</TableHead>
-                  <TableHead className="text-right">Base salary</TableHead>
-                  <TableHead>Effective from</TableHead>
-                  <TableHead>Recorded</TableHead>
+                  <TableHead className="pl-3">{t("columns.employee")}</TableHead>
+                  <TableHead className="text-right">{t("columns.base")}</TableHead>
+                  <TableHead>{t("columns.effective")}</TableHead>
+                  <TableHead>{t("columns.recorded")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {salaries.map((salary) => (
                   <TableRow key={salary.id}>
                     <TableCell className="pl-3 font-medium">
-                      {employeeLabel(salary.employee_id, directory.nameById)}
+                      {employeeLabel(
+                        salary.employee_id,
+                        directory.nameById,
+                        root("employeeFallback", { id: salary.employee_id.slice(-4) }),
+                      )}
                     </TableCell>
                     <TableCell className="text-right font-mono tabular-nums">
-                      {formatMoney(salary.amount, salary.currency)}
+                      {formatMoney(salary.amount, salary.currency, locale)}
                     </TableCell>
-                    <TableCell>{formatPayrollDate(salary.effective_from)}</TableCell>
+                    <TableCell>{formatPayrollDate(salary.effective_from, locale)}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       <time dateTime={salary.created_at}>
-                        {formatPayrollTimestamp(salary.created_at)}
+                        {formatPayrollTimestamp(salary.created_at, locale)}
                       </time>
                     </TableCell>
                   </TableRow>
@@ -305,7 +312,7 @@ export function SalaryForm({ canEdit }: { canEdit: boolean }) {
               </TableBody>
             </Table>
             {pageInfo === null ? null : (
-              <TablePagination page={pageInfo} label="salary records" onPageChange={setPage} />
+              <TablePagination page={pageInfo} label={t("paginationLabel")} onPageChange={setPage} />
             )}
           </>
         )}

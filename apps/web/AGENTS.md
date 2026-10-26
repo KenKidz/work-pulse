@@ -7,7 +7,8 @@ Stack and rationale: ADR 0005 (`.ai/decisions/0005-frontend-stack.md`).
 
 Tailwind CSS v4 · shadcn/ui (Radix + lucide-react + sonner) · TanStack Query v5 ·
 orval-generated `@workpulse/api-client` · react-hook-form + zod · Zustand ·
-dayjs (`utc` + `timezone`) · Recharts (Reports charts only) · ESLint + Prettier ·
+dayjs (`utc` + `timezone`) · next-intl (en + vi) · Recharts (Reports charts only) ·
+ESLint + Prettier ·
 Vitest + Testing Library.
 
 ## Commands
@@ -31,6 +32,8 @@ pnpm workspace member — `pnpm install` runs from the repo root (`make install`
 - `app/(auth)/` — login/register route group
 - `app/(dashboard)/` — authenticated-area route group
 - `app/providers.tsx` — QueryClientProvider + Toaster (client boundary)
+- `i18n/` — locale config, cookie action and request-scoped catalog loaders
+- `messages/en|vi/` — one JSON catalog per surface; both locales must match
 - `features/<name>/` — feature logic, mirroring `apps/api/app/domains/<name>/`
 - `components/ui/` — shared shadcn primitives (generated, then owned)
 - `lib/` — app utilities (`lib/datetime.ts` = dayjs)
@@ -48,8 +51,15 @@ pnpm workspace member — `pnpm install` runs from the repo root (`make install`
 - Debounce filter, search and sort inputs (~300ms) before refetching — never one
   API call per keystroke. Details: `.ai/conventions.md` (TypeScript section).
 - Forms: react-hook-form + zod, schema colocated in the feature.
-- Times: UTC ISO 8601 from the API; render through `lib/datetime.ts`.
+- Times: UTC ISO 8601 from the API; render with `Intl` (or the feature date
+  helper) using the active locale. Never hardcode English month names.
 - `"use client"` only on interactive leaves; Server Components by default.
+- i18n: every user-facing string, `aria-label`, placeholder, validation
+  message, toast, empty/error state and metadata title lives in
+  `messages/<locale>/`. Client Components use `useTranslations`, Server
+  Components `getTranslations`; add keys to **both** catalogs (the parity test
+  fails otherwise). Locale is the `wp_locale` cookie, never a URL segment.
+  `tests/mocks/next-intl.tsx` resolves the real English catalog for Vitest.
 - Strict TypeScript; no new dependencies without a spec.
 - pnpm's strict `node_modules`: declare every package you import in
   `apps/web/package.json` — no relying on hoisted transitive deps.

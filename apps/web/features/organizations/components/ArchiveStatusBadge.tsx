@@ -1,3 +1,5 @@
+import { useTranslations } from "next-intl";
+
 import { Badge } from "@/components/ui/badge";
 
 /**
@@ -5,9 +7,11 @@ import { Badge } from "@/components/ui/badge";
  * the same status cannot render differently per tab.
  */
 export function ArchiveStatusBadge({ archivedAt }: { archivedAt?: string | null }) {
+  const t = useTranslations("organizations.status");
+
   return archivedAt ? (
-    <Badge variant="muted">Archived</Badge>
+    <Badge variant="muted">{t("archived")}</Badge>
   ) : (
-    <Badge variant="success">Active</Badge>
+    <Badge variant="success">{t("active")}</Badge>
   );
 }

@@ -1,11 +1,14 @@
 /**
  * Timestamp rendering for the inbox. The API contract is UTC ISO 8601;
- * `dayjs` converts to the browser's local zone at render time only.
+ * `Intl` renders it in the browser's local zone and active locale.
  */
 
-import { dayjs } from "@/lib/datetime";
-
 /** "Oct 21, 09:42" — enough precision for a person-addressed inbox row. */
-export function formatNotificationTime(iso: string): string {
-  return dayjs(iso).format("MMM D, HH:mm");
+export function formatNotificationTime(iso: string, locale = "en-US"): string {
+  return new Intl.DateTimeFormat(locale, {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(iso));
 }

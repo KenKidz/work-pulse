@@ -9,6 +9,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CircleAlert, Clock, Pencil, Plus } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
@@ -56,6 +57,8 @@ import type { Shift } from "../types";
 import { shiftFormSchema, type ShiftFormValues } from "../schema";
 
 export function ShiftsPanel() {
+  const t = useTranslations("attendance");
+  const common = useTranslations("common.actions");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Shift | null>(null);
 
@@ -76,33 +79,30 @@ export function ShiftsPanel() {
   return (
     <Card data-testid="shifts-panel" className="rounded-md border-border shadow-none">
       <CardHeader>
-        <CardTitle>Shifts</CardTitle>
-        <CardDescription>
-          Use one default shift for every location, or set a different shift for a specific
-          location.
-        </CardDescription>
+        <CardTitle>{t("shifts.title")}</CardTitle>
+        <CardDescription>{t("shifts.description")}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <div>
           <Button onClick={openCreate} className="min-h-11">
             <Plus />
-            New shift
+            {t("shifts.newShift")}
           </Button>
         </div>
 
         {shiftsQuery.isPending ? (
           <div className="flex items-center justify-center gap-2 rounded-lg border border-dashed px-6 py-10 text-sm text-muted-foreground">
             <Spinner className="size-4" />
-            <p>Loading shifts…</p>
+            <p>{t("shifts.loading")}</p>
           </div>
         ) : shiftsQuery.isError ? (
           <Alert variant="destructive">
             <CircleAlert aria-hidden="true" />
             <AlertDescription>
               {isForbiddenError(shiftsQuery.error) ? (
-                <p>Only HR, admins and super admins can manage shifts.</p>
+                <p>{t("shifts.forbidden")}</p>
               ) : (
-                <p>Could not load shifts.</p>
+                <p>{t("shifts.loadError")}</p>
               )}
               <Button
                 variant="outline"
@@ -110,28 +110,28 @@ export function ShiftsPanel() {
                 className="mt-2"
                 onClick={() => void shiftsQuery.refetch()}
               >
-                Retry
+                {common("retry")}
               </Button>
             </AlertDescription>
           </Alert>
         ) : shifts.length === 0 ? (
-          <EmptyState icon={Clock} message="Add a shift to start marking late arrivals." />
+          <EmptyState icon={Clock} message={t("shifts.empty")} />
         ) : (
           <>
             <p className="text-xs text-muted-foreground sm:hidden">
-              Swipe sideways to see locations and editing actions.
+              {t("shifts.swipe")}
             </p>
             <Table
-              aria-label="Configured shifts"
-              containerLabel="Configured shifts. Scroll horizontally to see locations and actions."
+              aria-label={t("shifts.label")}
+              containerLabel={t("shifts.containerLabel")}
             >
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead>Name</TableHead>
-                  <TableHead>Hours</TableHead>
-                  <TableHead>Grace period</TableHead>
-                  <TableHead>Applies to</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>{t("shifts.columns.name")}</TableHead>
+                  <TableHead>{t("shifts.columns.hours")}</TableHead>
+                  <TableHead>{t("shifts.columns.grace")}</TableHead>
+                  <TableHead>{t("shifts.columns.appliesTo")}</TableHead>
+                  <TableHead className="text-right">{t("shifts.columns.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -141,14 +141,14 @@ export function ShiftsPanel() {
                     <TableCell className="text-sm tabular-nums">
                       {shift.start_time}–{shift.end_time}
                     </TableCell>
-                    <TableCell className="tabular-nums">{shift.grace_minutes} min</TableCell>
+                    <TableCell className="tabular-nums">{t("shifts.graceMinutes", { minutes: shift.grace_minutes })}</TableCell>
                     <TableCell>
                       {shift.location_id ? (
                         <span className="text-sm text-muted-foreground">
-                          Location …{shift.location_id.slice(-4)}
+                          {t("shifts.locationShort", { id: shift.location_id.slice(-4) })}
                         </span>
                       ) : (
-                        <Badge variant="secondary">Default for all locations</Badge>
+                        <Badge variant="secondary">{t("shifts.defaultAll")}</Badge>
                       )}
                     </TableCell>
                     <TableCell className="text-right">
@@ -156,11 +156,11 @@ export function ShiftsPanel() {
                         variant="ghost"
                         size="xs"
                         className="min-h-11 sm:min-h-7"
-                        aria-label={`Edit ${shift.name}`}
+                        aria-label={t("shifts.editAria", { name: shift.name })}
                         onClick={() => openEdit(shift)}
                       >
                         <Pencil />
-                        Edit
+                        {common("edit")}
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -188,6 +188,9 @@ type ShiftFormDialogProps = {
 };
 
 export function ShiftFormDialog({ open, onOpenChange, shift }: ShiftFormDialogProps) {
+  const t = useTranslations("attendance");
+  const common = useTranslations("common.actions");
+  const errors = useTranslations("attendance.errors");
   const isEdit = shift !== null;
   const [rootError, setRootError] = useState<string | null>(null);
   const createShift = useShiftCreate();
@@ -195,7 +198,7 @@ export function ShiftFormDialog({ open, onOpenChange, shift }: ShiftFormDialogPr
   const mutation = isEdit ? updateShift : createShift;
 
   const form = useForm<ShiftFormValues>({
-    resolver: zodResolver(shiftFormSchema),
+    resolver: zodResolver(shiftFormSchema((key) => t(`validation.${key}`))),
     defaultValues: {
       name: shift?.name ?? "",
       start_time: shift?.start_time ?? "09:00",
@@ -229,7 +232,7 @@ export function ShiftFormDialog({ open, onOpenChange, shift }: ShiftFormDialogPr
       }
       onOpenChange(false);
     } catch (error) {
-      setRootError(attendanceFieldErrors(error).root ?? errorMessage(error));
+      setRootError(attendanceFieldErrors(error, errors).root ?? errorMessage(error, errors));
     }
   }
 
@@ -237,10 +240,8 @@ export function ShiftFormDialog({ open, onOpenChange, shift }: ShiftFormDialogPr
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit shift" : "New shift"}</DialogTitle>
-          <DialogDescription>
-            Times follow the location’s local clock. Someone is late after the shift’s grace period.
-          </DialogDescription>
+          <DialogTitle>{isEdit ? t("shifts.form.editTitle") : t("shifts.form.createTitle")}</DialogTitle>
+          <DialogDescription>{t("shifts.form.description")}</DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
@@ -250,9 +251,9 @@ export function ShiftFormDialog({ open, onOpenChange, shift }: ShiftFormDialogPr
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Name</FormLabel>
+                  <FormLabel>{t("shifts.form.name")}</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="Standard hours" autoComplete="off" />
+                    <Input {...field} placeholder={t("shifts.form.namePlaceholder")} autoComplete="off" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -265,7 +266,7 @@ export function ShiftFormDialog({ open, onOpenChange, shift }: ShiftFormDialogPr
                 name="start_time"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Start time</FormLabel>
+                    <FormLabel>{t("shifts.form.startTime")}</FormLabel>
                     <FormControl>
                       <Input {...field} type="time" step={60} />
                     </FormControl>
@@ -279,7 +280,7 @@ export function ShiftFormDialog({ open, onOpenChange, shift }: ShiftFormDialogPr
                 name="end_time"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>End time</FormLabel>
+                    <FormLabel>{t("shifts.form.endTime")}</FormLabel>
                     <FormControl>
                       <Input {...field} type="time" step={60} />
                     </FormControl>
@@ -294,7 +295,7 @@ export function ShiftFormDialog({ open, onOpenChange, shift }: ShiftFormDialogPr
               name="grace_minutes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Grace minutes</FormLabel>
+                  <FormLabel>{t("shifts.form.graceMinutes")}</FormLabel>
                   <FormControl>
                     <Input
                       {...field}
@@ -320,10 +321,10 @@ export function ShiftFormDialog({ open, onOpenChange, shift }: ShiftFormDialogPr
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
+                {common("cancel")}
               </Button>
               <Button type="submit" disabled={mutation.isPending}>
-                {isEdit ? "Save changes" : "Create shift"}
+                {isEdit ? t("shifts.form.saveChanges") : t("shifts.form.createShift")}
               </Button>
             </DialogFooter>
           </form>

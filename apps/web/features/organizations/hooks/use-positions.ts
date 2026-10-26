@@ -13,6 +13,7 @@ import {
   useUpdatePosition,
 } from "@workpulse/api-client";
 import { ApiError } from "@workpulse/api-client/mutator/custom-fetch";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { invalidatePositions } from "../api";
@@ -26,69 +27,84 @@ export function usePositions(params?: ListPositionsParams) {
 export type PositionFieldName = "title" | "description";
 export type PositionFieldErrors = Partial<Record<PositionFieldName | "root", string>>;
 
+type PositionErrorTranslator = (
+  key: "positionTitleTaken" | "forbidden" | "generic",
+) => string;
+
 /** Map a stable API error code to the field it belongs to. */
-export function positionFieldErrors(error: unknown): PositionFieldErrors {
+export function positionFieldErrors(
+  error: unknown,
+  t: PositionErrorTranslator,
+): PositionFieldErrors {
   if (error instanceof ApiError) {
     switch (error.code) {
       case "position_title_taken":
-        return { title: "This title is already used by another position." };
+        return { title: t("positionTitleTaken") };
       case "forbidden":
-        return { root: "You do not have permission to manage organization data." };
+        return { root: t("forbidden") };
       default:
         return { root: error.message };
     }
   }
-  return { root: "Something went wrong. Please try again." };
+  return { root: t("generic") };
 }
 
 export function usePositionCreate() {
+  const t = useTranslations("organizations.toasts");
+  const errors = useTranslations("organizations.errors");
   const queryClient = useQueryClient();
   return useCreatePosition({
     mutation: {
       onSuccess: async () => {
         await invalidatePositions(queryClient);
-        toast.success("Position created");
+        toast.success(t("positionCreated"));
       },
-      onError: (error) => toast.error(errorMessage(error)),
+      onError: (error) => toast.error(errorMessage(error, errors)),
     },
   });
 }
 
 export function usePositionUpdate() {
+  const t = useTranslations("organizations.toasts");
+  const errors = useTranslations("organizations.errors");
   const queryClient = useQueryClient();
   return useUpdatePosition({
     mutation: {
       onSuccess: async () => {
         await invalidatePositions(queryClient);
-        toast.success("Position updated");
+        toast.success(t("positionUpdated"));
       },
-      onError: (error) => toast.error(errorMessage(error)),
+      onError: (error) => toast.error(errorMessage(error, errors)),
     },
   });
 }
 
 export function usePositionArchive() {
+  const t = useTranslations("organizations.toasts");
+  const errors = useTranslations("organizations.errors");
   const queryClient = useQueryClient();
   return useArchivePosition({
     mutation: {
       onSuccess: async () => {
         await invalidatePositions(queryClient);
-        toast.success("Position archived");
+        toast.success(t("positionArchived"));
       },
-      onError: (error) => toast.error(errorMessage(error)),
+      onError: (error) => toast.error(errorMessage(error, errors)),
     },
   });
 }
 
 export function usePositionRestore() {
+  const t = useTranslations("organizations.toasts");
+  const errors = useTranslations("organizations.errors");
   const queryClient = useQueryClient();
   return useRestorePosition({
     mutation: {
       onSuccess: async () => {
         await invalidatePositions(queryClient);
-        toast.success("Position restored");
+        toast.success(t("positionRestored"));
       },
-      onError: (error) => toast.error(errorMessage(error)),
+      onError: (error) => toast.error(errorMessage(error, errors)),
     },
   });
 }

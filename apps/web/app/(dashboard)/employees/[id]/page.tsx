@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 
 import { EmployeeDetailCard } from "@/features/employees/components/EmployeeDetailCard";
 
-export const metadata: Metadata = {
-  title: "Employee — WorkPulse",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("employees");
+  return { title: t("detailMetadataTitle") };
+}
 
 export default async function EmployeeDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

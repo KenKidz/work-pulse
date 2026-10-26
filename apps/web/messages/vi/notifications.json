@@ -1,0 +1,52 @@
+{
+  "metadataTitle": "Thông báo — WorkPulse",
+  "pageTitle": "Thông báo",
+  "pageDescription": "Cập nhật nghỉ phép và chấm công dành cho bạn. Đánh dấu đã đọc khi xem.",
+  "kinds": {
+    "leave_requested": "Yêu cầu nghỉ phép",
+    "leave_approved": "Đã duyệt nghỉ phép",
+    "leave_rejected": "Từ chối nghỉ phép",
+    "leave_withdrawn": "Đã rút yêu cầu nghỉ",
+    "attendance_late": "Chấm công muộn"
+  },
+  "bell": {
+    "label": "Thông báo",
+    "unreadLabel": "Thông báo, {count} chưa đọc",
+    "badgeUnread": "{count} chưa đọc",
+    "loading": "Đang tải thông báo…",
+    "loadError": "Không thể tải thông báo.",
+    "empty": "Chưa có thông báo.",
+    "unread": "Chưa đọc",
+    "markingAll": "Đang đánh dấu tất cả…",
+    "markAll": "Đánh dấu tất cả đã đọc",
+    "viewAll": "Xem tất cả thông báo"
+  },
+  "list": {
+    "ariaLabel": "Thông báo",
+    "unreadCount": "{count} chưa đọc",
+    "allCaughtUp": "Bạn đã xem hết",
+    "markingAll": "Đang đánh dấu tất cả…",
+    "markAll": "Đánh dấu tất cả đã đọc",
+    "loading": "Đang tải thông báo của bạn…",
+    "loadError": "Không thể tải thông báo của bạn.",
+    "empty": "Chưa có thông báo. Cập nhật nghỉ phép và chấm công dành cho bạn sẽ xuất hiện ở đây.",
+    "unread": "Chưa đọc",
+    "read": "Đã đọc",
+    "markRead": "Đánh dấu đã đọc",
+    "markReadAria": "Đánh dấu đã đọc: {subject}",
+    "previous": "Trước",
+    "previousAria": "Trang trước",
+    "next": "Tiếp",
+    "nextAria": "Trang tiếp",
+    "pageOf": "Trang {page} / {total}"
+  },
+  "errors": {
+    "notFound": "Thông báo này không còn khả dụng.",
+    "unauthorized": "Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại để tiếp tục.",
+    "generic": "Đã xảy ra lỗi. Vui lòng thử lại."
+  },
+  "toasts": {
+    "markedRead": "Đã đánh dấu thông báo đã đọc",
+    "allMarkedRead": "Đã đánh dấu tất cả thông báo đã đọc"
+  }
+}

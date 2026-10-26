@@ -14,12 +14,12 @@
  */
 
 import { Activity } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { cn } from "cn";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/empty-state";
 
-import { activityActionLabel } from "../labels";
 import type { RealtimeActivityEntry } from "../types";
 import type { EmployeeDirectory } from "../utils";
 import { employeeDisplayName, formatClockTime } from "../utils";
@@ -31,12 +31,14 @@ export function LiveActivityRail({
   activity: RealtimeActivityEntry[];
   directory: EmployeeDirectory;
 }) {
+  const t = useTranslations("realtime");
+  const locale = useLocale();
   const latest = activity.at(0);
   return (
     <Card data-testid="live-activity" className="gap-0 rounded-md border-border py-0 shadow-none">
       <CardHeader className="px-5 pt-5 pb-4">
-        <CardTitle>Live activity</CardTitle>
-        <CardDescription>Check-ins and check-outs, newest first.</CardDescription>
+        <CardTitle>{t("activityRail.title")}</CardTitle>
+        <CardDescription>{t("activityRail.description")}</CardDescription>
       </CardHeader>
       <CardContent className="px-5 pb-5">
         {/* One concise sentence per event — the visible list is a snapshot of
@@ -49,12 +51,20 @@ export function LiveActivityRail({
         >
           {latest === undefined
             ? ""
-            : `${employeeDisplayName(latest.employee_id, directory)} ${activityActionLabel[latest.action]} at ${formatClockTime(latest.occurred_at)}`}
+            : t("activityRail.announcer", {
+                name: employeeDisplayName(
+                  latest.employee_id,
+                  directory,
+                  t("employeeFallback", { id: latest.employee_id.slice(-4) }),
+                ),
+                action: t(`activity.${latest.action}` as never),
+                time: formatClockTime(latest.occurred_at, locale),
+              })}
         </p>
         {activity.length === 0 ? (
           <EmptyState
             icon={Activity}
-            message="Nothing yet today — the rail fills as people check in and out."
+            message={t("activityRail.empty")}
           />
         ) : (
           /* Bounded feed: a check-in burst can fill the 20-entry cap and a
@@ -62,13 +72,13 @@ export function LiveActivityRail({
              lives on the list, so it spans the full scrollable height. */
           <div
             role="region"
-            aria-label="Live activity feed. Scroll for older entries."
+            aria-label={t("activityRail.regionLabel")}
             tabIndex={0}
             data-testid="live-activity-scroll"
             className="max-h-[min(55dvh,32rem)] overflow-y-auto focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
             <ol
-              aria-label="Live activity"
+              aria-label={t("activityRail.listLabel")}
               className="relative flex flex-col gap-1 before:absolute before:inset-y-4 before:left-[4.125rem] before:w-px before:bg-border before:content-['']"
             >
               {activity.map((entry) => {
@@ -82,7 +92,7 @@ export function LiveActivityRail({
                       dateTime={entry.occurred_at}
                       className="text-right font-mono text-xs text-muted-foreground tabular-nums"
                     >
-                      {formatClockTime(entry.occurred_at)}
+                      {formatClockTime(entry.occurred_at, locale)}
                     </time>
                     <span
                       aria-hidden="true"
@@ -97,10 +107,14 @@ export function LiveActivityRail({
                     </span>
                     <span className="min-w-0 text-sm break-words">
                       <span className="font-medium">
-                        {employeeDisplayName(entry.employee_id, directory)}
+                        {employeeDisplayName(
+                          entry.employee_id,
+                          directory,
+                          t("employeeFallback", { id: entry.employee_id.slice(-4) }),
+                        )}
                       </span>{" "}
                       <span className={cn(checkedIn ? "text-success" : "text-muted-foreground")}>
-                        {activityActionLabel[entry.action]}
+                        {t(`activity.${entry.action}` as never)}
                       </span>
                     </span>
                   </li>

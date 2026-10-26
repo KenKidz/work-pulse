@@ -11,6 +11,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CircleAlert, Inbox } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 
@@ -55,7 +56,7 @@ import {
   useLeaveRequests,
   useRejectLeaveAction,
 } from "../hooks/use-leave";
-import { LEAVE_APPROVER_ROLES, leaveTypeLabel } from "../labels";
+import { LEAVE_APPROVER_ROLES } from "../labels";
 import { leaveDecisionFormSchema, type LeaveDecisionFormValues } from "../schema";
 import type { LeaveRequest } from "../types";
 
@@ -72,6 +73,9 @@ export function TeamApprovals() {
 }
 
 function TeamApprovalsInbox({ currentEmployeeId }: { currentEmployeeId: string | null }) {
+  const t = useTranslations("leave");
+  const locale = useLocale();
+  const common = useTranslations("common.actions");
   const [target, setTarget] = useState<DecisionTarget | null>(null);
   const requestsQuery = useLeaveRequests({
     status: "pending",
@@ -104,17 +108,19 @@ function TeamApprovalsInbox({ currentEmployeeId }: { currentEmployeeId: string |
 
   function employeeName(employeeId: string): string {
     const name = directory.get(employeeId);
-    return name !== undefined && name.length > 0 ? name : `Employee …${employeeId.slice(-4)}`;
+    return name !== undefined && name.length > 0
+      ? name
+      : t("myRequests.employeeFallback", { id: employeeId.slice(-4) });
   }
 
   return (
     <section aria-labelledby="team-approvals-title" className="flex flex-col gap-4">
       <div className="space-y-1">
         <h2 id="team-approvals-title" className="text-lg leading-6 font-semibold tracking-tight">
-          Team approvals
+          {t("approvals.title")}
         </h2>
         <p className="max-w-2xl text-sm leading-5 text-pretty text-muted-foreground">
-          Pending requests you can decide. Your own requests wait for someone else.
+          {t("approvals.description")}
         </p>
       </div>
 
@@ -125,20 +131,18 @@ function TeamApprovalsInbox({ currentEmployeeId }: { currentEmployeeId: string |
         {requestsQuery.isPending ? (
           <div className="flex items-center justify-center gap-2 px-6 py-10 text-sm text-muted-foreground">
             <Spinner className="size-4" />
-            <p>Loading pending requests…</p>
+            <p>{t("approvals.loading")}</p>
           </div>
         ) : requestsQuery.isError ? (
           <div className="p-4">
             <Alert variant="destructive">
               <CircleAlert aria-hidden="true" />
               <AlertTitle>
-                {denied ? "Approvals unavailable" : "Could not load pending leave requests"}
+                {denied ? t("approvals.deniedTitle") : t("approvals.errorTitle")}
               </AlertTitle>
               <AlertDescription>
                 <p>
-                  {denied
-                    ? "Managers, HR and admins decide leave requests."
-                    : "Pending requests could not be loaded."}
+                  {denied ? t("approvals.denied") : t("approvals.loadError")}
                 </p>
                 {!denied ? (
                   <Button
@@ -147,7 +151,7 @@ function TeamApprovalsInbox({ currentEmployeeId }: { currentEmployeeId: string |
                     className="mt-2"
                     onClick={() => void requestsQuery.refetch()}
                   >
-                    Retry
+                    {common("retry")}
                   </Button>
                 ) : null}
               </AlertDescription>
@@ -155,25 +159,25 @@ function TeamApprovalsInbox({ currentEmployeeId }: { currentEmployeeId: string |
           </div>
         ) : requests.length === 0 ? (
           <div className="p-4">
-            <EmptyState icon={Inbox} message="No pending leave requests in your scope." />
+            <EmptyState icon={Inbox} message={t("approvals.empty")} />
           </div>
         ) : (
           <>
             <p className="px-4 py-2 text-xs text-muted-foreground sm:hidden">
-              Swipe sideways to see every request field.
+              {t("approvals.swipe")}
             </p>
             <Table
-              aria-label="Pending leave requests"
-              containerLabel="Pending leave requests. Scroll horizontally to read all columns."
+              aria-label={t("approvals.label")}
+              containerLabel={t("approvals.containerLabel")}
             >
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="pl-3">Employee</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Dates</TableHead>
-                  <TableHead>Days</TableHead>
-                  <TableHead>Reason</TableHead>
-                  <TableHead className="pr-3 text-right">Actions</TableHead>
+                  <TableHead className="pl-3">{t("approvals.columns.employee")}</TableHead>
+                  <TableHead>{t("approvals.columns.type")}</TableHead>
+                  <TableHead>{t("approvals.columns.dates")}</TableHead>
+                  <TableHead>{t("approvals.columns.days")}</TableHead>
+                  <TableHead>{t("approvals.columns.reason")}</TableHead>
+                  <TableHead className="pr-3 text-right">{t("approvals.columns.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -183,9 +187,9 @@ function TeamApprovalsInbox({ currentEmployeeId }: { currentEmployeeId: string |
                   return (
                     <TableRow key={request.id}>
                       <TableCell className="pl-3 font-medium">{name}</TableCell>
-                      <TableCell>{leaveTypeLabel[request.leave_type_code]}</TableCell>
+                      <TableCell>{t(`types.${request.leave_type_code}`)}</TableCell>
                       <TableCell className="text-sm tabular-nums">
-                        {formatDate(request.start_date)} – {formatDate(request.end_date)}
+                        {formatDate(request.start_date, locale)} – {formatDate(request.end_date, locale)}
                       </TableCell>
                       <TableCell className="tabular-nums">{request.days}</TableCell>
                       <TableCell className="text-muted-foreground">
@@ -200,7 +204,7 @@ function TeamApprovalsInbox({ currentEmployeeId }: { currentEmployeeId: string |
                       <TableCell className="pr-3 text-right">
                         {own ? (
                           <span className="text-xs text-muted-foreground">
-                            Your own request — someone else must decide.
+                            {t("approvals.ownRequest")}
                           </span>
                         ) : (
                           <div className="flex justify-end gap-2">
@@ -208,19 +212,19 @@ function TeamApprovalsInbox({ currentEmployeeId }: { currentEmployeeId: string |
                               variant="outline"
                               size="sm"
                               className="min-h-11 sm:min-h-7"
-                              aria-label={`Approve leave request for ${name}`}
+                              aria-label={t("approvals.approveAria", { name })}
                               onClick={() => setTarget({ request, mode: "approve" })}
                             >
-                              Approve
+                              {t("approvals.approve")}
                             </Button>
                             <Button
                               variant="outline"
                               size="sm"
                               className="min-h-11 sm:min-h-7"
-                              aria-label={`Reject leave request for ${name}`}
+                              aria-label={t("approvals.rejectAria", { name })}
                               onClick={() => setTarget({ request, mode: "reject" })}
                             >
-                              Reject
+                              {t("approvals.reject")}
                             </Button>
                           </div>
                         )}
@@ -254,13 +258,18 @@ function DecisionDialog({
   employeeName: string;
   onClose: () => void;
 }) {
+  const t = useTranslations("leave");
+  const common = useTranslations("common.actions");
+  const validation = useTranslations("leave.validation");
+  const locale = useLocale();
+  const errors = useTranslations("leave.errors");
   const approve = useApproveLeaveAction();
   const reject = useRejectLeaveAction();
   const mutation = target.mode === "approve" ? approve : reject;
   const [rootError, setRootError] = useState<string | null>(null);
 
   const form = useForm<LeaveDecisionFormValues>({
-    resolver: zodResolver(leaveDecisionFormSchema),
+    resolver: zodResolver(leaveDecisionFormSchema((key) => validation(key))),
     defaultValues: { decision_note: "" },
   });
 
@@ -275,7 +284,7 @@ function DecisionDialog({
       });
       onClose();
     } catch (error) {
-      setRootError(leaveDecisionError(error));
+      setRootError(leaveDecisionError(error, errors));
     }
   }
 
@@ -290,11 +299,14 @@ function DecisionDialog({
     >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{approving ? "Approve leave request" : "Reject leave request"}</DialogTitle>
+          <DialogTitle>{approving ? t("approvals.approveTitle") : t("approvals.rejectTitle")}</DialogTitle>
           <DialogDescription>
-            {employeeName} · {formatDate(target.request.start_date)} –{" "}
-            {formatDate(target.request.end_date)} · {target.request.days}{" "}
-            {target.request.days === 1 ? "day" : "days"}
+            {t("approvals.dialogDescription", {
+              name: employeeName,
+              start: formatDate(target.request.start_date, locale),
+              end: formatDate(target.request.end_date, locale),
+              days: target.request.days,
+            })}
           </DialogDescription>
         </DialogHeader>
 
@@ -305,13 +317,13 @@ function DecisionDialog({
               name="decision_note"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Decision note (optional)</FormLabel>
+                  <FormLabel>{t("approvals.decisionNote")}</FormLabel>
                   <FormControl>
                     <Textarea
                       {...field}
                       value={field.value ?? ""}
                       rows={3}
-                      placeholder="Explain the decision for the requester."
+                      placeholder={t("approvals.decisionNotePlaceholder")}
                     />
                   </FormControl>
                   <FormMessage />
@@ -328,7 +340,7 @@ function DecisionDialog({
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={onClose}>
-                Cancel
+                {common("cancel")}
               </Button>
               <Button
                 type="submit"
@@ -337,11 +349,11 @@ function DecisionDialog({
               >
                 {mutation.isPending
                   ? approving
-                    ? "Approving…"
-                    : "Rejecting…"
+                    ? t("approvals.approving")
+                    : t("approvals.rejecting")
                   : approving
-                    ? "Approve request"
-                    : "Reject request"}
+                    ? t("approvals.approveRequest")
+                    : t("approvals.rejectRequest")}
               </Button>
             </DialogFooter>
           </form>

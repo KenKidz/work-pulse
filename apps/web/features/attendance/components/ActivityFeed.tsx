@@ -8,6 +8,7 @@
  */
 
 import { Activity } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { cn } from "cn";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,21 +16,23 @@ import { EmptyState } from "@/components/empty-state";
 
 import type { BoardActivity } from "../types";
 import { formatClockTime } from "./dates";
-import { boardActionLabel } from "./labels";
 
 export function ActivityFeed({ activity }: { activity: BoardActivity[] }) {
+  const t = useTranslations("attendance.activity");
+  const locale = useLocale();
+
   return (
     <Card data-testid="activity-feed" className="gap-0 rounded-md border-border py-0 shadow-none">
       <CardHeader className="px-5 pt-5 pb-4">
-        <CardTitle>Recent activity</CardTitle>
-        <CardDescription>Check-ins and check-outs for this date, newest first.</CardDescription>
+        <CardTitle>{t("title")}</CardTitle>
+        <CardDescription>{t("description")}</CardDescription>
       </CardHeader>
       <CardContent className="px-5 pb-5">
         {activity.length === 0 ? (
-          <EmptyState icon={Activity} message="No attendance activity recorded on this date yet." />
+          <EmptyState icon={Activity} message={t("empty")} />
         ) : (
           <ol
-            aria-label="Attendance events"
+            aria-label={t("ariaLabel")}
             className="relative flex flex-col gap-1 before:absolute before:top-4 before:bottom-4 before:left-[5.25rem] before:w-px before:bg-border before:content-['']"
           >
             {activity.map((entry) => {
@@ -43,7 +46,7 @@ export function ActivityFeed({ activity }: { activity: BoardActivity[] }) {
                     dateTime={entry.occurred_at}
                     className="text-right text-xs font-medium text-muted-foreground tabular-nums"
                   >
-                    {formatClockTime(entry.occurred_at)}
+                    {formatClockTime(entry.occurred_at, locale)}
                   </time>
                   <span
                     aria-hidden="true"
@@ -54,7 +57,7 @@ export function ActivityFeed({ activity }: { activity: BoardActivity[] }) {
                     />
                   </span>
                   <span className="min-w-0 text-sm break-words">
-                    {employeeShort(entry.employee_id)} {boardActionLabel[entry.action]}
+                    {employeeShort(entry.employee_id, t)} {t(entry.action)}
                   </span>
                 </li>
               );
@@ -67,6 +70,9 @@ export function ActivityFeed({ activity }: { activity: BoardActivity[] }) {
 }
 
 /** `01900000-…a001` → `Employee …a001` — no name join on the board contract. */
-function employeeShort(id: string): string {
-  return `Employee …${id.slice(-4)}`;
+function employeeShort(
+  id: string,
+  t: (key: "employeeShort", values: { id: string }) => string,
+): string {
+  return t("employeeShort", { id: id.slice(-4) });
 }

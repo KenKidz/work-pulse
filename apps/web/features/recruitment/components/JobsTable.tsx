@@ -8,6 +8,7 @@
  */
 
 import { Briefcase, CircleAlert, Plus, Search } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -36,7 +37,7 @@ import {
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 
 import { formatRecruitmentTimestamp } from "../dates";
-import { jobStatusLabel, jobStatusVariant, organizationLabel } from "../labels";
+import { jobStatusVariant, organizationLabel } from "../labels";
 import { useJobs, useRecruitmentDirectory } from "../hooks/use-recruitment";
 import type { Department, Job, JobStatus, ListJobsParams } from "../types";
 import { JobFormDialog } from "./JobFormDialog";
@@ -62,6 +63,9 @@ function JobsFilters({
   departments: Department[];
   onChange: (next: Partial<ListJobsParams>) => void;
 }) {
+  const t = useTranslations("recruitment.jobs.filters");
+  const status = useTranslations("recruitment.status.job");
+
   const activeDepartments = departments.filter(
     (department) => department.archived_at === null || department.archived_at === undefined,
   );
@@ -71,8 +75,8 @@ function JobsFilters({
       <div className="relative w-full sm:w-64">
         <Search className="absolute top-1/2 left-2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          aria-label="Search jobs"
-          placeholder="Search by title"
+          aria-label={t("searchAria")}
+          placeholder={t("searchPlaceholder")}
           className="w-full pl-8"
           value={params.q ?? ""}
           onChange={(event) => onChange({ q: event.target.value || undefined })}
@@ -85,14 +89,14 @@ function JobsFilters({
           onChange({ status: value === ANY ? undefined : (value as JobStatus), page: 1 })
         }
       >
-        <SelectTrigger aria-label="Filter by status" className="w-full sm:w-40">
-          <SelectValue placeholder="All statuses" />
+        <SelectTrigger aria-label={t("statusAria")} className="w-full sm:w-40">
+          <SelectValue placeholder={t("anyStatus")} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value={ANY}>All statuses</SelectItem>
-          <SelectItem value="draft">Draft</SelectItem>
-          <SelectItem value="open">Open</SelectItem>
-          <SelectItem value="closed">Closed</SelectItem>
+          <SelectItem value={ANY}>{t("anyStatus")}</SelectItem>
+          <SelectItem value="draft">{status("draft")}</SelectItem>
+          <SelectItem value="open">{status("open")}</SelectItem>
+          <SelectItem value="closed">{status("closed")}</SelectItem>
         </SelectContent>
       </Select>
 
@@ -102,11 +106,11 @@ function JobsFilters({
           onChange({ department_id: value === ANY ? undefined : value, page: 1 })
         }
       >
-        <SelectTrigger aria-label="Filter by department" className="w-full sm:w-48">
-          <SelectValue placeholder="All departments" />
+        <SelectTrigger aria-label={t("departmentAria")} className="w-full sm:w-48">
+          <SelectValue placeholder={t("allDepartments")} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value={ANY}>All departments</SelectItem>
+          <SelectItem value={ANY}>{t("allDepartments")}</SelectItem>
           {activeDepartments.map((department) => (
             <SelectItem key={department.id} value={department.id}>
               {department.name}
@@ -121,6 +125,11 @@ function JobsFilters({
 type OpenState = { job: Job; action: JobStateAction };
 
 export function JobsTable() {
+  const t = useTranslations("recruitment.jobs");
+  const common = useTranslations("recruitment.actions");
+  const status = useTranslations("recruitment.status.job");
+  const fallbacks = useTranslations("recruitment.fallbacks");
+  const locale = useLocale();
   const [params, setParams] = useState<ListJobsParams>({
     page: 1,
     page_size: JOBS_PAGE_SIZE,
@@ -179,7 +188,7 @@ export function JobsTable() {
         />
         <Button className="ml-auto" onClick={openCreate}>
           <Plus />
-          New job
+          {common("newJob")}
         </Button>
       </div>
 
@@ -187,21 +196,21 @@ export function JobsTable() {
         {jobsQuery.isPending ? (
           <div className="flex items-center justify-center gap-2 px-6 py-10 text-sm text-muted-foreground">
             <Spinner className="size-4" />
-            <p>Loading jobs…</p>
+            <p>{t("loading")}</p>
           </div>
         ) : jobsQuery.isError ? (
           <div className="p-4">
             <Alert variant="destructive">
               <CircleAlert aria-hidden="true" />
               <AlertDescription>
-                <p>Could not load jobs.</p>
+                <p>{t("loadError")}</p>
                 <Button
                   variant="outline"
                   size="sm"
                   className="mt-2"
                   onClick={() => void jobsQuery.refetch()}
                 >
-                  Retry
+                  {common("retry")}
                 </Button>
               </AlertDescription>
             </Alert>
@@ -211,15 +220,13 @@ export function JobsTable() {
             <EmptyState
               icon={Briefcase}
               message={
-                filtersActive
-                  ? "No jobs match these filters. Clear a filter or search for another title."
-                  : "No jobs yet. Create a job to start a hiring pipeline."
+                filtersActive ? t("emptyFiltered") : t("empty")
               }
             />
             {pageOutOfRange ? (
               <div className="mt-3 flex justify-center">
                 <Button variant="outline" size="sm" onClick={() => change({ page: 1 })}>
-                  Back to first page
+                  {common("backToFirstPage")}
                 </Button>
               </div>
             ) : null}
@@ -227,22 +234,22 @@ export function JobsTable() {
         ) : (
           <>
             <p className="px-4 py-2 text-xs text-muted-foreground sm:hidden">
-              Swipe sideways to see every job field.
+              {t("swipe")}
             </p>
             <Table
-              aria-label="Jobs"
-              containerLabel="Jobs. Scroll horizontally to read all columns."
+              aria-label={t("label")}
+              containerLabel={t("containerLabel")}
             >
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="pl-3">Title</TableHead>
-                  <TableHead>Department</TableHead>
-                  <TableHead>Position</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead className="text-right">Openings</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Opened</TableHead>
-                  <TableHead className="pr-3 text-right">Actions</TableHead>
+                  <TableHead className="pl-3">{t("columns.title")}</TableHead>
+                  <TableHead>{t("columns.department")}</TableHead>
+                  <TableHead>{t("columns.position")}</TableHead>
+                  <TableHead>{t("columns.location")}</TableHead>
+                  <TableHead className="text-right">{t("columns.openings")}</TableHead>
+                  <TableHead>{t("columns.status")}</TableHead>
+                  <TableHead>{t("columns.opened")}</TableHead>
+                  <TableHead className="pr-3 text-right">{t("columns.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -253,21 +260,29 @@ export function JobsTable() {
                       {organizationLabel(
                         directory.departmentNames,
                         job.department_id,
-                        "Department",
+                        fallbacks("department", { id: job.department_id.slice(-4) }),
                       )}
                     </TableCell>
                     <TableCell>
-                      {organizationLabel(directory.positionNames, job.position_id, "Position")}
+                      {organizationLabel(
+                        directory.positionNames,
+                        job.position_id,
+                        fallbacks("position", { id: job.position_id.slice(-4) }),
+                      )}
                     </TableCell>
                     <TableCell>
-                      {organizationLabel(directory.locationNames, job.location_id, "Location")}
+                      {organizationLabel(
+                        directory.locationNames,
+                        job.location_id,
+                        fallbacks("location", { id: job.location_id.slice(-4) }),
+                      )}
                     </TableCell>
                     <TableCell className="text-right font-mono tabular-nums">
                       {job.openings}
                     </TableCell>
                     <TableCell>
                       <Badge variant={jobStatusVariant[job.status]} data-status={job.status}>
-                        {jobStatusLabel[job.status]}
+                        {status(job.status)}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
@@ -275,7 +290,7 @@ export function JobsTable() {
                         "—"
                       ) : (
                         <time dateTime={job.opened_at}>
-                          {formatRecruitmentTimestamp(job.opened_at)}
+                          {formatRecruitmentTimestamp(job.opened_at, locale)}
                         </time>
                       )}
                     </TableCell>
@@ -289,30 +304,30 @@ export function JobsTable() {
                               variant="ghost"
                               size="xs"
                               className="min-h-11 sm:min-h-7"
-                              aria-label={`Edit ${job.title}`}
+                              aria-label={t("editAria", { title: job.title })}
                               onClick={() => openEdit(job)}
                             >
-                              Edit
+                              {common("edit")}
                             </Button>
                             {job.status === "draft" ? (
                               <Button
                                 variant="ghost"
                                 size="xs"
                                 className="min-h-11 sm:min-h-7"
-                                aria-label={`Open ${job.title}`}
+                                aria-label={t("openAria", { title: job.title })}
                                 onClick={() => setStateAction({ job, action: "open" })}
                               >
-                                Open
+                                {common("open")}
                               </Button>
                             ) : (
                               <Button
                                 variant="ghost"
                                 size="xs"
                                 className="min-h-11 sm:min-h-7"
-                                aria-label={`Close ${job.title}`}
+                                aria-label={t("closeAria", { title: job.title })}
                                 onClick={() => setStateAction({ job, action: "close" })}
                               >
-                                Close
+                                {common("close")}
                               </Button>
                             )}
                           </>
@@ -326,7 +341,7 @@ export function JobsTable() {
             {page === null ? null : (
               <RecruitmentPagination
                 page={page}
-                label="jobs"
+                label={t("paginationLabel")}
                 onPageChange={(nextPage) => change({ page: nextPage })}
               />
             )}

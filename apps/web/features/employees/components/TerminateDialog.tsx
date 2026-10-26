@@ -8,6 +8,7 @@
  */
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
@@ -42,11 +43,14 @@ type TerminateDialogProps = {
 };
 
 export function TerminateDialog({ open, onOpenChange, employeeId }: TerminateDialogProps) {
+  const t = useTranslations("employees");
+  const common = useTranslations("common.actions");
+  const errors = useTranslations("employees.errors");
   const [rootError, setRootError] = useState<string | null>(null);
   const terminate = useEmployeeTerminate();
 
   const form = useForm<TerminationFormValues>({
-    resolver: zodResolver(terminationFormSchema),
+    resolver: zodResolver(terminationFormSchema((key) => t(`terminate.validation.${key}`))),
     defaultValues: {
       effective_date: todayISO(),
       reason: "",
@@ -67,7 +71,7 @@ export function TerminateDialog({ open, onOpenChange, employeeId }: TerminateDia
     } catch (error) {
       // Termination errors are root-level: the record is closed, nothing to
       // fix per-field.
-      setRootError(employeeFieldErrors(error).root ?? errorMessage(error));
+      setRootError(employeeFieldErrors(error, errors).root ?? errorMessage(error, errors));
     }
   }
 
@@ -75,11 +79,8 @@ export function TerminateDialog({ open, onOpenChange, employeeId }: TerminateDia
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Terminate employee</DialogTitle>
-          <DialogDescription>
-            Termination is permanent. It closes the open employment period at the effective date,
-            clears the employee from any direct reports, and disables transfers.
-          </DialogDescription>
+          <DialogTitle>{t("terminate.title")}</DialogTitle>
+          <DialogDescription>{t("terminate.description")}</DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
@@ -89,7 +90,7 @@ export function TerminateDialog({ open, onOpenChange, employeeId }: TerminateDia
               name="effective_date"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Effective date</FormLabel>
+                  <FormLabel>{t("terminate.effectiveDate")}</FormLabel>
                   <FormControl>
                     <Input {...field} type="date" max={todayISO()} />
                   </FormControl>
@@ -103,7 +104,7 @@ export function TerminateDialog({ open, onOpenChange, employeeId }: TerminateDia
               name="reason"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Reason</FormLabel>
+                  <FormLabel>{t("terminate.reason")}</FormLabel>
                   <FormControl>
                     <Textarea {...field} rows={3} />
                   </FormControl>
@@ -120,10 +121,10 @@ export function TerminateDialog({ open, onOpenChange, employeeId }: TerminateDia
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
+                {common("cancel")}
               </Button>
               <Button type="submit" variant="destructive" disabled={terminate.isPending}>
-                Terminate
+                {t("terminate.confirm")}
               </Button>
             </DialogFooter>
           </form>

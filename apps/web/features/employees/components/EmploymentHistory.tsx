@@ -6,11 +6,11 @@
  * presentational. Client leaf.
  */
 
+import { useLocale, useTranslations } from "next-intl";
 import { cn } from "cn";
 
 import { Badge } from "@/components/ui/badge";
 
-import { employmentTypeLabel } from "./labels";
 import { formatDate } from "./dates";
 import type { Employment } from "../types";
 
@@ -27,12 +27,14 @@ export function EmploymentHistory({
   positionTitle,
   locationName,
 }: EmploymentHistoryProps) {
+  const t = useTranslations("employees");
+  const locale = useLocale();
   // The API already returns newest first; sort defensively so a regression
   // cannot show the wrong "current" period.
   const periods = [...employments].sort((a, b) => b.effective_from.localeCompare(a.effective_from));
 
   if (periods.length === 0) {
-    return <p className="text-sm text-muted-foreground">No employment periods recorded.</p>;
+    return <p className="text-sm text-muted-foreground">{t("detail.historyEmpty")}</p>;
   }
 
   return (
@@ -57,13 +59,13 @@ export function EmploymentHistory({
                   · {positionTitle(employment.position_id)} · {locationName(employment.location_id)}
                 </span>
               </p>
-              {current ? <Badge variant="success">Current</Badge> : null}
+              {current ? <Badge variant="success">{t("detail.current")}</Badge> : null}
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
-              {formatDate(employment.effective_from)} –{" "}
-              {employment.effective_to ? formatDate(employment.effective_to) : "Present"}
+              {formatDate(employment.effective_from, locale)} –{" "}
+              {employment.effective_to ? formatDate(employment.effective_to, locale) : t("detail.present")}
               {" · "}
-              {employmentTypeLabel[employment.employment_type]}
+              {t(`types.${employment.employment_type}`)}
             </p>
           </li>
         );

@@ -9,6 +9,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CircleAlert } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 
@@ -44,7 +45,7 @@ import {
   usePayrollDeductionUpdate,
   type DeductionFieldName,
 } from "../hooks/use-payroll-deductions";
-import { deductionKindLabel } from "../labels";
+import { DEDUCTION_KINDS } from "../labels";
 import { deductionFormSchema, type DeductionFormValues } from "../schema";
 import type { PayrollDeduction } from "../types";
 
@@ -56,6 +57,12 @@ type DeductionFormDialogProps = {
 };
 
 export function DeductionFormDialog({ open, onOpenChange, deduction }: DeductionFormDialogProps) {
+  const t = useTranslations("payroll.deductionForm");
+  const common = useTranslations("common.actions");
+  const validation = useTranslations("payroll.validation");
+  const errors = useTranslations("payroll.errors");
+  const kinds = useTranslations("payroll.kinds");
+  const deductions = useTranslations("payroll.deductions");
   const isEdit = deduction !== null;
   const [rootError, setRootError] = useState<string | null>(null);
   const createDeduction = usePayrollDeductionCreate();
@@ -71,7 +78,7 @@ export function DeductionFormDialog({ open, onOpenChange, deduction }: Deduction
   };
 
   const form = useForm<DeductionFormValues>({
-    resolver: zodResolver(deductionFormSchema),
+    resolver: zodResolver(deductionFormSchema((key) => validation(key))),
     defaultValues: defaults,
   });
 
@@ -104,7 +111,7 @@ export function DeductionFormDialog({ open, onOpenChange, deduction }: Deduction
       }
       handleOpenChange(false);
     } catch (error) {
-      const fieldErrors = deductionFieldErrors(error);
+      const fieldErrors = deductionFieldErrors(error, errors);
       for (const [field, message] of Object.entries(fieldErrors)) {
         if (field === "root") {
           setRootError(message ?? null);
@@ -122,10 +129,8 @@ export function DeductionFormDialog({ open, onOpenChange, deduction }: Deduction
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit deduction line" : "New deduction line"}</DialogTitle>
-          <DialogDescription>
-            Every active line lands on every payslip of the run as its own inspectable line.
-          </DialogDescription>
+          <DialogTitle>{isEdit ? t("editTitle") : t("createTitle")}</DialogTitle>
+          <DialogDescription>{t("description")}</DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
@@ -137,17 +142,15 @@ export function DeductionFormDialog({ open, onOpenChange, deduction }: Deduction
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel
-                      hint={
-                        isEdit ? "The code is fixed once created." : "Stable key on every payslip."
-                      }
+                      hint={isEdit ? t("codeHintEdit") : t("codeHintCreate")}
                     >
-                      Code
+                      {t("code")}
                     </FormLabel>
                     <FormControl>
                       <Input
                         {...field}
                         value={field.value}
-                        placeholder="WITHHOLDING"
+                        placeholder={t("codePlaceholder")}
                         autoComplete="off"
                         disabled={isEdit}
                       />
@@ -162,9 +165,9 @@ export function DeductionFormDialog({ open, onOpenChange, deduction }: Deduction
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel hint="Shown to readers of the payslip.">Name</FormLabel>
+                    <FormLabel hint={t("nameHint")}>{t("name")}</FormLabel>
                     <FormControl>
-                      <Input {...field} value={field.value} placeholder="Withholding" />
+                      <Input {...field} value={field.value} placeholder={t("namePlaceholder")} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -178,19 +181,17 @@ export function DeductionFormDialog({ open, onOpenChange, deduction }: Deduction
                 name="kind"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Kind</FormLabel>
+                    <FormLabel>{t("kind")}</FormLabel>
                     <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Choose a kind" />
+                          <SelectValue placeholder={t("chooseKind")} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {(
-                          Object.keys(deductionKindLabel) as Array<keyof typeof deductionKindLabel>
-                        ).map((value) => (
+                        {DEDUCTION_KINDS.map((value) => (
                           <SelectItem key={value} value={value}>
-                            {deductionKindLabel[value]}
+                            {kinds(value)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -208,11 +209,11 @@ export function DeductionFormDialog({ open, onOpenChange, deduction }: Deduction
                     <FormLabel
                       hint={
                         kind === "percent_of_base"
-                          ? "Percent of base, 0.01 to 100."
-                          : "Fixed amount per payslip."
+                          ? t("valuePercentHint")
+                          : t("valueFixedHint")
                       }
                     >
-                      Value
+                      {t("value")}
                     </FormLabel>
                     <FormControl>
                       <Input
@@ -239,19 +240,19 @@ export function DeductionFormDialog({ open, onOpenChange, deduction }: Deduction
               name="active"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel hint="Inactive lines appear on no payslip.">Status</FormLabel>
+                  <FormLabel hint={t("statusHint")}>{t("status")}</FormLabel>
                   <Select
                     value={field.value ? "active" : "inactive"}
                     onValueChange={(value) => field.onChange(value === "active")}
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Choose a status" />
+                        <SelectValue placeholder={t("chooseStatus")} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="inactive">Inactive</SelectItem>
+                      <SelectItem value="active">{deductions("active")}</SelectItem>
+                      <SelectItem value="inactive">{deductions("inactive")}</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -268,10 +269,10 @@ export function DeductionFormDialog({ open, onOpenChange, deduction }: Deduction
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
-                Cancel
+                {common("cancel")}
               </Button>
               <Button type="submit" disabled={mutation.isPending}>
-                {isEdit ? "Save changes" : "Create deduction line"}
+                {isEdit ? t("saveChanges") : t("create")}
               </Button>
             </DialogFooter>
           </form>

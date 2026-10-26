@@ -27,7 +27,9 @@ import {
   toReportParams,
   toggleGroupDimension,
 } from "@/features/reports/utils";
-import { intervalLabel } from "@/features/reports/labels";
+import { createTranslator } from "use-intl";
+
+import messages from "@/messages/en";
 
 const FILTERS: ReportFiltersState = {
   from: "2026-03-01",
@@ -124,7 +126,9 @@ describe("filters and params", () => {
     expect(groupByLabel(["department", "location", "seniority"])).toBe(
       "Department · Location · Seniority",
     );
-    expect(intervalLabel("total")).toBe("Whole range");
+    expect(
+      createTranslator({ locale: "en", messages, namespace: "reports.intervals" })("total"),
+    ).toBe("Whole range");
   });
 });
 

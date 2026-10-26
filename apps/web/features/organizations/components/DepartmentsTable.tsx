@@ -6,6 +6,7 @@
  */
 
 import { Archive, ArchiveRestore, Building2, CircleAlert, Pencil, Plus } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -32,6 +33,7 @@ import { ArchiveStatusBadge } from "./ArchiveStatusBadge";
 import { DepartmentFormDialog } from "./DepartmentFormDialog";
 
 export function DepartmentsTable() {
+  const t = useTranslations();
   const [includeArchived, setIncludeArchived] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Department | null>(null);
@@ -63,14 +65,14 @@ export function DepartmentsTable() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Button onClick={openCreate}>
           <Plus />
-          New department
+          {t("organizations.actions.newDepartment")}
         </Button>
         <Button
           variant="outline"
           aria-pressed={includeArchived}
           onClick={() => setIncludeArchived((value) => !value)}
         >
-          Include archived
+          {t("organizations.actions.includeArchived")}
         </Button>
       </div>
 
@@ -78,21 +80,21 @@ export function DepartmentsTable() {
         {departmentsQuery.isPending ? (
           <div className="flex items-center justify-center gap-2 px-6 py-10 text-sm text-muted-foreground">
             <Spinner className="size-4" />
-            <p>Loading departments…</p>
+            <p>{t("organizations.departments.loading")}</p>
           </div>
         ) : departmentsQuery.isError ? (
           <div className="p-4">
             <Alert variant="destructive">
               <CircleAlert aria-hidden="true" />
               <AlertDescription>
-                <p>Could not load departments.</p>
+                <p>{t("organizations.departments.loadError")}</p>
                 <Button
                   variant="outline"
                   size="sm"
                   className="mt-2"
                   onClick={() => void departmentsQuery.refetch()}
                 >
-                  Retry
+                  {t("common.actions.retry")}
                 </Button>
               </AlertDescription>
             </Alert>
@@ -101,24 +103,24 @@ export function DepartmentsTable() {
           <div className="p-4">
             <EmptyState
               icon={Building2}
-              message="No departments yet. Create the first one to structure your organization."
+              message={t("organizations.departments.empty")}
             />
           </div>
         ) : (
           <>
             <p className="px-4 py-2 text-xs text-muted-foreground sm:hidden">
-              Swipe sideways to see every department field.
+              {t("organizations.departments.swipe")}
             </p>
             <Table
-              aria-label="Departments"
-              containerLabel="Departments. Scroll horizontally to see every department field."
+              aria-label={t("organizations.departments.tableLabel")}
+              containerLabel={t("organizations.departments.containerLabel")}
             >
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="pl-3">Name</TableHead>
-                  <TableHead>Parent</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="pr-3 text-right">Actions</TableHead>
+                  <TableHead className="pl-3">{t("organizations.departments.columns.name")}</TableHead>
+                  <TableHead>{t("organizations.departments.columns.parent")}</TableHead>
+                  <TableHead>{t("organizations.departments.columns.status")}</TableHead>
+                  <TableHead className="pr-3 text-right">{t("organizations.departments.columns.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -139,35 +141,35 @@ export function DepartmentsTable() {
                           variant="ghost"
                           size="xs"
                           className="min-h-11 sm:min-h-7"
-                          aria-label={`Edit ${department.name}`}
+                          aria-label={t("organizations.departments.editAria", { name: department.name })}
                           onClick={() => openEdit(department)}
                         >
                           <Pencil />
-                          Edit
+                          {t("common.actions.edit")}
                         </Button>
                         {department.archived_at ? (
                           <Button
                             variant="ghost"
                             size="xs"
                             className="min-h-11 sm:min-h-7"
-                            aria-label={`Restore ${department.name}`}
+                            aria-label={t("organizations.departments.restoreAria", { name: department.name })}
                             disabled={restoreDepartment.isPending}
                             onClick={() => restoreDepartment.mutate({ id: department.id })}
                           >
                             <ArchiveRestore />
-                            Restore
+                            {t("common.actions.restore")}
                           </Button>
                         ) : (
                           <Button
                             variant="ghost"
                             size="xs"
                             className="min-h-11 sm:min-h-7"
-                            aria-label={`Archive ${department.name}`}
+                            aria-label={t("organizations.departments.archiveAria", { name: department.name })}
                             disabled={archiveDepartment.isPending}
                             onClick={() => archiveDepartment.mutate({ id: department.id })}
                           >
                             <Archive />
-                            Archive
+                            {t("common.actions.archive")}
                           </Button>
                         )}
                       </div>

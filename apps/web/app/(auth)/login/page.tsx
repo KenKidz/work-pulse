@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import { Activity } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { LoginForm } from "@/features/auth/components/LoginForm";
 
-export const metadata: Metadata = {
-  title: "Sign in — WorkPulse",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("auth.metadata");
+  return { title: t("loginTitle") };
+}
 
 /**
  * The pulse trace — the card's one signature moment. A thin EKG-style line
@@ -34,7 +36,9 @@ function PulseTrace() {
   );
 }
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  const t = await getTranslations("auth.login");
+
   return (
     <Card className="gap-0 overflow-hidden py-0">
       <PulseTrace />
@@ -48,10 +52,8 @@ export default function LoginPage() {
           </span>
           <span className="font-semibold tracking-tight">WorkPulse</span>
         </div>
-        <h1 className="text-2xl font-semibold tracking-tight">Sign in</h1>
-        <p className="text-sm text-muted-foreground">
-          Accounts are provisioned by an administrator — there is no self-registration.
-        </p>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
+        <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
       </CardHeader>
       <CardContent className="pb-6">
         <LoginForm />

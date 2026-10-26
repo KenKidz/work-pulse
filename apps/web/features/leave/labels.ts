@@ -8,7 +8,7 @@ import type { ComponentProps } from "react";
 import type { Badge } from "@/components/ui/badge";
 import type { Role } from "@workpulse/api-client/index.schemas";
 
-import type { LeaveRequestStatus, LeaveTypeCode } from "./types";
+import type { LeaveRequestStatus } from "./types";
 
 type BadgeVariant = ComponentProps<typeof Badge>["variant"];
 
@@ -19,13 +19,6 @@ type BadgeVariant = ComponentProps<typeof Badge>["variant"];
  */
 export const LEAVE_APPROVER_ROLES: Role[] = ["manager", "hr", "admin", "super_admin"];
 
-export const leaveStatusLabel: Record<LeaveRequestStatus, string> = {
-  pending: "Pending",
-  approved: "Approved",
-  rejected: "Rejected",
-  withdrawn: "Withdrawn",
-};
-
 export const leaveStatusVariant: Record<LeaveRequestStatus, BadgeVariant> = {
   pending: "warning",
   approved: "success",
@@ -33,9 +26,4 @@ export const leaveStatusVariant: Record<LeaveRequestStatus, BadgeVariant> = {
   withdrawn: "muted",
 };
 
-/** Fallback labels for the seeded codes — the API also sends a display name. */
-export const leaveTypeLabel: Record<LeaveTypeCode, string> = {
-  annual: "Annual leave",
-  sick: "Sick leave",
-  unpaid: "Unpaid leave",
-};
+

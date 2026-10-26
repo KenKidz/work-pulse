@@ -19,6 +19,7 @@ import {
 } from "@workpulse/api-client";
 import { ApiError } from "@workpulse/api-client/mutator/custom-fetch";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 /** The signed-in user — the session resolves exactly like every API call. */
@@ -43,6 +44,7 @@ export function useLogin() {
 }
 
 export function useSignOut() {
+  const t = useTranslations("auth.errors");
   const queryClient = useQueryClient();
   const router = useRouter();
   return useLogoutMutation({
@@ -56,21 +58,18 @@ export function useSignOut() {
       onError: (error) => {
         // Same pattern as the organization mutation hooks: the pinned message,
         // never the raw error. The user stays signed in on a failed logout.
-        toast.error(authErrorMessage(error));
+        toast.error(authErrorMessage(error, t));
       },
     },
   });
 }
 
+type AuthErrorTranslator = (key: "invalidCredentials" | "generic") => string;
+
 /** A stable, user-facing message per auth failure (never the raw error). */
-export function authErrorMessage(error: unknown): string {
-  if (error instanceof ApiError) {
-    switch (error.code) {
-      case "invalid_credentials":
-        return "Email or password is incorrect.";
-      default:
-        return "Something went wrong. Please try again.";
-    }
+export function authErrorMessage(error: unknown, t: AuthErrorTranslator): string {
+  if (error instanceof ApiError && error.code === "invalid_credentials") {
+    return t("invalidCredentials");
   }
-  return "Something went wrong. Please try again.";
+  return t("generic");
 }

@@ -9,6 +9,7 @@
  */
 
 import { CircleAlert } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -32,6 +33,8 @@ import { ShiftsPanel } from "./ShiftsPanel";
 import { todayISO } from "./dates";
 
 export function AttendanceBoard() {
+  const t = useTranslations("attendance");
+  const common = useTranslations("common.actions");
   // The board date is explicit — never rely on the server's UTC default.
   const [date, setDate] = useState(todayISO());
   const boardParams = { date };
@@ -70,22 +73,22 @@ export function AttendanceBoard() {
       <header className="grid gap-5 border-b border-border pb-6 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
         <div className="space-y-2">
           <h1 className="text-3xl leading-9 font-semibold tracking-tight text-balance">
-            Attendance
+            {t("title")}
           </h1>
           <p className="max-w-2xl text-sm leading-5 text-pretty text-muted-foreground">
-            Record your check-in and review attendance for the selected day.
+            {t("description")}
           </p>
           <p
             id="board-date-description"
             className="max-w-xl pt-1 text-xs leading-5 text-muted-foreground"
           >
-            Counts and activity use this date. Check-in time is recorded automatically.
+            {t("boardDateHint")}
           </p>
         </div>
         <div className="flex items-end gap-2">
           <div className="grid gap-1.5">
             <Label htmlFor="board-date" className="text-xs font-medium text-muted-foreground">
-              Date
+              {t("date")}
             </Label>
             <Input
               id="board-date"
@@ -102,7 +105,7 @@ export function AttendanceBoard() {
             disabled={isToday}
             onClick={() => setDate(todayISO())}
           >
-            Today
+            {t("today")}
           </Button>
         </div>
       </header>
@@ -112,19 +115,17 @@ export function AttendanceBoard() {
       {boardQuery.isPending ? (
         <div className="flex items-center justify-center gap-2 rounded-md border border-dashed px-6 py-10 text-sm text-muted-foreground">
           <Spinner className="size-4" />
-          <p>Loading attendance for this date…</p>
+          <p>{t("loading")}</p>
         </div>
       ) : boardQuery.isError || boardDenied ? (
         <Alert variant="destructive">
           <CircleAlert aria-hidden="true" />
           <AlertTitle>
-            {boardDenied ? "Attendance board unavailable" : "Could not load attendance"}
+            {boardDenied ? t("deniedTitle") : t("loadErrorTitle")}
           </AlertTitle>
           <AlertDescription>
             <p>
-              {boardDenied
-                ? "Managers, HR and admins can view workforce attendance."
-                : "Attendance could not be loaded for this date."}
+              {boardDenied ? t("denied") : t("loadError")}
             </p>
             {!boardDenied ? (
               <Button
@@ -133,7 +134,7 @@ export function AttendanceBoard() {
                 className="mt-2"
                 onClick={() => void boardQuery.refetch()}
               >
-                Retry
+                {common("retry")}
               </Button>
             ) : null}
           </AlertDescription>
@@ -148,11 +149,10 @@ export function AttendanceBoard() {
               className="flex flex-col gap-2 border-l-2 border-primary/30 py-1 pl-5"
             >
               <h2 id="attendance-refresh-title" className="text-base font-semibold">
-                New activity
+                {t("refreshTitle")}
               </h2>
               <p className="text-sm leading-6 text-muted-foreground">
-                This board does not update automatically. Refresh the page or choose another date to
-                check again.
+                {t("refreshBody")}
               </p>
             </aside>
           </div>
@@ -160,7 +160,7 @@ export function AttendanceBoard() {
       ) : null}
 
       <section className="flex flex-col gap-4">
-        <h2 className="text-lg leading-6 font-semibold tracking-tight">Attendance records</h2>
+        <h2 className="text-lg leading-6 font-semibold tracking-tight">{t("recordsTitle")}</h2>
         <AttendanceRecordsTable />
       </section>
 

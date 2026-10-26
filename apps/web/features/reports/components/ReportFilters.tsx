@@ -8,6 +8,7 @@
  */
 
 import { ChevronDown } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -28,12 +29,12 @@ import {
 } from "@/components/ui/select";
 
 import { useReportFilterOptions } from "../hooks/use-reports";
-import { INTERVAL_OPTIONS, REPORT_DIMENSION_LABELS } from "../labels";
 import {
   REPORT_DIMENSIONS,
   LEAVE_REPORT_DIMENSIONS,
   type ReportDimension,
   type ReportFiltersState,
+  type ReportInterval,
   type ReportKind,
 } from "../types";
 import {
@@ -45,6 +46,7 @@ import {
 } from "../utils";
 
 const ANY = "__any__";
+const INTERVAL_VALUES: readonly ReportInterval[] = ["day", "week", "month", "total"];
 
 export function ReportFilters({
   kind,
@@ -55,10 +57,13 @@ export function ReportFilters({
   filters: ReportFiltersState;
   onChange: (next: ReportFiltersState) => void;
 }) {
+  const t = useTranslations("reports.filters");
+  const dimensions = useTranslations("reports.dimensions");
+  const intervals = useTranslations("reports.intervals");
   const { departments, positions, locations, truncated } = useReportFilterOptions();
   const allowed = reportKindDimensions(kind);
   const effective = effectiveGroupBy(kind, filters.groupBy);
-  const triggerLabel = effective.map((dimension) => REPORT_DIMENSION_LABELS[dimension]).join(" · ");
+  const triggerLabel = effective.map((dimension) => dimensions(dimension)).join(" · ");
 
   function update(patch: Partial<ReportFiltersState>) {
     onChange({ ...filters, ...patch });
@@ -75,15 +80,15 @@ export function ReportFilters({
     >
       <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:flex">
         <Input
-          aria-label="From date"
+          aria-label={t("fromDate")}
           type="date"
           className="w-full sm:w-40"
           value={filters.from}
           onChange={(event) => update({ from: event.target.value })}
         />
-        <span className="text-sm text-muted-foreground">to</span>
+        <span className="text-sm text-muted-foreground">{t("to")}</span>
         <Input
-          aria-label="To date"
+          aria-label={t("toDate")}
           type="date"
           className="w-full sm:w-40"
           value={filters.to}
@@ -95,13 +100,13 @@ export function ReportFilters({
         value={filters.interval}
         onValueChange={(value) => update({ interval: value as ReportFiltersState["interval"] })}
       >
-        <SelectTrigger aria-label="Interval" className="w-full sm:w-40">
-          <SelectValue placeholder="Monthly" />
+        <SelectTrigger aria-label={t("intervalAria")} className="w-full sm:w-40">
+          <SelectValue placeholder={intervals("month")} />
         </SelectTrigger>
         <SelectContent>
-          {INTERVAL_OPTIONS.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
-              {option.label}
+          {INTERVAL_VALUES.map((interval) => (
+            <SelectItem key={interval} value={interval}>
+              {intervals(interval)}
             </SelectItem>
           ))}
         </SelectContent>
@@ -111,15 +116,15 @@ export function ReportFilters({
         <DropdownMenuTrigger asChild>
           <Button
             variant="outline"
-            aria-label="Group by dimensions"
+            aria-label={t("groupByAria")}
             className="w-full justify-between sm:w-64"
           >
-            <span className="truncate">Group by: {triggerLabel}</span>
+            <span className="truncate">{t("groupBy", { dimensions: triggerLabel })}</span>
             <ChevronDown aria-hidden="true" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-64">
-          <DropdownMenuLabel>Group by (in row order)</DropdownMenuLabel>
+          <DropdownMenuLabel>{t("groupByInOrder")}</DropdownMenuLabel>
           <DropdownMenuSeparator />
           {(kind === "leave" ? LEAVE_REPORT_DIMENSIONS : REPORT_DIMENSIONS).map((dimension) => {
             const checked = filters.groupBy.includes(dimension);
@@ -132,7 +137,7 @@ export function ReportFilters({
                 onSelect={(event) => event.preventDefault()}
                 onCheckedChange={() => toggleDimension(dimension)}
               >
-                {REPORT_DIMENSION_LABELS[dimension]}
+                {dimensions(dimension)}
               </DropdownMenuCheckboxItem>
             );
           })}
@@ -144,11 +149,11 @@ export function ReportFilters({
           value={filters.departmentId ?? ANY}
           onValueChange={(value) => update({ departmentId: value === ANY ? undefined : value })}
         >
-          <SelectTrigger aria-label="Filter by department" className="w-full sm:w-44">
-            <SelectValue placeholder="All departments" />
+          <SelectTrigger aria-label={t("departmentAria")} className="w-full sm:w-44">
+            <SelectValue placeholder={t("allDepartments")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ANY}>All departments</SelectItem>
+            <SelectItem value={ANY}>{t("allDepartments")}</SelectItem>
             {departments.map((department) => (
               <SelectItem key={department.id} value={department.id}>
                 {department.name}
@@ -161,11 +166,11 @@ export function ReportFilters({
           value={filters.locationId ?? ANY}
           onValueChange={(value) => update({ locationId: value === ANY ? undefined : value })}
         >
-          <SelectTrigger aria-label="Filter by location" className="w-full sm:w-40">
-            <SelectValue placeholder="All locations" />
+          <SelectTrigger aria-label={t("locationAria")} className="w-full sm:w-40">
+            <SelectValue placeholder={t("allLocations")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ANY}>All locations</SelectItem>
+            <SelectItem value={ANY}>{t("allLocations")}</SelectItem>
             {locations.map((location) => (
               <SelectItem key={location.id} value={location.id}>
                 {location.name}
@@ -178,11 +183,11 @@ export function ReportFilters({
           value={filters.positionId ?? ANY}
           onValueChange={(value) => update({ positionId: value === ANY ? undefined : value })}
         >
-          <SelectTrigger aria-label="Filter by position" className="w-full sm:w-44">
-            <SelectValue placeholder="All positions" />
+          <SelectTrigger aria-label={t("positionAria")} className="w-full sm:w-44">
+            <SelectValue placeholder={t("allPositions")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ANY}>All positions</SelectItem>
+            <SelectItem value={ANY}>{t("allPositions")}</SelectItem>
             {positions.map((position) => (
               <SelectItem key={position.id} value={position.id}>
                 {position.name}
@@ -197,9 +202,9 @@ export function ReportFilters({
           data-testid="report-filter-options-truncated"
           className="text-xs text-muted-foreground lg:basis-full"
         >
-          Some filter options are hidden because this workspace has more than{" "}
-          {REPORT_FILTER_OPTION_PAGE_SIZE * REPORT_FILTER_OPTION_MAX_PAGES} departments, positions
-          or locations.
+          {t("truncated", {
+            limit: REPORT_FILTER_OPTION_PAGE_SIZE * REPORT_FILTER_OPTION_MAX_PAGES,
+          })}
         </p>
       ) : null}
     </div>

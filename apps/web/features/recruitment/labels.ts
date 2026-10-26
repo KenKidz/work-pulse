@@ -1,6 +1,7 @@
 /**
- * Human-facing labels, status tones and pinned error messages for recruitment
- * — wire values and stable codes are never rendered (workpulse-ui §6).
+ * Status tones, pipeline classifiers and stable-code mapping for recruitment.
+ * Human-facing labels and sentences live in the `recruitment` message
+ * namespace; wire values never reach the DOM (workpulse-ui §6).
  */
 
 import type { ComponentProps } from "react";
@@ -8,36 +9,18 @@ import type { ComponentProps } from "react";
 import type { Badge } from "@/components/ui/badge";
 import { ApiError } from "@workpulse/api-client/mutator/custom-fetch";
 
-import { INTERVIEW_RATINGS } from "./schema";
 import type {
-  CandidateSource,
   CandidateStatus,
-  EmploymentType,
   InterviewStatus,
   JobStatus,
 } from "./types";
 
 type BadgeVariant = ComponentProps<typeof Badge>["variant"];
 
-export const jobStatusLabel: Record<JobStatus, string> = {
-  draft: "Draft",
-  open: "Open",
-  closed: "Closed",
-};
-
 export const jobStatusVariant: Record<JobStatus, BadgeVariant> = {
   draft: "secondary",
   open: "success",
   closed: "muted",
-};
-
-export const candidateStatusLabel: Record<CandidateStatus, string> = {
-  applied: "Applied",
-  interviewing: "Interviewing",
-  offered: "Offered",
-  hired: "Hired",
-  rejected: "Rejected",
-  withdrawn: "Withdrawn",
 };
 
 export const candidateStatusVariant: Record<CandidateStatus, BadgeVariant> = {
@@ -47,13 +30,6 @@ export const candidateStatusVariant: Record<CandidateStatus, BadgeVariant> = {
   hired: "success",
   rejected: "destructive",
   withdrawn: "muted",
-};
-
-export const candidateSourceLabel: Record<CandidateSource, string> = {
-  referral: "Referral",
-  job_board: "Job board",
-  agency: "Agency",
-  other: "Other",
 };
 
 /** A candidate can still be moved only from these stages. */
@@ -74,83 +50,93 @@ export function nextCandidateStage(status: CandidateStatus): CandidateStatus | n
   return null;
 }
 
-export const employmentTypeLabel: Record<EmploymentType, string> = {
-  full_time: "Full-time",
-  part_time: "Part-time",
-  contract: "Contract",
-  intern: "Intern",
-};
-
-export const interviewStatusLabel: Record<InterviewStatus, string> = {
-  scheduled: "Scheduled",
-  completed: "Completed",
-  cancelled: "Cancelled",
-};
-
 export const interviewStatusVariant: Record<InterviewStatus, BadgeVariant> = {
   scheduled: "warning",
   completed: "success",
   cancelled: "muted",
 };
 
-const INTERVIEW_RATING_TEXT: Record<(typeof INTERVIEW_RATINGS)[number], string> = {
-  "1": "Poor",
-  "2": "Below expectations",
-  "3": "Meets expectations",
-  "4": "Strong",
-  "5": "Exceptional",
-};
-
-/** The interviewer's 1..5 scale, with a human sentence per score. */
-export const interviewRatingLabel: Record<number, string> = Object.fromEntries(
-  INTERVIEW_RATINGS.map((value) => [
-    Number(value),
-    `${value} — ${INTERVIEW_RATING_TEXT[value]}`,
-  ]),
-);
-
-/**
- * Stable code → sentence. Every pinned job/candidate/interview code, plus the
- * Employees and Organization codes the hire seam and job references propagate
- * unchanged, has an entry so no raw code reaches a toast or alert.
- */
-export const RECRUITMENT_ERROR_MESSAGES: Record<string, string> = {
-  job_not_found: "This job is no longer available.",
-  candidate_not_found: "This candidate is no longer available.",
-  interview_not_found: "This interview is no longer available.",
-  interviewer_not_found: "Choose an employee from your organization as the interviewer.",
-  job_not_draft: "Only a draft job can be opened. Refresh and try again.",
-  job_not_open: "This job's state no longer allows that action. Refresh the list and try again.",
-  job_openings_filled:
-    "Every opening on this job is filled. Increase the openings before hiring again.",
-  candidate_already_applied: "This candidate has already applied to this job.",
-  candidate_stage_conflict:
-    "The candidate isn't at the stage this action needs. Refresh and try again.",
-  candidate_not_open: "This candidate is already closed and can't be rejected or withdrawn again.",
-  interview_not_scheduled: "This interview is no longer scheduled. Refresh and try again.",
-  interviewer_not_active: "That employee is no longer active and can't be assigned.",
-  employee_email_taken:
-    "An employee already uses this email. Override the email or update the existing record.",
-  employee_code_taken: "This employee code is already in use.",
-  employee_manager_invalid: "Choose an active manager inside your organization.",
-  department_not_found: "The selected department no longer exists. Pick another one.",
-  position_not_found: "The selected position no longer exists. Pick another one.",
-  location_not_found: "The selected location no longer exists. Pick another one.",
-  recruitment_denied: "You don't have permission to manage recruitment.",
-  validation_error: "Check the highlighted fields and try again.",
-  forbidden: "You don't have permission to do that.",
-};
+export type RecruitmentErrorKey =
+  | "jobNotFound"
+  | "candidateNotFound"
+  | "interviewNotFound"
+  | "interviewerNotFound"
+  | "jobNotDraft"
+  | "jobNotOpen"
+  | "jobOpeningsFilled"
+  | "candidateAlreadyApplied"
+  | "candidateStageConflict"
+  | "candidateNotOpen"
+  | "interviewNotScheduled"
+  | "interviewerNotActive"
+  | "employeeEmailTaken"
+  | "employeeCodeTaken"
+  | "employeeManagerInvalid"
+  | "departmentNotFound"
+  | "positionNotFound"
+  | "locationNotFound"
+  | "denied"
+  | "validation"
+  | "forbidden"
+  | "notFound"
+  | "generic";
 
 /** A stable, user-facing sentence for a recruitment failure (never a raw code). */
-export function recruitmentErrorMessage(error: unknown): string {
+export function recruitmentErrorMessage(
+  error: unknown,
+  t: (key: RecruitmentErrorKey) => string,
+): string {
   if (error instanceof ApiError) {
-    const mapped = error.code === null ? undefined : RECRUITMENT_ERROR_MESSAGES[error.code];
-    if (mapped !== undefined) return mapped;
-    if (error.status === 403) return RECRUITMENT_ERROR_MESSAGES.forbidden ?? "Forbidden.";
-    if (error.status === 404) return "This item is no longer available.";
-    return error.message;
+    switch (error.code) {
+      case "job_not_found":
+        return t("jobNotFound");
+      case "candidate_not_found":
+        return t("candidateNotFound");
+      case "interview_not_found":
+        return t("interviewNotFound");
+      case "interviewer_not_found":
+        return t("interviewerNotFound");
+      case "job_not_draft":
+        return t("jobNotDraft");
+      case "job_not_open":
+        return t("jobNotOpen");
+      case "job_openings_filled":
+        return t("jobOpeningsFilled");
+      case "candidate_already_applied":
+        return t("candidateAlreadyApplied");
+      case "candidate_stage_conflict":
+        return t("candidateStageConflict");
+      case "candidate_not_open":
+        return t("candidateNotOpen");
+      case "interview_not_scheduled":
+        return t("interviewNotScheduled");
+      case "interviewer_not_active":
+        return t("interviewerNotActive");
+      case "employee_email_taken":
+        return t("employeeEmailTaken");
+      case "employee_code_taken":
+        return t("employeeCodeTaken");
+      case "employee_manager_invalid":
+        return t("employeeManagerInvalid");
+      case "department_not_found":
+        return t("departmentNotFound");
+      case "position_not_found":
+        return t("positionNotFound");
+      case "location_not_found":
+        return t("locationNotFound");
+      case "recruitment_denied":
+        return t("denied");
+      case "validation_error":
+        return t("validation");
+      case "forbidden":
+        return t("forbidden");
+      default:
+        if (error.status === 403) return t("forbidden");
+        if (error.status === 404) return t("notFound");
+        return error.message;
+    }
   }
-  return "Something went wrong. Please try again.";
+  return t("generic");
 }
 
 /** Shared role-denied classification for read and mutation surfaces. */
@@ -159,14 +145,14 @@ export function isForbiddenError(error: unknown): boolean {
 }
 
 /**
- * A joined organization name from the directory, else the app-wide id-tail
- * convention (`Department …a1b2`) — the employees/users fallback.
+ * A joined organization name from the directory, else the caller's localized
+ * id-tail fallback (`Department …a1b2`).
  */
 export function organizationLabel(
   names: ReadonlyMap<string, string>,
   id: string,
-  kind: string,
+  fallback: string,
 ): string {
   const name = names.get(id);
-  return name !== undefined && name.length > 0 ? name : `${kind} …${id.slice(-4)}`;
+  return name !== undefined && name.length > 0 ? name : fallback;
 }

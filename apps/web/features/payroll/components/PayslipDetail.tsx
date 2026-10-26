@@ -10,6 +10,7 @@
 
 import { ArrowLeft, CircleAlert, Info, ReceiptText } from "lucide-react";
 import Link from "next/link";
+import { useLocale, useTranslations } from "next-intl";
 import { cn } from "cn";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -30,13 +31,7 @@ import {
 
 import { formatAmount, formatHours, formatPayrollTimestamp, formatPeriod } from "../format";
 import { useMyPayslip } from "../hooks/use-my-payslips";
-import {
-  deductionKindLabel,
-  isPayrollNotFoundError,
-  payrollTotalsLabel,
-  payslipStatusLabel,
-  payslipStatusVariant,
-} from "../labels";
+import { isPayrollNotFoundError, payslipStatusVariant } from "../labels";
 import type { PayrollRunTotals, PayslipDeductionLine } from "../types";
 
 const SUMMARY_KEYS: Array<keyof PayrollRunTotals> = [
@@ -48,19 +43,20 @@ const SUMMARY_KEYS: Array<keyof PayrollRunTotals> = [
 ];
 
 export function PayslipDetail({ payslipId }: { payslipId: string }) {
+  const t = useTranslations("payroll.payslipDetail");
+  const statusT = useTranslations("payroll.status.payslip");
+  const common = useTranslations("common.actions");
+  const locale = useLocale();
   const payslipQuery = useMyPayslip(payslipId);
 
   if (payslipQuery.isPending) {
     return (
       <section className="space-y-6">
         <BackLink />
-        <PageHeader
-          title="Payslip"
-          description="Simulated payroll — every line that makes up your net pay."
-        />
+        <PageHeader title={t("title")} description={t("description")} />
         <div className="flex items-center justify-center gap-2 px-6 py-10 text-sm text-muted-foreground">
           <Spinner className="size-4" />
-          <p>Loading payslip…</p>
+          <p>{t("loading")}</p>
         </div>
       </section>
     );
@@ -71,27 +67,21 @@ export function PayslipDetail({ payslipId }: { payslipId: string }) {
     return (
       <section className="space-y-6">
         <BackLink />
-        <PageHeader
-          title="Payslip"
-          description="Simulated payroll — every line that makes up your net pay."
-        />
+        <PageHeader title={t("title")} description={t("description")} />
         {notFound ? (
-          <EmptyState
-            icon={ReceiptText}
-            message="This payslip doesn’t exist or you don’t have access to it."
-          />
+          <EmptyState icon={ReceiptText} message={t("notFound")} />
         ) : (
           <Alert variant="destructive">
             <CircleAlert aria-hidden="true" />
             <AlertDescription>
-              <p>Could not load this payslip.</p>
+              <p>{t("loadError")}</p>
               <Button
                 variant="outline"
                 size="sm"
                 className="mt-2"
                 onClick={() => void payslipQuery.refetch()}
               >
-                Retry
+                {common("retry")}
               </Button>
             </AlertDescription>
           </Alert>
@@ -115,65 +105,73 @@ export function PayslipDetail({ payslipId }: { payslipId: string }) {
     <section className="space-y-6">
       <BackLink />
       <PageHeader
-        title={`Payslip — ${formatPeriod(payslip.period)}`}
-        description="Simulated payroll — every line that makes up your net pay."
+        title={t("runTitle", { period: formatPeriod(payslip.period, locale) })}
+        description={t("description")}
       />
 
       <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
         <Badge variant={payslipStatusVariant[payslip.status]}>
-          {payslipStatusLabel[payslip.status]}
+          {statusT(payslip.status)}
         </Badge>
         {payslip.issued_at === null || payslip.issued_at === undefined ? null : (
           <span>
-            Issued{" "}
-            <time dateTime={payslip.issued_at}>{formatPayrollTimestamp(payslip.issued_at)}</time>
+            {t("issued", { time: formatPayrollTimestamp(payslip.issued_at, locale) })}
           </span>
         )}
-        <span>Amounts are in your organization’s payroll currency.</span>
+        <span>{t("currencyNote")}</span>
       </div>
 
       {payslip.status === "superseded" ? (
         <Alert>
           <Info aria-hidden="true" />
-          <AlertTitle>This payslip was superseded</AlertTitle>
+          <AlertTitle>{t("supersededTitle")}</AlertTitle>
           <AlertDescription>
-            <p>A later correction run replaced it. It stays available for your records.</p>
+            <p>{t("supersededBody")}</p>
           </AlertDescription>
         </Alert>
       ) : null}
 
-      <SummaryCard summary={summary} />
+      <SummaryCard summary={summary} locale={locale} />
 
-      <DeductionLines lines={deductionLines} />
+      <DeductionLines lines={deductionLines} locale={locale} />
     </section>
   );
 }
 
 function BackLink() {
+  const t = useTranslations("payroll.payslipDetail");
   return (
     <Button asChild variant="ghost" size="sm" className="w-fit">
       <Link href="/payroll/my-payslips">
         <ArrowLeft />
-        Back to my payslips
+        {t("backToMyPayslips")}
       </Link>
     </Button>
   );
 }
 
-function SummaryCard({ summary }: { summary: Record<keyof PayrollRunTotals, number> }) {
+function SummaryCard({
+  summary,
+  locale,
+}: {
+  summary: Record<keyof PayrollRunTotals, number>;
+  locale: string;
+}) {
+  const totals = useTranslations("payroll.totals");
+
   return (
     <Card className="gap-0 overflow-hidden rounded-md border-border py-0 shadow-none">
       <dl className="grid grid-cols-2 gap-px bg-border sm:grid-cols-5">
         {SUMMARY_KEYS.map((key) => (
           <div key={key} className="bg-card p-4">
-            <dt className="text-xs text-muted-foreground">{payrollTotalsLabel[key]}</dt>
+            <dt className="text-xs text-muted-foreground">{totals(key)}</dt>
             <dd
               className={cn(
                 "mt-1 font-mono tabular-nums",
                 key === "net" ? "text-lg font-semibold" : "text-sm",
               )}
             >
-              {formatAmount(summary[key])}
+              {formatAmount(summary[key], locale)}
             </dd>
           </div>
         ))}
@@ -182,7 +180,16 @@ function SummaryCard({ summary }: { summary: Record<keyof PayrollRunTotals, numb
   );
 }
 
-function DeductionLines({ lines }: { lines: PayslipDeductionLine[] }) {
+function DeductionLines({
+  lines,
+  locale,
+}: {
+  lines: PayslipDeductionLine[];
+  locale: string;
+}) {
+  const t = useTranslations("payroll.payslipDetail");
+  const kinds = useTranslations("payroll.kinds");
+
   return (
     <section aria-labelledby="payslip-deductions-title" className="flex flex-col gap-3">
       <div className="space-y-1">
@@ -190,34 +197,29 @@ function DeductionLines({ lines }: { lines: PayslipDeductionLine[] }) {
           id="payslip-deductions-title"
           className="text-lg leading-6 font-semibold tracking-tight"
         >
-          Deduction lines
+          {t("deductionsTitle")}
         </h2>
         <p className="max-w-2xl text-sm leading-5 text-pretty text-muted-foreground">
-          Every active tenant rule appears here as its own line — no hidden tax tables.
+          {t("deductionsDescription")}
         </p>
       </div>
 
       <Card className="gap-0 overflow-hidden rounded-md border-border py-0 shadow-none">
         {lines.length === 0 ? (
           <div className="p-4">
-            <EmptyState icon={ReceiptText} message="No deductions on this payslip." />
+            <EmptyState icon={ReceiptText} message={t("noDeductions")} />
           </div>
         ) : (
           <>
-            <p className="px-4 py-2 text-xs text-muted-foreground sm:hidden">
-              Swipe sideways to see every deduction field.
-            </p>
-            <Table
-              aria-label="Payslip deduction lines"
-              containerLabel="Payslip deduction lines. Scroll horizontally to read all columns."
-            >
+            <p className="px-4 py-2 text-xs text-muted-foreground sm:hidden">{t("swipe")}</p>
+            <Table aria-label={t("tableLabel")} containerLabel={t("containerLabel")}>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="pl-3">Code</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Kind</TableHead>
-                  <TableHead className="text-right">Rule</TableHead>
-                  <TableHead className="pr-3 text-right">Amount</TableHead>
+                  <TableHead className="pl-3">{t("columns.code")}</TableHead>
+                  <TableHead>{t("columns.name")}</TableHead>
+                  <TableHead>{t("columns.kind")}</TableHead>
+                  <TableHead className="text-right">{t("columns.rule")}</TableHead>
+                  <TableHead className="pr-3 text-right">{t("columns.amount")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -225,16 +227,14 @@ function DeductionLines({ lines }: { lines: PayslipDeductionLine[] }) {
                   <TableRow key={line.code}>
                     <TableCell className="pl-3 font-mono text-xs">{line.code}</TableCell>
                     <TableCell className="font-medium">{line.name}</TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {deductionKindLabel[line.kind]}
-                    </TableCell>
+                    <TableCell className="text-muted-foreground">{kinds(line.kind)}</TableCell>
                     <TableCell className="text-right font-mono tabular-nums">
                       {line.kind === "percent_of_base"
-                        ? `${formatHours(line.value)}% of base`
-                        : formatAmount(line.value)}
+                        ? t("percentOfBase", { value: formatHours(line.value, locale) })
+                        : formatAmount(line.value, locale)}
                     </TableCell>
                     <TableCell className="pr-3 text-right font-mono tabular-nums">
-                      {formatAmount(line.amount)}
+                      {formatAmount(line.amount, locale)}
                     </TableCell>
                   </TableRow>
                 ))}

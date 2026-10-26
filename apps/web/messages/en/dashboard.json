@@ -1,0 +1,5 @@
+{
+  "title": "Dashboard",
+  "description": "Your workforce at a glance — people records, live attendance and the organization behind them.",
+  "phaseNote": "Phase 1 is request/response — refresh or change the board date to update. Live push arrives with realtime in Phase 2."
+}

@@ -1,18 +1,22 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 
 import { PageHeader } from "@/components/page-header";
 import { NotificationsList } from "@/features/notifications/components/NotificationsList";
 
-export const metadata: Metadata = {
-  title: "Notifications — WorkPulse",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("notifications");
+  return { title: t("metadataTitle") };
+}
 
-export default function NotificationsPage() {
+export default async function NotificationsPage() {
+  const t = await getTranslations("notifications");
+
   return (
     <section className="space-y-6">
       <PageHeader
-        title="Notifications"
-        description="Leave and attendance updates addressed to you. Mark items read as you go."
+        title={t("pageTitle")}
+        description={t("pageDescription")}
       />
       <NotificationsList />
     </section>

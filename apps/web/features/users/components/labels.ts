@@ -9,16 +9,15 @@
 
 import type { Role } from "../types";
 
-import { roleLabel } from "@/features/auth/labels";
-
-export { roleLabel };
-
-export const ALL_ROLES = Object.keys(roleLabel) as Role[];
-
-/** Account status label + semantic badge variant (mirrors employees). */
-export function accountStatusLabel(active: boolean): string {
-  return active ? "Active" : "Inactive";
-}
+/** The contract-tied role list, mirroring `Role` on the wire. */
+export const ALL_ROLES: Role[] = [
+  "employee",
+  "manager",
+  "hr",
+  "finance",
+  "admin",
+  "super_admin",
+];
 
 export function accountStatusVariant(active: boolean): "success" | "muted" {
   return active ? "success" : "muted";

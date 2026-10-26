@@ -1,0 +1,70 @@
+{
+  "appName": "WorkPulse",
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "create": "Create",
+    "edit": "Edit",
+    "delete": "Delete",
+    "confirm": "Confirm",
+    "back": "Back",
+    "retry": "Retry",
+    "refresh": "Refresh",
+    "dismiss": "Dismiss",
+    "search": "Search",
+    "clear": "Clear",
+    "apply": "Apply",
+    "reset": "Reset",
+    "remove": "Remove",
+    "view": "View",
+    "open": "Open",
+    "submit": "Submit",
+    "continue": "Continue",
+    "show": "Show",
+    "hide": "Hide",
+    "archive": "Archive",
+    "restore": "Restore"
+  },
+  "states": {
+    "loading": "Loading…",
+    "saving": "Saving…",
+    "sending": "Sending…",
+    "checkingSession": "Checking your session…",
+    "somethingWentWrong": "Something went wrong. Please try again.",
+    "forbidden": "You don’t have permission to do that.",
+    "notFound": "This item is no longer available.",
+    "noResults": "Nothing to show yet."
+  },
+  "locale": {
+    "label": "Language",
+    "en": "English",
+    "vi": "Tiếng Việt"
+  },
+  "theme": {
+    "switchToLight": "Switch to light theme",
+    "switchToDark": "Switch to dark theme"
+  },
+  "aria": {
+    "main": "Main",
+    "openNavigation": "Open navigation menu",
+    "close": "Close",
+    "accountMenu": "Account menu for {email}"
+  },
+  "date": {
+    "present": "Present"
+  },
+  "validation": {
+    "required": "This field is required.",
+    "email": "Enter a valid email.",
+    "number": "Enter a number.",
+    "positiveNumber": "Enter a number greater than zero.",
+    "invalid": "Check the highlighted fields and try again."
+  },
+  "table": {
+    "swipeHint": "Swipe sideways to see every {label} field."
+  },
+  "form": {
+    "showHelp": "Show field help"
+  }
+}

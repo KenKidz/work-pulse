@@ -10,6 +10,7 @@
  */
 
 import { LogOut } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -25,10 +26,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 import { useAuth } from "./AuthGate";
-import { initialsFromEmail, roleLabel } from "../labels";
+import { initialsFromEmail } from "../labels";
 import { useSignOut } from "../hooks/use-auth";
 
 export function UserMenu() {
+  const t = useTranslations("auth.userMenu");
+  const roles = useTranslations("auth.roles");
+  const common = useTranslations("common.aria");
   const { user } = useAuth();
   const signOut = useSignOut();
 
@@ -39,7 +43,7 @@ export function UserMenu() {
           variant="ghost"
           size="icon"
           className="size-11"
-          aria-label={`Account menu for ${user.email}`}
+          aria-label={common("accountMenu", { email: user.email })}
         >
           <Avatar>
             <AvatarFallback>{initialsFromEmail(user.email) || "?"}</AvatarFallback>
@@ -49,13 +53,10 @@ export function UserMenu() {
       <DropdownMenuContent align="end" className="w-64">
         <DropdownMenuGroup>
           <DropdownMenuLabel className="flex flex-col gap-1.5">
-            <span
-              className="truncate font-normal text-muted-foreground"
-              title={user.email}
-            >
+            <span className="truncate font-normal text-muted-foreground" title={user.email}>
               {user.email}
             </span>
-            <Badge variant="secondary">{roleLabel[user.role]}</Badge>
+            <Badge variant="secondary">{roles(user.role)}</Badge>
           </DropdownMenuLabel>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
@@ -69,7 +70,7 @@ export function UserMenu() {
             onSelect={() => signOut.mutate()}
           >
             <LogOut aria-hidden="true" />
-            {signOut.isPending ? "Signing out…" : "Sign out"}
+            {signOut.isPending ? t("signingOut") : t("signOut")}
           </DropdownMenuItem>
         </DropdownMenuGroup>
       </DropdownMenuContent>

@@ -9,6 +9,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CircleAlert } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 
@@ -27,7 +28,7 @@ import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 
 import { formatPayrollTimestamp } from "../format";
-import { payrollErrorMessage } from "../labels";
+import { payrollErrorMessage } from "../errors";
 import { usePayrollConfig, usePayrollConfigUpdate } from "../hooks/use-payroll-config";
 import { payrollConfigFormSchema, type PayrollConfigFormValues } from "../schema";
 import { PayrollSectionHeader } from "./PayrollSectionHeader";
@@ -35,6 +36,11 @@ import { PayrollSectionHeader } from "./PayrollSectionHeader";
 const CONFIG_SECTION_ID = "payroll-config-title";
 
 export function PayrollConfigForm({ canEdit }: { canEdit: boolean }) {
+  const t = useTranslations("payroll.config");
+  const common = useTranslations("common.actions");
+  const validation = useTranslations("payroll.validation");
+  const errors = useTranslations("payroll.errors");
+  const locale = useLocale();
   const configQuery = usePayrollConfig();
   const updateConfig = usePayrollConfigUpdate();
   const [rootError, setRootError] = useState<string | null>(null);
@@ -42,7 +48,7 @@ export function PayrollConfigForm({ canEdit }: { canEdit: boolean }) {
   const config = configQuery.data?.status === 200 ? configQuery.data.data : null;
 
   const form = useForm<PayrollConfigFormValues>({
-    resolver: zodResolver(payrollConfigFormSchema),
+    resolver: zodResolver(payrollConfigFormSchema((key) => validation(key))),
     defaultValues: {
       currency: "",
       standard_monthly_hours: 160,
@@ -65,7 +71,7 @@ export function PayrollConfigForm({ canEdit }: { canEdit: boolean }) {
     try {
       await updateConfig.mutateAsync({ data: values });
     } catch (error) {
-      setRootError(payrollErrorMessage(error));
+      setRootError(payrollErrorMessage(error, errors));
     }
   }
 
@@ -73,29 +79,29 @@ export function PayrollConfigForm({ canEdit }: { canEdit: boolean }) {
     <section aria-labelledby={CONFIG_SECTION_ID} className="flex flex-col gap-4">
       <PayrollSectionHeader
         id={CONFIG_SECTION_ID}
-        title="Configuration"
-        description="The tenant-wide inputs every simulated payroll run uses: currency, working hours and the overtime rate."
+        title={t("title")}
+        description={t("description")}
       />
 
       <Card className="gap-0 rounded-md border-border py-0 shadow-none">
         {configQuery.isPending ? (
           <div className="flex items-center justify-center gap-2 px-6 py-10 text-sm text-muted-foreground">
             <Spinner className="size-4" />
-            <p>Loading payroll configuration…</p>
+            <p>{t("loading")}</p>
           </div>
         ) : configQuery.isError ? (
           <div className="p-4">
             <Alert variant="destructive">
               <CircleAlert aria-hidden="true" />
               <AlertDescription>
-                <p>Could not load payroll configuration.</p>
+                <p>{t("loadError")}</p>
                 <Button
                   variant="outline"
                   size="sm"
                   className="mt-2"
                   onClick={() => void configQuery.refetch()}
                 >
-                  Retry
+                  {common("retry")}
                 </Button>
               </AlertDescription>
             </Alert>
@@ -113,7 +119,7 @@ export function PayrollConfigForm({ canEdit }: { canEdit: boolean }) {
                   name="currency"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel hint="One currency for the whole tenant.">Currency</FormLabel>
+                      <FormLabel hint={t("currencyHint")}>{t("currency")}</FormLabel>
                       <FormControl>
                         <Input
                           {...field}
@@ -137,9 +143,7 @@ export function PayrollConfigForm({ canEdit }: { canEdit: boolean }) {
                   name="standard_monthly_hours"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel hint="Used to derive the hourly rate.">
-                        Standard monthly hours
-                      </FormLabel>
+                      <FormLabel hint={t("standardHoursHint")}>{t("standardHours")}</FormLabel>
                       <FormControl>
                         <Input
                           {...field}
@@ -167,9 +171,7 @@ export function PayrollConfigForm({ canEdit }: { canEdit: boolean }) {
                   name="overtime_multiplier"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel hint="Applied to verified overtime hours.">
-                        Overtime multiplier
-                      </FormLabel>
+                      <FormLabel hint={t("overtimeMultiplierHint")}>{t("overtimeMultiplier")}</FormLabel>
                       <FormControl>
                         <Input
                           {...field}
@@ -194,8 +196,7 @@ export function PayrollConfigForm({ canEdit }: { canEdit: boolean }) {
               </div>
 
               <p className="max-w-2xl text-sm leading-5 text-pretty text-muted-foreground">
-                Overtime pay = verified hours × (base salary ÷ standard monthly hours) × overtime
-                multiplier.
+                {t("formula")}
               </p>
 
               {rootError ? (
@@ -209,16 +210,16 @@ export function PayrollConfigForm({ canEdit }: { canEdit: boolean }) {
                 <p className="text-xs text-muted-foreground">
                   {config === null
                     ? null
-                    : `Last updated ${formatPayrollTimestamp(config.updated_at)}`}
+                    : t("lastUpdated", {
+                        time: formatPayrollTimestamp(config.updated_at, locale),
+                      })}
                 </p>
                 {canEdit ? (
                   <Button type="submit" disabled={updateConfig.isPending}>
-                    Save changes
+                    {t("saveChanges")}
                   </Button>
                 ) : (
-                  <p className="text-xs text-muted-foreground">
-                    View only — Finance, Admin and Super Admin configure payroll.
-                  </p>
+                  <p className="text-xs text-muted-foreground">{t("viewOnly")}</p>
                 )}
               </div>
             </form>

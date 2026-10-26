@@ -11,6 +11,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CircleAlert } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
@@ -64,6 +65,10 @@ function isArchived(option: { archived_at?: string | null }): boolean {
 }
 
 export function JobFormDialog({ open, onOpenChange, job }: JobFormDialogProps) {
+  const t = useTranslations("recruitment.jobForm");
+  const common = useTranslations("recruitment.actions");
+  const validation = useTranslations("recruitment.validation");
+  const errors = useTranslations("recruitment.errors");
   const isEdit = job !== null;
   const [rootError, setRootError] = useState<string | null>(null);
   const createJob = useJobCreate();
@@ -72,7 +77,7 @@ export function JobFormDialog({ open, onOpenChange, job }: JobFormDialogProps) {
   const directory = useRecruitmentDirectory();
 
   const form = useForm<JobFormValues>({
-    resolver: zodResolver(jobFormSchema),
+    resolver: zodResolver(jobFormSchema((key) => validation(key))),
     defaultValues: {
       title: job?.title ?? "",
       description: job?.description ?? "",
@@ -102,7 +107,7 @@ export function JobFormDialog({ open, onOpenChange, job }: JobFormDialogProps) {
       }
       onOpenChange(false);
     } catch (error) {
-      const fieldErrors = jobFieldErrors(error);
+      const fieldErrors = jobFieldErrors(error, errors);
       for (const [field, message] of Object.entries(fieldErrors)) {
         if (field === "root") {
           setRootError(message ?? null);
@@ -120,11 +125,9 @@ export function JobFormDialog({ open, onOpenChange, job }: JobFormDialogProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit job" : "New job"}</DialogTitle>
+          <DialogTitle>{isEdit ? t("editTitle") : t("createTitle")}</DialogTitle>
           <DialogDescription>
-            {isEdit
-              ? "Update the job while it is a draft or open. Closing is a separate, terminal action."
-              : "Create a job in draft, then open it to start accepting candidates."}
+            {isEdit ? t("editDescription") : t("createDescription")}
           </DialogDescription>
         </DialogHeader>
 
@@ -136,9 +139,9 @@ export function JobFormDialog({ open, onOpenChange, job }: JobFormDialogProps) {
                 name="title"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Title</FormLabel>
+                    <FormLabel>{t("title")}</FormLabel>
                     <FormControl>
-                      <Input {...field} value={field.value} placeholder="Backend Engineer" />
+                      <Input {...field} value={field.value} placeholder={t("titlePlaceholder")} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -149,9 +152,7 @@ export function JobFormDialog({ open, onOpenChange, job }: JobFormDialogProps) {
                 name="openings"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel hint="Hiring stops once this many candidates are hired.">
-                      Openings
-                    </FormLabel>
+                    <FormLabel hint={t("openingsHint")}>{t("openings")}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
@@ -176,15 +177,13 @@ export function JobFormDialog({ open, onOpenChange, job }: JobFormDialogProps) {
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel hint="Visible to HR and managers running the pipeline. Do not include candidate details.">
-                    Description (optional)
-                  </FormLabel>
+                  <FormLabel hint={t("descriptionHint")}>{t("description")}</FormLabel>
                   <FormControl>
                     <Textarea
                       {...field}
                       value={field.value}
                       rows={4}
-                      placeholder="What the role covers, who it reports to and what success looks like."
+                      placeholder={t("descriptionPlaceholder")}
                     />
                   </FormControl>
                   <FormMessage />
@@ -198,11 +197,11 @@ export function JobFormDialog({ open, onOpenChange, job }: JobFormDialogProps) {
                 name="department_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Department</FormLabel>
+                    <FormLabel>{t("department")}</FormLabel>
                     <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a department" />
+                          <SelectValue placeholder={t("selectDepartment")} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -227,11 +226,11 @@ export function JobFormDialog({ open, onOpenChange, job }: JobFormDialogProps) {
                 name="position_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Position</FormLabel>
+                    <FormLabel>{t("position")}</FormLabel>
                     <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a position" />
+                          <SelectValue placeholder={t("selectPosition")} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -258,11 +257,11 @@ export function JobFormDialog({ open, onOpenChange, job }: JobFormDialogProps) {
               name="location_id"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Location</FormLabel>
+                  <FormLabel>{t("location")}</FormLabel>
                   <Select value={field.value} onValueChange={field.onChange}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a location" />
+                        <SelectValue placeholder={t("selectLocation")} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -292,16 +291,16 @@ export function JobFormDialog({ open, onOpenChange, job }: JobFormDialogProps) {
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
+                {common("cancel")}
               </Button>
               <Button type="submit" disabled={mutation.isPending}>
                 {mutation.isPending
                   ? isEdit
-                    ? "Saving…"
-                    : "Creating…"
+                    ? t("saving")
+                    : t("creating")
                   : isEdit
-                    ? "Save changes"
-                    : "Create job"}
+                    ? t("save")
+                    : t("create")}
               </Button>
             </DialogFooter>
           </form>

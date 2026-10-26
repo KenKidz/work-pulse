@@ -15,6 +15,8 @@ import {
   jobFormSchema,
 } from "@/features/recruitment/schema";
 
+const t = (key: string) => key;
+
 const VALID = {
   title: "Backend Engineer",
   description: "Own the workforce API.",
@@ -25,12 +27,12 @@ const VALID = {
 };
 
 function parse(overrides: Record<string, unknown>) {
-  return jobFormSchema.safeParse({ ...VALID, ...overrides });
+  return jobFormSchema(t).safeParse({ ...VALID, ...overrides });
 }
 
 describe("jobFormSchema", () => {
   it("accepts the pinned job shape and coerces openings", () => {
-    const result = jobFormSchema.safeParse({ ...VALID, openings: "3", title: "  Backend  " });
+    const result = jobFormSchema(t).safeParse({ ...VALID, openings: "3", title: "  Backend  " });
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.openings).toBe(3);
@@ -73,12 +75,12 @@ const VALID_CANDIDATE = {
 } as const;
 
 function parseCandidate(overrides: Record<string, unknown>) {
-  return candidateFormSchema.safeParse({ ...VALID_CANDIDATE, ...overrides });
+  return candidateFormSchema(t).safeParse({ ...VALID_CANDIDATE, ...overrides });
 }
 
 describe("candidateFormSchema", () => {
   it("accepts the pinned contact shape and trims text", () => {
-    const result = candidateFormSchema.safeParse({
+    const result = candidateFormSchema(t).safeParse({
       ...VALID_CANDIDATE,
       first_name: "  Amara ",
       notes: "",
@@ -104,13 +106,13 @@ describe("candidateFormSchema", () => {
 describe("candidateCreateSchema", () => {
   it("requires the application's job as a uuid", () => {
     expect(
-      candidateCreateSchema.safeParse({
+      candidateCreateSchema(t).safeParse({
         ...VALID_CANDIDATE,
         job_id: "01900000-0000-7000-8000-0000000000b1",
       }).success,
     ).toBe(true);
-    expect(candidateCreateSchema.safeParse({ ...VALID_CANDIDATE, job_id: "" }).success).toBe(false);
-    expect(candidateCreateSchema.safeParse({ ...VALID_CANDIDATE, job_id: "backend" }).success).toBe(
+    expect(candidateCreateSchema(t).safeParse({ ...VALID_CANDIDATE, job_id: "" }).success).toBe(false);
+    expect(candidateCreateSchema(t).safeParse({ ...VALID_CANDIDATE, job_id: "backend" }).success).toBe(
       false,
     );
   });
@@ -118,9 +120,9 @@ describe("candidateCreateSchema", () => {
 
 describe("candidateDecisionSchema", () => {
   it("allows an empty note and caps it at 500 characters", () => {
-    expect(candidateDecisionSchema.safeParse({ note: "" }).success).toBe(true);
-    expect(candidateDecisionSchema.safeParse({ note: "a".repeat(500) }).success).toBe(true);
-    expect(candidateDecisionSchema.safeParse({ note: "a".repeat(501) }).success).toBe(false);
+    expect(candidateDecisionSchema(t).safeParse({ note: "" }).success).toBe(true);
+    expect(candidateDecisionSchema(t).safeParse({ note: "a".repeat(500) }).success).toBe(true);
+    expect(candidateDecisionSchema(t).safeParse({ note: "a".repeat(501) }).success).toBe(false);
   });
 });
 
@@ -136,7 +138,7 @@ const VALID_HIRE = {
 } as const;
 
 function parseHire(overrides: Record<string, unknown>) {
-  return hireFormSchema.safeParse({ ...VALID_HIRE, ...overrides });
+  return hireFormSchema(t).safeParse({ ...VALID_HIRE, ...overrides });
 }
 
 describe("hireFormSchema", () => {

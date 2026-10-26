@@ -7,6 +7,7 @@
  */
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
@@ -41,11 +42,14 @@ type ResetPasswordDialogProps = {
 };
 
 export function ResetPasswordDialog({ open, onOpenChange, user }: ResetPasswordDialogProps) {
+  const t = useTranslations("users");
+  const common = useTranslations("common.actions");
+  const errors = useTranslations("users.errors");
   const [rootError, setRootError] = useState<string | null>(null);
   const reset = useUserResetPassword();
 
   const form = useForm<ResetPasswordValues>({
-    resolver: zodResolver(resetPasswordSchema),
+    resolver: zodResolver(resetPasswordSchema((key) => t(`form.validation.${key}`))),
     defaultValues: { new_password: "" },
   });
 
@@ -57,7 +61,7 @@ export function ResetPasswordDialog({ open, onOpenChange, user }: ResetPasswordD
       onOpenChange(false);
     } catch (error) {
       // Root-level, per the pinned mapping — same treatment as deactivate.
-      setRootError(userFieldErrors(error).root ?? "Something went wrong. Please try again.");
+      setRootError(userFieldErrors(error, errors).root ?? t("errors.generic"));
     }
   }
 
@@ -71,10 +75,9 @@ export function ResetPasswordDialog({ open, onOpenChange, user }: ResetPasswordD
     >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Reset password</DialogTitle>
+          <DialogTitle>{t("reset.title")}</DialogTitle>
           <DialogDescription>
-            Set a new password for {user?.email}. It applies immediately and signs out every
-            existing session of the account.
+            {t("reset.description", { email: user?.email ?? "" })}
           </DialogDescription>
         </DialogHeader>
 
@@ -85,7 +88,7 @@ export function ResetPasswordDialog({ open, onOpenChange, user }: ResetPasswordD
               name="new_password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>New password</FormLabel>
+                  <FormLabel>{t("reset.newPassword")}</FormLabel>
                   <FormControl>
                     <Input {...field} type="password" autoComplete="new-password" />
                   </FormControl>
@@ -102,10 +105,10 @@ export function ResetPasswordDialog({ open, onOpenChange, user }: ResetPasswordD
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
+                {common("cancel")}
               </Button>
               <Button type="submit" disabled={reset.isPending}>
-                Reset password
+                {t("reset.confirm")}
               </Button>
             </DialogFooter>
           </form>

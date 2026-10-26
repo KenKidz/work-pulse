@@ -8,6 +8,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CircleAlert } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
@@ -38,9 +39,13 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 
 import { formatRecruitmentTimestamp } from "../dates";
-import { interviewRatingLabel, recruitmentErrorMessage } from "../labels";
+import { recruitmentErrorMessage } from "../labels";
 import { useInterviewComplete } from "../hooks/use-recruitment";
-import { interviewFeedbackSchema, type InterviewFeedbackValues } from "../schema";
+import {
+  INTERVIEW_RATINGS,
+  interviewFeedbackSchema,
+  type InterviewFeedbackValues,
+} from "../schema";
 import type { Interview } from "../types";
 
 type InterviewFeedbackDialogProps = {
@@ -56,11 +61,17 @@ export function InterviewFeedbackDialog({
   interview,
   candidateName,
 }: InterviewFeedbackDialogProps) {
+  const t = useTranslations("recruitment.feedback");
+  const common = useTranslations("recruitment.actions");
+  const validation = useTranslations("recruitment.validation");
+  const errors = useTranslations("recruitment.errors");
+  const ratings = useTranslations("recruitment.ratings");
+  const locale = useLocale();
   const completeInterview = useInterviewComplete();
   const [error, setError] = useState<string | null>(null);
 
   const form = useForm<InterviewFeedbackValues>({
-    resolver: zodResolver(interviewFeedbackSchema),
+    resolver: zodResolver(interviewFeedbackSchema((key) => validation(key))),
     defaultValues: { rating: "", notes: "" },
   });
 
@@ -76,7 +87,7 @@ export function InterviewFeedbackDialog({
       });
       onOpenChange(false);
     } catch (failure) {
-      setError(recruitmentErrorMessage(failure));
+      setError(recruitmentErrorMessage(failure, errors));
     }
   }
 
@@ -84,11 +95,12 @@ export function InterviewFeedbackDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Submit feedback</DialogTitle>
+          <DialogTitle>{t("title")}</DialogTitle>
           <DialogDescription>
-            {candidateName ?? "This candidate"} ·{" "}
-            {formatRecruitmentTimestamp(interview.scheduled_at)}. Submitting completes the
-            interview; the candidate&apos;s stage stays with HR.
+            {t("description", {
+              name: candidateName ?? "",
+              time: formatRecruitmentTimestamp(interview.scheduled_at, locale),
+            })}
           </DialogDescription>
         </DialogHeader>
 
@@ -99,17 +111,17 @@ export function InterviewFeedbackDialog({
               name="rating"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Rating</FormLabel>
+                  <FormLabel>{t("rating")}</FormLabel>
                   <Select value={field.value} onValueChange={field.onChange}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Choose a rating" />
+                        <SelectValue placeholder={t("chooseRating")} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {Object.entries(interviewRatingLabel).map(([value, label]) => (
+                      {INTERVIEW_RATINGS.map((value) => (
                         <SelectItem key={value} value={value}>
-                          {label}
+                          {ratings("option", { value, label: ratings(value) })}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -124,15 +136,13 @@ export function InterviewFeedbackDialog({
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel hint="Sensitive: visible to HR and never included in events or audit values.">
-                    Feedback notes (optional)
-                  </FormLabel>
+                  <FormLabel hint={t("notesHint")}>{t("notes")}</FormLabel>
                   <FormControl>
                     <Textarea
                       {...field}
                       value={field.value}
                       rows={5}
-                      placeholder="What stood out, what to probe further and how the candidate compares."
+                      placeholder={t("notesPlaceholder")}
                     />
                   </FormControl>
                   <FormMessage />
@@ -149,10 +159,10 @@ export function InterviewFeedbackDialog({
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
+                {common("cancel")}
               </Button>
               <Button type="submit" disabled={completeInterview.isPending}>
-                {completeInterview.isPending ? "Submitting…" : "Submit feedback"}
+                {completeInterview.isPending ? t("submitting") : t("submit")}
               </Button>
             </DialogFooter>
           </form>

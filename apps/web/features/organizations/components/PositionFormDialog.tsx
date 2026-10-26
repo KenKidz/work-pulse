@@ -6,6 +6,7 @@
  */
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
@@ -46,6 +47,8 @@ type PositionFormDialogProps = {
 };
 
 export function PositionFormDialog({ open, onOpenChange, position }: PositionFormDialogProps) {
+  const t = useTranslations();
+  const errors = useTranslations("organizations.errors");
   const isEdit = position !== null;
   const [rootError, setRootError] = useState<string | null>(null);
   const createPosition = usePositionCreate();
@@ -53,7 +56,7 @@ export function PositionFormDialog({ open, onOpenChange, position }: PositionFor
   const mutation = isEdit ? updatePosition : createPosition;
 
   const form = useForm<PositionFormValues>({
-    resolver: zodResolver(positionFormSchema),
+    resolver: zodResolver(positionFormSchema((key) => t(`organizations.positions.validation.${key}`))),
     defaultValues: {
       title: position?.title ?? "",
       description: position?.description ?? null,
@@ -75,7 +78,7 @@ export function PositionFormDialog({ open, onOpenChange, position }: PositionFor
       }
       onOpenChange(false);
     } catch (error) {
-      const fieldErrors = positionFieldErrors(error);
+      const fieldErrors = positionFieldErrors(error, errors);
       for (const [field, message] of Object.entries(fieldErrors)) {
         if (field === "root") {
           setRootError(message ?? null);
@@ -90,10 +93,8 @@ export function PositionFormDialog({ open, onOpenChange, position }: PositionFor
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit position" : "New position"}</DialogTitle>
-          <DialogDescription>
-            Positions are tenant-global — the same title can span departments.
-          </DialogDescription>
+          <DialogTitle>{isEdit ? t("organizations.positions.editTitle") : t("organizations.positions.createTitle")}</DialogTitle>
+          <DialogDescription>{t("organizations.positions.description")}</DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
@@ -103,9 +104,9 @@ export function PositionFormDialog({ open, onOpenChange, position }: PositionFor
               name="title"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Title</FormLabel>
+                  <FormLabel>{t("organizations.positions.title")}</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="Senior Nurse" autoComplete="off" />
+                    <Input {...field} placeholder={t("organizations.positions.titlePlaceholder")} autoComplete="off" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -117,12 +118,12 @@ export function PositionFormDialog({ open, onOpenChange, position }: PositionFor
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel>{t("organizations.positions.descriptionField")}</FormLabel>
                   <FormControl>
                     <Textarea
                       {...field}
                       value={field.value ?? ""}
-                      placeholder="What this position does"
+                      placeholder={t("organizations.positions.descriptionPlaceholder")}
                       rows={3}
                     />
                   </FormControl>
@@ -139,10 +140,10 @@ export function PositionFormDialog({ open, onOpenChange, position }: PositionFor
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
+                {t("common.actions.cancel")}
               </Button>
               <Button type="submit" disabled={mutation.isPending}>
-                {isEdit ? "Save changes" : "Create position"}
+                {isEdit ? t("organizations.actions.saveChanges") : t("organizations.actions.createPosition")}
               </Button>
             </DialogFooter>
           </form>

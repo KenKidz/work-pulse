@@ -9,6 +9,7 @@
  */
 
 import { CircleAlert, Inbox } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -42,6 +43,9 @@ export function ManagerInbox() {
 }
 
 function ManagerInboxTable({ currentEmployeeId }: { currentEmployeeId: string | null }) {
+  const t = useTranslations("overtime");
+  const locale = useLocale();
+  const common = useTranslations("common.actions");
   const [target, setTarget] = useState<OvertimeDecisionTarget | null>(null);
   const [page, setPage] = useState(1);
   const requestsQuery = useOvertimeRequests(
@@ -64,10 +68,10 @@ function ManagerInboxTable({ currentEmployeeId }: { currentEmployeeId: string | 
     <section aria-labelledby="manager-inbox-title" className="flex flex-col gap-4">
       <div className="space-y-1">
         <h2 id="manager-inbox-title" className="text-lg leading-6 font-semibold tracking-tight">
-          Manager approval
+          {t("manager.title")}
         </h2>
         <p className="max-w-2xl text-sm leading-5 text-pretty text-muted-foreground">
-          Claims waiting for the manager step. Your own claims wait for someone else.
+          {t("manager.description")}
         </p>
       </div>
 
@@ -78,20 +82,20 @@ function ManagerInboxTable({ currentEmployeeId }: { currentEmployeeId: string | 
         {requestsQuery.isPending ? (
           <div className="flex items-center justify-center gap-2 px-6 py-10 text-sm text-muted-foreground">
             <Spinner className="size-4" />
-            <p>Loading overtime requests…</p>
+            <p>{t("manager.loading")}</p>
           </div>
         ) : requestsQuery.isError ? (
           <div className="p-4">
             <Alert variant="destructive">
               <CircleAlert aria-hidden="true" />
               <AlertTitle>
-                {denied ? "Approvals unavailable" : "Could not load overtime requests"}
+                {denied ? t("manager.deniedTitle") : t("manager.errorTitle")}
               </AlertTitle>
               <AlertDescription>
                 <p>
                   {denied
-                    ? "Managers, HR and admins approve overtime requests."
-                    : "Waiting overtime requests could not be loaded."}
+                    ? t("manager.denied")
+                    : t("manager.loadError")}
                 </p>
                 {!denied ? (
                   <Button
@@ -100,7 +104,7 @@ function ManagerInboxTable({ currentEmployeeId }: { currentEmployeeId: string | 
                     className="mt-2"
                     onClick={() => void requestsQuery.refetch()}
                   >
-                    Retry
+                    {common("retry")}
                   </Button>
                 ) : null}
               </AlertDescription>
@@ -110,40 +114,44 @@ function ManagerInboxTable({ currentEmployeeId }: { currentEmployeeId: string | 
           <div className="p-4">
             <EmptyState
               icon={Inbox}
-              message="No overtime requests are waiting for manager approval."
+              message={t("manager.empty")}
             />
           </div>
         ) : (
           <>
             <p className="px-4 py-2 text-xs text-muted-foreground sm:hidden">
-              Swipe sideways to see every request field.
+              {t("manager.swipe")}
             </p>
             <Table
-              aria-label="Overtime requests awaiting manager approval"
-              containerLabel="Overtime requests awaiting manager approval. Scroll horizontally to read all columns."
+              aria-label={t("manager.label")}
+              containerLabel={t("manager.containerLabel")}
             >
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="pl-3">Employee</TableHead>
-                  <TableHead>Work date</TableHead>
-                  <TableHead>Hours</TableHead>
-                  <TableHead>Reason</TableHead>
-                  <TableHead>Submitted</TableHead>
-                  <TableHead className="pr-3 text-right">Actions</TableHead>
+                  <TableHead className="pl-3">{t("manager.columns.employee")}</TableHead>
+                  <TableHead>{t("manager.columns.workDate")}</TableHead>
+                  <TableHead>{t("manager.columns.hours")}</TableHead>
+                  <TableHead>{t("manager.columns.reason")}</TableHead>
+                  <TableHead>{t("manager.columns.submitted")}</TableHead>
+                  <TableHead className="pr-3 text-right">{t("manager.columns.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {requests.map((request: OvertimeRequest) => {
-                  const name = overtimeEmployeeLabel(request.employee_id, directory);
+                  const name = overtimeEmployeeLabel(
+                    request.employee_id,
+                    directory,
+                    t("employeeFallback", { id: request.employee_id.slice(-4) }),
+                  );
                   const own = request.employee_id === currentEmployeeId;
                   return (
                     <TableRow key={request.id} data-testid="manager-inbox-row">
                       <TableCell className="pl-3 font-medium">{name}</TableCell>
                       <TableCell className="tabular-nums">
-                        {formatDate(request.work_date)}
+                        {formatDate(request.work_date, locale)}
                       </TableCell>
                       <TableCell className="font-mono tabular-nums">
-                        {formatHours(request.hours)}
+                        {formatHours(request.hours, locale)}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {request.reason ? (
@@ -155,12 +163,12 @@ function ManagerInboxTable({ currentEmployeeId }: { currentEmployeeId: string | 
                         )}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground tabular-nums">
-                        {formatDate(request.created_at)}
+                        {formatDate(request.created_at, locale)}
                       </TableCell>
                       <TableCell className="pr-3 text-right">
                         {own ? (
                           <span className="text-xs text-muted-foreground">
-                            Your own request — someone else must decide.
+                            {t("manager.ownRequest")}
                           </span>
                         ) : (
                           <div className="flex justify-end gap-2">
@@ -168,19 +176,19 @@ function ManagerInboxTable({ currentEmployeeId }: { currentEmployeeId: string | 
                               variant="outline"
                               size="sm"
                               className="min-h-11 sm:min-h-7"
-                              aria-label={`Approve overtime request for ${name}`}
+                              aria-label={t("manager.approveAria", { name })}
                               onClick={() => setTarget({ request, mode: "approve" })}
                             >
-                              Approve
+                              {t("manager.approve")}
                             </Button>
                             <Button
                               variant="outline"
                               size="sm"
                               className="min-h-11 sm:min-h-7"
-                              aria-label={`Reject overtime request for ${name}`}
+                              aria-label={t("manager.rejectAria", { name })}
                               onClick={() => setTarget({ request, mode: "reject" })}
                             >
-                              Reject
+                              {t("manager.reject")}
                             </Button>
                           </div>
                         )}
@@ -194,7 +202,7 @@ function ManagerInboxTable({ currentEmployeeId }: { currentEmployeeId: string | 
             {pageInfo === null ? null : (
               <OvertimePagination
                 page={pageInfo}
-                label="overtime requests awaiting manager approval"
+                label={t("manager.paginationLabel")}
                 onPageChange={setPage}
               />
             )}
@@ -205,7 +213,11 @@ function ManagerInboxTable({ currentEmployeeId }: { currentEmployeeId: string | 
       {target !== null ? (
         <DecisionDialog
           target={target}
-          employeeName={overtimeEmployeeLabel(target.request.employee_id, directory)}
+          employeeName={overtimeEmployeeLabel(
+            target.request.employee_id,
+            directory,
+            t("employeeFallback", { id: target.request.employee_id.slice(-4) }),
+          )}
           onClose={() => setTarget(null)}
         />
       ) : null}

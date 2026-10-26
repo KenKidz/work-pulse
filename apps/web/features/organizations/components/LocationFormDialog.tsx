@@ -7,6 +7,7 @@
  */
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
@@ -47,6 +48,8 @@ type LocationFormDialogProps = {
 };
 
 export function LocationFormDialog({ open, onOpenChange, location }: LocationFormDialogProps) {
+  const t = useTranslations();
+  const errors = useTranslations("organizations.errors");
   const isEdit = location !== null;
   const [rootError, setRootError] = useState<string | null>(null);
   const createLocation = useLocationCreate();
@@ -54,7 +57,7 @@ export function LocationFormDialog({ open, onOpenChange, location }: LocationFor
   const mutation = isEdit ? updateLocation : createLocation;
 
   const form = useForm<LocationFormValues>({
-    resolver: zodResolver(locationFormSchema),
+    resolver: zodResolver(locationFormSchema((key) => t(`organizations.locations.validation.${key}`))),
     defaultValues: {
       name: location?.name ?? "",
       address: location?.address ?? null,
@@ -78,7 +81,7 @@ export function LocationFormDialog({ open, onOpenChange, location }: LocationFor
       }
       onOpenChange(false);
     } catch (error) {
-      const fieldErrors = locationFieldErrors(error);
+      const fieldErrors = locationFieldErrors(error, errors);
       for (const [field, message] of Object.entries(fieldErrors)) {
         if (field === "root") {
           setRootError(message ?? null);
@@ -93,10 +96,8 @@ export function LocationFormDialog({ open, onOpenChange, location }: LocationFor
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit location" : "New location"}</DialogTitle>
-          <DialogDescription>
-            Attendance lateness is evaluated in the location&apos;s timezone.
-          </DialogDescription>
+          <DialogTitle>{isEdit ? t("organizations.locations.editTitle") : t("organizations.locations.createTitle")}</DialogTitle>
+          <DialogDescription>{t("organizations.locations.description")}</DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
@@ -106,9 +107,9 @@ export function LocationFormDialog({ open, onOpenChange, location }: LocationFor
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Name</FormLabel>
+                  <FormLabel>{t("organizations.locations.name")}</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="Ho Chi Minh Office" autoComplete="off" />
+                    <Input {...field} placeholder={t("organizations.locations.namePlaceholder")} autoComplete="off" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -120,12 +121,12 @@ export function LocationFormDialog({ open, onOpenChange, location }: LocationFor
               name="address"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Address</FormLabel>
+                  <FormLabel>{t("organizations.locations.address")}</FormLabel>
                   <FormControl>
                     <Textarea
                       {...field}
                       value={field.value ?? ""}
-                      placeholder="Street, city, country"
+                      placeholder={t("organizations.locations.addressPlaceholder")}
                       rows={2}
                     />
                   </FormControl>
@@ -139,9 +140,9 @@ export function LocationFormDialog({ open, onOpenChange, location }: LocationFor
               name="timezone"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Timezone</FormLabel>
+                  <FormLabel>{t("organizations.locations.timezone")}</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="Asia/Ho_Chi_Minh" autoComplete="off" />
+                    <Input {...field} placeholder={t("organizations.locations.timezonePlaceholder")} autoComplete="off" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -156,10 +157,10 @@ export function LocationFormDialog({ open, onOpenChange, location }: LocationFor
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
+                {t("common.actions.cancel")}
               </Button>
               <Button type="submit" disabled={mutation.isPending}>
-                {isEdit ? "Save changes" : "Create location"}
+                {isEdit ? t("organizations.actions.saveChanges") : t("organizations.actions.createLocation")}
               </Button>
             </DialogFooter>
           </form>
