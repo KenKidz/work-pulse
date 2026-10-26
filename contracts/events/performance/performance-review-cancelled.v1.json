@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workpulse.dev/contracts/events/performance/performance-review-cancelled.v1.json",
+  "title": "WorkPulse performance.review_cancelled v1",
+  "description": "A draft performance review was cancelled; cancellation is terminal. Identifiers and the state only — period, strengths and improvements are evaluative PII and never leave the database (`.ai/security.md`).",
+  "type": "object",
+  "required": ["review_id", "employee_id", "status"],
+  "additionalProperties": false,
+  "properties": {
+    "review_id": {
+      "type": "string",
+      "description": "The cancelled review (UUIDv7 string)."
+    },
+    "employee_id": {
+      "type": "string",
+      "description": "Employee the review evaluates — the subject (UUIDv7 string). Also the Kafka message key (ADR 0012)."
+    },
+    "status": {
+      "const": "cancelled",
+      "description": "Terminal review state; cancellation is allowed only from `draft`."
+    }
+  }
+}

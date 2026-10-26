@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workpulse.dev/contracts/events/performance/performance-review-started.v1.json",
+  "title": "WorkPulse performance.review_started v1",
+  "description": "A manager or HR started a performance review. Identifiers and the state only — period, strengths, improvements and the rating are evaluative PII and never leave the database (`.ai/security.md`).",
+  "type": "object",
+  "required": ["review_id", "employee_id", "status"],
+  "additionalProperties": false,
+  "properties": {
+    "review_id": {
+      "type": "string",
+      "description": "The started review (UUIDv7 string)."
+    },
+    "employee_id": {
+      "type": "string",
+      "description": "Employee the review evaluates — the subject (UUIDv7 string). Also the Kafka message key (ADR 0012)."
+    },
+    "status": {
+      "const": "draft",
+      "description": "Review state after creation; only draft reviews accept feedback."
+    }
+  }
+}

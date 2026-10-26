@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workpulse.dev/contracts/events/performance/performance-feedback-submitted.v1.json",
+  "title": "WorkPulse performance.feedback_submitted v1",
+  "description": "A nominated peer filed feedback on a draft performance review. Identifiers only — the feedback comment is peer PII and never leaves the database (`.ai/security.md`).",
+  "type": "object",
+  "required": ["feedback_id", "review_id", "employee_id"],
+  "additionalProperties": false,
+  "properties": {
+    "feedback_id": {
+      "type": "string",
+      "description": "The submitted feedback entry (UUIDv7 string)."
+    },
+    "review_id": {
+      "type": "string",
+      "description": "The review the feedback was filed on (UUIDv7 string)."
+    },
+    "employee_id": {
+      "type": "string",
+      "description": "Employee the review evaluates — the subject (UUIDv7 string). Also the Kafka message key (ADR 0012)."
+    }
+  }
+}

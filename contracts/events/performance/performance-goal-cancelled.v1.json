@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workpulse.dev/contracts/events/performance/performance-goal-cancelled.v1.json",
+  "title": "WorkPulse performance.goal_cancelled v1",
+  "description": "A draft or active employee goal was cancelled; cancellation is terminal. Identifiers and the state only — goal titles and descriptions are sensitive and never leave the database (`.ai/security.md`).",
+  "type": "object",
+  "required": ["goal_id", "employee_id", "status"],
+  "additionalProperties": false,
+  "properties": {
+    "goal_id": {
+      "type": "string",
+      "description": "The cancelled goal (UUIDv7 string)."
+    },
+    "employee_id": {
+      "type": "string",
+      "description": "Employee the goal belongs to — the subject (UUIDv7 string). Also the Kafka message key (ADR 0012)."
+    },
+    "status": {
+      "const": "cancelled",
+      "description": "Terminal goal state; cancellation is allowed from `draft` or `active`."
+    }
+  }
+}

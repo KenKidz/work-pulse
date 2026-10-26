@@ -483,10 +483,11 @@ producer (rule 4).
 ### Ordered tasks
 
 **T1 — Event contracts (before any producer).**
-Add `contracts/events/performance/{goal-created,goal-activated,goal-completed,
-goal-cancelled,review-started,review-completed,review-cancelled,
-feedback-submitted}.v1.json` — JSON Schema draft 2020-12, kebab-case file ↔
-`performance.<snake_case>` event_type, `additionalProperties: false`, every
+Add `contracts/events/performance/performance-{goal-created,goal-activated,
+goal-completed,goal-cancelled,review-started,review-completed,review-cancelled,
+feedback-submitted}.v1.json` — JSON Schema draft 2020-12, the file's
+`<event-domain>-<event>` prefix matching `performance.<snake_case>` event_type
+(the repo's contract-sweep convention), `additionalProperties: false`, every
 property required, payloads exactly the spec `## Events` table (ids + status
 only; `feedback_submitted` = `{feedback_id, review_id, employee_id}`).
 Copy the shape of `contracts/events/recruitment/candidate-created.v1.json`.

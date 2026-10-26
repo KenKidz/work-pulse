@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workpulse.dev/contracts/events/performance/performance-goal-activated.v1.json",
+  "title": "WorkPulse performance.goal_activated v1",
+  "description": "A draft employee goal was activated and is now in progress. Identifiers and the state only — goal titles and descriptions are sensitive and never leave the database (`.ai/security.md`).",
+  "type": "object",
+  "required": ["goal_id", "employee_id", "status"],
+  "additionalProperties": false,
+  "properties": {
+    "goal_id": {
+      "type": "string",
+      "description": "The activated goal (UUIDv7 string)."
+    },
+    "employee_id": {
+      "type": "string",
+      "description": "Employee the goal belongs to — the subject (UUIDv7 string). Also the Kafka message key (ADR 0012)."
+    },
+    "status": {
+      "const": "active",
+      "description": "Goal state after activation; only active goals can complete."
+    }
+  }
+}

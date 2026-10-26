@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workpulse.dev/contracts/events/performance/performance-goal-completed.v1.json",
+  "title": "WorkPulse performance.goal_completed v1",
+  "description": "An active employee goal was completed. Identifiers and the state only — goal titles and descriptions are sensitive and never leave the database (`.ai/security.md`).",
+  "type": "object",
+  "required": ["goal_id", "employee_id", "status"],
+  "additionalProperties": false,
+  "properties": {
+    "goal_id": {
+      "type": "string",
+      "description": "The completed goal (UUIDv7 string)."
+    },
+    "employee_id": {
+      "type": "string",
+      "description": "Employee the goal belongs to — the subject (UUIDv7 string). Also the Kafka message key (ADR 0012)."
+    },
+    "status": {
+      "const": "completed",
+      "description": "Terminal goal state; a completed goal is never re-opened."
+    }
+  }
+}

@@ -59,6 +59,9 @@ CANDIDATE_ID = UUID("00000000-0000-4000-8000-00000000000f")
 INTERVIEW_ID = UUID("00000000-0000-4000-8000-000000000010")
 INTERVIEWER_ID = UUID("00000000-0000-4000-8000-000000000011")
 HIRED_EMPLOYEE_ID = UUID("00000000-0000-4000-8000-000000000012")
+GOAL_ID = UUID("00000000-0000-4000-8000-000000000013")
+REVIEW_ID = UUID("00000000-0000-4000-8000-000000000014")
+FEEDBACK_ID = UUID("00000000-0000-4000-8000-000000000015")
 NOW = datetime(2026, 10, 21, 9, 0, tzinfo=UTC)
 WORKDAY = date(2026, 10, 21)
 END_DATE = date(2026, 10, 23)
@@ -111,7 +114,11 @@ def _event_type(schema_path: Path) -> str:
 
 
 def _raw_envelope(event_type: str, data: dict[str, Any]) -> dict[str, Any]:
-    """An envelope without a domain builder — payroll's builders land in T3."""
+    """An envelope without a domain builder — payroll/performance builders land later.
+
+    Payroll's builders land in its T3 and performance's in its T3; until then the
+    catalog sweep still proves their schemas load and their payloads validate.
+    """
     return {
         "event_id": f"evt_{event_type.replace('.', '_')}",
         "event_type": event_type,
@@ -405,6 +412,70 @@ BUILDER_CASES: dict[str, Callable[[], dict[str, Any]]] = {
             "run_id": str(PAYROLL_RUN_ID),
             "employee_id": str(EMPLOYEE_ID),
             "period": PERIOD,
+        },
+    ),
+    "performance/performance-goal-created.v1.json": lambda: _raw_envelope(
+        "performance.goal_created",
+        {
+            "goal_id": str(GOAL_ID),
+            "employee_id": str(EMPLOYEE_ID),
+            "status": "draft",
+        },
+    ),
+    "performance/performance-goal-activated.v1.json": lambda: _raw_envelope(
+        "performance.goal_activated",
+        {
+            "goal_id": str(GOAL_ID),
+            "employee_id": str(EMPLOYEE_ID),
+            "status": "active",
+        },
+    ),
+    "performance/performance-goal-completed.v1.json": lambda: _raw_envelope(
+        "performance.goal_completed",
+        {
+            "goal_id": str(GOAL_ID),
+            "employee_id": str(EMPLOYEE_ID),
+            "status": "completed",
+        },
+    ),
+    "performance/performance-goal-cancelled.v1.json": lambda: _raw_envelope(
+        "performance.goal_cancelled",
+        {
+            "goal_id": str(GOAL_ID),
+            "employee_id": str(EMPLOYEE_ID),
+            "status": "cancelled",
+        },
+    ),
+    "performance/performance-review-started.v1.json": lambda: _raw_envelope(
+        "performance.review_started",
+        {
+            "review_id": str(REVIEW_ID),
+            "employee_id": str(EMPLOYEE_ID),
+            "status": "draft",
+        },
+    ),
+    "performance/performance-review-completed.v1.json": lambda: _raw_envelope(
+        "performance.review_completed",
+        {
+            "review_id": str(REVIEW_ID),
+            "employee_id": str(EMPLOYEE_ID),
+            "status": "completed",
+        },
+    ),
+    "performance/performance-review-cancelled.v1.json": lambda: _raw_envelope(
+        "performance.review_cancelled",
+        {
+            "review_id": str(REVIEW_ID),
+            "employee_id": str(EMPLOYEE_ID),
+            "status": "cancelled",
+        },
+    ),
+    "performance/performance-feedback-submitted.v1.json": lambda: _raw_envelope(
+        "performance.feedback_submitted",
+        {
+            "feedback_id": str(FEEDBACK_ID),
+            "review_id": str(REVIEW_ID),
+            "employee_id": str(EMPLOYEE_ID),
         },
     ),
 }
