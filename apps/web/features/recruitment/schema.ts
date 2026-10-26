@@ -112,3 +112,36 @@ export const hireFormSchema = z.object({
 });
 
 export type HireFormValues = z.infer<typeof hireFormSchema>;
+
+/** A `datetime-local` value; a past time is allowed (backfilled interviews). */
+const dateTimeInput = z
+  .string()
+  .min(1, "Choose a date and time")
+  .refine((value) => dayjs(value).isValid(), "Choose a valid date and time");
+
+/** Scheduling mirrors `InterviewSchedule`: interviewer, time, optional notes. */
+export const interviewScheduleSchema = z.object({
+  candidate_id: z.string().uuid("Choose a candidate"),
+  interviewer_id: z.string().uuid("Choose an interviewer"),
+  scheduled_at: dateTimeInput,
+  notes: z.string().trim().max(1000, "Notes must be at most 1,000 characters"),
+});
+
+export type InterviewScheduleValues = z.infer<typeof interviewScheduleSchema>;
+
+/** The pinned feedback scale, as the strings a form control produces. */
+export const INTERVIEW_RATINGS = ["1", "2", "3", "4", "5"] as const;
+
+/** Feedback: the rating is an explicit 1..5 choice; notes are optional. */
+export const interviewFeedbackSchema = z.object({
+  rating: z
+    .string()
+    .min(1, "Choose a rating from 1 to 5")
+    .refine(
+      (value) => (INTERVIEW_RATINGS as readonly string[]).includes(value),
+      "Choose a rating from 1 to 5",
+    ),
+  notes: z.string().trim().max(1000, "Feedback must be at most 1,000 characters"),
+});
+
+export type InterviewFeedbackValues = z.infer<typeof interviewFeedbackSchema>;

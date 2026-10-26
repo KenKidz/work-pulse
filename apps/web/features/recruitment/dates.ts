@@ -12,6 +12,23 @@ export function formatRecruitmentTimestamp(value: string): string {
 }
 
 /**
+ * A UTC ISO instant as the `YYYY-MM-DDTHH:mm` value a `datetime-local` input
+ * expects — the browser's local wall time, not UTC.
+ */
+export function toLocalDateTimeInput(value: string): string {
+  return dayjs(value).format("YYYY-MM-DDTHH:mm");
+}
+
+/**
+ * A `datetime-local` wall time in the browser's zone → the UTC ISO instant the
+ * API contract pins. The browser's zone is the user's intent; the API stores
+ * UTC.
+ */
+export function localDateTimeToUtc(value: string): string {
+  return dayjs(value).utc().toISOString();
+}
+
+/**
  * The server's current date as a `YYYY-MM-DD` string. Hire-date bounds are
  * evaluated against the API's UTC clock (time-as-a-parameter), so the form
  * uses UTC too instead of the browser zone.

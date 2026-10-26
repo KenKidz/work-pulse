@@ -14,24 +14,30 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useQueries, useQueryClient } from "@tanstack/react-query";
 import {
+  getListCandidatesQueryOptions,
   getListDepartmentsQueryOptions,
   getListJobsQueryOptions,
   getListLocationsQueryOptions,
   getListPositionsQueryOptions,
   useAdvanceCandidate,
+  useCancelInterview,
   useCloseJob,
+  useCompleteInterview,
   useCreateCandidate,
   useCreateJob,
   useHireCandidate,
   useListCandidates,
   useListDepartments,
   useListEmployees,
+  useListInterviews,
   useListJobs,
   useListLocations,
   useListPositions,
   useOpenJob,
   useRejectCandidate,
+  useScheduleInterview,
   useUpdateCandidate,
+  useUpdateInterview,
   useUpdateJob,
   useWithdrawCandidate,
 } from "@workpulse/api-client";
@@ -40,14 +46,21 @@ import { toast } from "sonner";
 
 import { useAuth } from "@/features/auth/components/AuthGate";
 
-import { invalidateJobs, invalidateRecruitment, invalidateRecruitmentHire } from "../api";
+import {
+  invalidateInterviews,
+  invalidateJobs,
+  invalidateRecruitment,
+  invalidateRecruitmentHire,
+} from "../api";
 import { recruitmentErrorMessage } from "../labels";
 import { RECRUITMENT_MANAGER_ROLES, RECRUITMENT_NAV_ROLES } from "../roles";
 import type {
+  Candidate,
   Department,
   EmployeeSummary,
   Job,
   ListCandidatesParams,
+  ListInterviewsParams,
   ListJobsParams,
   Location,
   Position,
@@ -216,6 +229,38 @@ export function useJobs(params?: ListJobsParams) {
 
 export function useCandidates(params?: ListCandidatesParams) {
   return useListCandidates(params);
+}
+
+export function useInterviews(params?: ListInterviewsParams) {
+  return useListInterviews(params);
+}
+
+/**
+ * Candidate labels and the scheduling choices. The API scopes the list for a
+ * non-management caller to the candidates they interview, so the same hook
+ * serves HR's pipeline and an interviewer's "My interviews" without exposing
+ * anyone else's rows. Follows `total_pages` with the bounded directory fan-out.
+ */
+export function useRecruitmentCandidateDirectory() {
+  const first = useListCandidates({ page: 1, page_size: DIRECTORY_PAGE_SIZE });
+  const rest = useQueries({
+    queries: directoryPageNumbers(first.data).map((page) =>
+      getListCandidatesQueryOptions({ page, page_size: DIRECTORY_PAGE_SIZE }),
+    ),
+  });
+
+  const candidates = directoryItems<Candidate>([
+    first.data,
+    ...rest.map((query) => query.data),
+  ]);
+
+  return {
+    interviewingCandidates: candidates.filter((row) => row.status === "interviewing"),
+    candidateNames: new Map(
+      candidates.map((row) => [row.id, `${row.first_name} ${row.last_name}`]),
+    ),
+    isPending: first.isPending,
+  };
 }
 
 /**
@@ -435,6 +480,88 @@ export function useCandidateHire() {
         // A hire also creates the Employee through the seam.
         await invalidateRecruitmentHire(queryClient);
         toast.success("Candidate hired");
+      },
+      onError: (error) => toast.error(recruitmentErrorMessage(error)),
+    },
+  });
+}
+
+export type InterviewFieldName =
+  | "candidate_id"
+  | "interviewer_id"
+  | "scheduled_at"
+  | "notes"
+  | "rating"
+  | "root";
+
+export type InterviewFieldErrors = Partial<Record<InterviewFieldName, string>>;
+
+/** Map the pinned interview codes back to the field that caused them. */
+export function interviewFieldErrors(error: unknown): InterviewFieldErrors {
+  const message = recruitmentErrorMessage(error);
+  if (error instanceof ApiError) {
+    switch (error.code) {
+      case "interviewer_not_found":
+      case "interviewer_not_active":
+        return { interviewer_id: message };
+      case "candidate_stage_conflict":
+      case "candidate_not_found":
+        return { candidate_id: message };
+      default:
+        return { root: message };
+    }
+  }
+  return { root: message };
+}
+
+export function useInterviewSchedule() {
+  const queryClient = useQueryClient();
+  return useScheduleInterview({
+    mutation: {
+      onSuccess: async () => {
+        await invalidateInterviews(queryClient);
+        toast.success("Interview scheduled");
+      },
+      onError: (error) => toast.error(recruitmentErrorMessage(error)),
+    },
+  });
+}
+
+export function useInterviewUpdate() {
+  const queryClient = useQueryClient();
+  return useUpdateInterview({
+    mutation: {
+      onSuccess: async () => {
+        await invalidateInterviews(queryClient);
+        toast.success("Interview updated");
+      },
+      onError: (error) => toast.error(recruitmentErrorMessage(error)),
+    },
+  });
+}
+
+export function useInterviewComplete() {
+  const queryClient = useQueryClient();
+  return useCompleteInterview({
+    mutation: {
+      onSuccess: async () => {
+        // Invalidation refetches the list, so the row flips to `completed`
+        // without a reload (the interviewer feedback AC).
+        await invalidateInterviews(queryClient);
+        toast.success("Feedback submitted");
+      },
+      onError: (error) => toast.error(recruitmentErrorMessage(error)),
+    },
+  });
+}
+
+export function useInterviewCancel() {
+  const queryClient = useQueryClient();
+  return useCancelInterview({
+    mutation: {
+      onSuccess: async () => {
+        await invalidateInterviews(queryClient);
+        toast.success("Interview cancelled");
       },
       onError: (error) => toast.error(recruitmentErrorMessage(error)),
     },

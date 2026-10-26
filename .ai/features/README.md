@@ -47,7 +47,7 @@ domain map in `.ai/domain.md` is their placeholder.
 | Payroll (simulated runs, timesheets, payslips) | 4 | L | done | `payroll.md` |
 | Overtime (requests, manager approval, HR verification) | 4 | M | done | `overtime.md` |
 | Analytics & Reports (ClickHouse projections) | 4 | L | done | `analytics-reports.md` |
-| Recruitment (jobs, candidates, interviews) | 4+ | L | approved | `recruitment.md` |
+| Recruitment (jobs, candidates, interviews) | 4+ | L | done | `recruitment.md` |
 | Performance (goals, reviews, feedback, skills) | 4+ | M | planned | — |
 | Employee documents (presigned upload/download) | 4+ | M | planned | — |
 | Observability (OTel, Prometheus, Grafana) | 6 | M | planned | — |

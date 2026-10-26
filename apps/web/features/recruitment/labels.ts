@@ -8,6 +8,7 @@ import type { ComponentProps } from "react";
 import type { Badge } from "@/components/ui/badge";
 import { ApiError } from "@workpulse/api-client/mutator/custom-fetch";
 
+import { INTERVIEW_RATINGS } from "./schema";
 import type {
   CandidateSource,
   CandidateStatus,
@@ -91,6 +92,22 @@ export const interviewStatusVariant: Record<InterviewStatus, BadgeVariant> = {
   completed: "success",
   cancelled: "muted",
 };
+
+const INTERVIEW_RATING_TEXT: Record<(typeof INTERVIEW_RATINGS)[number], string> = {
+  "1": "Poor",
+  "2": "Below expectations",
+  "3": "Meets expectations",
+  "4": "Strong",
+  "5": "Exceptional",
+};
+
+/** The interviewer's 1..5 scale, with a human sentence per score. */
+export const interviewRatingLabel: Record<number, string> = Object.fromEntries(
+  INTERVIEW_RATINGS.map((value) => [
+    Number(value),
+    `${value} — ${INTERVIEW_RATING_TEXT[value]}`,
+  ]),
+);
 
 /**
  * Stable code → sentence. Every pinned job/candidate/interview code, plus the

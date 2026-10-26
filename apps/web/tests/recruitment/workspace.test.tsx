@@ -27,6 +27,18 @@ vi.mock("@/features/recruitment/components/JobsTable", () => ({
   JobsTable: () => <p>Jobs table</p>,
 }));
 
+vi.mock("@/features/recruitment/components/CandidatesPanel", () => ({
+  CandidatesPanel: () => <p>Candidates panel</p>,
+}));
+
+vi.mock("@/features/recruitment/components/InterviewsPanel", () => ({
+  InterviewsPanel: () => <p>Interviews panel</p>,
+}));
+
+vi.mock("@/features/recruitment/components/MyInterviewsPanel", () => ({
+  MyInterviewsPanel: () => <p>My interviews panel</p>,
+}));
+
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.user = { role: "hr" };
@@ -52,7 +64,7 @@ describe("RecruitmentWorkspace", () => {
     expect(screen.getByRole("tab", { name: "My interviews" })).toBeInTheDocument();
     expect(screen.queryByRole("tab", { name: "Jobs" })).not.toBeInTheDocument();
     expect(screen.queryByRole("tab", { name: "Candidates" })).not.toBeInTheDocument();
-    expect(screen.getByText("No interviews to show here yet.")).toBeInTheDocument();
+    expect(screen.getByText("My interviews panel")).toBeInTheDocument();
     expect(mocks.replace).not.toHaveBeenCalled();
   });
 

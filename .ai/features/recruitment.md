@@ -1,6 +1,6 @@
 # Feature: Recruitment
 
-- **Status:** approved
+- **Status:** done
 - **Phase:** 4+ (`.ai/domain.md` context map; first feature after the Phase-4 core)
 - **Size:** L
 - **Surfaces:** api+web+events
@@ -405,23 +405,23 @@ ratings or reasons (`.ai/security.md`). `*_by` fields are actor **user** ids
 
 ## Acceptance criteria
 
-- [ ] API (jobs): given HR creates a job, when it is opened and then closed, then the status transitions are `draft → open → closed` with `opened_at`/`closed_at` stamped and `job.opened`/`job.closed` events in the outbox.
-- [ ] API (job failure): given a `draft` job, when a non-HR role calls `openJob` → `403 recruitment_denied`; when `openJob` runs twice → `409 job_not_draft`; when a candidate is created on a `closed` job → `409 job_not_open`.
-- [ ] API (candidate lifecycle): given an open job, when HR creates a candidate and advances twice, then `hire` runs, then the status path is `applied → interviewing → offered → hired`, the response carries `employee_id`, an Employee row exists via the seam (visible in Employees), and `candidate.created`/`candidate.advanced`/`candidate.hired` events are in the outbox.
-- [ ] API (candidate failure): given an `offered` candidate, when `advance` runs → `409 candidate_stage_conflict`; when `hire` runs on an `interviewing` candidate → `409 candidate_stage_conflict`; creating the same email on the same job again → `409 candidate_already_applied`.
-- [ ] API (hire failure): given a candidate whose email already belongs to an employee, when `hire` runs, then `409 employee_email_taken` is returned, the candidate remains `offered`, and no employee row is created (atomic rollback).
-- [ ] API (openings): given `openings=1` and two `offered` candidates, when the second `hire` runs → `409 job_openings_filled`.
-- [ ] API (interviews): given an `interviewing` candidate, when HR schedules an interview and the assigned interviewer completes it with `rating=4`, then the interview is `completed`, `interview.completed` is in the outbox, and the candidate's stage is unchanged (stage moves stay HR-driven).
-- [ ] API (interview failure): given a `scheduled` interview, when another interviewer calls `complete` → `404`; when HR (not assigned) calls `complete` → `403`; when `complete` runs on a `completed` interview → `409 interview_not_scheduled`; scheduling on an `applied` candidate → `409 candidate_stage_conflict`.
-- [ ] API (denied role): given an Employee- or Finance-role session, when any management endpoint is called (`createJob`, `createCandidate`, `advanceCandidate`, `hireCandidate`, `scheduleInterview`) → `403 recruitment_denied`.
-- [ ] API (scoped viewer): given a Manager with an assigned interview, when they `listInterviews?mine=1` they see only their interviews and `getCandidate` for that candidate; a different candidate id → `404`.
-- [ ] API (tenant isolation): given tenant A's job/candidate/interview ids, when tenant B calls any recruitment endpoint with them → `404`.
-- [ ] API (PII): a sweep of logs, error messages, outbox payloads and audit `changes` finds no candidate name, email, phone, notes or feedback text (identifiers only).
+- [x] API (jobs): given HR creates a job, when it is opened and then closed, then the status transitions are `draft → open → closed` with `opened_at`/`closed_at` stamped and `job.opened`/`job.closed` events in the outbox (`tests/integration/test_recruitment_jobs.py`).
+- [x] API (job failure): given a `draft` job, when a non-HR role calls `openJob` → `403 recruitment_denied`; when `openJob` runs twice → `409 job_not_draft`; when a candidate is created on a `closed` job → `409 job_not_open` (`test_recruitment_jobs.py`, `test_recruitment_roles.py`).
+- [x] API (candidate lifecycle): given an open job, when HR creates a candidate and advances twice, then `hire` runs, then the status path is `applied → interviewing → offered → hired`, the response carries `employee_id`, an Employee row exists via the seam (visible in Employees), and `candidate.created`/`candidate.advanced`/`candidate.hired` events are in the outbox (`test_recruitment_candidates.py`, `test_recruitment_hire.py`).
+- [x] API (candidate failure): given an `offered` candidate, when `advance` runs → `409 candidate_stage_conflict`; when `hire` runs on an `interviewing` candidate → `409 candidate_stage_conflict`; creating the same email on the same job again → `409 candidate_already_applied` (`test_recruitment_candidates.py`).
+- [x] API (hire failure): given a candidate whose email already belongs to an employee, when `hire` runs, then `409 employee_email_taken` is returned, the candidate remains `offered`, and no employee row is created (atomic rollback) (`test_recruitment_hire.py`).
+- [x] API (openings): given `openings=1` and two `offered` candidates, when the second `hire` runs → `409 job_openings_filled` (`test_recruitment_hire.py`).
+- [x] API (interviews): given an `interviewing` candidate, when HR schedules an interview and the assigned interviewer completes it with `rating=4`, then the interview is `completed`, `interview.completed` is in the outbox, and the candidate's stage is unchanged (stage moves stay HR-driven) (`test_recruitment_interviews.py`).
+- [x] API (interview failure): given a `scheduled` interview, when another interviewer calls `complete` → `404`; when HR (not assigned) calls `complete` → `403`; when `complete` runs on a `completed` interview → `409 interview_not_scheduled`; scheduling on an `applied` candidate → `409 candidate_stage_conflict` (`test_recruitment_interviews.py`).
+- [x] API (denied role): given an Employee- or Finance-role session, when any management endpoint is called (`createJob`, `createCandidate`, `advanceCandidate`, `hireCandidate`, `scheduleInterview`) → `403 recruitment_denied` (`test_recruitment_roles.py`).
+- [x] API (scoped viewer): given a Manager with an assigned interview, when they `listInterviews?mine=1` they see only their interviews and `getCandidate` for that candidate; a different candidate id → `404` (`test_recruitment_interviews.py`).
+- [x] API (tenant isolation): given tenant A's job/candidate/interview ids, when tenant B calls any recruitment endpoint with them → `404` (`test_recruitment_tenant_isolation.py`).
+- [x] API (PII): a sweep of logs, error messages, outbox payloads and audit `changes` finds no candidate name, email, phone, notes or feedback text (identifiers only) (`test_recruitment_logs.py`).
 - [x] Contracts: the ten `recruitment/*` v1 schemas validate their payloads, reject unknown or missing fields, and an event-payload contract test proves the identifiers-only shape (`tests/contract/test_recruitment_events.py`).
-- [ ] Web: given an HR session, when the `/recruitment` workspace loads, then Jobs/Candidates/Interviews tabs render with loading, empty and error states, pipeline moves (advance/reject/withdraw/hire) and interview actions reflect the pinned `409`/`404` codes as visible messages, and a failed hire (email taken) leaves the candidate `offered` with the error shown.
-- [ ] Web (interviewer): given a Manager with an assigned interview, when they open "My interviews", then only their interviews appear and submitting feedback completes the row without a reload.
-- [ ] Web (denied): an Employee or Finance user never sees the Recruitment nav, and a direct `/recruitment` URL redirects or renders the denied state (proven in e2e).
-- [ ] E2E: `tests/e2e/recruitment.spec.ts` drives HR create job → open → add candidate → advance → schedule interview → the interviewer (second session) files feedback → advance → hire, and the new employee appears in Employees; plus the duplicate-application refusal and the hidden/denied nav for the employee role.
+- [x] Web: given an HR session, when the `/recruitment` workspace loads, then Jobs/Candidates/Interviews tabs render with loading, empty and error states, pipeline moves (advance/reject/withdraw/hire) and interview actions reflect the pinned `409`/`404` codes as visible messages, and a failed hire (email taken) leaves the candidate `offered` with the error shown (`apps/web/tests/recruitment/{jobs,candidates,interviews}.test.tsx`).
+- [x] Web (interviewer): given a Manager with an assigned interview, when they open "My interviews", then only their interviews appear and submitting feedback completes the row without a reload (`apps/web/tests/recruitment/my-interviews.test.tsx`).
+- [x] Web (denied): an Employee or Finance user never sees the Recruitment nav, and a direct `/recruitment` URL redirects or renders the denied state (proven in e2e) (`workspace.test.tsx`, `tests/e2e/recruitment.spec.ts`).
+- [x] E2E: `tests/e2e/recruitment.spec.ts` drives HR create job → open → add candidate → advance → schedule interview → the interviewer (second session) files feedback → advance → hire, and the new employee appears in Employees; plus the duplicate-application refusal and the hidden/denied nav for the employee role.
 
 ## Decisions (PO, 2026-10-23)
 

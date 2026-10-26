@@ -388,6 +388,22 @@ reset_overtime_fixtures() {
   fi
 }
 
+# Recruitment rows and the employees a hire creates are mutable through the
+# UI; a repeat run would collide on the unique candidate (tenant, job, email)
+# key and the employees' email/code uniqueness. Reset the seeded tenant's
+# jobs/candidates/interviews and the hires' employees. The shared script is
+# also called by the spec before its flow, so a Playwright retry starts clean
+# too. Synthetic dev data only (`.ai/testing.md` rule 6).
+reset_recruitment_fixtures() {
+  if ! (
+    cd "$API_DIR" || exit 1
+    PYTHONPATH="../..:." "$PYTHON" scripts/reset_recruitment_fixtures.py
+  ); then
+    echo "full-hop: could not reset the seeded recruitment fixtures" >&2
+    exit 1
+  fi
+}
+
 # The reports spec asserts exact, labelled rows, so it starts from the real
 # builders' envelopes published to kafka-test before the reports worker starts:
 # the worker folds them into clickhouse-test exactly as it folds production
@@ -586,6 +602,7 @@ reset_leave_fixtures
 reset_notification_fixtures
 reset_payroll_fixtures
 reset_overtime_fixtures
+reset_recruitment_fixtures
 reset_reports_fixtures
 
 # All workers run inside the apps/api uv environment, reading the same
