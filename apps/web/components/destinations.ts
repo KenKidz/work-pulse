@@ -1,5 +1,6 @@
 import {
   Banknote,
+  BriefcaseBusiness,
   Building2,
   CalendarClock,
   CalendarDays,
@@ -16,6 +17,7 @@ import {
 import type { Role } from "@workpulse/api-client/index.schemas";
 
 import { PAYROLL_VIEW_ROLES } from "@/features/payroll/roles";
+import { RECRUITMENT_NAV_ROLES } from "@/features/recruitment/roles";
 import { REPORT_READ_ROLES } from "@/features/reports/roles";
 
 export type Destination = {
@@ -121,6 +123,12 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Reports",
     icon: ChartColumn,
     roles: REPORT_READ_ROLES,
+  },
+  {
+    href: "/recruitment",
+    label: "Recruitment",
+    icon: BriefcaseBusiness,
+    roles: RECRUITMENT_NAV_ROLES,
   },
   {
     href: "/command-center",

@@ -21,6 +21,7 @@ const DASHBOARD_ROOTS = [
   "/attendance",
   "/leave",
   "/command-center",
+  "/recruitment",
   "/settings",
 ];
 
@@ -55,6 +56,7 @@ export const config = {
     "/attendance/:path*",
     "/leave/:path*",
     "/command-center/:path*",
+    "/recruitment/:path*",
     "/settings/:path*",
     "/login",
   ],

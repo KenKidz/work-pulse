@@ -1,0 +1,50 @@
+"use client";
+
+/**
+ * Shared pagination footer for the recruitment lists. The house clamp shape
+ * means `page` metadata is always present; the control renders only when a
+ * second page exists, and both buttons carry the list's accessible name.
+ */
+
+import { Button } from "@/components/ui/button";
+
+import type { Page } from "../types";
+
+type RecruitmentPaginationProps = {
+  page: Page;
+  /** Human list name used in the controls' accessible labels. */
+  label: string;
+  onPageChange: (page: number) => void;
+};
+
+export function RecruitmentPagination({ page, label, onPageChange }: RecruitmentPaginationProps) {
+  if (page.total_pages <= 1) return null;
+
+  return (
+    <div className="flex items-center justify-end gap-2 border-t px-4 py-3 text-sm">
+      <Button
+        variant="outline"
+        size="sm"
+        className="min-h-11 sm:min-h-8"
+        aria-label={`Previous page of ${label}`}
+        disabled={page.page <= 1}
+        onClick={() => onPageChange(page.page - 1)}
+      >
+        Previous
+      </Button>
+      <span className="text-muted-foreground">
+        Page {page.page} of {page.total_pages}
+      </span>
+      <Button
+        variant="outline"
+        size="sm"
+        className="min-h-11 sm:min-h-8"
+        aria-label={`Next page of ${label}`}
+        disabled={page.page >= page.total_pages}
+        onClick={() => onPageChange(page.page + 1)}
+      >
+        Next
+      </Button>
+    </div>
+  );
+}
