@@ -15,8 +15,9 @@ Covered here (`.ai/features/recruitment.md` → T3):
 - contact edits with PII audit markers and the job-scoped email guard;
 - list filters (`job_id`, `status`, `q`), clamped pagination and foreign filter
   ids `404`;
-- interview-derived manager visibility (`CandidateDetail.interviews` is empty
-  until T5; the scope join is proven with a directly seeded interview row);
+- interview-derived manager visibility (`CandidateDetail.interviews` carries
+  the interviewer's own conversation since T5; the scope join is proven with a
+  directly seeded interview row);
 - tenant isolation: B sees and touches nothing of A's.
 """
 
@@ -568,7 +569,11 @@ async def test_manager_candidate_scope_comes_from_interview_assignment(
     assert listed.status_code == 200
     assert [item["id"] for item in listed.json()["items"]] == [assigned["id"]]
     assert assigned_detail.status_code == 200
-    assert assigned_detail.json()["interviews"] == []
+    # The assignment now exposes the interviewer's own conversation (T5).
+    assert len(assigned_detail.json()["interviews"]) == 1
+    assert assigned_detail.json()["interviews"][0]["interviewer_id"] == str(
+        interviewer_id
+    )
     _assert_error(other_detail, 404, "candidate_not_found")
     assert [item["id"] for item in by_job.json()["items"]] == [assigned["id"]]
 

@@ -561,6 +561,41 @@ export interface HireCandidate {
 }
 
 /**
+ * The assigned interviewer's completion feedback — `interview.completed`.
+ */
+export interface InterviewFeedback {
+  /**
+   * @minimum 1
+   * @maximum 5
+   */
+  rating: number;
+  notes?: string | null;
+}
+
+export interface InterviewListPage {
+  items: Interview[];
+  page: Page;
+}
+
+/**
+ * Schedule on an `interviewing` candidate for an active employee.
+ */
+export interface InterviewSchedule {
+  interviewer_id: string;
+  scheduled_at: string;
+  notes?: string | null;
+}
+
+/**
+ * Reschedule / re-assign / re-note while `scheduled`.
+ */
+export interface InterviewUpdate {
+  interviewer_id?: string | null;
+  scheduled_at?: string | null;
+  notes?: string | null;
+}
+
+/**
  * Pinned job lifecycle (`draft → open → closed`).
  */
 export type JobStatus = (typeof JobStatus)[keyof typeof JobStatus];
@@ -1515,6 +1550,18 @@ export type ListCandidatesParams = {
   job_id?: string | null;
   status?: CandidateStatus | null;
   q?: string | null;
+  page?: number;
+  page_size?: number;
+};
+
+export type ListInterviewsParams = {
+  candidate_id?: string | null;
+  job_id?: string | null;
+  status?: InterviewStatus | null;
+  mine?: boolean;
+  interviewer_id?: string | null;
+  from?: string | null;
+  to?: string | null;
   page?: number;
   page_size?: number;
 };

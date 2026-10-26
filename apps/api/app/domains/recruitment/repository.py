@@ -27,6 +27,13 @@ counting filled openings, so two hires cannot both claim the last one
 conditional `offered → hired` flip; `EmployeeHirePort` is the recruitment-owned
 write seam to Employees, implemented in `app.infrastructure.postgres` so this
 module imports neither Employees nor infrastructure.
+
+Interviews (T5) are conditional on `scheduled` exactly like the other state
+machines: `update_interview`, `complete_interview` and `cancel_interview`
+return `None` when a concurrent completion/cancellation won or the row is not
+in the tenant. `interviewer_facts` is the cross-context read that keeps the
+"terminated employees cannot be newly assigned" rule out of routers; it
+returns recruitment-owned facts (`InterviewerFacts`), never an Employees row.
 """
 
 from collections.abc import Sequence
@@ -42,6 +49,8 @@ from app.domains.recruitment.schemas import (
     CandidateRejectedFrom,
     CandidateSource,
     CandidateStatus,
+    Interview,
+    InterviewStatus,
     Job,
     JobStatus,
 )
@@ -64,6 +73,34 @@ class CandidateFilters(BaseModel):
     status: CandidateStatus | None = None
     q: str | None = None
     visible_candidate_ids: Sequence[UUID] | None = None
+
+
+class InterviewFilters(BaseModel):
+    """Effective interview-list filters (scope already resolved).
+
+    `interviewer_id` is the *effective* interviewer restriction: management
+    passes the requested filter (or the caller's employee id for `mine=1`),
+    non-management callers are always forced to their own employee id by the
+    service. `scheduled_from`/`scheduled_to` are inclusive UTC calendar days.
+    """
+
+    candidate_id: UUID | None = None
+    job_id: UUID | None = None
+    status: InterviewStatus | None = None
+    interviewer_id: UUID | None = None
+    scheduled_from: date | None = None
+    scheduled_to: date | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class InterviewerFacts:
+    """The cross-context facts recruitment needs about an interviewer.
+
+    Deliberately recruitment-owned: the adapter reads Employees, but no
+    Employees type crosses this module's boundary.
+    """
+
+    active: bool
 
 
 @dataclass(frozen=True, slots=True)
@@ -277,5 +314,106 @@ class RecruitmentRepository(Protocol):
 
         `None` when the row is not `offered` (a concurrent decision won) or not
         in the tenant; the service maps that to `409 candidate_stage_conflict`.
+        """
+        ...
+
+    # --- interviews ---------------------------------------------------------
+
+    async def interviewer_facts(
+        self, tenant_id: UUID, employee_id: UUID
+    ) -> InterviewerFacts | None:
+        """Active/terminated status of the assigned employee.
+
+        `None` for a foreign or unknown employee id (`404 interviewer_not_found`
+        in the service). A terminated employee is facts with `active=False`
+        (`409 interviewer_not_active` on a new assignment; reads and existing
+        assignments keep working).
+        """
+        ...
+
+    async def create_interview(
+        self,
+        tenant_id: UUID,
+        interview_id: UUID,
+        *,
+        candidate_id: UUID,
+        job_id: UUID,
+        interviewer_id: UUID,
+        scheduled_at: datetime,
+        notes: str | None,
+    ) -> Interview:
+        """Insert a conversation in `scheduled`."""
+        ...
+
+    async def get_interview(
+        self, tenant_id: UUID, interview_id: UUID
+    ) -> Interview | None:
+        """Tenant-scoped detail; `None` for a missing or foreign id."""
+        ...
+
+    async def list_interviews(
+        self, tenant_id: UUID, filters: InterviewFilters, page: PageParams
+    ) -> tuple[Sequence[Interview], int]:
+        """Paged interviews, newest `scheduled_at` first (`id` tiebreak)."""
+        ...
+
+    async def list_candidate_interviews(
+        self,
+        tenant_id: UUID,
+        candidate_id: UUID,
+        *,
+        interviewer_id: UUID | None = None,
+    ) -> Sequence[Interview]:
+        """Every interview on the candidate (or only the given interviewer's).
+
+        Backs `CandidateDetail.interviews`: management sees all, an assigned
+        interviewer sees their own slice.
+        """
+        ...
+
+    async def update_interview(
+        self,
+        tenant_id: UUID,
+        interview_id: UUID,
+        *,
+        now: datetime,
+        **changes: Any,
+    ) -> Interview | None:
+        """Reschedule / re-assign / re-note while `scheduled`.
+
+        `None` when a concurrent completion/cancellation won or the row is not
+        in the tenant; the service maps that to `409 interview_not_scheduled`.
+        """
+        ...
+
+    async def complete_interview(
+        self,
+        tenant_id: UUID,
+        interview_id: UUID,
+        *,
+        interviewer_id: UUID,
+        rating: int,
+        feedback_notes: str | None,
+        now: datetime,
+    ) -> Interview | None:
+        """Conditional `scheduled → completed` by the assigned interviewer.
+
+        The `interviewer_id` guard is part of the update, so a concurrent
+        reassignment cannot be completed by the previous assignee.
+        """
+        ...
+
+    async def cancel_interview(
+        self,
+        tenant_id: UUID,
+        interview_id: UUID,
+        *,
+        note: str | None,
+        now: datetime,
+    ) -> Interview | None:
+        """Conditional `scheduled → cancelled`, stamping `cancelled_at`.
+
+        A provided note replaces the interview's `notes` column (the pinned
+        `Interview` shape has no separate cancellation-note field).
         """
         ...

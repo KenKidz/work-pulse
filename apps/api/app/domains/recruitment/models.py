@@ -212,6 +212,21 @@ class Interview(Base):
             "interviewer_id",
             "scheduled_at",
         ),
+        # The default management list, the `from`/`to` range and a job's
+        # interviews all order by `scheduled_at`; `id` makes the order stable.
+        Index(
+            "ix_interviews_tenant_scheduled",
+            "tenant_id",
+            "scheduled_at",
+            "id",
+        ),
+        Index(
+            "ix_interviews_tenant_job_scheduled",
+            "tenant_id",
+            "job_id",
+            "scheduled_at",
+            "id",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid7)

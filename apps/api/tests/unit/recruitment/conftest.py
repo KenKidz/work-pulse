@@ -21,6 +21,9 @@ from app.domains.recruitment.schemas import (
     CandidateRejectedFrom,
     CandidateSource,
     CandidateStatus,
+    Interview,
+    InterviewSchedule,
+    InterviewStatus,
     Job,
     JobCreate,
     JobStatus,
@@ -49,6 +52,8 @@ OTHER_DEPARTMENT = UUID("00000000-0000-4000-8000-0000000000d2")
 
 # NOW = 2026-10-23 12:00 UTC — the pinned clock for every mutation test.
 NOW = datetime(2026, 10, 23, 12, 0, tzinfo=UTC)
+# The default interview slot used by the service/HTTP tests.
+INTERVIEW_AT = datetime(2026, 10, 25, 9, 0, tzinfo=UTC)
 
 
 def identity(
@@ -247,6 +252,63 @@ async def create_candidate(
             email=email,
             phone=phone,
             source=source,
+            notes=notes,
+        ),
+        now,
+    )
+
+
+def seed_interview(
+    repo: FakeRecruitmentRepo,
+    *,
+    candidate_id: UUID,
+    job_id: UUID,
+    tenant_id: UUID = TENANT_A,
+    interviewer_id: UUID = EMPLOYEE,
+    scheduled_at: datetime = INTERVIEW_AT,
+    notes: str | None = None,
+    status: InterviewStatus = InterviewStatus.SCHEDULED,
+    rating: int | None = None,
+    feedback_notes: str | None = None,
+    created_at: datetime = CREATED_AT,
+) -> Interview:
+    """Insert an interview directly — only for states no service path produced."""
+    interview = Interview(
+        id=uuid7(),
+        tenant_id=tenant_id,
+        candidate_id=candidate_id,
+        job_id=job_id,
+        interviewer_id=interviewer_id,
+        scheduled_at=scheduled_at,
+        notes=notes,
+        status=status,
+        rating=rating,
+        feedback_notes=feedback_notes,
+        completed_at=created_at if status is InterviewStatus.COMPLETED else None,
+        cancelled_at=created_at if status is InterviewStatus.CANCELLED else None,
+        created_at=created_at,
+        updated_at=created_at,
+    )
+    repo.interviews[(tenant_id, interview.id)] = interview
+    return interview
+
+
+async def schedule_interview(
+    service: RecruitmentService,
+    candidate_id: UUID,
+    *,
+    caller: Identity | None = None,
+    interviewer_id: UUID = EMPLOYEE,
+    scheduled_at: datetime = INTERVIEW_AT,
+    notes: str | None = None,
+    now: datetime = NOW,
+) -> Interview:
+    return await service.schedule_interview(
+        caller or identity(),
+        candidate_id,
+        InterviewSchedule(
+            interviewer_id=interviewer_id,
+            scheduled_at=scheduled_at,
             notes=notes,
         ),
         now,

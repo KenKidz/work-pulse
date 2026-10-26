@@ -1,4 +1,5 @@
-"""Use cases for the Recruitment domain — jobs (T2), candidates (T3), hire (T4).
+"""Use cases for the Recruitment domain — jobs (T2), candidates (T3), hire (T4),
+interviews (T5).
 
 Rules implemented here (pinned in `.ai/features/recruitment.md`):
 
@@ -17,6 +18,12 @@ Rules implemented here (pinned in `.ai/features/recruitment.md`):
   created through the `EmployeeHirePort` on the caller's session, and the
   candidate flips to `HIRED` with the returned id. A seam failure propagates
   unchanged and rolls the whole hire back (the candidate stays `OFFERED`).
+- **Interview state machine** (T5): scheduling is management-only and requires
+  an `interviewing` candidate plus an active employee interviewer. `update` and
+  `cancel` are management-only while `scheduled`; `complete` is reserved for
+  the assigned interviewer (feedback is the only path to `completed`) and never
+  moves the candidate's stage. Scheduled/completed/cancelled/updated audit
+  entries carry no interview or feedback text.
 - **Org references**: `department_id`/`position_id`/`location_id` are validated
   through the Organizations services — never their tables (AGENTS.md rule 3).
   Their 404s propagate unchanged; archived refs are accepted at job creation
@@ -31,11 +38,12 @@ Rules implemented here (pinned in `.ai/features/recruitment.md`):
 - **PII**: candidate names, emails, phones, notes and side-exit notes never
   appear in this module's events or audit `changes` values. Audit records the
   PII field names with the `"changed"` marker only; events carry identifiers,
-  state and the intake source code.
+  state and the intake source code. Interview notes and feedback notes follow
+  the same rule; ratings reach the audit trail but never the event stream.
 """
 
 from collections.abc import Sequence
-from datetime import datetime
+from datetime import date, datetime
 from enum import StrEnum
 from typing import Any, Protocol, cast
 from uuid import UUID
@@ -48,10 +56,15 @@ from app.domains.recruitment.exceptions import (
     CandidateNotOpenError,
     CandidateStageConflictError,
     HireDateInFutureError,
+    InterviewerNotActiveError,
+    InterviewerNotFoundError,
+    InterviewNotFoundError,
+    InterviewNotScheduledError,
     JobNotDraftError,
     JobNotFoundError,
     JobNotOpenError,
     JobOpeningsFilledError,
+    RecruitmentDeniedError,
 )
 from app.domains.recruitment.policies import (
     ensure_can_manage,
@@ -62,6 +75,7 @@ from app.domains.recruitment.repository import (
     CandidateFilters,
     EmployeeHirePayload,
     EmployeeHirePort,
+    InterviewFilters,
     JobFilters,
     RecruitmentRepository,
 )
@@ -75,6 +89,12 @@ from app.domains.recruitment.schemas import (
     CandidateStatus,
     CandidateUpdate,
     HireCandidate,
+    Interview,
+    InterviewFeedback,
+    InterviewListPage,
+    InterviewSchedule,
+    InterviewStatus,
+    InterviewUpdate,
     Job,
     JobCreate,
     JobListPage,
@@ -105,9 +125,11 @@ class OrgReferenceReader(Protocol):
 
 
 def _value(value: object) -> object:
-    """Audit-safe JSON value: UUIDs/StrEnums become strings, the rest as-is."""
+    """Audit-safe JSON value: UUIDs/datetimes/StrEnums become strings."""
     if isinstance(value, UUID):
         return str(value)
+    if isinstance(value, datetime):
+        return value.isoformat()
     if isinstance(value, StrEnum):
         return value.value
     return value
@@ -669,7 +691,10 @@ class RecruitmentService:
                 },
             )
         )
-        return self._detail(updated)
+        return self._detail(
+            updated,
+            await self._repo.list_candidate_interviews(identity.tenant_id, updated.id),
+        )
 
     # --- reads ---------------------------------------------------------------
 
@@ -735,8 +760,9 @@ class RecruitmentService:
     ) -> CandidateDetail:
         """Candidate detail; unknown, cross-tenant and out-of-scope ids are `404`.
 
-        `interviews` is populated by T5 (management: all; an assigned
-        interviewer: their own); until then it is the empty list.
+        `interviews` is management-complete and interviewer-scoped: an assigned
+        interviewer sees only their own conversations on the candidate, never
+        another interviewer's feedback.
         """
         scope = await self._candidate_scope(identity)
         candidate = await self._repo.get_candidate(identity.tenant_id, candidate_id)
@@ -744,7 +770,365 @@ class RecruitmentService:
             raise CandidateNotFoundError()
         if scope is not None and candidate.id not in scope:
             raise CandidateNotFoundError()
-        return self._detail(candidate)
+        interviewer_id: UUID | None = None
+        if not is_management(identity):
+            # The scope above proves the employee link exists; keeping the
+            # explicit guard makes the read fail closed if that ever changes.
+            if identity.employee_id is None:
+                raise CandidateNotFoundError()
+            interviewer_id = identity.employee_id
+        interviews = await self._repo.list_candidate_interviews(
+            identity.tenant_id, candidate.id, interviewer_id=interviewer_id
+        )
+        return self._detail(candidate, interviews)
+
+    async def list_interviews(
+        self,
+        identity: Identity,
+        *,
+        candidate_id: UUID | None,
+        job_id: UUID | None,
+        status: InterviewStatus | None,
+        mine: bool,
+        interviewer_id: UUID | None,
+        scheduled_from: date | None,
+        scheduled_to: date | None,
+        page: PageParams,
+    ) -> InterviewListPage:
+        """Paged interviews with the pinned scope and filter semantics.
+
+        Management may filter by any `interviewer_id`; a non-management caller
+        is always forced to their own employee id and may not pass the filter
+        (`403 recruitment_denied`). `mine=1` restricts any caller to their own
+        assignments (empty when the account has no employee link). Foreign
+        filter ids are `404` with the entity's code.
+        """
+        ensure_has_standing(identity)
+        management = is_management(identity)
+
+        if not management and interviewer_id is not None:
+            raise RecruitmentDeniedError()
+
+        if candidate_id is not None:
+            candidate = await self._repo.get_candidate(identity.tenant_id, candidate_id)
+            if candidate is None:
+                raise CandidateNotFoundError()
+            if not management:
+                scope = await self._candidate_scope(identity)
+                if scope is not None and candidate.id not in scope:
+                    raise CandidateNotFoundError()
+
+        if job_id is not None:
+            job = await self._repo.get_job(identity.tenant_id, job_id)
+            if job is None:
+                raise JobNotFoundError()
+            if not management:
+                scope = await self._read_scope(identity)
+                if scope is not None and job.id not in scope:
+                    raise JobNotFoundError()
+
+        effective_interviewer: UUID | None = None
+        empty_scope = False
+        if management:
+            if mine:
+                effective_interviewer = identity.employee_id
+                empty_scope = identity.employee_id is None
+            else:
+                effective_interviewer = interviewer_id
+                if interviewer_id is not None:
+                    facts = await self._repo.interviewer_facts(
+                        identity.tenant_id, interviewer_id
+                    )
+                    if facts is None:
+                        raise InterviewerNotFoundError()
+        elif identity.employee_id is None:
+            empty_scope = True
+        else:
+            effective_interviewer = identity.employee_id
+
+        if empty_scope:
+            return InterviewListPage(items=[], page=page.make_page(0))
+
+        items, total = await self._repo.list_interviews(
+            identity.tenant_id,
+            InterviewFilters(
+                candidate_id=candidate_id,
+                job_id=job_id,
+                status=status,
+                interviewer_id=effective_interviewer,
+                scheduled_from=scheduled_from,
+                scheduled_to=scheduled_to,
+            ),
+            page,
+        )
+        return InterviewListPage(items=list(items), page=page.make_page(total))
+
+    async def schedule_interview(
+        self,
+        identity: Identity,
+        candidate_id: UUID,
+        payload: InterviewSchedule,
+        now: datetime,
+    ) -> Interview:
+        """Schedule a conversation on an `interviewing` candidate.
+
+        Management-only. The candidate stage and the interviewer's active
+        status are checked before the row is written; scheduling is the only
+        interview transition that emits `interview.scheduled`.
+        """
+        ensure_can_manage(identity)
+        # `FOR UPDATE` serializes this stage check with a concurrent
+        # advance/reject/withdraw so the insert cannot land on a candidate that
+        # left `interviewing` between the read and the write.
+        candidate = await self._repo.lock_candidate(identity.tenant_id, candidate_id)
+        if candidate is None:
+            raise CandidateNotFoundError()
+        if candidate.status is not CandidateStatus.INTERVIEWING:
+            raise CandidateStageConflictError()
+        await self._ensure_active_interviewer(
+            identity.tenant_id, payload.interviewer_id
+        )
+
+        interview = await self._repo.create_interview(
+            identity.tenant_id,
+            uuid7(),
+            candidate_id=candidate.id,
+            job_id=candidate.job_id,
+            interviewer_id=payload.interviewer_id,
+            scheduled_at=payload.scheduled_at,
+            notes=payload.notes,
+        )
+
+        await self._outbox.append(
+            events.interview_scheduled(
+                tenant_id=identity.tenant_id,
+                actor_id=identity.actor_id,
+                occurred_at=now,
+                interview_id=interview.id,
+                candidate_id=interview.candidate_id,
+                job_id=interview.job_id,
+                interviewer_id=interview.interviewer_id,
+            )
+        )
+        changes: dict[str, Any] = {
+            "candidate_id": {"old": None, "new": str(interview.candidate_id)},
+            "job_id": {"old": None, "new": str(interview.job_id)},
+            "interviewer_id": {"old": None, "new": str(interview.interviewer_id)},
+            "scheduled_at": {"old": None, "new": interview.scheduled_at.isoformat()},
+            "status": {"old": None, "new": InterviewStatus.SCHEDULED.value},
+        }
+        if interview.notes is not None:
+            changes["notes"] = PII_CHANGED  # PII: never the value
+        await self._audit.write(
+            AuditEntryCreate(
+                tenant_id=identity.tenant_id,
+                actor_id=identity.actor_id,
+                action="interview.scheduled",
+                entity_type="interview",
+                entity_id=interview.id,
+                occurred_at=now,
+                changes=changes,
+            )
+        )
+        return interview
+
+    async def update_interview(
+        self,
+        identity: Identity,
+        interview_id: UUID,
+        payload: InterviewUpdate,
+        now: datetime,
+    ) -> Interview:
+        """Reschedule / re-assign / re-note while `scheduled` (management-only).
+
+        A reassignment re-runs the active-interviewer check. No event: the
+        catalog has no `interview.updated` fact; the audit entry records it.
+        """
+        ensure_can_manage(identity)
+        existing = await self._repo.get_interview(identity.tenant_id, interview_id)
+        if existing is None:
+            raise InterviewNotFoundError()
+        if existing.status is not InterviewStatus.SCHEDULED:
+            raise InterviewNotScheduledError()
+
+        updates = payload.model_dump(exclude_unset=True)
+        if not updates:
+            return existing
+        if "interviewer_id" in updates:
+            await self._ensure_active_interviewer(
+                identity.tenant_id, updates["interviewer_id"]
+            )
+
+        updated = await self._repo.update_interview(
+            identity.tenant_id, interview_id, now=now, **updates
+        )
+        if updated is None:
+            # A concurrent completion/cancellation won the row.
+            raise InterviewNotScheduledError()
+
+        await self._audit.write(
+            AuditEntryCreate(
+                tenant_id=identity.tenant_id,
+                actor_id=identity.actor_id,
+                action="interview.updated",
+                entity_type="interview",
+                entity_id=interview_id,
+                occurred_at=now,
+                changes={
+                    field: (
+                        PII_CHANGED
+                        if field in {"notes", "feedback_notes"}
+                        else {
+                            "old": _value(getattr(existing, field)),
+                            "new": _value(getattr(updated, field)),
+                        }
+                    )
+                    for field in updates
+                },
+            )
+        )
+        return updated
+
+    async def complete_interview(
+        self,
+        identity: Identity,
+        interview_id: UUID,
+        payload: InterviewFeedback,
+        now: datetime,
+    ) -> Interview:
+        """The assigned interviewer files feedback: `scheduled → completed`.
+
+        Only the assigned interviewer may complete; a management caller who is
+        not assigned gets `403`, a non-management caller who is not assigned
+        gets `404` (existence is not leaked). The candidate's stage is never
+        changed here.
+        """
+        ensure_has_standing(identity)
+        existing = await self._repo.get_interview(identity.tenant_id, interview_id)
+        if existing is None:
+            raise InterviewNotFoundError()
+        interviewer_id = identity.employee_id
+        if interviewer_id is None or interviewer_id != existing.interviewer_id:
+            if is_management(identity):
+                raise RecruitmentDeniedError()
+            raise InterviewNotFoundError()
+        if existing.status is not InterviewStatus.SCHEDULED:
+            raise InterviewNotScheduledError()
+
+        updated = await self._repo.complete_interview(
+            identity.tenant_id,
+            interview_id,
+            interviewer_id=interviewer_id,
+            rating=payload.rating,
+            feedback_notes=payload.notes,
+            now=now,
+        )
+        if updated is None:
+            # The guarded update lost: a concurrent completion/cancellation won,
+            # or HR reassigned the interview after the permission read. Re-read
+            # so the caller gets the pinned code for the actual outcome rather
+            # than a blanket wrong-state conflict.
+            latest = await self._repo.get_interview(identity.tenant_id, interview_id)
+            if latest is None:
+                raise InterviewNotFoundError()
+            if latest.interviewer_id != interviewer_id:
+                if is_management(identity):
+                    raise RecruitmentDeniedError()
+                raise InterviewNotFoundError()
+            raise InterviewNotScheduledError()
+
+        await self._outbox.append(
+            events.interview_completed(
+                tenant_id=identity.tenant_id,
+                actor_id=identity.actor_id,
+                occurred_at=now,
+                interview_id=updated.id,
+                candidate_id=updated.candidate_id,
+                job_id=updated.job_id,
+                interviewer_id=updated.interviewer_id,
+                completed_by=identity.actor_id,
+            )
+        )
+        changes: dict[str, Any] = {
+            "status": {
+                "old": InterviewStatus.SCHEDULED.value,
+                "new": InterviewStatus.COMPLETED.value,
+            },
+            "rating": {"old": None, "new": payload.rating},
+            "completed_at": {"old": None, "new": now.isoformat()},
+        }
+        if payload.notes is not None:
+            changes["feedback_notes"] = PII_CHANGED  # PII: never the value
+        await self._audit.write(
+            AuditEntryCreate(
+                tenant_id=identity.tenant_id,
+                actor_id=identity.actor_id,
+                action="interview.completed",
+                entity_type="interview",
+                entity_id=updated.id,
+                occurred_at=now,
+                changes=changes,
+            )
+        )
+        return updated
+
+    async def cancel_interview(
+        self,
+        identity: Identity,
+        interview_id: UUID,
+        payload: CandidateDecision,
+        now: datetime,
+    ) -> Interview:
+        """Cancel a `scheduled` interview (management-only), terminal.
+
+        The optional note is PII: it is stored on the interview row and
+        recorded in the audit trail as `"changed"`, never in the event.
+        """
+        ensure_can_manage(identity)
+        existing = await self._repo.get_interview(identity.tenant_id, interview_id)
+        if existing is None:
+            raise InterviewNotFoundError()
+        if existing.status is not InterviewStatus.SCHEDULED:
+            raise InterviewNotScheduledError()
+
+        updated = await self._repo.cancel_interview(
+            identity.tenant_id, interview_id, note=payload.note, now=now
+        )
+        if updated is None:
+            raise InterviewNotScheduledError()
+
+        await self._outbox.append(
+            events.interview_cancelled(
+                tenant_id=identity.tenant_id,
+                actor_id=identity.actor_id,
+                occurred_at=now,
+                interview_id=updated.id,
+                candidate_id=updated.candidate_id,
+                job_id=updated.job_id,
+                cancelled_by=identity.actor_id,
+            )
+        )
+        changes: dict[str, Any] = {
+            "status": {
+                "old": InterviewStatus.SCHEDULED.value,
+                "new": InterviewStatus.CANCELLED.value,
+            },
+            "cancelled_at": {"old": None, "new": now.isoformat()},
+        }
+        if payload.note is not None:
+            changes["notes"] = PII_CHANGED  # PII: never the value
+        await self._audit.write(
+            AuditEntryCreate(
+                tenant_id=identity.tenant_id,
+                actor_id=identity.actor_id,
+                action="interview.cancelled",
+                entity_type="interview",
+                entity_id=updated.id,
+                occurred_at=now,
+                changes=changes,
+            )
+        )
+        return updated
 
     # --- internals -----------------------------------------------------------
 
@@ -798,14 +1182,26 @@ class RecruitmentService:
         await self._positions.get(identity, position_id)
         await self._locations.get(identity, location_id)
 
+    async def _ensure_active_interviewer(
+        self, tenant_id: UUID, interviewer_id: UUID
+    ) -> None:
+        """Unknown/foreign is `404`, a terminated employee is `409`."""
+        facts = await self._repo.interviewer_facts(tenant_id, interviewer_id)
+        if facts is None:
+            raise InterviewerNotFoundError()
+        if not facts.active:
+            raise InterviewerNotActiveError()
+
     @staticmethod
-    def _detail(candidate: Candidate) -> CandidateDetail:
+    def _detail(
+        candidate: Candidate, interviews: Sequence[Interview]
+    ) -> CandidateDetail:
         """One `CandidateDetail` assembly for reads and the hire response.
 
-        T5 fills `interviews` here (management: all; assigned interviewer:
-        own), so the hire endpoint cannot drift from `getCandidate`.
+        T5 fills `interviews` (management: all; assigned interviewer: own), so
+        the hire endpoint cannot drift from `getCandidate`.
         """
-        return CandidateDetail(**candidate.model_dump(), interviews=[])
+        return CandidateDetail(**candidate.model_dump(), interviews=list(interviews))
 
     @staticmethod
     def _hire_payload(

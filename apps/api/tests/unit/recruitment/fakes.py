@@ -1,17 +1,19 @@
-"""In-memory fakes for the Recruitment unit tests (T2–T4).
+"""In-memory fakes for the Recruitment unit tests (T2–T5).
 
 No I/O anywhere (`.ai/testing.md` — these tests pass with `postgres-test`
-stopped). The fake honors tenant scope, the pinned job/candidate filters, the
-conditional transition guards and the interview-derived visibility maps, so the
-service is exercised against the same rules as the Postgres adapter without
-simulating transactions.
+stopped). The fake honors tenant scope, the pinned job/candidate/interview
+filters, the conditional transition guards and the interview-derived visibility
+maps, so the service is exercised against the same rules as the Postgres
+adapter without simulating transactions.
 
 Every transition returns `None` when its observed source state no longer
 matches — exactly the backstop the service maps to the pinned wrong-state
-error. `lose_next_transition` / `lose_next_candidate_transition` simulate the
-concurrent-editor race: the next conditional update loses even though the
-service's pre-check passed. Candidate creates/edits enforce the
-`(tenant_id, job_id, email)` uniqueness the real adapter backs with an index.
+error. `lose_next_transition`, `lose_next_candidate_transition` and
+`lose_next_interview_transition` simulate the concurrent-editor race: the next
+conditional update loses even though the service's pre-check passed. Candidate
+creates/edits enforce the `(tenant_id, job_id, email)` uniqueness the real
+adapter backs with an index; `interviewers` is the tenant-scoped
+active/terminated directory `interviewer_facts` reads.
 """
 
 from collections.abc import Sequence
@@ -25,6 +27,8 @@ from app.domains.recruitment.exceptions import CandidateAlreadyAppliedError
 from app.domains.recruitment.repository import (
     CandidateFilters,
     EmployeeHirePayload,
+    InterviewerFacts,
+    InterviewFilters,
     JobFilters,
 )
 from app.domains.recruitment.schemas import (
@@ -32,6 +36,8 @@ from app.domains.recruitment.schemas import (
     CandidateRejectedFrom,
     CandidateSource,
     CandidateStatus,
+    Interview,
+    InterviewStatus,
     Job,
     JobStatus,
 )
@@ -49,6 +55,9 @@ class FakeRecruitmentRepo:
     def __init__(self) -> None:
         self.jobs: dict[tuple[UUID, UUID], Job] = {}
         self.candidates: dict[tuple[UUID, UUID], Candidate] = {}
+        self.interviews: dict[tuple[UUID, UUID], Interview] = {}
+        # (tenant, employee) → active? The `interviewer_facts` directory.
+        self.interviewers: dict[tuple[UUID, UUID], bool] = {}
         # (tenant, interviewer employee) → the ids their interviews expose.
         self.visible_jobs: dict[tuple[UUID, UUID], set[UUID]] = {}
         self.visible_candidates: dict[tuple[UUID, UUID], set[UUID]] = {}
@@ -56,6 +65,10 @@ class FakeRecruitmentRepo:
         self.lose_next_transition = False
         self.lose_next_candidate_transition = False
         self.lose_next_hired_transition = False
+        self.lose_next_interview_transition = False
+        # Simulates a concurrent HR reassignment landing after the service's
+        # permission read but before its conditional completion update.
+        self.reassign_next_complete_to: UUID | None = None
         self._created = 0
 
     def _race_lost(self) -> bool:
@@ -77,6 +90,13 @@ class FakeRecruitmentRepo:
         if not self.lose_next_hired_transition:
             return False
         self.lose_next_hired_transition = False
+        return True
+
+    def _interview_race_lost(self) -> bool:
+        """Consume a one-shot simulated lost interview transition."""
+        if not self.lose_next_interview_transition:
+            return False
+        self.lose_next_interview_transition = False
         return True
 
     def _email_taken(
@@ -395,6 +415,182 @@ class FakeRecruitmentRepo:
             }
         )
         self.candidates[key] = updated
+        return updated
+
+    # --- interviews ----------------------------------------------------------
+
+    async def interviewer_facts(
+        self, tenant_id: UUID, employee_id: UUID
+    ) -> InterviewerFacts | None:
+        self.calls.append("interviewer_facts")
+        active = self.interviewers.get((tenant_id, employee_id))
+        if active is None:
+            return None
+        return InterviewerFacts(active=active)
+
+    async def create_interview(
+        self,
+        tenant_id: UUID,
+        interview_id: UUID,
+        *,
+        candidate_id: UUID,
+        job_id: UUID,
+        interviewer_id: UUID,
+        scheduled_at: datetime,
+        notes: str | None,
+    ) -> Interview:
+        self.calls.append("create_interview")
+        created_at = self._stamp()
+        interview = Interview(
+            id=interview_id,
+            tenant_id=tenant_id,
+            candidate_id=candidate_id,
+            job_id=job_id,
+            interviewer_id=interviewer_id,
+            scheduled_at=scheduled_at,
+            notes=notes,
+            status=InterviewStatus.SCHEDULED,
+            created_at=created_at,
+            updated_at=created_at,
+        )
+        self.interviews[(tenant_id, interview_id)] = interview
+        return interview
+
+    async def get_interview(
+        self, tenant_id: UUID, interview_id: UUID
+    ) -> Interview | None:
+        return self.interviews.get((tenant_id, interview_id))
+
+    async def list_interviews(
+        self, tenant_id: UUID, filters: InterviewFilters, page: PageParams
+    ) -> tuple[Sequence[Interview], int]:
+        rows = [
+            row
+            for (row_tenant, _), row in self.interviews.items()
+            if row_tenant == tenant_id
+            and (
+                filters.candidate_id is None or row.candidate_id == filters.candidate_id
+            )
+            and (filters.job_id is None or row.job_id == filters.job_id)
+            and (filters.status is None or row.status is filters.status)
+            and (
+                filters.interviewer_id is None
+                or row.interviewer_id == filters.interviewer_id
+            )
+            and (
+                filters.scheduled_from is None
+                or row.scheduled_at.astimezone(UTC).date() >= filters.scheduled_from
+            )
+            and (
+                filters.scheduled_to is None
+                or row.scheduled_at.astimezone(UTC).date() <= filters.scheduled_to
+            )
+        ]
+        rows.sort(key=lambda row: (row.scheduled_at, row.id), reverse=True)
+        total = len(rows)
+        return rows[page.offset : page.offset + page.limit], total
+
+    async def list_candidate_interviews(
+        self,
+        tenant_id: UUID,
+        candidate_id: UUID,
+        *,
+        interviewer_id: UUID | None = None,
+    ) -> Sequence[Interview]:
+        rows = [
+            row
+            for (row_tenant, _), row in self.interviews.items()
+            if row_tenant == tenant_id
+            and row.candidate_id == candidate_id
+            and (interviewer_id is None or row.interviewer_id == interviewer_id)
+        ]
+        rows.sort(key=lambda row: (row.scheduled_at, row.id), reverse=True)
+        return rows
+
+    async def update_interview(
+        self,
+        tenant_id: UUID,
+        interview_id: UUID,
+        *,
+        now: datetime,
+        **changes: Any,
+    ) -> Interview | None:
+        self.calls.append("update_interview")
+        if self._interview_race_lost():
+            return None
+        key = (tenant_id, interview_id)
+        row = self.interviews.get(key)
+        if row is None or row.status is not InterviewStatus.SCHEDULED:
+            return None
+        updated = row.model_copy(update={**changes, "updated_at": now})
+        self.interviews[key] = updated
+        return updated
+
+    async def complete_interview(
+        self,
+        tenant_id: UUID,
+        interview_id: UUID,
+        *,
+        interviewer_id: UUID,
+        rating: int,
+        feedback_notes: str | None,
+        now: datetime,
+    ) -> Interview | None:
+        self.calls.append("complete_interview")
+        if self._interview_race_lost():
+            return None
+        key = (tenant_id, interview_id)
+        row = self.interviews.get(key)
+        if self.reassign_next_complete_to is not None and row is not None:
+            # The concurrent writer landed first: change the assignment, then
+            # the guarded update matches nothing.
+            self.interviews[key] = row.model_copy(
+                update={"interviewer_id": self.reassign_next_complete_to}
+            )
+            self.reassign_next_complete_to = None
+            return None
+        if (
+            row is None
+            or row.status is not InterviewStatus.SCHEDULED
+            or row.interviewer_id != interviewer_id
+        ):
+            return None
+        updated = row.model_copy(
+            update={
+                "status": InterviewStatus.COMPLETED,
+                "rating": rating,
+                "feedback_notes": feedback_notes,
+                "completed_at": now,
+                "updated_at": now,
+            }
+        )
+        self.interviews[key] = updated
+        return updated
+
+    async def cancel_interview(
+        self,
+        tenant_id: UUID,
+        interview_id: UUID,
+        *,
+        note: str | None,
+        now: datetime,
+    ) -> Interview | None:
+        self.calls.append("cancel_interview")
+        if self._interview_race_lost():
+            return None
+        key = (tenant_id, interview_id)
+        row = self.interviews.get(key)
+        if row is None or row.status is not InterviewStatus.SCHEDULED:
+            return None
+        changes: dict[str, Any] = {
+            "status": InterviewStatus.CANCELLED,
+            "cancelled_at": now,
+            "updated_at": now,
+        }
+        if note is not None:
+            changes["notes"] = note
+        updated = row.model_copy(update=changes)
+        self.interviews[key] = updated
         return updated
 
 

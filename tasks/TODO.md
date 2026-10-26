@@ -6,7 +6,7 @@ does the work.
 
 ## Now
 
-- [ ] Recruitment (`.ai/features/recruitment.md`) — `Status: approved`, plan landed 2026-10-23 (T1–T9: contracts/outbox keys → API → hire seam → web → e2e); T1–T4 landed 2026-10-23 (ten event contracts + outbox key fallback, jobs API, candidates API, hire seam + `hireCandidate`); next: build T5 (interviews + scoped viewer)
+- [ ] Recruitment (`.ai/features/recruitment.md`) — `Status: approved`, plan landed 2026-10-23 (T1–T9: contracts/outbox keys → API → hire seam → web → e2e); T1–T5 landed 2026-10-23 (ten event contracts + outbox key fallback, jobs API, candidates API, hire seam + `hireCandidate`, interviews API + scoped viewer); next: build T6 (web shell, navigation, Jobs)
 
 ## Later
 

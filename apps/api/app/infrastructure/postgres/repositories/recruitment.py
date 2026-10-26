@@ -1,21 +1,24 @@
-"""Postgres repository for the Recruitment domain — jobs (T2), candidates (T3).
+"""Postgres repository for the Recruitment domain — jobs, candidates, interviews.
 
 Every statement carries `WHERE tenant_id = :tenant` first — tenant scoping
 lives here and nowhere else (`.ai/security.md`). Reads/writes expose the pinned
 wire shape (`schemas.py`); ORM rows never leave this module.
 
-Job and candidate transitions are conditional updates on the observed source
-status and return `None` when zero rows matched, so a concurrent editor's win
-surfaces as the pinned wrong-state error in the service. Visibility is derived
-from interview assignments: an interviewer sees exactly the jobs and candidates
-of their interviews (the join is empty until interviews exist in T5).
+Job, candidate and interview transitions are conditional updates on the
+observed source status and return `None` when zero rows matched, so a
+concurrent editor's win surfaces as the pinned wrong-state error in the
+service. Visibility is derived from interview assignments: an interviewer sees
+exactly the jobs, candidates and interviews their assignments expose.
 
 Candidate writes map the `(tenant_id, job_id, email)` unique violation to the
 pinned `candidate_already_applied` — create and update share that guard.
+`interviewer_facts` is the only Employees read here (the attendance
+cross-context pattern): it answers active/terminated without leaking the
+Employees ORM row across the domain boundary.
 """
 
 from collections.abc import Sequence
-from datetime import datetime
+from datetime import UTC, date, datetime, time, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -23,14 +26,23 @@ from sqlalchemy import func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domains.employees import models as employees_orm
+from app.domains.employees.schemas import EmployeeStatus
 from app.domains.recruitment import models as orm
 from app.domains.recruitment.exceptions import CandidateAlreadyAppliedError
-from app.domains.recruitment.repository import CandidateFilters, JobFilters
+from app.domains.recruitment.repository import (
+    CandidateFilters,
+    InterviewerFacts,
+    InterviewFilters,
+    JobFilters,
+)
 from app.domains.recruitment.schemas import (
     Candidate,
     CandidateRejectedFrom,
     CandidateSource,
     CandidateStatus,
+    Interview,
+    InterviewStatus,
     Job,
     JobStatus,
 )
@@ -52,6 +64,11 @@ def _job(row: orm.Job) -> Job:
 def _candidate(row: orm.Candidate) -> Candidate:
     """ORM row → the pinned wire shape."""
     return Candidate.model_validate(row)
+
+
+def _interview(row: orm.Interview) -> Interview:
+    """ORM row → the pinned wire shape."""
+    return Interview.model_validate(row)
 
 
 def _map_unique_violation(exc: IntegrityError) -> WorkPulseError | None:
@@ -460,3 +477,208 @@ class PostgresRecruitmentRepository:
         if updated is None:
             return None
         return await self.get_candidate(tenant_id, candidate_id)
+
+    # --- interviews ----------------------------------------------------------
+
+    async def interviewer_facts(
+        self, tenant_id: UUID, employee_id: UUID
+    ) -> InterviewerFacts | None:
+        stmt = select(employees_orm.Employee.status).where(
+            employees_orm.Employee.tenant_id == tenant_id,
+            employees_orm.Employee.id == employee_id,
+        )
+        status = (await self._session.execute(stmt)).scalar_one_or_none()
+        if status is None:
+            return None
+        return InterviewerFacts(active=status == EmployeeStatus.ACTIVE.value)
+
+    async def create_interview(
+        self,
+        tenant_id: UUID,
+        interview_id: UUID,
+        *,
+        candidate_id: UUID,
+        job_id: UUID,
+        interviewer_id: UUID,
+        scheduled_at: datetime,
+        notes: str | None,
+    ) -> Interview:
+        row = orm.Interview(
+            id=interview_id,
+            tenant_id=tenant_id,
+            candidate_id=candidate_id,
+            job_id=job_id,
+            interviewer_id=interviewer_id,
+            scheduled_at=scheduled_at,
+            notes=notes,
+            status=InterviewStatus.SCHEDULED.value,
+        )
+        self._session.add(row)
+        await self._session.flush()
+        await self._session.refresh(row)
+        return _interview(row)
+
+    async def get_interview(
+        self, tenant_id: UUID, interview_id: UUID
+    ) -> Interview | None:
+        stmt = select(orm.Interview).where(
+            orm.Interview.tenant_id == tenant_id,
+            orm.Interview.id == interview_id,
+        )
+        row = (await self._session.execute(stmt)).scalar_one_or_none()
+        return _interview(row) if row is not None else None
+
+    async def list_interviews(
+        self, tenant_id: UUID, filters: InterviewFilters, page: PageParams
+    ) -> tuple[Sequence[Interview], int]:
+        conditions = [orm.Interview.tenant_id == tenant_id]
+        if filters.candidate_id is not None:
+            conditions.append(orm.Interview.candidate_id == filters.candidate_id)
+        if filters.job_id is not None:
+            conditions.append(orm.Interview.job_id == filters.job_id)
+        if filters.status is not None:
+            conditions.append(orm.Interview.status == filters.status.value)
+        if filters.interviewer_id is not None:
+            conditions.append(orm.Interview.interviewer_id == filters.interviewer_id)
+        if filters.scheduled_from is not None:
+            conditions.append(
+                orm.Interview.scheduled_at
+                >= datetime.combine(filters.scheduled_from, time.min, tzinfo=UTC)
+            )
+        if filters.scheduled_to is not None:
+            conditions.append(
+                orm.Interview.scheduled_at
+                < datetime.combine(
+                    _next_day(filters.scheduled_to), time.min, tzinfo=UTC
+                )
+            )
+
+        total_items = (
+            await self._session.execute(
+                select(func.count()).select_from(orm.Interview).where(*conditions)
+            )
+        ).scalar_one()
+        rows_stmt = (
+            select(orm.Interview)
+            .where(*conditions)
+            .order_by(orm.Interview.scheduled_at.desc(), orm.Interview.id.desc())
+            .limit(page.limit)
+            .offset(page.offset)
+        )
+        rows = (await self._session.execute(rows_stmt)).scalars()
+        return [_interview(row) for row in rows], total_items
+
+    async def list_candidate_interviews(
+        self,
+        tenant_id: UUID,
+        candidate_id: UUID,
+        *,
+        interviewer_id: UUID | None = None,
+    ) -> Sequence[Interview]:
+        conditions = [
+            orm.Interview.tenant_id == tenant_id,
+            orm.Interview.candidate_id == candidate_id,
+        ]
+        if interviewer_id is not None:
+            conditions.append(orm.Interview.interviewer_id == interviewer_id)
+        stmt = (
+            select(orm.Interview)
+            .where(*conditions)
+            .order_by(orm.Interview.scheduled_at.desc(), orm.Interview.id.desc())
+        )
+        rows = (await self._session.execute(stmt)).scalars()
+        return [_interview(row) for row in rows]
+
+    async def update_interview(
+        self,
+        tenant_id: UUID,
+        interview_id: UUID,
+        *,
+        now: datetime,
+        **changes: Any,
+    ) -> Interview | None:
+        stmt = (
+            update(orm.Interview)
+            .where(
+                orm.Interview.tenant_id == tenant_id,
+                orm.Interview.id == interview_id,
+                orm.Interview.status == InterviewStatus.SCHEDULED.value,
+            )
+            .values(**changes, updated_at=now)
+            .returning(orm.Interview.id)
+        )
+        updated = (await self._session.execute(stmt)).scalar_one_or_none()
+        if updated is None:
+            return None
+        return await self.get_interview(tenant_id, interview_id)
+
+    async def complete_interview(
+        self,
+        tenant_id: UUID,
+        interview_id: UUID,
+        *,
+        interviewer_id: UUID,
+        rating: int,
+        feedback_notes: str | None,
+        now: datetime,
+    ) -> Interview | None:
+        stmt = (
+            update(orm.Interview)
+            .where(
+                orm.Interview.tenant_id == tenant_id,
+                orm.Interview.id == interview_id,
+                orm.Interview.status == InterviewStatus.SCHEDULED.value,
+                # The assignment is part of the guard: a concurrent reassignment
+                # must not let the previous interviewer complete the row.
+                orm.Interview.interviewer_id == interviewer_id,
+            )
+            .values(
+                status=InterviewStatus.COMPLETED.value,
+                rating=rating,
+                feedback_notes=feedback_notes,
+                completed_at=now,
+                updated_at=now,
+            )
+            .returning(orm.Interview.id)
+        )
+        updated = (await self._session.execute(stmt)).scalar_one_or_none()
+        if updated is None:
+            return None
+        return await self.get_interview(tenant_id, interview_id)
+
+    async def cancel_interview(
+        self,
+        tenant_id: UUID,
+        interview_id: UUID,
+        *,
+        note: str | None,
+        now: datetime,
+    ) -> Interview | None:
+        values: dict[str, Any] = {
+            "status": InterviewStatus.CANCELLED.value,
+            "cancelled_at": now,
+            "updated_at": now,
+        }
+        if note is not None:
+            # The pinned Interview shape has no separate cancellation note;
+            # the interview's `notes` is the only available column.
+            values["notes"] = note
+        stmt = (
+            update(orm.Interview)
+            .where(
+                orm.Interview.tenant_id == tenant_id,
+                orm.Interview.id == interview_id,
+                orm.Interview.status == InterviewStatus.SCHEDULED.value,
+            )
+            .values(**values)
+            .returning(orm.Interview.id)
+        )
+        updated = (await self._session.execute(stmt)).scalar_one_or_none()
+        if updated is None:
+            return None
+        return await self.get_interview(tenant_id, interview_id)
+
+
+def _next_day(day: date) -> date:
+    """The exclusive bound for an inclusive calendar-day filter."""
+    return day + timedelta(days=1)

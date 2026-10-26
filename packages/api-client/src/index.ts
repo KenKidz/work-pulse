@@ -55,6 +55,11 @@ import type {
   HeadcountReport,
   HealthzHealthzGet200,
   HireCandidate,
+  Interview,
+  InterviewFeedback,
+  InterviewListPage,
+  InterviewSchedule,
+  InterviewUpdate,
   Job,
   JobCreate,
   JobListPage,
@@ -70,6 +75,7 @@ import type {
   ListCandidatesParams,
   ListDepartmentsParams,
   ListEmployeesParams,
+  ListInterviewsParams,
   ListJobsParams,
   ListLeaveBalancesParams,
   ListLeaveRequestsParams,
@@ -15604,4 +15610,761 @@ export const useHireCandidate = <
   TContext
 > => {
   return useMutation(getHireCandidateMutationOptions(options), queryClient);
+};
+
+export type scheduleInterviewResponse201 = {
+  data: Interview;
+  status: 201;
+};
+
+export type scheduleInterviewResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type scheduleInterviewResponseSuccess = scheduleInterviewResponse201 & {
+  headers: Headers;
+};
+export type scheduleInterviewResponseError = scheduleInterviewResponse422 & {
+  headers: Headers;
+};
+
+export type scheduleInterviewResponse =
+  scheduleInterviewResponseSuccess | scheduleInterviewResponseError;
+
+export const getScheduleInterviewUrl = (candidateId: string) => {
+  return `/api/v1/recruitment/candidates/${candidateId}/interviews`;
+};
+
+/**
+ * Schedule an interview for an `interviewing` candidate.
+ * @summary Schedule Interview
+ */
+export const scheduleInterview = async (
+  candidateId: string,
+  interviewSchedule: InterviewSchedule,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<scheduleInterviewResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return customFetch<scheduleInterviewResponse>(
+    getScheduleInterviewUrl(candidateId),
+    {
+      ...options,
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...getHeaders(options?.headers),
+      },
+      body: JSON.stringify(interviewSchedule),
+    },
+  );
+};
+
+export const getScheduleInterviewMutationKey = () =>
+  ["scheduleInterview"] as const;
+
+export const getScheduleInterviewMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof scheduleInterview>>,
+    TError,
+    ScheduleInterviewMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof scheduleInterview>>,
+  TError,
+  ScheduleInterviewMutationVariables,
+  TContext
+> => {
+  const mutationKey = getScheduleInterviewMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof scheduleInterview>>,
+    ScheduleInterviewMutationVariables
+  > = (props) => {
+    const { candidateId, data } = props ?? {};
+
+    return scheduleInterview(candidateId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ScheduleInterviewMutationResult = NonNullable<
+  Awaited<ReturnType<typeof scheduleInterview>>
+>;
+export type ScheduleInterviewMutationBody = InterviewSchedule;
+export type ScheduleInterviewMutationError = HTTPValidationError;
+export type ScheduleInterviewMutationVariables = {
+  candidateId: string;
+  data: InterviewSchedule;
+};
+
+/**
+ * @summary Schedule Interview
+ */
+export const useScheduleInterview = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof scheduleInterview>>,
+      TError,
+      ScheduleInterviewMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof scheduleInterview>>,
+  TError,
+  ScheduleInterviewMutationVariables,
+  TContext
+> => {
+  return useMutation(getScheduleInterviewMutationOptions(options), queryClient);
+};
+
+export type listInterviewsResponse200 = {
+  data: InterviewListPage;
+  status: 200;
+};
+
+export type listInterviewsResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type listInterviewsResponseSuccess = listInterviewsResponse200 & {
+  headers: Headers;
+};
+export type listInterviewsResponseError = listInterviewsResponse422 & {
+  headers: Headers;
+};
+
+export type listInterviewsResponse =
+  listInterviewsResponseSuccess | listInterviewsResponseError;
+
+export const getListInterviewsUrl = (params?: ListInterviewsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/recruitment/interviews?${stringifiedParams}`
+    : `/api/v1/recruitment/interviews`;
+};
+
+/**
+ * Interviews scoped to the caller (`mine=1` for any caller).
+ * @summary List Interviews
+ */
+export const listInterviews = async (
+  params?: ListInterviewsParams,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<listInterviewsResponse> => {
+  return customFetch<listInterviewsResponse>(getListInterviewsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListInterviewsQueryKey = (params?: ListInterviewsParams) => {
+  return [
+    `/api/v1/recruitment/interviews`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getListInterviewsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listInterviews>>,
+  TError = HTTPValidationError,
+>(
+  params?: ListInterviewsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listInterviews>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListInterviewsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listInterviews>>> = ({
+    signal,
+  }) => listInterviews(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listInterviews>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListInterviewsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listInterviews>>
+>;
+export type ListInterviewsQueryError = HTTPValidationError;
+
+export function useListInterviews<
+  TData = Awaited<ReturnType<typeof listInterviews>>,
+  TError = HTTPValidationError,
+>(
+  params: undefined | ListInterviewsParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listInterviews>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listInterviews>>,
+          TError,
+          Awaited<ReturnType<typeof listInterviews>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useListInterviews<
+  TData = Awaited<ReturnType<typeof listInterviews>>,
+  TError = HTTPValidationError,
+>(
+  params?: ListInterviewsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listInterviews>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listInterviews>>,
+          TError,
+          Awaited<ReturnType<typeof listInterviews>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useListInterviews<
+  TData = Awaited<ReturnType<typeof listInterviews>>,
+  TError = HTTPValidationError,
+>(
+  params?: ListInterviewsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listInterviews>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary List Interviews
+ */
+
+export function useListInterviews<
+  TData = Awaited<ReturnType<typeof listInterviews>>,
+  TError = HTTPValidationError,
+>(
+  params?: ListInterviewsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listInterviews>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getListInterviewsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export type updateInterviewResponse200 = {
+  data: Interview;
+  status: 200;
+};
+
+export type updateInterviewResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type updateInterviewResponseSuccess = updateInterviewResponse200 & {
+  headers: Headers;
+};
+export type updateInterviewResponseError = updateInterviewResponse422 & {
+  headers: Headers;
+};
+
+export type updateInterviewResponse =
+  updateInterviewResponseSuccess | updateInterviewResponseError;
+
+export const getUpdateInterviewUrl = (interviewId: string) => {
+  return `/api/v1/recruitment/interviews/${interviewId}`;
+};
+
+/**
+ * Reschedule / re-assign / re-note while `scheduled` (management-only).
+ * @summary Update Interview
+ */
+export const updateInterview = async (
+  interviewId: string,
+  interviewUpdate: InterviewUpdate,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<updateInterviewResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return customFetch<updateInterviewResponse>(
+    getUpdateInterviewUrl(interviewId),
+    {
+      ...options,
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        ...getHeaders(options?.headers),
+      },
+      body: JSON.stringify(interviewUpdate),
+    },
+  );
+};
+
+export const getUpdateInterviewMutationKey = () => ["updateInterview"] as const;
+
+export const getUpdateInterviewMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateInterview>>,
+    TError,
+    UpdateInterviewMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateInterview>>,
+  TError,
+  UpdateInterviewMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateInterviewMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateInterview>>,
+    UpdateInterviewMutationVariables
+  > = (props) => {
+    const { interviewId, data } = props ?? {};
+
+    return updateInterview(interviewId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateInterviewMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateInterview>>
+>;
+export type UpdateInterviewMutationBody = InterviewUpdate;
+export type UpdateInterviewMutationError = HTTPValidationError;
+export type UpdateInterviewMutationVariables = {
+  interviewId: string;
+  data: InterviewUpdate;
+};
+
+/**
+ * @summary Update Interview
+ */
+export const useUpdateInterview = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateInterview>>,
+      TError,
+      UpdateInterviewMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateInterview>>,
+  TError,
+  UpdateInterviewMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateInterviewMutationOptions(options), queryClient);
+};
+
+export type completeInterviewResponse200 = {
+  data: Interview;
+  status: 200;
+};
+
+export type completeInterviewResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type completeInterviewResponseSuccess = completeInterviewResponse200 & {
+  headers: Headers;
+};
+export type completeInterviewResponseError = completeInterviewResponse422 & {
+  headers: Headers;
+};
+
+export type completeInterviewResponse =
+  completeInterviewResponseSuccess | completeInterviewResponseError;
+
+export const getCompleteInterviewUrl = (interviewId: string) => {
+  return `/api/v1/recruitment/interviews/${interviewId}/complete`;
+};
+
+/**
+ * The assigned interviewer files feedback: `scheduled → completed`.
+ * @summary Complete Interview
+ */
+export const completeInterview = async (
+  interviewId: string,
+  interviewFeedback: InterviewFeedback,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<completeInterviewResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return customFetch<completeInterviewResponse>(
+    getCompleteInterviewUrl(interviewId),
+    {
+      ...options,
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...getHeaders(options?.headers),
+      },
+      body: JSON.stringify(interviewFeedback),
+    },
+  );
+};
+
+export const getCompleteInterviewMutationKey = () =>
+  ["completeInterview"] as const;
+
+export const getCompleteInterviewMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof completeInterview>>,
+    TError,
+    CompleteInterviewMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof completeInterview>>,
+  TError,
+  CompleteInterviewMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCompleteInterviewMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof completeInterview>>,
+    CompleteInterviewMutationVariables
+  > = (props) => {
+    const { interviewId, data } = props ?? {};
+
+    return completeInterview(interviewId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CompleteInterviewMutationResult = NonNullable<
+  Awaited<ReturnType<typeof completeInterview>>
+>;
+export type CompleteInterviewMutationBody = InterviewFeedback;
+export type CompleteInterviewMutationError = HTTPValidationError;
+export type CompleteInterviewMutationVariables = {
+  interviewId: string;
+  data: InterviewFeedback;
+};
+
+/**
+ * @summary Complete Interview
+ */
+export const useCompleteInterview = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof completeInterview>>,
+      TError,
+      CompleteInterviewMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof completeInterview>>,
+  TError,
+  CompleteInterviewMutationVariables,
+  TContext
+> => {
+  return useMutation(getCompleteInterviewMutationOptions(options), queryClient);
+};
+
+export type cancelInterviewResponse200 = {
+  data: Interview;
+  status: 200;
+};
+
+export type cancelInterviewResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type cancelInterviewResponseSuccess = cancelInterviewResponse200 & {
+  headers: Headers;
+};
+export type cancelInterviewResponseError = cancelInterviewResponse422 & {
+  headers: Headers;
+};
+
+export type cancelInterviewResponse =
+  cancelInterviewResponseSuccess | cancelInterviewResponseError;
+
+export const getCancelInterviewUrl = (interviewId: string) => {
+  return `/api/v1/recruitment/interviews/${interviewId}/cancel`;
+};
+
+/**
+ * Cancel a `scheduled` interview (management-only), terminal.
+ * @summary Cancel Interview
+ */
+export const cancelInterview = async (
+  interviewId: string,
+  candidateDecision: CandidateDecision,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<cancelInterviewResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return customFetch<cancelInterviewResponse>(
+    getCancelInterviewUrl(interviewId),
+    {
+      ...options,
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...getHeaders(options?.headers),
+      },
+      body: JSON.stringify(candidateDecision),
+    },
+  );
+};
+
+export const getCancelInterviewMutationKey = () => ["cancelInterview"] as const;
+
+export const getCancelInterviewMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof cancelInterview>>,
+    TError,
+    CancelInterviewMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof cancelInterview>>,
+  TError,
+  CancelInterviewMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCancelInterviewMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof cancelInterview>>,
+    CancelInterviewMutationVariables
+  > = (props) => {
+    const { interviewId, data } = props ?? {};
+
+    return cancelInterview(interviewId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CancelInterviewMutationResult = NonNullable<
+  Awaited<ReturnType<typeof cancelInterview>>
+>;
+export type CancelInterviewMutationBody = CandidateDecision;
+export type CancelInterviewMutationError = HTTPValidationError;
+export type CancelInterviewMutationVariables = {
+  interviewId: string;
+  data: CandidateDecision;
+};
+
+/**
+ * @summary Cancel Interview
+ */
+export const useCancelInterview = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof cancelInterview>>,
+      TError,
+      CancelInterviewMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof cancelInterview>>,
+  TError,
+  CancelInterviewMutationVariables,
+  TContext
+> => {
+  return useMutation(getCancelInterviewMutationOptions(options), queryClient);
 };
