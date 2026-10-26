@@ -7107,6 +7107,76 @@
           }
         }
       }
+    },
+    "/api/v1/recruitment/candidates/{candidate_id}/hire": {
+      "post": {
+        "tags": [
+          "recruitment"
+        ],
+        "summary": "Hire Candidate",
+        "description": "Hire an `offered` candidate; creates the Employee through the seam.",
+        "operationId": "hireCandidate",
+        "parameters": [
+          {
+            "name": "candidate_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Candidate Id"
+            }
+          },
+          {
+            "name": "wp_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Wp Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HireCandidate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CandidateDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -8866,6 +8936,102 @@
         ],
         "title": "HeadcountReportRow",
         "description": "Workforce metrics at the bucket's as-of date."
+      },
+      "HireCandidate": {
+        "properties": {
+          "employment_type": {
+            "$ref": "#/components/schemas/EmploymentType"
+          },
+          "hired_at": {
+            "type": "string",
+            "format": "date",
+            "title": "Hired At"
+          },
+          "manager_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manager Id"
+          },
+          "employee_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 50,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Employee Code"
+          },
+          "first_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Name"
+          },
+          "last_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Name"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 320,
+                "minLength": 3
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 50
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "employment_type",
+          "hired_at"
+        ],
+        "title": "HireCandidate",
+        "description": "Hire terms; names/email/phone override the candidate's record.\n\n`hired_at` in the future is a service `422` (the validator cannot read the\ninjected clock \u2014 risk 6 in the spec)."
       },
       "Interview": {
         "properties": {

@@ -1,4 +1,4 @@
-"""Data-access abstractions for the Recruitment domain (T2–T3).
+"""Data-access abstractions for the Recruitment domain (T2–T4).
 
 Protocols only — the domain never imports infrastructure. Every method takes
 `tenant_id` explicitly: tenant scoping is enforced in repository
@@ -20,10 +20,18 @@ interview-assignment join (`visible_job_ids` / `visible_candidate_ids`).
 The candidate create/update paths map the `(tenant_id, job_id, email)` unique
 violation to `409 candidate_already_applied` inside the adapter — the service
 never pre-checks for a race it cannot win (risk 7 in the spec).
+
+The hire flow (T4, ADR 0020) locks the candidate and then its job before
+counting filled openings, so two hires cannot both claim the last one
+(`lock_candidate` → `lock_job` → `count_hired`). `mark_hired` is the
+conditional `offered → hired` flip; `EmployeeHirePort` is the recruitment-owned
+write seam to Employees, implemented in `app.infrastructure.postgres` so this
+module imports neither Employees nor infrastructure.
 """
 
 from collections.abc import Sequence
-from datetime import datetime
+from dataclasses import dataclass
+from datetime import date, datetime
 from typing import Any, Protocol
 from uuid import UUID
 
@@ -58,6 +66,49 @@ class CandidateFilters(BaseModel):
     visible_candidate_ids: Sequence[UUID] | None = None
 
 
+@dataclass(frozen=True, slots=True)
+class EmployeeHirePayload:
+    """The effective `CreateEmployee` fields the hire seam applies (ADR 0020).
+
+    Recruitment-owned by design: no Employees type is imported here. The
+    service resolves candidate overrides, the job's organization refs and the
+    hire terms into these values; the adapter maps them to the Employees
+    `CreateEmployee` on the caller's session.
+    """
+
+    first_name: str
+    last_name: str
+    email: str
+    phone: str | None
+    department_id: UUID
+    position_id: UUID
+    location_id: UUID
+    manager_id: UUID | None
+    employment_type: str
+    hired_at: date
+    employee_code: str | None
+
+
+class EmployeeHirePort(Protocol):
+    """Write seam Recruitment → Employees (ADR 0020).
+
+    `create_employee` runs in the caller's transaction and returns the created
+    employee's id. Seam errors propagate unchanged (email/code taken, invalid
+    manager, unknown or archived org refs), and any failure rolls the candidate
+    flip back with it.
+    """
+
+    async def create_employee(
+        self,
+        tenant_id: UUID,
+        actor_id: UUID,
+        payload: EmployeeHirePayload,
+        now: datetime,
+    ) -> UUID:
+        """Create the employee through the Employees service; return its id."""
+        ...
+
+
 class RecruitmentRepository(Protocol):
     # --- visibility ---------------------------------------------------------
 
@@ -87,6 +138,14 @@ class RecruitmentRepository(Protocol):
 
     async def get_job(self, tenant_id: UUID, job_id: UUID) -> Job | None:
         """Tenant-scoped detail; `None` for a missing or foreign id."""
+        ...
+
+    async def lock_job(self, tenant_id: UUID, job_id: UUID) -> Job | None:
+        """Read the job under `FOR UPDATE` for the hire capacity decision.
+
+        Holding the lock until the request transaction ends serializes two
+        hires competing for the same opening (ADR 0020 decision 4).
+        """
         ...
 
     async def list_jobs(
@@ -155,6 +214,12 @@ class RecruitmentRepository(Protocol):
         """Tenant-scoped detail; `None` for a missing or foreign id."""
         ...
 
+    async def lock_candidate(
+        self, tenant_id: UUID, candidate_id: UUID
+    ) -> Candidate | None:
+        """Read the candidate under `FOR UPDATE` before the hire decision."""
+        ...
+
     async def list_candidates(
         self, tenant_id: UUID, filters: CandidateFilters, page: PageParams
     ) -> tuple[Sequence[Candidate], int]:
@@ -192,5 +257,25 @@ class RecruitmentRepository(Protocol):
         the row is not in the tenant. `stage_note` is written only for the
         terminal side exits (`rejected`/`withdrawn`) and `rejected_from` only
         for a rejection; an advance leaves both untouched.
+        """
+        ...
+
+    async def count_hired(self, tenant_id: UUID, job_id: UUID) -> int:
+        """How many candidates on the job are `hired` (the opening capacity)."""
+        ...
+
+    async def mark_hired(
+        self,
+        tenant_id: UUID,
+        candidate_id: UUID,
+        *,
+        employee_id: UUID,
+        hired_at: datetime,
+        now: datetime,
+    ) -> Candidate | None:
+        """Conditional `offered → hired`, stamping the seam's employee id.
+
+        `None` when the row is not `offered` (a concurrent decision won) or not
+        in the tenant; the service maps that to `409 candidate_stage_conflict`.
         """
         ...

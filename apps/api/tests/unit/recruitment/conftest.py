@@ -31,6 +31,7 @@ from tests.unit.organizations.fakes import RecordingAuditWriter
 from tests.unit.outbox.fakes import RecordingEventOutbox
 from tests.unit.recruitment.fakes import (
     CREATED_AT,
+    FakeEmployeeHirePort,
     FakeOrgRefs,
     FakeRecruitmentRepo,
 )
@@ -103,6 +104,11 @@ def locations() -> FakeOrgRefs:
 
 
 @pytest.fixture
+def hire() -> FakeEmployeeHirePort:
+    return FakeEmployeeHirePort()
+
+
+@pytest.fixture
 def service(
     repo: FakeRecruitmentRepo,
     audit: RecordingAuditWriter,
@@ -110,6 +116,7 @@ def service(
     departments: FakeOrgRefs,
     positions: FakeOrgRefs,
     locations: FakeOrgRefs,
+    hire: FakeEmployeeHirePort,
 ) -> RecruitmentService:
     return RecruitmentService(
         repo=repo,
@@ -118,6 +125,7 @@ def service(
         departments=departments,
         positions=positions,
         locations=locations,
+        hire=hire,
     )
 
 

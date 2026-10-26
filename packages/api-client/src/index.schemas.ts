@@ -544,6 +544,23 @@ export interface HeadcountReport {
 }
 
 /**
+ * Hire terms; names/email/phone override the candidate's record.
+ *
+ * `hired_at` in the future is a service `422` (the validator cannot read the
+ * injected clock — risk 6 in the spec).
+ */
+export interface HireCandidate {
+  employment_type: EmploymentType;
+  hired_at: string;
+  manager_id?: string | null;
+  employee_code?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+}
+
+/**
  * Pinned job lifecycle (`draft → open → closed`).
  */
 export type JobStatus = (typeof JobStatus)[keyof typeof JobStatus];

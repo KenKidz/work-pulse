@@ -54,6 +54,7 @@ import type {
   HTTPValidationError,
   HeadcountReport,
   HealthzHealthzGet200,
+  HireCandidate,
   Job,
   JobCreate,
   JobListPage,
@@ -15462,4 +15463,145 @@ export const useWithdrawCandidate = <
   TContext
 > => {
   return useMutation(getWithdrawCandidateMutationOptions(options), queryClient);
+};
+
+export type hireCandidateResponse200 = {
+  data: CandidateDetail;
+  status: 200;
+};
+
+export type hireCandidateResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type hireCandidateResponseSuccess = hireCandidateResponse200 & {
+  headers: Headers;
+};
+export type hireCandidateResponseError = hireCandidateResponse422 & {
+  headers: Headers;
+};
+
+export type hireCandidateResponse =
+  hireCandidateResponseSuccess | hireCandidateResponseError;
+
+export const getHireCandidateUrl = (candidateId: string) => {
+  return `/api/v1/recruitment/candidates/${candidateId}/hire`;
+};
+
+/**
+ * Hire an `offered` candidate; creates the Employee through the seam.
+ * @summary Hire Candidate
+ */
+export const hireCandidate = async (
+  candidateId: string,
+  hireCandidateBody: HireCandidate,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<hireCandidateResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return customFetch<hireCandidateResponse>(getHireCandidateUrl(candidateId), {
+    ...options,
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...getHeaders(options?.headers),
+    },
+    body: JSON.stringify(hireCandidateBody),
+  });
+};
+
+export const getHireCandidateMutationKey = () => ["hireCandidate"] as const;
+
+export const getHireCandidateMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof hireCandidate>>,
+    TError,
+    HireCandidateMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof hireCandidate>>,
+  TError,
+  HireCandidateMutationVariables,
+  TContext
+> => {
+  const mutationKey = getHireCandidateMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof hireCandidate>>,
+    HireCandidateMutationVariables
+  > = (props) => {
+    const { candidateId, data } = props ?? {};
+
+    return hireCandidate(candidateId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type HireCandidateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof hireCandidate>>
+>;
+export type HireCandidateMutationBody = HireCandidate;
+export type HireCandidateMutationError = HTTPValidationError;
+export type HireCandidateMutationVariables = {
+  candidateId: string;
+  data: HireCandidate;
+};
+
+/**
+ * @summary Hire Candidate
+ */
+export const useHireCandidate = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof hireCandidate>>,
+      TError,
+      HireCandidateMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof hireCandidate>>,
+  TError,
+  HireCandidateMutationVariables,
+  TContext
+> => {
+  return useMutation(getHireCandidateMutationOptions(options), queryClient);
 };

@@ -1,4 +1,4 @@
-"""In-memory fakes for the Recruitment unit tests (T2–T3).
+"""In-memory fakes for the Recruitment unit tests (T2–T4).
 
 No I/O anywhere (`.ai/testing.md` — these tests pass with `postgres-test`
 stopped). The fake honors tenant scope, the pinned job/candidate filters, the
@@ -19,8 +19,14 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
+from uuid_utils.compat import uuid7
+
 from app.domains.recruitment.exceptions import CandidateAlreadyAppliedError
-from app.domains.recruitment.repository import CandidateFilters, JobFilters
+from app.domains.recruitment.repository import (
+    CandidateFilters,
+    EmployeeHirePayload,
+    JobFilters,
+)
 from app.domains.recruitment.schemas import (
     Candidate,
     CandidateRejectedFrom,
@@ -49,6 +55,7 @@ class FakeRecruitmentRepo:
         self.calls: list[str] = []
         self.lose_next_transition = False
         self.lose_next_candidate_transition = False
+        self.lose_next_hired_transition = False
         self._created = 0
 
     def _race_lost(self) -> bool:
@@ -63,6 +70,13 @@ class FakeRecruitmentRepo:
         if not self.lose_next_candidate_transition:
             return False
         self.lose_next_candidate_transition = False
+        return True
+
+    def _hired_race_lost(self) -> bool:
+        """Consume a one-shot simulated lost hire transition."""
+        if not self.lose_next_hired_transition:
+            return False
+        self.lose_next_hired_transition = False
         return True
 
     def _email_taken(
@@ -130,6 +144,10 @@ class FakeRecruitmentRepo:
         return job
 
     async def get_job(self, tenant_id: UUID, job_id: UUID) -> Job | None:
+        return self.jobs.get((tenant_id, job_id))
+
+    async def lock_job(self, tenant_id: UUID, job_id: UUID) -> Job | None:
+        self.calls.append("lock_job")
         return self.jobs.get((tenant_id, job_id))
 
     async def list_jobs(
@@ -257,6 +275,12 @@ class FakeRecruitmentRepo:
     ) -> Candidate | None:
         return self.candidates.get((tenant_id, candidate_id))
 
+    async def lock_candidate(
+        self, tenant_id: UUID, candidate_id: UUID
+    ) -> Candidate | None:
+        self.calls.append("lock_candidate")
+        return self.candidates.get((tenant_id, candidate_id))
+
     async def list_candidates(
         self, tenant_id: UUID, filters: CandidateFilters, page: PageParams
     ) -> tuple[Sequence[Candidate], int]:
@@ -335,6 +359,69 @@ class FakeRecruitmentRepo:
         updated = row.model_copy(update=changes)
         self.candidates[key] = updated
         return updated
+
+    async def count_hired(self, tenant_id: UUID, job_id: UUID) -> int:
+        self.calls.append("count_hired")
+        return sum(
+            1
+            for (row_tenant, _), row in self.candidates.items()
+            if row_tenant == tenant_id
+            and row.job_id == job_id
+            and row.status is CandidateStatus.HIRED
+        )
+
+    async def mark_hired(
+        self,
+        tenant_id: UUID,
+        candidate_id: UUID,
+        *,
+        employee_id: UUID,
+        hired_at: datetime,
+        now: datetime,
+    ) -> Candidate | None:
+        self.calls.append("mark_hired")
+        if self._hired_race_lost():
+            return None
+        key = (tenant_id, candidate_id)
+        row = self.candidates.get(key)
+        if row is None or row.status is not CandidateStatus.OFFERED:
+            return None
+        updated = row.model_copy(
+            update={
+                "status": CandidateStatus.HIRED,
+                "employee_id": employee_id,
+                "hired_at": hired_at,
+                "updated_at": now,
+            }
+        )
+        self.candidates[key] = updated
+        return updated
+
+
+class FakeEmployeeHirePort:
+    """Recording `EmployeeHirePort` fake with a settable seam failure.
+
+    On success it returns `employee_id`; setting `error` makes the next and
+    every later call raise it unchanged (the service must propagate seam
+    errors and leave the candidate untouched).
+    """
+
+    def __init__(self) -> None:
+        self.employee_id: UUID = uuid7()
+        self.error: WorkPulseError | None = None
+        self.calls: list[tuple[UUID, UUID, EmployeeHirePayload, datetime]] = []
+
+    async def create_employee(
+        self,
+        tenant_id: UUID,
+        actor_id: UUID,
+        payload: EmployeeHirePayload,
+        now: datetime,
+    ) -> UUID:
+        self.calls.append((tenant_id, actor_id, payload, now))
+        if self.error is not None:
+            raise self.error
+        return self.employee_id
 
 
 class FakeOrgRefs:

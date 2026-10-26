@@ -1,4 +1,4 @@
-"""Use cases for the Recruitment domain — jobs (T2) and candidates (T3).
+"""Use cases for the Recruitment domain — jobs (T2), candidates (T3), hire (T4).
 
 Rules implemented here (pinned in `.ai/features/recruitment.md`):
 
@@ -11,8 +11,12 @@ Rules implemented here (pinned in `.ai/features/recruitment.md`):
   steps exactly one stage (`APPLIED → INTERVIEWING → OFFERED`); `reject` and
   `withdraw` are the terminal side exits from any pre-hire state. Terminal
   candidates are never re-opened. Every mutation is an event + an audit entry
-  in the same transaction (ADR 0012). `hire` (which creates the Employee
-  through the Employees seam) lands in T4 — until then `OFFERED` is the end.
+  in the same transaction (ADR 0012).
+- **Hire** (T4, ADR 0020): only from `OFFERED` on an `OPEN` job with a free
+  `openings` slot. The candidate then the job are locked, the employee is
+  created through the `EmployeeHirePort` on the caller's session, and the
+  candidate flips to `HIRED` with the returned id. A seam failure propagates
+  unchanged and rolls the whole hire back (the candidate stays `OFFERED`).
 - **Org references**: `department_id`/`position_id`/`location_id` are validated
   through the Organizations services — never their tables (AGENTS.md rule 3).
   Their 404s propagate unchanged; archived refs are accepted at job creation
@@ -43,9 +47,11 @@ from app.domains.recruitment.exceptions import (
     CandidateNotFoundError,
     CandidateNotOpenError,
     CandidateStageConflictError,
+    HireDateInFutureError,
     JobNotDraftError,
     JobNotFoundError,
     JobNotOpenError,
+    JobOpeningsFilledError,
 )
 from app.domains.recruitment.policies import (
     ensure_can_manage,
@@ -54,6 +60,8 @@ from app.domains.recruitment.policies import (
 )
 from app.domains.recruitment.repository import (
     CandidateFilters,
+    EmployeeHirePayload,
+    EmployeeHirePort,
     JobFilters,
     RecruitmentRepository,
 )
@@ -66,6 +74,7 @@ from app.domains.recruitment.schemas import (
     CandidateRejectedFrom,
     CandidateStatus,
     CandidateUpdate,
+    HireCandidate,
     Job,
     JobCreate,
     JobListPage,
@@ -113,6 +122,7 @@ class RecruitmentService:
         departments: OrgReferenceReader,
         positions: OrgReferenceReader,
         locations: OrgReferenceReader,
+        hire: EmployeeHirePort,
     ) -> None:
         self._repo = repo
         self._audit = audit
@@ -120,6 +130,7 @@ class RecruitmentService:
         self._departments = departments
         self._positions = positions
         self._locations = locations
+        self._hire = hire
 
     # --- mutations -----------------------------------------------------------
 
@@ -577,6 +588,89 @@ class RecruitmentService:
         )
         return updated
 
+    async def hire_candidate(
+        self,
+        identity: Identity,
+        candidate_id: UUID,
+        payload: HireCandidate,
+        now: datetime,
+    ) -> CandidateDetail:
+        """Hire an `offered` candidate and create the Employee through the seam.
+
+        Guards run in the pinned order: candidate (`404`/`409
+        candidate_stage_conflict`), job (`409 job_not_open`), capacity (`409
+        job_openings_filled`), then the hire date (`422`). The candidate then
+        its job are locked before the capacity count (ADR 0020 decision 4).
+        `candidate.hired_at` records the transition instant; the employment
+        start date is `payload.hired_at` on the Employee record.
+        """
+        ensure_can_manage(identity)
+
+        candidate = await self._repo.lock_candidate(identity.tenant_id, candidate_id)
+        if candidate is None:
+            raise CandidateNotFoundError()
+        if candidate.status is not CandidateStatus.OFFERED:
+            raise CandidateStageConflictError()
+
+        job = await self._repo.lock_job(identity.tenant_id, candidate.job_id)
+        if job is None:  # pragma: no cover — the candidate FK guarantees the job
+            raise JobNotFoundError()
+        if job.status is not JobStatus.OPEN:
+            raise JobNotOpenError()
+        hired = await self._repo.count_hired(identity.tenant_id, job.id)
+        if hired >= job.openings:
+            raise JobOpeningsFilledError()
+        if payload.hired_at > now.date():
+            raise HireDateInFutureError()
+
+        employee_id = await self._hire.create_employee(
+            identity.tenant_id,
+            identity.actor_id,
+            self._hire_payload(candidate, job, payload),
+            now,
+        )
+
+        updated = await self._repo.mark_hired(
+            identity.tenant_id,
+            candidate_id,
+            employee_id=employee_id,
+            hired_at=now,
+            now=now,
+        )
+        if updated is None:  # pragma: no cover — the FOR UPDATE lock prevents it
+            raise CandidateStageConflictError()
+
+        await self._outbox.append(
+            events.candidate_hired(
+                tenant_id=identity.tenant_id,
+                actor_id=identity.actor_id,
+                occurred_at=now,
+                candidate_id=updated.id,
+                job_id=updated.job_id,
+                employee_id=employee_id,
+                hired_by=identity.actor_id,
+            )
+        )
+        await self._audit.write(
+            AuditEntryCreate(
+                tenant_id=identity.tenant_id,
+                actor_id=identity.actor_id,
+                action="candidate.hired",
+                entity_type="candidate",
+                entity_id=updated.id,
+                occurred_at=now,
+                changes={
+                    "status": {
+                        "old": CandidateStatus.OFFERED.value,
+                        "new": CandidateStatus.HIRED.value,
+                    },
+                    "employee_id": {"old": None, "new": str(employee_id)},
+                    "hired_at": {"old": None, "new": now.isoformat()},
+                },
+            )
+        )
+        return self._detail(updated)
+
     # --- reads ---------------------------------------------------------------
 
     async def list_jobs(
@@ -650,7 +744,7 @@ class RecruitmentService:
             raise CandidateNotFoundError()
         if scope is not None and candidate.id not in scope:
             raise CandidateNotFoundError()
-        return CandidateDetail(**candidate.model_dump(), interviews=[])
+        return self._detail(candidate)
 
     # --- internals -----------------------------------------------------------
 
@@ -703,3 +797,41 @@ class RecruitmentService:
         await self._departments.get(identity, department_id)
         await self._positions.get(identity, position_id)
         await self._locations.get(identity, location_id)
+
+    @staticmethod
+    def _detail(candidate: Candidate) -> CandidateDetail:
+        """One `CandidateDetail` assembly for reads and the hire response.
+
+        T5 fills `interviews` here (management: all; assigned interviewer:
+        own), so the hire endpoint cannot drift from `getCandidate`.
+        """
+        return CandidateDetail(**candidate.model_dump(), interviews=[])
+
+    @staticmethod
+    def _hire_payload(
+        candidate: Candidate, job: Job, payload: HireCandidate
+    ) -> EmployeeHirePayload:
+        """Effective hire terms: candidate record + overrides + the job's refs.
+
+        `None` overrides fall back to the candidate's recorded contact data
+        (the pinned "defaulting to the candidate's record" semantics).
+        """
+        return EmployeeHirePayload(
+            first_name=(
+                candidate.first_name
+                if payload.first_name is None
+                else payload.first_name
+            ),
+            last_name=(
+                candidate.last_name if payload.last_name is None else payload.last_name
+            ),
+            email=candidate.email if payload.email is None else payload.email,
+            phone=candidate.phone if payload.phone is None else payload.phone,
+            department_id=job.department_id,
+            position_id=job.position_id,
+            location_id=job.location_id,
+            manager_id=payload.manager_id,
+            employment_type=payload.employment_type.value,
+            hired_at=payload.hired_at,
+            employee_code=payload.employee_code,
+        )

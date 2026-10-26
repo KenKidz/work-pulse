@@ -24,6 +24,7 @@ from app.domains.recruitment.schemas import (
     CandidateListPage,
     CandidateStatus,
     CandidateUpdate,
+    HireCandidate,
     Job,
     JobCreate,
     JobListPage,
@@ -248,3 +249,18 @@ async def withdraw_candidate(
 ) -> Candidate:
     """HR records a candidate withdrawal from any pre-hire stage."""
     return await service.withdraw_candidate(identity, candidate_id, payload, _now())
+
+
+@router.post(
+    "/recruitment/candidates/{candidate_id}/hire",
+    response_model=CandidateDetail,
+    operation_id="hireCandidate",
+)
+async def hire_candidate(
+    candidate_id: UUID,
+    payload: HireCandidate,
+    identity: IdentityDep,
+    service: RecruitmentServiceDep,
+) -> CandidateDetail:
+    """Hire an `offered` candidate; creates the Employee through the seam."""
+    return await service.hire_candidate(identity, candidate_id, payload, _now())

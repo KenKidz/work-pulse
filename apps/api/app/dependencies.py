@@ -59,6 +59,7 @@ from app.infrastructure.postgres.payroll_facts import (
     PostgresLeaveDaysPort,
     PostgresOvertimeHoursPort,
 )
+from app.infrastructure.postgres.recruitment_hire import PostgresEmployeeHirePort
 from app.infrastructure.postgres.reference_labels import PostgresReferenceLabels
 from app.infrastructure.postgres.repositories.attendance import (
     PostgresAttendanceRepository,
@@ -128,7 +129,13 @@ def get_location_service(session: SessionDep) -> LocationService:
     )
 
 
-def get_employee_service(session: SessionDep) -> EmployeeService:
+def build_employee_service(session: AsyncSession) -> EmployeeService:
+    """Wire the Employees service on a caller-owned session.
+
+    Shared by the HTTP provider and the recruitment hire seam (ADR 0020): the
+    seam must reuse the request session, so it cannot go through the
+    `SessionDep` provider and open its own.
+    """
     audit = PostgresAuditWriter(session)
     return EmployeeService(
         repo=PostgresEmployeeRepository(session),
@@ -148,6 +155,10 @@ def get_employee_service(session: SessionDep) -> EmployeeService:
         # all. The relay worker publishes committed rows to Kafka.
         outbox=PostgresEventOutbox(session, clock=_utc_now),
     )
+
+
+def get_employee_service(session: SessionDep) -> EmployeeService:
+    return build_employee_service(session)
 
 
 def _utc_now() -> datetime:
@@ -197,7 +208,8 @@ def get_recruitment_service(session: SessionDep) -> RecruitmentService:
     The outbox shares the request session, so a transition, its audit entry and
     its event envelope commit together (ADR 0012). Org refs are validated
     through the Organizations services (conventions: never another domain's
-    internals); the hire seam port joins in T4.
+    internals). The hire seam port is built on the same session (ADR 0020), so
+    a hire and its Employee row share one transaction.
     """
     audit = PostgresAuditWriter(session)
     return RecruitmentService(
@@ -211,6 +223,7 @@ def get_recruitment_service(session: SessionDep) -> RecruitmentService:
         locations=LocationService(
             repo=PostgresLocationRepository(session), audit=audit
         ),
+        hire=PostgresEmployeeHirePort(build_employee_service(session)),
     )
 
 

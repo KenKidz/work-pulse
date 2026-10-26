@@ -141,6 +141,19 @@ class PostgresRecruitmentRepository:
         row = (await self._session.execute(stmt)).scalar_one_or_none()
         return _job(row) if row is not None else None
 
+    async def lock_job(self, tenant_id: UUID, job_id: UUID) -> Job | None:
+        """Read the job under `FOR UPDATE` for the hire capacity decision."""
+        stmt = (
+            select(orm.Job)
+            .where(
+                orm.Job.tenant_id == tenant_id,
+                orm.Job.id == job_id,
+            )
+            .with_for_update()
+        )
+        row = (await self._session.execute(stmt)).scalar_one_or_none()
+        return _job(row) if row is not None else None
+
     async def list_jobs(
         self, tenant_id: UUID, filters: JobFilters, page: PageParams
     ) -> tuple[Sequence[Job], int]:
@@ -288,6 +301,21 @@ class PostgresRecruitmentRepository:
         row = (await self._session.execute(stmt)).scalar_one_or_none()
         return _candidate(row) if row is not None else None
 
+    async def lock_candidate(
+        self, tenant_id: UUID, candidate_id: UUID
+    ) -> Candidate | None:
+        """Read the candidate under `FOR UPDATE` before the hire decision."""
+        stmt = (
+            select(orm.Candidate)
+            .where(
+                orm.Candidate.tenant_id == tenant_id,
+                orm.Candidate.id == candidate_id,
+            )
+            .with_for_update()
+        )
+        row = (await self._session.execute(stmt)).scalar_one_or_none()
+        return _candidate(row) if row is not None else None
+
     async def list_candidates(
         self, tenant_id: UUID, filters: CandidateFilters, page: PageParams
     ) -> tuple[Sequence[Candidate], int]:
@@ -383,6 +411,49 @@ class PostgresRecruitmentRepository:
                 orm.Candidate.status == from_status.value,
             )
             .values(**values)
+            .returning(orm.Candidate.id)
+        )
+        updated = (await self._session.execute(stmt)).scalar_one_or_none()
+        if updated is None:
+            return None
+        return await self.get_candidate(tenant_id, candidate_id)
+
+    async def count_hired(self, tenant_id: UUID, job_id: UUID) -> int:
+        """Hired candidates on the job — the opening capacity already claimed."""
+        stmt = (
+            select(func.count())
+            .select_from(orm.Candidate)
+            .where(
+                orm.Candidate.tenant_id == tenant_id,
+                orm.Candidate.job_id == job_id,
+                orm.Candidate.status == CandidateStatus.HIRED.value,
+            )
+        )
+        return int((await self._session.execute(stmt)).scalar_one())
+
+    async def mark_hired(
+        self,
+        tenant_id: UUID,
+        candidate_id: UUID,
+        *,
+        employee_id: UUID,
+        hired_at: datetime,
+        now: datetime,
+    ) -> Candidate | None:
+        """Conditional `offered → hired`, stamping the seam's employee id."""
+        stmt = (
+            update(orm.Candidate)
+            .where(
+                orm.Candidate.tenant_id == tenant_id,
+                orm.Candidate.id == candidate_id,
+                orm.Candidate.status == CandidateStatus.OFFERED.value,
+            )
+            .values(
+                status=CandidateStatus.HIRED.value,
+                employee_id=employee_id,
+                hired_at=hired_at,
+                updated_at=now,
+            )
             .returning(orm.Candidate.id)
         )
         updated = (await self._session.execute(stmt)).scalar_one_or_none()
