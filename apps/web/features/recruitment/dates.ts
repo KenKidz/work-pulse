@@ -10,3 +10,12 @@ import { dayjs } from "@/lib/datetime";
 export function formatRecruitmentTimestamp(value: string): string {
   return dayjs(value).format("MMM D, YYYY HH:mm");
 }
+
+/**
+ * The server's current date as a `YYYY-MM-DD` string. Hire-date bounds are
+ * evaluated against the API's UTC clock (time-as-a-parameter), so the form
+ * uses UTC too instead of the browser zone.
+ */
+export function todayISO(): string {
+  return dayjs.utc().format("YYYY-MM-DD");
+}

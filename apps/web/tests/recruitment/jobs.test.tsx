@@ -42,7 +42,11 @@ vi.mock("@workpulse/api-client", () => ({
   getListJobsQueryKey: () => ["/api/v1/recruitment/jobs"],
   getListCandidatesQueryKey: () => ["/api/v1/recruitment/candidates"],
   getListInterviewsQueryKey: () => ["/api/v1/recruitment/interviews"],
+  getListEmployeesQueryKey: () => ["/api/v1/employees"],
+  getGetEmployeeQueryKey: (id: string) => ["/api/v1/employees", id],
+  getListEmploymentsQueryKey: (id: string) => ["/api/v1/employees", id, "employments"],
   // Directory paging (only invoked when a first page has more pages).
+  getListJobsQueryOptions: vi.fn(),
   getListDepartmentsQueryOptions: vi.fn(),
   getListPositionsQueryOptions: vi.fn(),
   getListLocationsQueryOptions: vi.fn(),

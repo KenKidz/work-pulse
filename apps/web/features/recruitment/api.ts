@@ -14,6 +14,8 @@ import {
   getListJobsQueryKey,
 } from "@workpulse/api-client";
 
+import { invalidateEmployees } from "@/features/employees/api";
+
 export const recruitmentJobsQueryKey = [...getListJobsQueryKey()];
 export const recruitmentCandidatesQueryKey = [...getListCandidatesQueryKey()];
 export const recruitmentInterviewsQueryKey = [...getListInterviewsQueryKey()];
@@ -37,4 +39,9 @@ export async function invalidateRecruitment(queryClient: QueryClient): Promise<v
     invalidateCandidates(queryClient),
     invalidateInterviews(queryClient),
   ]);
+}
+
+/** A hire also creates the Employee visible in the Employees workspace. */
+export async function invalidateRecruitmentHire(queryClient: QueryClient): Promise<void> {
+  await Promise.all([invalidateRecruitment(queryClient), invalidateEmployees(queryClient)]);
 }

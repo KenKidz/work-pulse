@@ -15,6 +15,8 @@ export type {
   CandidateStatus,
   CandidateUpdate,
   Department,
+  EmployeeSummary,
+  EmploymentType,
   HireCandidate,
   Interview,
   InterviewFeedback,

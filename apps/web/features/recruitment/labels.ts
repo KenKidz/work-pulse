@@ -8,7 +8,13 @@ import type { ComponentProps } from "react";
 import type { Badge } from "@/components/ui/badge";
 import { ApiError } from "@workpulse/api-client/mutator/custom-fetch";
 
-import type { CandidateSource, CandidateStatus, InterviewStatus, JobStatus } from "./types";
+import type {
+  CandidateSource,
+  CandidateStatus,
+  EmploymentType,
+  InterviewStatus,
+  JobStatus,
+} from "./types";
 
 type BadgeVariant = ComponentProps<typeof Badge>["variant"];
 
@@ -47,6 +53,31 @@ export const candidateSourceLabel: Record<CandidateSource, string> = {
   job_board: "Job board",
   agency: "Agency",
   other: "Other",
+};
+
+/** A candidate can still be moved only from these stages. */
+export const CANDIDATE_OPEN_STATUSES: readonly CandidateStatus[] = [
+  "applied",
+  "interviewing",
+  "offered",
+];
+
+export function isCandidateOpen(status: CandidateStatus): boolean {
+  return CANDIDATE_OPEN_STATUSES.includes(status);
+}
+
+/** The one stage an `advance` moves to, or `null` when the pipeline is done. */
+export function nextCandidateStage(status: CandidateStatus): CandidateStatus | null {
+  if (status === "applied") return "interviewing";
+  if (status === "interviewing") return "offered";
+  return null;
+}
+
+export const employmentTypeLabel: Record<EmploymentType, string> = {
+  full_time: "Full-time",
+  part_time: "Part-time",
+  contract: "Contract",
+  intern: "Intern",
 };
 
 export const interviewStatusLabel: Record<InterviewStatus, string> = {

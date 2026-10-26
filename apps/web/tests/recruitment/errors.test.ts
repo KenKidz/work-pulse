@@ -7,7 +7,11 @@ import { describe, expect, it } from "vitest";
 
 import { ApiError } from "@workpulse/api-client/mutator/custom-fetch";
 
-import { jobFieldErrors } from "@/features/recruitment/hooks/use-recruitment";
+import {
+  candidateFieldErrors,
+  hireFieldErrors,
+  jobFieldErrors,
+} from "@/features/recruitment/hooks/use-recruitment";
 import {
   RECRUITMENT_ERROR_MESSAGES,
   isForbiddenError,
@@ -102,5 +106,51 @@ describe("organizationLabel", () => {
     expect(organizationLabel(names, "01900000-0000-7000-8000-000000000d99", "Department")).toBe(
       "Department …0d99",
     );
+  });
+});
+
+describe("candidate error mapping", () => {
+  it("puts a duplicate application on the email field", () => {
+    expect(
+      candidateFieldErrors(new ApiError(409, "candidate_already_applied", "Duplicate")),
+    ).toEqual({ email: RECRUITMENT_ERROR_MESSAGES.candidate_already_applied });
+  });
+
+  it("puts an intake job conflict on the job field", () => {
+    expect(candidateFieldErrors(new ApiError(409, "job_not_open", "Job is closed"))).toEqual({
+      job_id: RECRUITMENT_ERROR_MESSAGES.job_not_open,
+    });
+    expect(candidateFieldErrors(new ApiError(404, "job_not_found", "Gone"))).toEqual({
+      job_id: RECRUITMENT_ERROR_MESSAGES.job_not_found,
+    });
+  });
+
+  it("keeps an unknown intake failure on the dialog root", () => {
+    expect(candidateFieldErrors(new ApiError(400, "unexpected", "boom"))).toEqual({
+      root: "boom",
+    });
+  });
+});
+
+describe("hire error mapping", () => {
+  it("maps the seam's email/code/manager codes to their fields", () => {
+    expect(hireFieldErrors(new ApiError(409, "employee_email_taken", "Taken"))).toEqual({
+      email: RECRUITMENT_ERROR_MESSAGES.employee_email_taken,
+    });
+    expect(hireFieldErrors(new ApiError(409, "employee_code_taken", "Taken"))).toEqual({
+      employee_code: RECRUITMENT_ERROR_MESSAGES.employee_code_taken,
+    });
+    expect(hireFieldErrors(new ApiError(400, "employee_manager_invalid", "Invalid"))).toEqual({
+      manager_id: RECRUITMENT_ERROR_MESSAGES.employee_manager_invalid,
+    });
+  });
+
+  it("keeps capacity/stage failures on the dialog root", () => {
+    expect(hireFieldErrors(new ApiError(409, "job_openings_filled", "Full"))).toEqual({
+      root: RECRUITMENT_ERROR_MESSAGES.job_openings_filled,
+    });
+    expect(hireFieldErrors(new ApiError(409, "candidate_stage_conflict", "Moved"))).toEqual({
+      root: RECRUITMENT_ERROR_MESSAGES.candidate_stage_conflict,
+    });
   });
 });
