@@ -507,6 +507,72 @@ export interface EmployeeListPage {
   page: Page;
 }
 
+/**
+ * Pinned goal lifecycle (`draft → active → completed | cancelled`).
+ */
+export type GoalStatus = (typeof GoalStatus)[keyof typeof GoalStatus];
+
+export const GoalStatus = {
+  draft: "draft",
+  active: "active",
+  completed: "completed",
+  cancelled: "cancelled",
+} as const;
+
+/**
+ * One goal and its state (pinned response shape).
+ */
+export interface Goal {
+  id: string;
+  employee_id: string;
+  title: string;
+  description?: string | null;
+  due_date?: string | null;
+  progress_pct: number;
+  status: GoalStatus;
+  created_at: string;
+  updated_at: string;
+  completed_at?: string | null;
+}
+
+/**
+ * Create a goal — always `draft`; the subject defaults to the actor.
+ */
+export interface GoalCreate {
+  employee_id?: string | null;
+  /**
+   * @minLength 1
+   * @maxLength 200
+   */
+  title: string;
+  description?: string | null;
+  due_date?: string | null;
+  /**
+   * @minimum 0
+   * @maximum 100
+   */
+  progress_pct?: number;
+}
+
+export interface GoalListPage {
+  items: Goal[];
+  page: Page;
+}
+
+/**
+ * Edit a `draft`/`active` goal; absent fields are unchanged.
+ *
+ * Progress is a field update, not a state transition. Explicit `null` clears
+ * the optional `description`/`due_date` but is rejected for `title` and
+ * `progress_pct`.
+ */
+export interface GoalUpdate {
+  title?: string | null;
+  description?: string | null;
+  due_date?: string | null;
+  progress_pct?: number | null;
+}
+
 export type ValidationErrorCtx = { [key: string]: unknown };
 
 export interface ValidationError {
@@ -1461,6 +1527,13 @@ export type ListOvertimeRequestsParams = {
   status?: OvertimeRequestStatus | null;
   from?: string | null;
   to?: string | null;
+  page?: number;
+  page_size?: number;
+};
+
+export type ListGoalsParams = {
+  employee_id?: string | null;
+  status?: GoalStatus | null;
   page?: number;
   page_size?: number;
 };

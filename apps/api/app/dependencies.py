@@ -42,6 +42,7 @@ from app.domains.payroll.repository import (
     OvertimeHoursPort,
 )
 from app.domains.payroll.service import PayrollService
+from app.domains.performance.service import GoalService
 from app.domains.realtime.service import RealtimeService
 from app.domains.recruitment.service import RecruitmentService
 from app.domains.reports.exceptions import ReportsUnavailableError
@@ -86,6 +87,9 @@ from app.infrastructure.postgres.repositories.overtime import (
     PostgresOvertimeRepository,
 )
 from app.infrastructure.postgres.repositories.payroll import PostgresPayrollRepository
+from app.infrastructure.postgres.repositories.performance import (
+    PostgresPerformanceRepository,
+)
 from app.infrastructure.postgres.repositories.recruitment import (
     PostgresRecruitmentRepository,
 )
@@ -198,6 +202,22 @@ def get_overtime_service(session: SessionDep) -> OvertimeService:
         audit=PostgresAuditWriter(session),
         # Same session, same transaction: the request row, its audit entry and
         # its event envelope commit together or not at all (ADR 0012).
+        outbox=PostgresEventOutbox(session, clock=_utc_now),
+    )
+
+
+def get_goal_service(session: SessionDep) -> GoalService:
+    """Performance goals (T5).
+
+    The outbox shares the request session, so a transition, its audit entry and
+    its event envelope commit together (ADR 0012). Goal visibility reuses the
+    shared self + direct-reports `PostgresEmployeeScope` (leave/overtime/reports)
+    so a manager's goal scope cannot drift from their inbox scope.
+    """
+    return GoalService(
+        repo=PostgresPerformanceRepository(session),
+        scope=PostgresEmployeeScope(session),
+        audit=PostgresAuditWriter(session),
         outbox=PostgresEventOutbox(session, clock=_utc_now),
     )
 
@@ -386,6 +406,7 @@ EmployeeServiceDep = Annotated[EmployeeService, Depends(get_employee_service)]
 AttendanceServiceDep = Annotated[AttendanceService, Depends(get_attendance_service)]
 LeaveServiceDep = Annotated[LeaveService, Depends(get_leave_service)]
 OvertimeServiceDep = Annotated[OvertimeService, Depends(get_overtime_service)]
+GoalServiceDep = Annotated[GoalService, Depends(get_goal_service)]
 RecruitmentServiceDep = Annotated[RecruitmentService, Depends(get_recruitment_service)]
 PayrollServiceDep = Annotated[PayrollService, Depends(get_payroll_service)]
 NotificationInboxServiceDep = Annotated[

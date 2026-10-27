@@ -51,6 +51,10 @@ import type {
   GetHeadcountReportParams,
   GetLeaveReportParams,
   GetOvertimeReportParams,
+  Goal,
+  GoalCreate,
+  GoalListPage,
+  GoalUpdate,
   HTTPValidationError,
   HeadcountReport,
   HealthzHealthzGet200,
@@ -75,6 +79,7 @@ import type {
   ListCandidatesParams,
   ListDepartmentsParams,
   ListEmployeesParams,
+  ListGoalsParams,
   ListInterviewsParams,
   ListJobsParams,
   ListLeaveBalancesParams,
@@ -9252,6 +9257,947 @@ export const useWithdrawOvertimeRequest = <
     getWithdrawOvertimeRequestMutationOptions(options),
     queryClient,
   );
+};
+
+export type createGoalResponse201 = {
+  data: Goal;
+  status: 201;
+};
+
+export type createGoalResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type createGoalResponseSuccess = createGoalResponse201 & {
+  headers: Headers;
+};
+export type createGoalResponseError = createGoalResponse422 & {
+  headers: Headers;
+};
+
+export type createGoalResponse =
+  createGoalResponseSuccess | createGoalResponseError;
+
+export const getCreateGoalUrl = () => {
+  return `/api/v1/performance/goals`;
+};
+
+/**
+ * Create a goal in `draft` for the payload subject (default: self).
+ * @summary Create Goal
+ */
+export const createGoal = async (
+  goalCreate: GoalCreate,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<createGoalResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return customFetch<createGoalResponse>(getCreateGoalUrl(), {
+    ...options,
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...getHeaders(options?.headers),
+    },
+    body: JSON.stringify(goalCreate),
+  });
+};
+
+export const getCreateGoalMutationKey = () => ["createGoal"] as const;
+
+export const getCreateGoalMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createGoal>>,
+    TError,
+    CreateGoalMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createGoal>>,
+  TError,
+  CreateGoalMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateGoalMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createGoal>>,
+    CreateGoalMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createGoal(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateGoalMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createGoal>>
+>;
+export type CreateGoalMutationBody = GoalCreate;
+export type CreateGoalMutationError = HTTPValidationError;
+export type CreateGoalMutationVariables = { data: GoalCreate };
+
+/**
+ * @summary Create Goal
+ */
+export const useCreateGoal = <TError = HTTPValidationError, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createGoal>>,
+      TError,
+      CreateGoalMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createGoal>>,
+  TError,
+  CreateGoalMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateGoalMutationOptions(options), queryClient);
+};
+
+export type listGoalsResponse200 = {
+  data: GoalListPage;
+  status: 200;
+};
+
+export type listGoalsResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type listGoalsResponseSuccess = listGoalsResponse200 & {
+  headers: Headers;
+};
+export type listGoalsResponseError = listGoalsResponse422 & {
+  headers: Headers;
+};
+
+export type listGoalsResponse =
+  listGoalsResponseSuccess | listGoalsResponseError;
+
+export const getListGoalsUrl = (params?: ListGoalsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/performance/goals?${stringifiedParams}`
+    : `/api/v1/performance/goals`;
+};
+
+/**
+ * Goals scoped to the actor's visibility (## Roles & access).
+ * @summary List Goals
+ */
+export const listGoals = async (
+  params?: ListGoalsParams,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<listGoalsResponse> => {
+  return customFetch<listGoalsResponse>(getListGoalsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListGoalsQueryKey = (params?: ListGoalsParams) => {
+  return [`/api/v1/performance/goals`, ...(params ? [params] : [])] as const;
+};
+
+export const getListGoalsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listGoals>>,
+  TError = HTTPValidationError,
+>(
+  params?: ListGoalsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listGoals>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListGoalsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listGoals>>> = ({
+    signal,
+  }) => listGoals(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listGoals>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListGoalsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listGoals>>
+>;
+export type ListGoalsQueryError = HTTPValidationError;
+
+export function useListGoals<
+  TData = Awaited<ReturnType<typeof listGoals>>,
+  TError = HTTPValidationError,
+>(
+  params: undefined | ListGoalsParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listGoals>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listGoals>>,
+          TError,
+          Awaited<ReturnType<typeof listGoals>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useListGoals<
+  TData = Awaited<ReturnType<typeof listGoals>>,
+  TError = HTTPValidationError,
+>(
+  params?: ListGoalsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listGoals>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listGoals>>,
+          TError,
+          Awaited<ReturnType<typeof listGoals>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useListGoals<
+  TData = Awaited<ReturnType<typeof listGoals>>,
+  TError = HTTPValidationError,
+>(
+  params?: ListGoalsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listGoals>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary List Goals
+ */
+
+export function useListGoals<
+  TData = Awaited<ReturnType<typeof listGoals>>,
+  TError = HTTPValidationError,
+>(
+  params?: ListGoalsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listGoals>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getListGoalsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export type getGoalResponse200 = {
+  data: Goal;
+  status: 200;
+};
+
+export type getGoalResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type getGoalResponseSuccess = getGoalResponse200 & {
+  headers: Headers;
+};
+export type getGoalResponseError = getGoalResponse422 & {
+  headers: Headers;
+};
+
+export type getGoalResponse = getGoalResponseSuccess | getGoalResponseError;
+
+export const getGetGoalUrl = (id: string) => {
+  return `/api/v1/performance/goals/${id}`;
+};
+
+/**
+ * Goal detail; unknown, cross-tenant and out-of-scope ids are `404`.
+ * @summary Get Goal
+ */
+export const getGoal = async (
+  id: string,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<getGoalResponse> => {
+  return customFetch<getGoalResponse>(getGetGoalUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetGoalQueryKey = (id: string) => {
+  return [`/api/v1/performance/goals/${id}`] as const;
+};
+
+export const getGetGoalQueryOptions = <
+  TData = Awaited<ReturnType<typeof getGoal>>,
+  TError = HTTPValidationError,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getGoal>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetGoalQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getGoal>>> = ({
+    signal,
+  }) => getGoal(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getGoal>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetGoalQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getGoal>>
+>;
+export type GetGoalQueryError = HTTPValidationError;
+
+export function useGetGoal<
+  TData = Awaited<ReturnType<typeof getGoal>>,
+  TError = HTTPValidationError,
+>(
+  id: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getGoal>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getGoal>>,
+          TError,
+          Awaited<ReturnType<typeof getGoal>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetGoal<
+  TData = Awaited<ReturnType<typeof getGoal>>,
+  TError = HTTPValidationError,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getGoal>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getGoal>>,
+          TError,
+          Awaited<ReturnType<typeof getGoal>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetGoal<
+  TData = Awaited<ReturnType<typeof getGoal>>,
+  TError = HTTPValidationError,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getGoal>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary Get Goal
+ */
+
+export function useGetGoal<
+  TData = Awaited<ReturnType<typeof getGoal>>,
+  TError = HTTPValidationError,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getGoal>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetGoalQueryOptions(id, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export type updateGoalResponse200 = {
+  data: Goal;
+  status: 200;
+};
+
+export type updateGoalResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type updateGoalResponseSuccess = updateGoalResponse200 & {
+  headers: Headers;
+};
+export type updateGoalResponseError = updateGoalResponse422 & {
+  headers: Headers;
+};
+
+export type updateGoalResponse =
+  updateGoalResponseSuccess | updateGoalResponseError;
+
+export const getUpdateGoalUrl = (id: string) => {
+  return `/api/v1/performance/goals/${id}`;
+};
+
+/**
+ * Edit a `draft`/`active` goal; a terminal goal is `409 goal_terminal`.
+ * @summary Update Goal
+ */
+export const updateGoal = async (
+  id: string,
+  goalUpdate: GoalUpdate,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<updateGoalResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return customFetch<updateGoalResponse>(getUpdateGoalUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      ...getHeaders(options?.headers),
+    },
+    body: JSON.stringify(goalUpdate),
+  });
+};
+
+export const getUpdateGoalMutationKey = () => ["updateGoal"] as const;
+
+export const getUpdateGoalMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateGoal>>,
+    TError,
+    UpdateGoalMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateGoal>>,
+  TError,
+  UpdateGoalMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateGoalMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateGoal>>,
+    UpdateGoalMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateGoal(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateGoalMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateGoal>>
+>;
+export type UpdateGoalMutationBody = GoalUpdate;
+export type UpdateGoalMutationError = HTTPValidationError;
+export type UpdateGoalMutationVariables = { id: string; data: GoalUpdate };
+
+/**
+ * @summary Update Goal
+ */
+export const useUpdateGoal = <TError = HTTPValidationError, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateGoal>>,
+      TError,
+      UpdateGoalMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateGoal>>,
+  TError,
+  UpdateGoalMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateGoalMutationOptions(options), queryClient);
+};
+
+export type activateGoalResponse200 = {
+  data: Goal;
+  status: 200;
+};
+
+export type activateGoalResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type activateGoalResponseSuccess = activateGoalResponse200 & {
+  headers: Headers;
+};
+export type activateGoalResponseError = activateGoalResponse422 & {
+  headers: Headers;
+};
+
+export type activateGoalResponse =
+  activateGoalResponseSuccess | activateGoalResponseError;
+
+export const getActivateGoalUrl = (id: string) => {
+  return `/api/v1/performance/goals/${id}/activate`;
+};
+
+/**
+ * `draft → active`; any other state is `409 goal_not_draft`.
+ * @summary Activate Goal
+ */
+export const activateGoal = async (
+  id: string,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<activateGoalResponse> => {
+  return customFetch<activateGoalResponse>(getActivateGoalUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getActivateGoalMutationKey = () => ["activateGoal"] as const;
+
+export const getActivateGoalMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof activateGoal>>,
+    TError,
+    ActivateGoalMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof activateGoal>>,
+  TError,
+  ActivateGoalMutationVariables,
+  TContext
+> => {
+  const mutationKey = getActivateGoalMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof activateGoal>>,
+    ActivateGoalMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return activateGoal(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ActivateGoalMutationResult = NonNullable<
+  Awaited<ReturnType<typeof activateGoal>>
+>;
+
+export type ActivateGoalMutationError = HTTPValidationError;
+export type ActivateGoalMutationVariables = { id: string };
+
+/**
+ * @summary Activate Goal
+ */
+export const useActivateGoal = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof activateGoal>>,
+      TError,
+      ActivateGoalMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof activateGoal>>,
+  TError,
+  ActivateGoalMutationVariables,
+  TContext
+> => {
+  return useMutation(getActivateGoalMutationOptions(options), queryClient);
+};
+
+export type completeGoalResponse200 = {
+  data: Goal;
+  status: 200;
+};
+
+export type completeGoalResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type completeGoalResponseSuccess = completeGoalResponse200 & {
+  headers: Headers;
+};
+export type completeGoalResponseError = completeGoalResponse422 & {
+  headers: Headers;
+};
+
+export type completeGoalResponse =
+  completeGoalResponseSuccess | completeGoalResponseError;
+
+export const getCompleteGoalUrl = (id: string) => {
+  return `/api/v1/performance/goals/${id}/complete`;
+};
+
+/**
+ * `active → completed`; any other state is `409 goal_not_active`.
+ * @summary Complete Goal
+ */
+export const completeGoal = async (
+  id: string,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<completeGoalResponse> => {
+  return customFetch<completeGoalResponse>(getCompleteGoalUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getCompleteGoalMutationKey = () => ["completeGoal"] as const;
+
+export const getCompleteGoalMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof completeGoal>>,
+    TError,
+    CompleteGoalMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof completeGoal>>,
+  TError,
+  CompleteGoalMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCompleteGoalMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof completeGoal>>,
+    CompleteGoalMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return completeGoal(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CompleteGoalMutationResult = NonNullable<
+  Awaited<ReturnType<typeof completeGoal>>
+>;
+
+export type CompleteGoalMutationError = HTTPValidationError;
+export type CompleteGoalMutationVariables = { id: string };
+
+/**
+ * @summary Complete Goal
+ */
+export const useCompleteGoal = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof completeGoal>>,
+      TError,
+      CompleteGoalMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof completeGoal>>,
+  TError,
+  CompleteGoalMutationVariables,
+  TContext
+> => {
+  return useMutation(getCompleteGoalMutationOptions(options), queryClient);
+};
+
+export type cancelGoalResponse200 = {
+  data: Goal;
+  status: 200;
+};
+
+export type cancelGoalResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type cancelGoalResponseSuccess = cancelGoalResponse200 & {
+  headers: Headers;
+};
+export type cancelGoalResponseError = cancelGoalResponse422 & {
+  headers: Headers;
+};
+
+export type cancelGoalResponse =
+  cancelGoalResponseSuccess | cancelGoalResponseError;
+
+export const getCancelGoalUrl = (id: string) => {
+  return `/api/v1/performance/goals/${id}/cancel`;
+};
+
+/**
+ * `draft|active → cancelled`, terminal; a terminal goal is immutable.
+ * @summary Cancel Goal
+ */
+export const cancelGoal = async (
+  id: string,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<cancelGoalResponse> => {
+  return customFetch<cancelGoalResponse>(getCancelGoalUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getCancelGoalMutationKey = () => ["cancelGoal"] as const;
+
+export const getCancelGoalMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof cancelGoal>>,
+    TError,
+    CancelGoalMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof cancelGoal>>,
+  TError,
+  CancelGoalMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCancelGoalMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof cancelGoal>>,
+    CancelGoalMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return cancelGoal(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CancelGoalMutationResult = NonNullable<
+  Awaited<ReturnType<typeof cancelGoal>>
+>;
+
+export type CancelGoalMutationError = HTTPValidationError;
+export type CancelGoalMutationVariables = { id: string };
+
+/**
+ * @summary Cancel Goal
+ */
+export const useCancelGoal = <TError = HTTPValidationError, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof cancelGoal>>,
+      TError,
+      CancelGoalMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof cancelGoal>>,
+  TError,
+  CancelGoalMutationVariables,
+  TContext
+> => {
+  return useMutation(getCancelGoalMutationOptions(options), queryClient);
 };
 
 export type listNotificationsResponse200 = {

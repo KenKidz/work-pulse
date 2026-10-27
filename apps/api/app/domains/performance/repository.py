@@ -172,9 +172,20 @@ class PerformanceRepository(Protocol):
         ...
 
     async def transition_goal_cancel(
-        self, tenant_id: UUID, goal_id: UUID, *, now: datetime
+        self,
+        tenant_id: UUID,
+        goal_id: UUID,
+        *,
+        from_status: GoalStatus,
+        now: datetime,
     ) -> Goal | None:
-        """`draft|active → cancelled`, terminal."""
+        """`from_status (draft|active) → cancelled`, terminal.
+
+        The observed source state is part of the update, so a concurrent
+        `activate` cannot make the audit claim a transition the row did not
+        have: a lost race returns `None` (the service maps it to
+        `goal_terminal`).
+        """
         ...
 
     # --- reviews -------------------------------------------------------------

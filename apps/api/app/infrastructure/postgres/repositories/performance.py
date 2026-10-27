@@ -61,7 +61,6 @@ from app.shared.errors import WorkPulseError
 from app.shared.pagination import PageParams
 
 _EDITABLE_GOAL_STATUSES = (GoalStatus.DRAFT.value, GoalStatus.ACTIVE.value)
-_CANCELLABLE_GOAL_STATUSES = (GoalStatus.DRAFT.value, GoalStatus.ACTIVE.value)
 
 _EMPLOYEE_SKILL_COLUMNS = (
     orm.EmployeeSkill.skill_id,
@@ -320,14 +319,19 @@ class PostgresPerformanceRepository:
         return await self.get_goal(tenant_id, goal_id)
 
     async def transition_goal_cancel(
-        self, tenant_id: UUID, goal_id: UUID, *, now: datetime
+        self,
+        tenant_id: UUID,
+        goal_id: UUID,
+        *,
+        from_status: GoalStatus,
+        now: datetime,
     ) -> Goal | None:
         stmt = (
             update(orm.Goal)
             .where(
                 orm.Goal.tenant_id == tenant_id,
                 orm.Goal.id == goal_id,
-                orm.Goal.status.in_(_CANCELLABLE_GOAL_STATUSES),
+                orm.Goal.status == from_status.value,
             )
             .values(
                 status=GoalStatus.CANCELLED.value,

@@ -201,14 +201,19 @@ class FakePerformanceRepo:
         return updated
 
     async def transition_goal_cancel(
-        self, tenant_id: UUID, goal_id: UUID, *, now: datetime
+        self,
+        tenant_id: UUID,
+        goal_id: UUID,
+        *,
+        from_status: GoalStatus,
+        now: datetime,
     ) -> Goal | None:
         self.calls.append("transition_goal_cancel")
         if self._race_lost():
             return None
         key = (tenant_id, goal_id)
         row = self.goals.get(key)
-        if row is None or row.status not in _OPEN_GOAL_STATUSES:
+        if row is None or row.status is not from_status:
             return None
         updated = row.model_copy(
             update={"status": GoalStatus.CANCELLED, "updated_at": now}
