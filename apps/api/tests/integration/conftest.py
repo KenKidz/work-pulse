@@ -110,6 +110,9 @@ ALL_TABLES = (
     "notification_deliveries, notifications, "
     "leave_balances, leave_requests, leave_types, overtime_requests, "
     "interviews, candidates, jobs, "
+    "performance_review_feedback, performance_review_providers, "
+    "performance_reviews, performance_employee_skills, performance_skills, "
+    "performance_goals, "
     "audit_entries, departments, positions, locations, employees, employments, "
     "shifts, attendance_records, users, sessions, event_outbox"
 )
