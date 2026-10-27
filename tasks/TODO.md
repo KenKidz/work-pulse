@@ -6,9 +6,6 @@ does the work.
 
 ## Now
 
-- [ ] Performance (`.ai/features/performance.md`): goals, reviews, feedback and
-      skills — spec drafted, PO decisions resolved 2026-10-26; awaiting `/plan`.
-
 ## Later
 
 - [ ] Phase 4+: Employee documents
@@ -18,6 +15,8 @@ does the work.
 - [ ] Phase 8: Docker images, Kubernetes, CI/CD
 
 ## Done
+
+- [x] Performance built end-to-end (`.ai/features/performance.md`, T1–T14, 2026-10-26 → 2026-10-27): the Performance context — a tenant skill catalog with per-employee proficiency rows (ADR 0021 pins the one deliberate ADR 0007 divergence: archiving a skill in use is allowed, only new assignment is blocked), the goal lifecycle (`draft → active → completed | cancelled`) with self/manager/HR authorship, ad-hoc manager/HR reviews (`draft → completed | cancelled`) with nominated peer providers and one immutable feedback comment each, manager/HR-only feedback the subject never sees, draft invisibility and never-self rules, PII-safe audit/events; eight `performance/*` v1 contracts land before their producers (every payload carries `employee_id`, so ADR 0012's message key needs no amendment), migration `0018`, and the web `/performance` workspace (Goals · Reviews · Skills tabs by role, "My reviews", the feedback worklist, pinned error copy, en + vi catalogs); `tests/e2e/performance.spec.ts` proves manager creates a review → nominates the peer → complete-without-rating is refused → peer files feedback and a duplicate is refused → manager completes → the employee sees the completed review and never the peer text, with `full-hop.sh` resetting the tenant's performance rows and provisioning the deterministic peer login. Gates green (1661 API / 419 web / 26 e2e).
 
 - [x] Web i18n integrated (`.ai/features/i18n.md`, 2026-10-26): `next-intl` v4 with English + Vietnamese catalogs, a cookie-backed locale switcher (no URL prefix), server/client translation, localized page metadata, locale-aware dates/numbers/money across every feature, and a Vitest runtime that resolves the real English catalog; catalog parity, switcher and server-action tests added. Gates green (typecheck, ESLint, 369 Vitest, `next build`).
 - [x] Field-hint tooltips (2026-10-26): every field-level explanation on the recruitment, payroll and overtime forms moved from an always-visible `FormDescription` line into a `FormLabel hint` tooltip backed by the new `components/ui/tooltip.tsx` primitive; the hint stays in the DOM as the control's `aria-describedby` description, the label row keeps its height, and the rule is codified in `workpulse-ui` §5 and `.ai/conventions.md`; web gates green (360 unit).

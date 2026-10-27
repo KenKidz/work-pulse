@@ -404,6 +404,22 @@ reset_recruitment_fixtures() {
   fi
 }
 
+# Performance rows are mutable through the UI and the skill name is unique per
+# tenant, so a repeat run would otherwise leave drafts, feedback rows and catalog
+# names behind. The shared script also creates the deterministic peer login the
+# feedback hop nominates (the seeds link only Wendy and Morgan), and the spec
+# calls it again before its flow so a Playwright retry starts clean too.
+# Synthetic dev data only (`.ai/testing.md` rule 6).
+reset_performance_fixtures() {
+  if ! (
+    cd "$API_DIR" || exit 1
+    PYTHONPATH="../..:." "$PYTHON" scripts/reset_performance_fixtures.py
+  ); then
+    echo "full-hop: could not reset the performance fixtures" >&2
+    exit 1
+  fi
+}
+
 # The reports spec asserts exact, labelled rows, so it starts from the real
 # builders' envelopes published to kafka-test before the reports worker starts:
 # the worker folds them into clickhouse-test exactly as it folds production
@@ -603,6 +619,7 @@ reset_notification_fixtures
 reset_payroll_fixtures
 reset_overtime_fixtures
 reset_recruitment_fixtures
+reset_performance_fixtures
 reset_reports_fixtures
 
 # All workers run inside the apps/api uv environment, reading the same

@@ -1,6 +1,6 @@
 # Feature: Performance
 
-- **Status:** approved
+- **Status:** done
 - **Phase:** 4+ (the Performance context of `.ai/domain.md`; skills were deferred
   here by product decision 4, `.ai/product.md`)
 - **Size:** M
@@ -9,8 +9,9 @@
   catalog; invariants 1–6) · `.ai/product.md` (Manager "run reviews",
   decision 4: skills → Performance) · `.ai/security.md` (roles matrix, PII) ·
   ADR 0007 (reference-data soft delete — the skill catalog) · ADR 0010
-  (identity, `employee_id`) · ADR 0012 (outbox) · `leave.md` / `overtime.md`
-  (manager scope = self + direct reports; workflow precedent) ·
+  (identity, `employee_id`) · ADR 0012 (outbox) · ADR 0021 (skill archive is
+  never blocked by use — the documented ADR 0007 divergence) · `leave.md` /
+  `overtime.md` (manager scope = self + direct reports; workflow precedent) ·
   `recruitment.md` (events-only precedent) · `i18n.md` (catalog conventions)
 
 ## Problem
@@ -311,63 +312,63 @@ Contract-before-producer holds even though nothing consumes these yet
 
 ## Acceptance criteria
 
-- [ ] API (goals): given an active employee, when they create a goal and
+- [x] API (goals): given an active employee, when they create a goal and
       activate it, then `201`/`200` reflect `draft → active`, the outbox holds
       `performance.goal_created` + `performance.goal_activated` rows in the
       same transaction, and exactly one audit entry per transition exists.
-- [ ] API (goals failure): given a `draft` goal, when `complete` is called, then
+- [x] API (goals failure): given a `draft` goal, when `complete` is called, then
       `409 goal_not_active`; given an `active` goal, when `activate` is called
       again, then `409 goal_not_draft`; `PATCH` on a terminal goal →
       `409 goal_terminal`.
-- [ ] API (reviews): given a manager and their direct report, when the manager
+- [x] API (reviews): given a manager and their direct report, when the manager
       creates a review with a rating and completes it, then `200` shows
       `completed`, the outbox holds `performance.review_completed`, and the
       same review id now resolves for the subject (it did not before).
-- [ ] API (reviews failure): given a review without `rating`, when `complete`
+- [x] API (reviews failure): given a review without `rating`, when `complete`
       is called, then `409 review_incomplete`; given a `completed` review, when
       `PATCH` or `cancel` is called, then `409 review_not_draft`; given the
       actor's own employee id as subject, when `create` is called, then `403`.
-- [ ] API (feedback): given a nominated provider, when they submit a comment,
+- [x] API (feedback): given a nominated provider, when they submit a comment,
       then `201` and `performance.feedback_submitted` in the outbox; a second
       submission → `409 feedback_already_submitted`; a non-nominated employee →
       `403`; the subject calling `GET …/feedback` → `403 feedback_access_denied`.
-- [ ] API (skills): given HR creates a skill and the employee attaches it with
+- [x] API (skills): given HR creates a skill and the employee attaches it with
       a proficiency, then `201` + `201`; a duplicate skill name (including an
       archived row) → `409 skill_name_taken`; attaching an archived skill →
       `409 skill_archived`; attaching the same skill twice →
       `409 employee_skill_exists`.
-- [ ] API (denied role): given an Employee, when they create a review for a
+- [x] API (denied role): given an Employee, when they create a review for a
       colleague or call any skill-catalog mutation, then `403`; given a Finance
       user, when they manage goals or reviews, then `403`.
-- [ ] API (tenant isolation): given goals, reviews and skills of tenant A, when
+- [x] API (tenant isolation): given goals, reviews and skills of tenant A, when
       tenant B lists, reads by id, or passes them as nested `employee_id` /
       `skill_id` / `feedback_provider_ids`, then `404` (never `403`).
-- [ ] API (audit & PII): every mutating route writes exactly one append-only
+- [x] API (audit & PII): every mutating route writes exactly one append-only
       audit entry whose `changes` carry ids and state only — asserting no
       `title`, `strengths`, `improvements`, `comment`, `note` or `rating`
       value appears in audit rows, logs or event payloads.
-- [ ] Events (contract): each of the eight payloads validates against
+- [x] Events (contract): each of the eight payloads validates against
       `contracts/events/performance/*`, carries `employee_id`, and contains
       identifiers + state only.
-- [ ] Web (goals): given `/performance`, when the user creates, activates and
+- [x] Web (goals): given `/performance`, when the user creates, activates and
       completes a goal (with `progress_pct`), then the list reflects every
       state without a reload, and the Vietnamese locale renders the same flow
       from the `performance` catalog (no hardcoded English).
-- [ ] Web (reviews): given a manager, when the review completes, then the
+- [x] Web (reviews): given a manager, when the review completes, then the
       subject's "My reviews" shows it with rating and sections; while it is
       `draft` the subject's surface shows no trace of it, and no surface ever
       shows feedback text to the subject.
-- [ ] Web (feedback): given a nominated provider, when they open the
+- [x] Web (feedback): given a nominated provider, when they open the
       feedback worklist, they can submit exactly once and a second attempt is
       refused with the pinned error copy.
-- [ ] Web (failure): given a failed mutation (`409 goal_not_active`,
+- [x] Web (failure): given a failed mutation (`409 goal_not_active`,
       `409 feedback_already_submitted`), when it happens, then the pinned
       error message surfaces (toast/inline) and the form keeps the user's
       input.
-- [ ] Web (denied): given an Employee role, when `/performance` renders, then
+- [x] Web (denied): given an Employee role, when `/performance` renders, then
       team tabs, review creation and catalog management are absent, and the
       denied state appears for team-scoped actions.
-- [ ] Tests & gates: unit coverage of both state machines and the policy
+- [x] Tests & gates: unit coverage of both state machines and the policy
       matrix (including every denied-role case), integration coverage of the
       routes with tenant isolation, contract coverage of API shape + the eight
       event payloads, Vitest coverage of the feature, and `tests/e2e/performance.spec.ts`
@@ -652,7 +653,9 @@ picker exclusion). Verify: `make check-web`.
 **T13 — E2E + fixtures.**
 `apps/api/scripts/reset_performance_fixtures.py` (idempotent reset of
 performance rows **and** creation of a peer employee not subject/author — the
-dev seeds only have Wendy + Morgan, so nomination needs a third employee);
+dev seeds only have Wendy + Morgan, so nomination needs a third employee — plus
+its linked `peer@workpulse.test` login, because feedback can only be filed by a
+nominated provider's own session);
 register it in `tests/e2e/full-hop.sh` alongside the other resets;
 `tests/e2e/performance.spec.ts` (`test.describe.serial`, `uiLogin` personas
 manager@ / worker@ / the seeded peer): manager creates review → nominates peer
@@ -670,11 +673,12 @@ additively with the eight events, and add ADR 0021 for the ADR 0007 divergence
 ### Risks, unknowns, ADR
 
 - **ADR 0021 (recommended)** — "skill archive is never blocked by use": the one
-  deliberate ADR 0007 divergence. Everything else follows existing decisions
-  (0007 soft delete, 0010 identity, 0012 outbox, 0015 trigger map untouched,
-  recruitment decision 5 events-only precedent). If the team prefers, this can
-  live only in the spec; it is the one behavior a future reader will otherwise
-  "fix" back into parity with departments.
+  deliberate ADR 0007 divergence. **Landed** at T14
+  (`.ai/decisions/0021-skill-archive-not-blocked-by-use.md`); everything else
+  follows existing decisions (0007 soft delete, 0010 identity, 0012 outbox, 0015
+  trigger map untouched, recruitment decision 5 events-only precedent). It is
+  the one behavior a future reader will otherwise "fix" back into parity with
+  departments.
 - **e2e persona gap** — seeds have only two employees (Wendy ↔ Morgan), but the
   feedback flow needs a third (neither subject nor author). T13's reset script
   creates one; if a permanent persona is preferred instead, add it to

@@ -74,14 +74,27 @@ before running the gate.
   payroll worker alongside the relay/consumer so the transition is real, not a
   test double. The spec invokes the same reset scripts before its finance test
   so a Playwright retry starts clean too.
+- `performance.spec.ts` — the manager starts an ad-hoc review for the seeded
+  worker and nominates the deterministic peer created by
+  `reset_performance_fixtures.py`; the draft is invisible on the worker's
+  "My reviews" and the Employee surface has no review/catalog management.
+  Completing without a rating renders the pinned `409 review_incomplete`
+  sentence; the manager adds the rating and text, the peer files one comment
+  from "Feedback requested" and a second submission renders the pinned
+  `409 feedback_already_submitted` copy with the typed text kept. After the
+  manager completes it, the worker's "My reviews" shows the rating and sections
+  and never the peer's feedback text.
 
 `full-hop.sh` resets only the seeded worker's leave requests/balances,
-notification rows, the seeded tenant's payroll ledger and the seeded
-worker's/manager's overtime rows before Playwright starts: an approved leave
+notification rows, the seeded tenant's payroll ledger, the seeded
+worker's/manager's overtime rows, the seeded tenant's performance rows (plus the
+deterministic peer employee/login the feedback hop nominates) and produces the
+reports projection fixtures before Playwright starts: an approved leave
 request is terminal (there is no cancel/delete API) and repeats would otherwise
 hit `409 leave_overlaps` on the wall date the live assertion needs; the inbox
 spec asserts an exact badge count, so it starts from three unread fixture rows;
 the payroll spec asserts exact net amounts, so it starts from an empty payroll
-ledger; and approved/verified overtime claims are terminal too, so the overtime
-and seam fixtures need a free work date and exact countable hours. Leave types
+ledger; approved/verified overtime claims are terminal too, so the overtime
+and seam fixtures need a free work date and exact countable hours; and
+performance reviews/feedback/catalog names are mutable across runs. Leave types
 stay — the service provisions them per tenant.

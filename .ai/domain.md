@@ -107,7 +107,14 @@ where it actually flows on the bus.
 | `interview.scheduled` | an interview is scheduled | 4+ | 4+ | Analytics |
 | `interview.completed` | the assigned interviewer files feedback | 4+ | 4+ | Notifications, Analytics |
 | `interview.cancelled` | a scheduled interview is cancelled | 4+ | 4+ | Analytics |
+| `performance.goal_created` | a goal is created in draft | 4+ | 4+ | Analytics (follow-up) |
+| `performance.goal_activated` | a draft goal becomes active | 4+ | 4+ | Analytics (follow-up) |
+| `performance.goal_completed` | an active goal completes | 4+ | 4+ | Analytics (follow-up) |
+| `performance.goal_cancelled` | a draft or active goal is cancelled | 4+ | 4+ | Analytics (follow-up) |
+| `performance.review_started` | a review is created in draft | 4+ | 4+ | Analytics (follow-up) |
 | `performance.review_completed` | a review is finalized | 4+ | 4+ | Analytics |
+| `performance.review_cancelled` | a draft review is cancelled | 4+ | 4+ | Analytics (follow-up) |
+| `performance.feedback_submitted` | a nominated peer files feedback | 4+ | 4+ | Analytics (follow-up) |
 
 Envelope and versioning rules: `contracts/README.md`,
 `contracts/events/common/event-envelope.v1.json`.
@@ -173,6 +180,28 @@ SCHEDULED ─┬─► COMPLETED (the assigned interviewer files feedback)
 
 `COMPLETED` and `CANCELLED` are terminal. Completing an interview does not move
 the candidate's stage.
+
+**Goal**
+
+```text
+DRAFT ─► ACTIVE ─► COMPLETED
+  │         │
+  └─────────┴──────► CANCELLED
+```
+
+`COMPLETED` and `CANCELLED` are terminal; a terminal goal is never re-opened.
+`progress_pct` is a field update, not a state transition (no event, audited).
+
+**Review**
+
+```text
+DRAFT ─┬─► COMPLETED (the subject sees it from here)
+       └─► CANCELLED
+```
+
+`COMPLETED` and `CANCELLED` are terminal; a correction is a new review. Peer
+feedback is filed only while `DRAFT` and stays readable on a cancelled review;
+the subject never sees feedback.
 
 **Employment**
 

@@ -33,6 +33,13 @@ export const WORKER_EMPLOYEE_ID = "00000000-0000-4000-8000-000000000021";
 /** Linked to `00000000-0000-4000-8000-000000000023`; the worker reports to them. */
 export const MANAGER_EMAIL = "manager@workpulse.test";
 export const MANAGER_EMPLOYEE_ID = "00000000-0000-4000-8000-000000000023";
+/**
+ * Created by `apps/api/scripts/reset_performance_fixtures.py` (it is not in
+ * seed 003): an active direct report of the seeded manager and neither the
+ * performance review subject nor its author, so it is the eligible peer the
+ * feedback flow can nominate and sign in as.
+ */
+export const PEER_EMAIL = "peer@workpulse.test";
 
 /** Log a seeded user in through the real UI; lands on the dashboard. */
 export async function uiLogin(page: Page, email: string): Promise<void> {

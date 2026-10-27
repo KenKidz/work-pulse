@@ -26,6 +26,14 @@ Capability rows are the product's real authorization surface. `Y` = allowed,
 | View own notification inbox & mark read | own | own | own | own | own | own |
 | View team attendance & profiles | — | team | Y | — | Y | Y |
 | Approve leave / overtime | — | team | Y | — | Y | Y |
+| View own goals / completed reviews / skills | own | own | own | own | own | own |
+| Manage goals | own | team | Y | — | Y | Y |
+| Run reviews (create / complete / cancel) | — | team | Y | — | Y | Y |
+| View reviews of others | — | team | Y | — | Y | Y |
+| Nominate providers / view feedback | — | own reviews | Y | — | Y | Y |
+| File peer feedback | nominated only | nominated only | nominated only | nominated only | nominated only | nominated only |
+| Manage the skill catalog | — | — | Y | — | Y | Y |
+| Record employee skills | own | team | Y | — | Y | Y |
 | Manage employee records (create/update/terminate) | — | — | Y | — | Y | Y |
 | Run recruitment (jobs, candidates, interviews, hiring) | — | assigned interviews only | Y | — | Y | Y |
 | Manage organization structure | — | — | Y | — | Y | Y |
@@ -81,7 +89,7 @@ retrofit.
 - Append-only and immutable: insert-only table, no update/delete path in code.
 - Written for every sensitive mutation: employee create/update/transfer/
   terminate, attendance correction, leave & overtime decisions, payroll runs,
-  permission changes.
+  performance goals/reviews/feedback/skills, permission changes.
 - Entry shape: `id`, `tenant_id`, `actor_id`, `action`, `entity_type`,
   `entity_id`, `occurred_at`, `reason?`, `changes?` (field names + old/new for
   non-PII fields; PII changes recorded as "field changed", not values).
