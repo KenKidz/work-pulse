@@ -1,4 +1,4 @@
-"""Use cases for the Performance domain — goals (T5) and reviews (T6).
+"""Use cases for the Performance domain — goals (T5), reviews (T6), skills (T7).
 
 Rules implemented here (pinned in `.ai/features/performance.md`):
 
@@ -45,6 +45,15 @@ Rules implemented here (pinned in `.ai/features/performance.md`):
   `rating`/`strengths`/`improvements`, feedback `comment` and employee-skill
   `note` are never logged, emitted or written into audit `changes` values — the
   audit records the `"changed"` marker only. Events carry ids and state only.
+- **Skills** (T7): the tenant catalog follows ADR 0007 soft-delete semantics —
+  `archived_at`, no DELETE route, archive/restore are no-ops when the row is
+  already in the target state (no audit entry), and name uniqueness spans
+  archived rows (`409 skill_name_taken`). The one deliberate divergence:
+  archiving a skill in use is allowed; only new assignment is blocked
+  (`409 skill_archived`) and existing employee rows stay editable. Employee
+  skills attach one catalog skill per `(employee, skill)` (`409
+  employee_skill_exists`), are keyed by `skill_id`, and are audited on record/
+  update/remove — never evented (no workflow state).
 - **Clock**: every mutation takes `now` as its last parameter — the router is
   the only wall-clock reader.
 - Tenant isolation is the repository's (`WHERE tenant_id = …` first); this
@@ -62,6 +71,7 @@ from app.domains.performance import events
 from app.domains.performance.exceptions import (
     EmployeeNotActiveError,
     EmployeeNotFoundError,
+    EmployeeSkillExistsError,
     FeedbackAlreadySubmittedError,
     FeedbackProviderInvalidError,
     GoalNotActiveError,
@@ -73,10 +83,15 @@ from app.domains.performance.exceptions import (
     ReviewIncompleteError,
     ReviewNotDraftError,
     ReviewNotFoundError,
+    SkillArchivedError,
+    SkillNameTakenError,
+    SkillNotFoundError,
 )
 from app.domains.performance.policies import (
     ensure_can_manage_goals,
+    ensure_can_manage_skills,
     ensure_can_nominate,
+    ensure_can_record_skills,
     ensure_can_run_reviews,
     ensure_can_view_feedback,
     is_management,
@@ -86,8 +101,13 @@ from app.domains.performance.repository import (
     GoalFilters,
     PerformanceRepository,
     ReviewFilters,
+    SkillFilters,
 )
 from app.domains.performance.schemas import (
+    EmployeeSkill,
+    EmployeeSkillCreate,
+    EmployeeSkillList,
+    EmployeeSkillUpdate,
     Goal,
     GoalCreate,
     GoalListPage,
@@ -101,6 +121,10 @@ from app.domains.performance.schemas import (
     ReviewListPage,
     ReviewStatus,
     ReviewUpdate,
+    Skill,
+    SkillCreate,
+    SkillListPage,
+    SkillUpdate,
 )
 from app.shared.audit import AuditEntryCreate, AuditWriter
 from app.shared.identity import Identity, Role
@@ -1127,6 +1151,346 @@ class ReviewService:
                 action=action,
                 entity_type=entity_type,
                 entity_id=entity_id,
+                occurred_at=now,
+                changes=changes,
+            )
+        )
+
+
+class SkillService:
+    """Skill catalog and per-employee skill rows (T7).
+
+    The catalog is tenant reference data under ADR 0007 soft-delete semantics:
+    archive/restore are no-ops when the row is already in the target state (no
+    audit entry), and uniqueness spans archived rows so a restore never
+    conflicts. Archiving a skill that employees already hold is allowed (the
+    documented divergence): history stays readable and editable, only new
+    assignment is blocked.
+
+    Employee-skill rows are the employee's own, their manager's (self + direct
+    reports) and HR/Admin/Super Admin's to manage. Out-of-scope, foreign and
+    unknown ids are `404` (`employee_not_found` / `skill_not_found`), never a
+    denied leak. Record/update/remove write one audit entry each; they emit no
+    events (no workflow state). Notes and skill descriptions are PII: audit
+    records the `"changed"` marker, never the value.
+
+    The service takes no `EventOutbox`: the pinned contract has no skill events.
+    """
+
+    def __init__(
+        self,
+        repo: PerformanceRepository,
+        scope: EmployeeScope,
+        audit: AuditWriter,
+    ) -> None:
+        self._repo = repo
+        self._scope = scope
+        self._audit = audit
+
+    # --- catalog -------------------------------------------------------------
+
+    async def create_skill(
+        self, identity: Identity, payload: SkillCreate, now: datetime
+    ) -> Skill:
+        """Add a catalog skill; a duplicate name (archived included) is `409`."""
+        ensure_can_manage_skills(identity)
+        if await self._repo.skill_name_taken(identity.tenant_id, payload.name):
+            raise SkillNameTakenError()
+        skill = await self._repo.create_skill(
+            identity.tenant_id,
+            uuid7(),
+            name=payload.name,
+            description=payload.description,
+        )
+        changes: dict[str, Any] = {"name": {"old": None, "new": skill.name}}
+        if skill.description is not None:
+            changes["description"] = PII_CHANGED  # PII: never the value
+        await self._write_audit(identity, "skill.created", skill.id, now, changes)
+        return skill
+
+    async def list_skills(
+        self,
+        identity: Identity,
+        *,
+        q: str | None = None,
+        include_archived: bool = False,
+        page: PageParams,
+    ) -> SkillListPage:
+        """Paged catalog, name-ordered; archived rows only on request."""
+        filters = SkillFilters(q=q, include_archived=include_archived)
+        items, total = await self._repo.list_skills(identity.tenant_id, filters, page)
+        return SkillListPage(items=list(items), page=page.make_page(total))
+
+    async def update_skill(
+        self,
+        identity: Identity,
+        skill_id: UUID,
+        payload: SkillUpdate,
+        now: datetime,
+    ) -> Skill:
+        """Rename/re-describe a catalog skill; a duplicate name is `409`."""
+        ensure_can_manage_skills(identity)
+        existing = await self._skill(skill_id, identity)
+        changes = payload.model_dump(exclude_unset=True)
+        if not changes:
+            # A no-op edit changes no fact: no write, no audit.
+            return existing
+        if "name" in changes and await self._repo.skill_name_taken(
+            identity.tenant_id, changes["name"], exclude_id=skill_id
+        ):
+            raise SkillNameTakenError()
+
+        updated = await self._repo.update_skill(
+            identity.tenant_id, skill_id, now=now, **changes
+        )
+        if updated is None:
+            raise SkillNotFoundError()
+
+        audit_changes: dict[str, Any] = {}
+        for field in changes:
+            if field == "description":
+                audit_changes[field] = PII_CHANGED  # PII: never the value
+            else:
+                audit_changes[field] = {
+                    "old": getattr(existing, field),
+                    "new": getattr(updated, field),
+                }
+        await self._write_audit(identity, "skill.updated", skill_id, now, audit_changes)
+        return updated
+
+    async def archive_skill(
+        self, identity: Identity, skill_id: UUID, now: datetime
+    ) -> Skill:
+        """Soft delete; already-archived is a `200` no-op without an audit row."""
+        ensure_can_manage_skills(identity)
+        # Read first so the audit records the state the row actually had; the
+        # conditional update remains the race backstop.
+        existing = await self._skill(skill_id, identity)
+        result = await self._repo.archive_skill(identity.tenant_id, skill_id, now=now)
+        if result is None:
+            raise SkillNotFoundError()
+        if result.changed:
+            await self._write_audit(
+                identity,
+                "skill.archived",
+                skill_id,
+                now,
+                {
+                    "archived_at": {
+                        "old": _value(existing.archived_at),
+                        "new": _value(result.skill.archived_at),
+                    }
+                },
+            )
+        return result.skill
+
+    async def restore_skill(
+        self, identity: Identity, skill_id: UUID, now: datetime
+    ) -> Skill:
+        """Clear `archived_at`; already-active is a `200` no-op without audit."""
+        ensure_can_manage_skills(identity)
+        existing = await self._skill(skill_id, identity)
+        result = await self._repo.restore_skill(identity.tenant_id, skill_id, now=now)
+        if result is None:
+            raise SkillNotFoundError()
+        if result.changed:
+            await self._write_audit(
+                identity,
+                "skill.restored",
+                skill_id,
+                now,
+                {
+                    "archived_at": {
+                        "old": _value(existing.archived_at),
+                        "new": _value(result.skill.archived_at),
+                    }
+                },
+            )
+        return result.skill
+
+    # --- employee skills -----------------------------------------------------
+
+    async def record_employee_skill(
+        self,
+        identity: Identity,
+        employee_id: UUID,
+        payload: EmployeeSkillCreate,
+        now: datetime,
+    ) -> EmployeeSkill:
+        """Attach an active catalog skill; archived skills cannot be attached."""
+        ensure_can_record_skills(identity)
+        await self._ensure_employee(identity, employee_id)
+        skill = await self._skill(payload.skill_id, identity)
+        if skill.archived_at is not None:
+            raise SkillArchivedError()
+        if (
+            await self._repo.get_employee_skill(
+                identity.tenant_id, employee_id, payload.skill_id
+            )
+            is not None
+        ):
+            # Pre-check the pinned duplicate; the composite primary key stays
+            # the race backstop (mapped in the adapter).
+            raise EmployeeSkillExistsError()
+
+        row = await self._repo.record_employee_skill(
+            identity.tenant_id,
+            employee_id=employee_id,
+            skill_id=payload.skill_id,
+            proficiency=payload.proficiency,
+            note=payload.note,
+        )
+        changes: dict[str, Any] = {
+            "employee_id": {"old": None, "new": str(employee_id)},
+            "skill_id": {"old": None, "new": str(payload.skill_id)},
+            "proficiency": {"old": None, "new": row.proficiency},
+        }
+        if row.note is not None:
+            changes["note"] = PII_CHANGED  # PII: never the value
+        await self._write_audit(
+            identity,
+            "employee_skill.recorded",
+            payload.skill_id,
+            now,
+            changes,
+            entity_type="employee_skill",
+        )
+        return row
+
+    async def list_employee_skills(
+        self, identity: Identity, employee_id: UUID
+    ) -> EmployeeSkillList:
+        """The employee's skill rows, scoped own/team/tenant like goals."""
+        await self._ensure_employee(identity, employee_id)
+        items = await self._repo.list_employee_skills(identity.tenant_id, employee_id)
+        return EmployeeSkillList(items=list(items))
+
+    async def update_employee_skill(
+        self,
+        identity: Identity,
+        employee_id: UUID,
+        skill_id: UUID,
+        payload: EmployeeSkillUpdate,
+        now: datetime,
+    ) -> EmployeeSkill:
+        """Replace proficiency/note in place; archived skills stay editable."""
+        ensure_can_record_skills(identity)
+        await self._ensure_employee(identity, employee_id)
+        existing = await self._repo.get_employee_skill(
+            identity.tenant_id, employee_id, skill_id
+        )
+        if existing is None:
+            raise SkillNotFoundError()
+
+        updated = await self._repo.update_employee_skill(
+            identity.tenant_id,
+            employee_id,
+            skill_id,
+            proficiency=payload.proficiency,
+            note=payload.note,
+            now=now,
+        )
+        if updated is None:
+            # The row was removed between the read and the write.
+            raise SkillNotFoundError()
+
+        changes: dict[str, Any] = {
+            "proficiency": {
+                "old": existing.proficiency,
+                "new": updated.proficiency,
+            }
+        }
+        if "note" in payload.model_fields_set:
+            changes["note"] = PII_CHANGED  # PII: never the value
+        await self._write_audit(
+            identity,
+            "employee_skill.updated",
+            skill_id,
+            now,
+            changes,
+            entity_type="employee_skill",
+        )
+        return updated
+
+    async def remove_employee_skill(
+        self, identity: Identity, employee_id: UUID, skill_id: UUID, now: datetime
+    ) -> None:
+        """Delete the row; audited, never evented (no workflow state)."""
+        ensure_can_record_skills(identity)
+        await self._ensure_employee(identity, employee_id)
+        existing = await self._repo.get_employee_skill(
+            identity.tenant_id, employee_id, skill_id
+        )
+        if existing is None:
+            raise SkillNotFoundError()
+
+        removed = await self._repo.remove_employee_skill(
+            identity.tenant_id, employee_id, skill_id
+        )
+        if not removed:
+            raise SkillNotFoundError()
+
+        await self._write_audit(
+            identity,
+            "employee_skill.removed",
+            skill_id,
+            now,
+            {
+                "employee_id": {"old": str(employee_id), "new": None},
+                "skill_id": {"old": str(skill_id), "new": None},
+                "proficiency": {"old": existing.proficiency, "new": None},
+            },
+            entity_type="employee_skill",
+        )
+
+    # --- internals -----------------------------------------------------------
+
+    async def _skill(self, skill_id: UUID, identity: Identity) -> Skill:
+        """Tenant-scoped skill detail; foreign and unknown are the same `404`."""
+        skill = await self._repo.get_skill(identity.tenant_id, skill_id)
+        if skill is None:
+            raise SkillNotFoundError()
+        return skill
+
+    async def _ensure_employee(self, identity: Identity, employee_id: UUID) -> None:
+        """The employee exists in the tenant and is visible to the caller."""
+        facts = await self._repo.employee_facts(identity.tenant_id, employee_id)
+        if facts is None or not await self._employee_visible(identity, employee_id):
+            # Existence is not leaked to a caller without standing (404).
+            raise EmployeeNotFoundError()
+
+    async def _employee_visible(self, identity: Identity, employee_id: UUID) -> bool:
+        """Own for Employee/Finance, self + direct reports for Manager, else all."""
+        if identity.role in (Role.EMPLOYEE, Role.FINANCE):
+            return (
+                identity.employee_id is not None and employee_id == identity.employee_id
+            )
+        if identity.role is Role.MANAGER:
+            if identity.employee_id is None:
+                return False
+            visible = await self._scope.visible_employee_ids(
+                identity.tenant_id, identity.employee_id
+            )
+            return employee_id in visible
+        return True  # hr / admin / super_admin
+
+    async def _write_audit(
+        self,
+        identity: Identity,
+        action: str,
+        skill_id: UUID,
+        now: datetime,
+        changes: dict[str, Any],
+        *,
+        entity_type: str = "skill",
+    ) -> None:
+        await self._audit.write(
+            AuditEntryCreate(
+                tenant_id=identity.tenant_id,
+                actor_id=identity.actor_id,
+                action=action,
+                entity_type=entity_type,
+                entity_id=skill_id,
                 occurred_at=now,
                 changes=changes,
             )

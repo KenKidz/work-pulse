@@ -42,7 +42,11 @@ from app.domains.payroll.repository import (
     OvertimeHoursPort,
 )
 from app.domains.payroll.service import PayrollService
-from app.domains.performance.service import GoalService, ReviewService
+from app.domains.performance.service import (
+    GoalService,
+    ReviewService,
+    SkillService,
+)
 from app.domains.realtime.service import RealtimeService
 from app.domains.recruitment.service import RecruitmentService
 from app.domains.reports.exceptions import ReportsUnavailableError
@@ -237,6 +241,21 @@ def get_review_service(session: SessionDep) -> ReviewService:
     )
 
 
+def get_skill_service(session: SessionDep) -> SkillService:
+    """Performance skills (T7).
+
+    The catalog and employee-skill rows emit no events (the pinned contract has
+    none), so the service is wired without an outbox; every mutation still
+    writes one audit entry on the request session. Employee-skill visibility
+    reuses the shared self + direct-reports `PostgresEmployeeScope`.
+    """
+    return SkillService(
+        repo=PostgresPerformanceRepository(session),
+        scope=PostgresEmployeeScope(session),
+        audit=PostgresAuditWriter(session),
+    )
+
+
 def get_recruitment_service(session: SessionDep) -> RecruitmentService:
     """Recruitment jobs/candidates/interviews (T2–T5).
 
@@ -423,6 +442,7 @@ LeaveServiceDep = Annotated[LeaveService, Depends(get_leave_service)]
 OvertimeServiceDep = Annotated[OvertimeService, Depends(get_overtime_service)]
 GoalServiceDep = Annotated[GoalService, Depends(get_goal_service)]
 ReviewServiceDep = Annotated[ReviewService, Depends(get_review_service)]
+SkillServiceDep = Annotated[SkillService, Depends(get_skill_service)]
 RecruitmentServiceDep = Annotated[RecruitmentService, Depends(get_recruitment_service)]
 PayrollServiceDep = Annotated[PayrollService, Depends(get_payroll_service)]
 NotificationInboxServiceDep = Annotated[

@@ -508,6 +508,50 @@ export interface EmployeeListPage {
 }
 
 /**
+ * One employee's proficiency in one catalog skill (pinned response).
+ */
+export interface EmployeeSkill {
+  skill_id: string;
+  skill_name: string;
+  proficiency: number;
+  note?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Attach an active catalog skill to an employee.
+ */
+export interface EmployeeSkillCreate {
+  skill_id: string;
+  /**
+   * @minimum 1
+   * @maximum 5
+   */
+  proficiency: number;
+  note?: string | null;
+}
+
+/**
+ * The pinned `GET …/employees/{employee_id}/skills` envelope.
+ */
+export interface EmployeeSkillList {
+  items: EmployeeSkill[];
+}
+
+/**
+ * Replace the proficiency/note on an existing employee-skill row.
+ */
+export interface EmployeeSkillUpdate {
+  /**
+   * @minimum 1
+   * @maximum 5
+   */
+  proficiency: number;
+  note?: string | null;
+}
+
+/**
  * Pinned goal lifecycle (`draft → active → completed | cancelled`).
  */
 export type GoalStatus = (typeof GoalStatus)[keyof typeof GoalStatus];
@@ -1476,6 +1520,41 @@ export interface ShiftUpdate {
   location_id?: string | null;
 }
 
+/**
+ * One catalog skill (pinned response shape).
+ */
+export interface Skill {
+  id: string;
+  name: string;
+  description?: string | null;
+  archived_at?: string | null;
+}
+
+/**
+ * Add a skill to the tenant catalog.
+ */
+export interface SkillCreate {
+  /**
+   * @minLength 1
+   * @maxLength 100
+   */
+  name: string;
+  description?: string | null;
+}
+
+export interface SkillListPage {
+  items: Skill[];
+  page: Page;
+}
+
+/**
+ * Rename or re-describe a catalog skill; absent fields are unchanged.
+ */
+export interface SkillUpdate {
+  name?: string | null;
+  description?: string | null;
+}
+
 export interface TerminationRequest {
   effective_date: string;
   /**
@@ -1631,6 +1710,13 @@ export type ListReviewsParams = {
   employee_id?: string | null;
   status?: ReviewStatus | null;
   feedback_for_me?: boolean;
+  page?: number;
+  page_size?: number;
+};
+
+export type ListSkillsParams = {
+  q?: string | null;
+  include_archived?: boolean;
   page?: number;
   page_size?: number;
 };

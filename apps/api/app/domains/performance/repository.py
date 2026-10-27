@@ -345,6 +345,12 @@ class PerformanceRepository(Protocol):
 
     # --- skill catalog -------------------------------------------------------
 
+    async def skill_name_taken(
+        self, tenant_id: UUID, name: str, *, exclude_id: UUID | None = None
+    ) -> bool:
+        """Whether the name is taken in the tenant (archived rows included)."""
+        ...
+
     async def create_skill(
         self,
         tenant_id: UUID,

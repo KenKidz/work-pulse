@@ -502,6 +502,11 @@ class FakePerformanceRepo:
             for (row_tenant, _), row in self.skills.items()
         )
 
+    async def skill_name_taken(
+        self, tenant_id: UUID, name: str, *, exclude_id: UUID | None = None
+    ) -> bool:
+        return self._skill_name_taken(tenant_id, name, exclude_id=exclude_id)
+
     async def create_skill(
         self,
         tenant_id: UUID,

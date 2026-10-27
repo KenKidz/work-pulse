@@ -779,6 +779,15 @@ class PostgresPerformanceRepository:
 
     # --- skill catalog -------------------------------------------------------
 
+    async def skill_name_taken(
+        self, tenant_id: UUID, name: str, *, exclude_id: UUID | None = None
+    ) -> bool:
+        conditions = [orm.Skill.tenant_id == tenant_id, orm.Skill.name == name]
+        if exclude_id is not None:
+            conditions.append(orm.Skill.id != exclude_id)
+        stmt = select(orm.Skill.id).where(*conditions).limit(1)
+        return (await self._session.execute(stmt)).scalar_one_or_none() is not None
+
     async def create_skill(
         self,
         tenant_id: UUID,

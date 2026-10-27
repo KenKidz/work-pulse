@@ -20,12 +20,23 @@ from uuid import UUID
 
 from fastapi import APIRouter, Query
 
-from app.dependencies import GoalServiceDep, IdentityDep, ReviewServiceDep
+from app.dependencies import (
+    GoalServiceDep,
+    IdentityDep,
+    ReviewServiceDep,
+    SkillServiceDep,
+)
 from app.domains.performance.policies import (
     ensure_can_manage_goals,
+    ensure_can_manage_skills,
+    ensure_can_record_skills,
     ensure_can_run_reviews,
 )
 from app.domains.performance.schemas import (
+    EmployeeSkill,
+    EmployeeSkillCreate,
+    EmployeeSkillList,
+    EmployeeSkillUpdate,
     Goal,
     GoalCreate,
     GoalListPage,
@@ -39,6 +50,10 @@ from app.domains.performance.schemas import (
     ReviewListPage,
     ReviewStatus,
     ReviewUpdate,
+    Skill,
+    SkillCreate,
+    SkillListPage,
+    SkillUpdate,
 )
 from app.shared.pagination import PageParamsDep
 
@@ -293,3 +308,155 @@ async def list_review_feedback(
 ) -> ReviewFeedbackList:
     """Feedback on the review: all for author/HR, the caller's own for a peer."""
     return await service.list_review_feedback(identity, id)
+
+
+# --- skills ------------------------------------------------------------------
+
+
+@router.post(
+    "/performance/skills",
+    response_model=Skill,
+    operation_id="createSkill",
+    status_code=201,
+)
+async def create_skill(
+    payload: SkillCreate,
+    identity: IdentityDep,
+    service: SkillServiceDep,
+) -> Skill:
+    """Add a catalog skill; a duplicate name (archived included) is `409`."""
+    ensure_can_manage_skills(identity)
+    return await service.create_skill(identity, payload, _now())
+
+
+@router.get(
+    "/performance/skills",
+    response_model=SkillListPage,
+    operation_id="listSkills",
+)
+async def list_skills(
+    identity: IdentityDep,
+    service: SkillServiceDep,
+    page: PageParamsDep,
+    q: str | None = Query(default=None),
+    include_archived: bool = Query(default=False),
+) -> SkillListPage:
+    """The tenant catalog; archived rows only with `include_archived=true`."""
+    return await service.list_skills(
+        identity,
+        q=q,
+        include_archived=include_archived,
+        page=page,
+    )
+
+
+@router.patch(
+    "/performance/skills/{id}",
+    response_model=Skill,
+    operation_id="updateSkill",
+)
+async def update_skill(
+    id: UUID,
+    payload: SkillUpdate,
+    identity: IdentityDep,
+    service: SkillServiceDep,
+) -> Skill:
+    """Rename/re-describe a catalog skill; a duplicate name is `409`."""
+    ensure_can_manage_skills(identity)
+    return await service.update_skill(identity, id, payload, _now())
+
+
+@router.post(
+    "/performance/skills/{id}/archive",
+    response_model=Skill,
+    operation_id="archiveSkill",
+)
+async def archive_skill(
+    id: UUID,
+    identity: IdentityDep,
+    service: SkillServiceDep,
+) -> Skill:
+    """Soft delete; repeat archive is a `200` no-op without an audit entry."""
+    ensure_can_manage_skills(identity)
+    return await service.archive_skill(identity, id, _now())
+
+
+@router.post(
+    "/performance/skills/{id}/restore",
+    response_model=Skill,
+    operation_id="restoreSkill",
+)
+async def restore_skill(
+    id: UUID,
+    identity: IdentityDep,
+    service: SkillServiceDep,
+) -> Skill:
+    """Clear `archived_at`; repeat restore is a `200` no-op without audit."""
+    ensure_can_manage_skills(identity)
+    return await service.restore_skill(identity, id, _now())
+
+
+@router.post(
+    "/performance/employees/{employee_id}/skills",
+    response_model=EmployeeSkill,
+    operation_id="recordEmployeeSkill",
+    status_code=201,
+)
+async def record_employee_skill(
+    employee_id: UUID,
+    payload: EmployeeSkillCreate,
+    identity: IdentityDep,
+    service: SkillServiceDep,
+) -> EmployeeSkill:
+    """Attach an active catalog skill to an employee."""
+    ensure_can_record_skills(identity)
+    return await service.record_employee_skill(identity, employee_id, payload, _now())
+
+
+@router.get(
+    "/performance/employees/{employee_id}/skills",
+    response_model=EmployeeSkillList,
+    operation_id="listEmployeeSkills",
+)
+async def list_employee_skills(
+    employee_id: UUID,
+    identity: IdentityDep,
+    service: SkillServiceDep,
+) -> EmployeeSkillList:
+    """The employee's skill rows, scoped own/team/tenant."""
+    return await service.list_employee_skills(identity, employee_id)
+
+
+@router.patch(
+    "/performance/employees/{employee_id}/skills/{skill_id}",
+    response_model=EmployeeSkill,
+    operation_id="updateEmployeeSkill",
+)
+async def update_employee_skill(
+    employee_id: UUID,
+    skill_id: UUID,
+    payload: EmployeeSkillUpdate,
+    identity: IdentityDep,
+    service: SkillServiceDep,
+) -> EmployeeSkill:
+    """Replace proficiency/note in place; archived skills stay editable."""
+    ensure_can_record_skills(identity)
+    return await service.update_employee_skill(
+        identity, employee_id, skill_id, payload, _now()
+    )
+
+
+@router.delete(
+    "/performance/employees/{employee_id}/skills/{skill_id}",
+    operation_id="removeEmployeeSkill",
+    status_code=204,
+)
+async def remove_employee_skill(
+    employee_id: UUID,
+    skill_id: UUID,
+    identity: IdentityDep,
+    service: SkillServiceDep,
+) -> None:
+    """Delete the employee's skill row; audited, never evented."""
+    ensure_can_record_skills(identity)
+    await service.remove_employee_skill(identity, employee_id, skill_id, _now())

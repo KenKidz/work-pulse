@@ -45,6 +45,10 @@ import type {
   Employee,
   EmployeeDetail,
   EmployeeListPage,
+  EmployeeSkill,
+  EmployeeSkillCreate,
+  EmployeeSkillList,
+  EmployeeSkillUpdate,
   Employment,
   GetAttendanceBoardParams,
   GetAttendanceReportParams,
@@ -94,6 +98,7 @@ import type {
   ListRunPayslipsParams,
   ListRunTimesheetsParams,
   ListSalariesParams,
+  ListSkillsParams,
   ListUsersParams,
   Location,
   LocationCreate,
@@ -137,6 +142,10 @@ import type {
   Shift,
   ShiftCreate,
   ShiftUpdate,
+  Skill,
+  SkillCreate,
+  SkillListPage,
+  SkillUpdate,
   TerminationRequest,
   TimesheetListPage,
   TransferRequest,
@@ -11388,6 +11397,1306 @@ export function useListReviewFeedback<
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+export type createSkillResponse201 = {
+  data: Skill;
+  status: 201;
+};
+
+export type createSkillResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type createSkillResponseSuccess = createSkillResponse201 & {
+  headers: Headers;
+};
+export type createSkillResponseError = createSkillResponse422 & {
+  headers: Headers;
+};
+
+export type createSkillResponse =
+  createSkillResponseSuccess | createSkillResponseError;
+
+export const getCreateSkillUrl = () => {
+  return `/api/v1/performance/skills`;
+};
+
+/**
+ * Add a catalog skill; a duplicate name (archived included) is `409`.
+ * @summary Create Skill
+ */
+export const createSkill = async (
+  skillCreate: SkillCreate,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<createSkillResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return customFetch<createSkillResponse>(getCreateSkillUrl(), {
+    ...options,
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...getHeaders(options?.headers),
+    },
+    body: JSON.stringify(skillCreate),
+  });
+};
+
+export const getCreateSkillMutationKey = () => ["createSkill"] as const;
+
+export const getCreateSkillMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createSkill>>,
+    TError,
+    CreateSkillMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createSkill>>,
+  TError,
+  CreateSkillMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateSkillMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createSkill>>,
+    CreateSkillMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createSkill(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateSkillMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createSkill>>
+>;
+export type CreateSkillMutationBody = SkillCreate;
+export type CreateSkillMutationError = HTTPValidationError;
+export type CreateSkillMutationVariables = { data: SkillCreate };
+
+/**
+ * @summary Create Skill
+ */
+export const useCreateSkill = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createSkill>>,
+      TError,
+      CreateSkillMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createSkill>>,
+  TError,
+  CreateSkillMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateSkillMutationOptions(options), queryClient);
+};
+
+export type listSkillsResponse200 = {
+  data: SkillListPage;
+  status: 200;
+};
+
+export type listSkillsResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type listSkillsResponseSuccess = listSkillsResponse200 & {
+  headers: Headers;
+};
+export type listSkillsResponseError = listSkillsResponse422 & {
+  headers: Headers;
+};
+
+export type listSkillsResponse =
+  listSkillsResponseSuccess | listSkillsResponseError;
+
+export const getListSkillsUrl = (params?: ListSkillsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/performance/skills?${stringifiedParams}`
+    : `/api/v1/performance/skills`;
+};
+
+/**
+ * The tenant catalog; archived rows only with `include_archived=true`.
+ * @summary List Skills
+ */
+export const listSkills = async (
+  params?: ListSkillsParams,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<listSkillsResponse> => {
+  return customFetch<listSkillsResponse>(getListSkillsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListSkillsQueryKey = (params?: ListSkillsParams) => {
+  return [`/api/v1/performance/skills`, ...(params ? [params] : [])] as const;
+};
+
+export const getListSkillsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listSkills>>,
+  TError = HTTPValidationError,
+>(
+  params?: ListSkillsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listSkills>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListSkillsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listSkills>>> = ({
+    signal,
+  }) => listSkills(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listSkills>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListSkillsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listSkills>>
+>;
+export type ListSkillsQueryError = HTTPValidationError;
+
+export function useListSkills<
+  TData = Awaited<ReturnType<typeof listSkills>>,
+  TError = HTTPValidationError,
+>(
+  params: undefined | ListSkillsParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listSkills>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listSkills>>,
+          TError,
+          Awaited<ReturnType<typeof listSkills>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useListSkills<
+  TData = Awaited<ReturnType<typeof listSkills>>,
+  TError = HTTPValidationError,
+>(
+  params?: ListSkillsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listSkills>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listSkills>>,
+          TError,
+          Awaited<ReturnType<typeof listSkills>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useListSkills<
+  TData = Awaited<ReturnType<typeof listSkills>>,
+  TError = HTTPValidationError,
+>(
+  params?: ListSkillsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listSkills>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary List Skills
+ */
+
+export function useListSkills<
+  TData = Awaited<ReturnType<typeof listSkills>>,
+  TError = HTTPValidationError,
+>(
+  params?: ListSkillsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listSkills>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getListSkillsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export type updateSkillResponse200 = {
+  data: Skill;
+  status: 200;
+};
+
+export type updateSkillResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type updateSkillResponseSuccess = updateSkillResponse200 & {
+  headers: Headers;
+};
+export type updateSkillResponseError = updateSkillResponse422 & {
+  headers: Headers;
+};
+
+export type updateSkillResponse =
+  updateSkillResponseSuccess | updateSkillResponseError;
+
+export const getUpdateSkillUrl = (id: string) => {
+  return `/api/v1/performance/skills/${id}`;
+};
+
+/**
+ * Rename/re-describe a catalog skill; a duplicate name is `409`.
+ * @summary Update Skill
+ */
+export const updateSkill = async (
+  id: string,
+  skillUpdate: SkillUpdate,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<updateSkillResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return customFetch<updateSkillResponse>(getUpdateSkillUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      ...getHeaders(options?.headers),
+    },
+    body: JSON.stringify(skillUpdate),
+  });
+};
+
+export const getUpdateSkillMutationKey = () => ["updateSkill"] as const;
+
+export const getUpdateSkillMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateSkill>>,
+    TError,
+    UpdateSkillMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateSkill>>,
+  TError,
+  UpdateSkillMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateSkillMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateSkill>>,
+    UpdateSkillMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateSkill(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateSkillMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateSkill>>
+>;
+export type UpdateSkillMutationBody = SkillUpdate;
+export type UpdateSkillMutationError = HTTPValidationError;
+export type UpdateSkillMutationVariables = { id: string; data: SkillUpdate };
+
+/**
+ * @summary Update Skill
+ */
+export const useUpdateSkill = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateSkill>>,
+      TError,
+      UpdateSkillMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateSkill>>,
+  TError,
+  UpdateSkillMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateSkillMutationOptions(options), queryClient);
+};
+
+export type archiveSkillResponse200 = {
+  data: Skill;
+  status: 200;
+};
+
+export type archiveSkillResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type archiveSkillResponseSuccess = archiveSkillResponse200 & {
+  headers: Headers;
+};
+export type archiveSkillResponseError = archiveSkillResponse422 & {
+  headers: Headers;
+};
+
+export type archiveSkillResponse =
+  archiveSkillResponseSuccess | archiveSkillResponseError;
+
+export const getArchiveSkillUrl = (id: string) => {
+  return `/api/v1/performance/skills/${id}/archive`;
+};
+
+/**
+ * Soft delete; repeat archive is a `200` no-op without an audit entry.
+ * @summary Archive Skill
+ */
+export const archiveSkill = async (
+  id: string,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<archiveSkillResponse> => {
+  return customFetch<archiveSkillResponse>(getArchiveSkillUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getArchiveSkillMutationKey = () => ["archiveSkill"] as const;
+
+export const getArchiveSkillMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof archiveSkill>>,
+    TError,
+    ArchiveSkillMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof archiveSkill>>,
+  TError,
+  ArchiveSkillMutationVariables,
+  TContext
+> => {
+  const mutationKey = getArchiveSkillMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof archiveSkill>>,
+    ArchiveSkillMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return archiveSkill(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ArchiveSkillMutationResult = NonNullable<
+  Awaited<ReturnType<typeof archiveSkill>>
+>;
+
+export type ArchiveSkillMutationError = HTTPValidationError;
+export type ArchiveSkillMutationVariables = { id: string };
+
+/**
+ * @summary Archive Skill
+ */
+export const useArchiveSkill = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof archiveSkill>>,
+      TError,
+      ArchiveSkillMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof archiveSkill>>,
+  TError,
+  ArchiveSkillMutationVariables,
+  TContext
+> => {
+  return useMutation(getArchiveSkillMutationOptions(options), queryClient);
+};
+
+export type restoreSkillResponse200 = {
+  data: Skill;
+  status: 200;
+};
+
+export type restoreSkillResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type restoreSkillResponseSuccess = restoreSkillResponse200 & {
+  headers: Headers;
+};
+export type restoreSkillResponseError = restoreSkillResponse422 & {
+  headers: Headers;
+};
+
+export type restoreSkillResponse =
+  restoreSkillResponseSuccess | restoreSkillResponseError;
+
+export const getRestoreSkillUrl = (id: string) => {
+  return `/api/v1/performance/skills/${id}/restore`;
+};
+
+/**
+ * Clear `archived_at`; repeat restore is a `200` no-op without audit.
+ * @summary Restore Skill
+ */
+export const restoreSkill = async (
+  id: string,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<restoreSkillResponse> => {
+  return customFetch<restoreSkillResponse>(getRestoreSkillUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getRestoreSkillMutationKey = () => ["restoreSkill"] as const;
+
+export const getRestoreSkillMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof restoreSkill>>,
+    TError,
+    RestoreSkillMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof restoreSkill>>,
+  TError,
+  RestoreSkillMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRestoreSkillMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof restoreSkill>>,
+    RestoreSkillMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return restoreSkill(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RestoreSkillMutationResult = NonNullable<
+  Awaited<ReturnType<typeof restoreSkill>>
+>;
+
+export type RestoreSkillMutationError = HTTPValidationError;
+export type RestoreSkillMutationVariables = { id: string };
+
+/**
+ * @summary Restore Skill
+ */
+export const useRestoreSkill = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof restoreSkill>>,
+      TError,
+      RestoreSkillMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof restoreSkill>>,
+  TError,
+  RestoreSkillMutationVariables,
+  TContext
+> => {
+  return useMutation(getRestoreSkillMutationOptions(options), queryClient);
+};
+
+export type recordEmployeeSkillResponse201 = {
+  data: EmployeeSkill;
+  status: 201;
+};
+
+export type recordEmployeeSkillResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type recordEmployeeSkillResponseSuccess =
+  recordEmployeeSkillResponse201 & {
+    headers: Headers;
+  };
+export type recordEmployeeSkillResponseError =
+  recordEmployeeSkillResponse422 & {
+    headers: Headers;
+  };
+
+export type recordEmployeeSkillResponse =
+  recordEmployeeSkillResponseSuccess | recordEmployeeSkillResponseError;
+
+export const getRecordEmployeeSkillUrl = (employeeId: string) => {
+  return `/api/v1/performance/employees/${employeeId}/skills`;
+};
+
+/**
+ * Attach an active catalog skill to an employee.
+ * @summary Record Employee Skill
+ */
+export const recordEmployeeSkill = async (
+  employeeId: string,
+  employeeSkillCreate: EmployeeSkillCreate,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<recordEmployeeSkillResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return customFetch<recordEmployeeSkillResponse>(
+    getRecordEmployeeSkillUrl(employeeId),
+    {
+      ...options,
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...getHeaders(options?.headers),
+      },
+      body: JSON.stringify(employeeSkillCreate),
+    },
+  );
+};
+
+export const getRecordEmployeeSkillMutationKey = () =>
+  ["recordEmployeeSkill"] as const;
+
+export const getRecordEmployeeSkillMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof recordEmployeeSkill>>,
+    TError,
+    RecordEmployeeSkillMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof recordEmployeeSkill>>,
+  TError,
+  RecordEmployeeSkillMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRecordEmployeeSkillMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof recordEmployeeSkill>>,
+    RecordEmployeeSkillMutationVariables
+  > = (props) => {
+    const { employeeId, data } = props ?? {};
+
+    return recordEmployeeSkill(employeeId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RecordEmployeeSkillMutationResult = NonNullable<
+  Awaited<ReturnType<typeof recordEmployeeSkill>>
+>;
+export type RecordEmployeeSkillMutationBody = EmployeeSkillCreate;
+export type RecordEmployeeSkillMutationError = HTTPValidationError;
+export type RecordEmployeeSkillMutationVariables = {
+  employeeId: string;
+  data: EmployeeSkillCreate;
+};
+
+/**
+ * @summary Record Employee Skill
+ */
+export const useRecordEmployeeSkill = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof recordEmployeeSkill>>,
+      TError,
+      RecordEmployeeSkillMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof recordEmployeeSkill>>,
+  TError,
+  RecordEmployeeSkillMutationVariables,
+  TContext
+> => {
+  return useMutation(
+    getRecordEmployeeSkillMutationOptions(options),
+    queryClient,
+  );
+};
+
+export type listEmployeeSkillsResponse200 = {
+  data: EmployeeSkillList;
+  status: 200;
+};
+
+export type listEmployeeSkillsResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type listEmployeeSkillsResponseSuccess =
+  listEmployeeSkillsResponse200 & {
+    headers: Headers;
+  };
+export type listEmployeeSkillsResponseError = listEmployeeSkillsResponse422 & {
+  headers: Headers;
+};
+
+export type listEmployeeSkillsResponse =
+  listEmployeeSkillsResponseSuccess | listEmployeeSkillsResponseError;
+
+export const getListEmployeeSkillsUrl = (employeeId: string) => {
+  return `/api/v1/performance/employees/${employeeId}/skills`;
+};
+
+/**
+ * The employee's skill rows, scoped own/team/tenant.
+ * @summary List Employee Skills
+ */
+export const listEmployeeSkills = async (
+  employeeId: string,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<listEmployeeSkillsResponse> => {
+  return customFetch<listEmployeeSkillsResponse>(
+    getListEmployeeSkillsUrl(employeeId),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListEmployeeSkillsQueryKey = (employeeId: string) => {
+  return [`/api/v1/performance/employees/${employeeId}/skills`] as const;
+};
+
+export const getListEmployeeSkillsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listEmployeeSkills>>,
+  TError = HTTPValidationError,
+>(
+  employeeId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listEmployeeSkills>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListEmployeeSkillsQueryKey(employeeId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listEmployeeSkills>>
+  > = ({ signal }) =>
+    listEmployeeSkills(employeeId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: employeeId !== null && employeeId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listEmployeeSkills>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListEmployeeSkillsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listEmployeeSkills>>
+>;
+export type ListEmployeeSkillsQueryError = HTTPValidationError;
+
+export function useListEmployeeSkills<
+  TData = Awaited<ReturnType<typeof listEmployeeSkills>>,
+  TError = HTTPValidationError,
+>(
+  employeeId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listEmployeeSkills>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listEmployeeSkills>>,
+          TError,
+          Awaited<ReturnType<typeof listEmployeeSkills>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useListEmployeeSkills<
+  TData = Awaited<ReturnType<typeof listEmployeeSkills>>,
+  TError = HTTPValidationError,
+>(
+  employeeId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listEmployeeSkills>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listEmployeeSkills>>,
+          TError,
+          Awaited<ReturnType<typeof listEmployeeSkills>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useListEmployeeSkills<
+  TData = Awaited<ReturnType<typeof listEmployeeSkills>>,
+  TError = HTTPValidationError,
+>(
+  employeeId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listEmployeeSkills>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary List Employee Skills
+ */
+
+export function useListEmployeeSkills<
+  TData = Awaited<ReturnType<typeof listEmployeeSkills>>,
+  TError = HTTPValidationError,
+>(
+  employeeId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof listEmployeeSkills>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getListEmployeeSkillsQueryOptions(employeeId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export type updateEmployeeSkillResponse200 = {
+  data: EmployeeSkill;
+  status: 200;
+};
+
+export type updateEmployeeSkillResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type updateEmployeeSkillResponseSuccess =
+  updateEmployeeSkillResponse200 & {
+    headers: Headers;
+  };
+export type updateEmployeeSkillResponseError =
+  updateEmployeeSkillResponse422 & {
+    headers: Headers;
+  };
+
+export type updateEmployeeSkillResponse =
+  updateEmployeeSkillResponseSuccess | updateEmployeeSkillResponseError;
+
+export const getUpdateEmployeeSkillUrl = (
+  employeeId: string,
+  skillId: string,
+) => {
+  return `/api/v1/performance/employees/${employeeId}/skills/${skillId}`;
+};
+
+/**
+ * Replace proficiency/note in place; archived skills stay editable.
+ * @summary Update Employee Skill
+ */
+export const updateEmployeeSkill = async (
+  employeeId: string,
+  skillId: string,
+  employeeSkillUpdate: EmployeeSkillUpdate,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<updateEmployeeSkillResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return customFetch<updateEmployeeSkillResponse>(
+    getUpdateEmployeeSkillUrl(employeeId, skillId),
+    {
+      ...options,
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        ...getHeaders(options?.headers),
+      },
+      body: JSON.stringify(employeeSkillUpdate),
+    },
+  );
+};
+
+export const getUpdateEmployeeSkillMutationKey = () =>
+  ["updateEmployeeSkill"] as const;
+
+export const getUpdateEmployeeSkillMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateEmployeeSkill>>,
+    TError,
+    UpdateEmployeeSkillMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateEmployeeSkill>>,
+  TError,
+  UpdateEmployeeSkillMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateEmployeeSkillMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateEmployeeSkill>>,
+    UpdateEmployeeSkillMutationVariables
+  > = (props) => {
+    const { employeeId, skillId, data } = props ?? {};
+
+    return updateEmployeeSkill(employeeId, skillId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateEmployeeSkillMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateEmployeeSkill>>
+>;
+export type UpdateEmployeeSkillMutationBody = EmployeeSkillUpdate;
+export type UpdateEmployeeSkillMutationError = HTTPValidationError;
+export type UpdateEmployeeSkillMutationVariables = {
+  employeeId: string;
+  skillId: string;
+  data: EmployeeSkillUpdate;
+};
+
+/**
+ * @summary Update Employee Skill
+ */
+export const useUpdateEmployeeSkill = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateEmployeeSkill>>,
+      TError,
+      UpdateEmployeeSkillMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateEmployeeSkill>>,
+  TError,
+  UpdateEmployeeSkillMutationVariables,
+  TContext
+> => {
+  return useMutation(
+    getUpdateEmployeeSkillMutationOptions(options),
+    queryClient,
+  );
+};
+
+export type removeEmployeeSkillResponse204 = {
+  data: void;
+  status: 204;
+};
+
+export type removeEmployeeSkillResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type removeEmployeeSkillResponseSuccess =
+  removeEmployeeSkillResponse204 & {
+    headers: Headers;
+  };
+export type removeEmployeeSkillResponseError =
+  removeEmployeeSkillResponse422 & {
+    headers: Headers;
+  };
+
+export type removeEmployeeSkillResponse =
+  removeEmployeeSkillResponseSuccess | removeEmployeeSkillResponseError;
+
+export const getRemoveEmployeeSkillUrl = (
+  employeeId: string,
+  skillId: string,
+) => {
+  return `/api/v1/performance/employees/${employeeId}/skills/${skillId}`;
+};
+
+/**
+ * Delete the employee's skill row; audited, never evented.
+ * @summary Remove Employee Skill
+ */
+export const removeEmployeeSkill = async (
+  employeeId: string,
+  skillId: string,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<removeEmployeeSkillResponse> => {
+  return customFetch<removeEmployeeSkillResponse>(
+    getRemoveEmployeeSkillUrl(employeeId, skillId),
+    {
+      ...options,
+      method: "DELETE",
+    },
+  );
+};
+
+export const getRemoveEmployeeSkillMutationKey = () =>
+  ["removeEmployeeSkill"] as const;
+
+export const getRemoveEmployeeSkillMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof removeEmployeeSkill>>,
+    TError,
+    RemoveEmployeeSkillMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof removeEmployeeSkill>>,
+  TError,
+  RemoveEmployeeSkillMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRemoveEmployeeSkillMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof removeEmployeeSkill>>,
+    RemoveEmployeeSkillMutationVariables
+  > = (props) => {
+    const { employeeId, skillId } = props ?? {};
+
+    return removeEmployeeSkill(employeeId, skillId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RemoveEmployeeSkillMutationResult = NonNullable<
+  Awaited<ReturnType<typeof removeEmployeeSkill>>
+>;
+
+export type RemoveEmployeeSkillMutationError = HTTPValidationError;
+export type RemoveEmployeeSkillMutationVariables = {
+  employeeId: string;
+  skillId: string;
+};
+
+/**
+ * @summary Remove Employee Skill
+ */
+export const useRemoveEmployeeSkill = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof removeEmployeeSkill>>,
+      TError,
+      RemoveEmployeeSkillMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof removeEmployeeSkill>>,
+  TError,
+  RemoveEmployeeSkillMutationVariables,
+  TContext
+> => {
+  return useMutation(
+    getRemoveEmployeeSkillMutationOptions(options),
+    queryClient,
+  );
+};
 
 export type listNotificationsResponse200 = {
   data: NotificationListPage;

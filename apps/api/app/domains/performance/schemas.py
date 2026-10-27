@@ -256,6 +256,12 @@ class EmployeeSkillUpdate(BaseModel):
     note: str | None = Field(default=None, min_length=1, max_length=500)
 
 
+class EmployeeSkillList(BaseModel):
+    """The pinned `GET …/employees/{employee_id}/skills` envelope."""
+
+    items: list[EmployeeSkill]
+
+
 class GoalListPage(BaseModel):
     items: list[Goal]
     page: Page
