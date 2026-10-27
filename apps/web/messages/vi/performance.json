@@ -1,0 +1,199 @@
+{
+  "metadataTitle": "Hiệu suất — WorkPulse",
+  "pageTitle": "Hiệu suất",
+  "pageDescription": "Mục tiêu, đánh giá và kỹ năng — cách công việc được lập kế hoạch, đánh giá và ghi nhận.",
+  "tabsAria": "Khu vực hiệu suất",
+  "tabs": {
+    "goals": "Mục tiêu",
+    "reviews": "Đánh giá",
+    "skills": "Kỹ năng"
+  },
+  "workspace": {
+    "noEmployeeLink": "Tài khoản của bạn chưa được liên kết với hồ sơ nhân viên nên không có dữ liệu cá nhân để hiển thị. Hãy đề nghị HR liên kết tài khoản."
+  },
+  "status": {
+    "goal": {
+      "draft": "Bản nháp",
+      "active": "Đang thực hiện",
+      "completed": "Hoàn thành",
+      "cancelled": "Đã hủy"
+    },
+    "review": {
+      "draft": "Bản nháp",
+      "completed": "Hoàn thành",
+      "cancelled": "Đã hủy"
+    },
+    "skill": {
+      "active": "Đang dùng",
+      "archived": "Đã lưu trữ"
+    }
+  },
+  "actions": {
+    "newGoal": "Mục tiêu mới",
+    "edit": "Sửa",
+    "activate": "Kích hoạt",
+    "complete": "Hoàn thành",
+    "cancel": "Hủy",
+    "retry": "Thử lại",
+    "backToFirstPage": "Về trang đầu"
+  },
+  "pagination": {
+    "previous": "Trước",
+    "previousAria": "Trang trước của {label}",
+    "next": "Sau",
+    "nextAria": "Trang sau của {label}",
+    "pageOf": "Trang {page} / {total}"
+  },
+  "goals": {
+    "title": "Mục tiêu",
+    "description": "Mỗi người đang hướng tới điều gì — bản nháp chuyển sang đang thực hiện rồi hoàn thành.",
+    "loading": "Đang tải mục tiêu…",
+    "loadError": "Không thể tải mục tiêu.",
+    "denied": "Bạn không có quyền xem những mục tiêu này.",
+    "empty": "Chưa có mục tiêu nào. Tạo một mục tiêu để bắt đầu theo dõi tiến độ.",
+    "emptyFiltered": "Không có mục tiêu nào khớp bộ lọc. Hãy xóa bộ lọc hoặc chọn trạng thái khác.",
+    "swipe": "Vuốt ngang để xem đầy đủ các trường của mục tiêu.",
+    "label": "Mục tiêu",
+    "containerLabel": "Mục tiêu. Cuộn ngang để đọc tất cả các cột.",
+    "columns": {
+      "title": "Mục tiêu",
+      "employee": "Nhân viên",
+      "due": "Hạn",
+      "progress": "Tiến độ",
+      "status": "Trạng thái",
+      "actions": "Thao tác"
+    },
+    "editAria": "Sửa {title}",
+    "activateAria": "Kích hoạt {title}",
+    "completeAria": "Hoàn thành {title}",
+    "cancelAria": "Hủy {title}",
+    "paginationLabel": "mục tiêu",
+    "filters": {
+      "statusAria": "Lọc theo trạng thái",
+      "anyStatus": "Tất cả trạng thái",
+      "employeeAria": "Lọc theo nhân viên",
+      "allEmployees": "Tất cả nhân viên"
+    }
+  },
+  "goalForm": {
+    "createTitle": "Mục tiêu mới",
+    "editTitle": "Sửa mục tiêu",
+    "createDescription": "Tạo mục tiêu ở dạng bản nháp, sau đó kích hoạt khi công việc bắt đầu.",
+    "editDescription": "Cập nhật mục tiêu khi còn bản nháp hoặc đang thực hiện. Hoàn thành hoặc hủy là thao tác riêng và không thể đảo ngược.",
+    "employee": "Nhân viên",
+    "employeeHint": "Người sở hữu mục tiêu này. Không thể thay đổi sau khi tạo.",
+    "selectEmployee": "Chọn nhân viên",
+    "self": "Tôi",
+    "title": "Mục tiêu",
+    "titlePlaceholder": "Hoàn thành đợt cải tổ quy trình tiếp nhận trong quý",
+    "description": "Mô tả (không bắt buộc)",
+    "descriptionHint": "Nhạy cảm: nhân viên, quản lý của họ và HR nhìn thấy, không bao giờ xuất hiện trong sự kiện.",
+    "descriptionPlaceholder": "Thế nào là thành công và bước cụ thể đầu tiên.",
+    "dueDate": "Hạn (không bắt buộc)",
+    "dueDateHint": "Cho phép ngày trong quá khứ — mục tiêu là kế hoạch, không phải yêu cầu.",
+    "progress": "Tiến độ",
+    "progressHint": "0–100. Hoàn thành mục tiêu không tự động thay đổi tiến độ.",
+    "create": "Tạo mục tiêu",
+    "save": "Lưu thay đổi",
+    "creating": "Đang tạo…",
+    "saving": "Đang lưu…"
+  },
+  "goalState": {
+    "activateTitle": "Kích hoạt mục tiêu",
+    "completeTitle": "Hoàn thành mục tiêu",
+    "cancelTitle": "Hủy mục tiêu",
+    "activateDescription": "Kích hoạt “{title}”? Nhân viên có thể cập nhật tiến độ cho đến khi mục tiêu hoàn thành hoặc bị hủy.",
+    "completeDescription": "Hoàn thành “{title}”? Thao tác này không thể đảo ngược — mục tiêu đã hoàn thành không thể sửa hay mở lại.",
+    "cancelDescription": "Hủy “{title}”? Thao tác này không thể đảo ngược — không thể mở lại mục tiêu. Tiến độ được giữ nguyên.",
+    "activating": "Đang kích hoạt…",
+    "completing": "Đang hoàn thành…",
+    "cancelling": "Đang hủy…",
+    "cancelAction": "Hủy mục tiêu"
+  },
+  "reviews": {
+    "title": "Đánh giá",
+    "description": "Các đánh giá đã hoàn thành và những đánh giá đang thực hiện.",
+    "myDescription": "Các đánh giá đã hoàn thành của bạn. Bản nháp vẫn ở với quản lý cho đến khi hoàn tất.",
+    "loading": "Đang tải đánh giá…",
+    "loadError": "Không thể tải đánh giá.",
+    "denied": "Bạn không có quyền xem những đánh giá này.",
+    "empty": "Chưa có đánh giá nào. Đánh giá sẽ xuất hiện sau khi quản lý bắt đầu.",
+    "emptyMine": "Chưa có đánh giá nào hoàn thành. Bản nháp của quản lý được ẩn cho đến khi hoàn tất.",
+    "swipe": "Vuốt ngang để xem đầy đủ các trường của đánh giá.",
+    "label": "Đánh giá",
+    "containerLabel": "Đánh giá. Cuộn ngang để đọc tất cả các cột.",
+    "columns": {
+      "employee": "Nhân viên",
+      "period": "Kỳ",
+      "rating": "Điểm",
+      "status": "Trạng thái",
+      "completed": "Hoàn thành lúc"
+    },
+    "ratingValue": "Điểm {rating} trên 5",
+    "paginationLabel": "đánh giá"
+  },
+  "feedback": {
+    "title": "Phản hồi",
+    "description": "Ý kiến đồng nghiệp về một đánh giá, chỉ người viết đánh giá và HR nhìn thấy."
+  },
+  "skills": {
+    "title": "Kỹ năng",
+    "description": "Danh mục kỹ năng của tổ chức. Kỹ năng của từng nhân viên dựa trên danh mục này.",
+    "loading": "Đang tải kỹ năng…",
+    "loadError": "Không thể tải kỹ năng.",
+    "denied": "Bạn không có quyền xem danh mục kỹ năng.",
+    "empty": "Danh mục chưa có kỹ năng nào.",
+    "swipe": "Vuốt ngang để xem đầy đủ các trường của kỹ năng.",
+    "label": "Kỹ năng",
+    "containerLabel": "Kỹ năng. Cuộn ngang để đọc tất cả các cột.",
+    "columns": {
+      "name": "Kỹ năng",
+      "description": "Mô tả",
+      "status": "Trạng thái"
+    },
+    "paginationLabel": "kỹ năng"
+  },
+  "errors": {
+    "goalNotFound": "Mục tiêu này không còn khả dụng.",
+    "goalNotDraft": "Chỉ mục tiêu ở bản nháp mới có thể kích hoạt. Hãy làm mới danh sách và thử lại.",
+    "goalNotActive": "Chỉ mục tiêu đang thực hiện mới có thể hoàn thành. Hãy làm mới danh sách và thử lại.",
+    "goalTerminal": "Mục tiêu đã hoàn thành hoặc đã hủy và không thể thay đổi nữa.",
+    "reviewNotFound": "Đánh giá này không còn khả dụng.",
+    "reviewIncomplete": "Hãy thêm điểm trước khi hoàn thành đánh giá.",
+    "reviewNotDraft": "Đánh giá này không còn là bản nháp. Hãy làm mới danh sách và thử lại.",
+    "feedbackProviderInvalid": "Hãy chọn nhân viên đang làm việc, không phải người đánh giá hoặc người được đánh giá.",
+    "feedbackAlreadySubmitted": "Bạn đã gửi phản hồi cho đánh giá này.",
+    "feedbackAccessDenied": "Phản hồi chỉ người viết đánh giá và HR nhìn thấy.",
+    "skillNameTaken": "Đã có kỹ năng trùng tên, kể cả kỹ năng đã lưu trữ.",
+    "skillArchived": "Kỹ năng này đã lưu trữ và không thể gán cho người mới.",
+    "employeeSkillExists": "Nhân viên này đã có kỹ năng đó. Hãy cập nhật dòng hiện có.",
+    "employeeNotActive": "Nhân viên này không còn làm việc và không thể nhận mục tiêu hay đánh giá mới.",
+    "employeeNotFound": "Hãy chọn một nhân viên trong tổ chức.",
+    "skillNotFound": "Kỹ năng này không còn khả dụng.",
+    "denied": "Bạn không có quyền quản lý hiệu suất.",
+    "validation": "Hãy kiểm tra các trường được đánh dấu và thử lại.",
+    "forbidden": "Bạn không có quyền thực hiện thao tác đó.",
+    "notFound": "Mục này không còn khả dụng.",
+    "generic": "Đã xảy ra lỗi. Vui lòng thử lại."
+  },
+  "toasts": {
+    "goalCreated": "Đã tạo mục tiêu",
+    "goalUpdated": "Đã cập nhật mục tiêu",
+    "goalActivated": "Đã kích hoạt mục tiêu",
+    "goalCompleted": "Đã hoàn thành mục tiêu",
+    "goalCancelled": "Đã hủy mục tiêu"
+  },
+  "validation": {
+    "titleRequired": "Nhập tên mục tiêu",
+    "titleTooLong": "Tên mục tiêu tối đa 200 ký tự",
+    "descriptionTooLong": "Mô tả tối đa 2.000 ký tự",
+    "employeeInvalid": "Chọn một nhân viên",
+    "dueDateInvalid": "Chọn ngày hợp lệ",
+    "progressRequired": "Nhập tiến độ từ 0 đến 100",
+    "progressInt": "Tiến độ phải là số nguyên",
+    "progressRange": "Tiến độ phải từ 0 đến 100"
+  },
+  "fallbacks": {
+    "employee": "Nhân viên …{id}"
+  }
+}

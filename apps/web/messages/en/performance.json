@@ -1,0 +1,199 @@
+{
+  "metadataTitle": "Performance — WorkPulse",
+  "pageTitle": "Performance",
+  "pageDescription": "Goals, reviews and skills — how work is planned, judged and recorded.",
+  "tabsAria": "Performance section",
+  "tabs": {
+    "goals": "Goals",
+    "reviews": "Reviews",
+    "skills": "Skills"
+  },
+  "workspace": {
+    "noEmployeeLink": "Your account isn't linked to an employee record, so there is nothing personal to show here. Ask HR to link your account."
+  },
+  "status": {
+    "goal": {
+      "draft": "Draft",
+      "active": "Active",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "review": {
+      "draft": "Draft",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "skill": {
+      "active": "Active",
+      "archived": "Archived"
+    }
+  },
+  "actions": {
+    "newGoal": "New goal",
+    "edit": "Edit",
+    "activate": "Activate",
+    "complete": "Complete",
+    "cancel": "Cancel",
+    "retry": "Retry",
+    "backToFirstPage": "Back to first page"
+  },
+  "pagination": {
+    "previous": "Previous",
+    "previousAria": "Previous page of {label}",
+    "next": "Next",
+    "nextAria": "Next page of {label}",
+    "pageOf": "Page {page} of {total}"
+  },
+  "goals": {
+    "title": "Goals",
+    "description": "What each person is working toward — drafts become active, then complete.",
+    "loading": "Loading goals…",
+    "loadError": "Could not load goals.",
+    "denied": "You don't have permission to view these goals.",
+    "empty": "No goals yet. Create a goal to start tracking progress.",
+    "emptyFiltered": "No goals match these filters. Clear a filter or choose another status.",
+    "swipe": "Swipe sideways to see every goal field.",
+    "label": "Goals",
+    "containerLabel": "Goals. Scroll horizontally to read all columns.",
+    "columns": {
+      "title": "Goal",
+      "employee": "Employee",
+      "due": "Due",
+      "progress": "Progress",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "editAria": "Edit {title}",
+    "activateAria": "Activate {title}",
+    "completeAria": "Complete {title}",
+    "cancelAria": "Cancel {title}",
+    "paginationLabel": "goals",
+    "filters": {
+      "statusAria": "Filter by status",
+      "anyStatus": "All statuses",
+      "employeeAria": "Filter by employee",
+      "allEmployees": "All employees"
+    }
+  },
+  "goalForm": {
+    "createTitle": "New goal",
+    "editTitle": "Edit goal",
+    "createDescription": "Create a goal in draft, then activate it when work starts.",
+    "editDescription": "Update the goal while it is a draft or active. Completing or cancelling is a separate, terminal action.",
+    "employee": "Employee",
+    "employeeHint": "The person this goal belongs to. It can't change after creation.",
+    "selectEmployee": "Select an employee",
+    "self": "Me",
+    "title": "Goal",
+    "titlePlaceholder": "Ship the quarterly onboarding revamp",
+    "description": "Description (optional)",
+    "descriptionHint": "Sensitive: visible to the employee, their manager and HR, never included in events.",
+    "descriptionPlaceholder": "What success looks like and the first concrete step.",
+    "dueDate": "Due date (optional)",
+    "dueDateHint": "Past dates are allowed — goals are plans, not claims.",
+    "progress": "Progress",
+    "progressHint": "0–100. Completing a goal never changes progress automatically.",
+    "create": "Create goal",
+    "save": "Save changes",
+    "creating": "Creating…",
+    "saving": "Saving…"
+  },
+  "goalState": {
+    "activateTitle": "Activate goal",
+    "completeTitle": "Complete goal",
+    "cancelTitle": "Cancel goal",
+    "activateDescription": "Activate “{title}”? The employee can then record progress until the goal completes or is cancelled.",
+    "completeDescription": "Complete “{title}”? This is terminal — a completed goal can't be edited or re-opened.",
+    "cancelDescription": "Cancel “{title}”? This is terminal — the goal can't be re-opened. Progress stays as recorded.",
+    "activating": "Activating…",
+    "completing": "Completing…",
+    "cancelling": "Cancelling…",
+    "cancelAction": "Cancel goal"
+  },
+  "reviews": {
+    "title": "Reviews",
+    "description": "Completed reviews and the ones still in progress.",
+    "myDescription": "Your completed reviews. Drafts stay with your manager until they are finished.",
+    "loading": "Loading reviews…",
+    "loadError": "Could not load reviews.",
+    "denied": "You don't have permission to view these reviews.",
+    "empty": "No reviews yet. A review appears here after a manager starts one.",
+    "emptyMine": "No completed reviews yet. Your manager's drafts stay hidden until they finish.",
+    "swipe": "Swipe sideways to see every review field.",
+    "label": "Reviews",
+    "containerLabel": "Reviews. Scroll horizontally to read all columns.",
+    "columns": {
+      "employee": "Employee",
+      "period": "Period",
+      "rating": "Rating",
+      "status": "Status",
+      "completed": "Completed"
+    },
+    "ratingValue": "Rating {rating} out of 5",
+    "paginationLabel": "reviews"
+  },
+  "feedback": {
+    "title": "Feedback",
+    "description": "Peer input on a review, visible to the review author and HR."
+  },
+  "skills": {
+    "title": "Skills",
+    "description": "The tenant skill catalog. Employee skills build on it.",
+    "loading": "Loading skills…",
+    "loadError": "Could not load skills.",
+    "denied": "You don't have permission to view the skill catalog.",
+    "empty": "No skills in the catalog yet.",
+    "swipe": "Swipe sideways to see every skill field.",
+    "label": "Skills",
+    "containerLabel": "Skills. Scroll horizontally to read all columns.",
+    "columns": {
+      "name": "Skill",
+      "description": "Description",
+      "status": "Status"
+    },
+    "paginationLabel": "skills"
+  },
+  "errors": {
+    "goalNotFound": "This goal is no longer available.",
+    "goalNotDraft": "Only a draft goal can be activated. Refresh the list and try again.",
+    "goalNotActive": "Only an active goal can be completed. Refresh the list and try again.",
+    "goalTerminal": "This goal is completed or cancelled and can no longer change.",
+    "reviewNotFound": "This review is no longer available.",
+    "reviewIncomplete": "Add a rating before completing the review.",
+    "reviewNotDraft": "This review is no longer a draft. Refresh the list and try again.",
+    "feedbackProviderInvalid": "Choose active employees other than the reviewer and the employee being reviewed.",
+    "feedbackAlreadySubmitted": "You already submitted feedback for this review.",
+    "feedbackAccessDenied": "Feedback is visible to the review author and HR only.",
+    "skillNameTaken": "A skill with this name already exists, including archived skills.",
+    "skillArchived": "This skill is archived and can't be assigned to anyone new.",
+    "employeeSkillExists": "This employee already has this skill. Update the existing row instead.",
+    "employeeNotActive": "That employee is no longer active and can't be given new goals or reviews.",
+    "employeeNotFound": "Choose an employee from your organization.",
+    "skillNotFound": "This skill is no longer available.",
+    "denied": "You don't have permission to manage performance.",
+    "validation": "Check the highlighted fields and try again.",
+    "forbidden": "You don't have permission to do that.",
+    "notFound": "This item is no longer available.",
+    "generic": "Something went wrong. Please try again."
+  },
+  "toasts": {
+    "goalCreated": "Goal created",
+    "goalUpdated": "Goal updated",
+    "goalActivated": "Goal activated",
+    "goalCompleted": "Goal completed",
+    "goalCancelled": "Goal cancelled"
+  },
+  "validation": {
+    "titleRequired": "Enter a goal title",
+    "titleTooLong": "Goal title must be at most 200 characters",
+    "descriptionTooLong": "Description must be at most 2,000 characters",
+    "employeeInvalid": "Choose an employee",
+    "dueDateInvalid": "Choose a valid date",
+    "progressRequired": "Enter progress from 0 to 100",
+    "progressInt": "Progress must be a whole number",
+    "progressRange": "Progress must be between 0 and 100"
+  },
+  "fallbacks": {
+    "employee": "Employee …{id}"
+  }
+}

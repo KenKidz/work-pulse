@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   MonitorDot,
   ReceiptText,
+  Target,
   Timer,
   UserCog,
   Users,
@@ -16,6 +17,7 @@ import {
 
 import type { Role } from "@workpulse/api-client/index.schemas";
 
+import { PERFORMANCE_NAV_ROLES } from "@/features/performance/roles";
 import { PAYROLL_VIEW_ROLES } from "@/features/payroll/roles";
 import { RECRUITMENT_NAV_ROLES } from "@/features/recruitment/roles";
 import { REPORT_READ_ROLES } from "@/features/reports/roles";
@@ -49,6 +51,7 @@ export type NavKey =
   | "myPayslips"
   | "reports"
   | "recruitment"
+  | "performance"
   | "commandCenter"
   | "users";
 
@@ -121,6 +124,12 @@ export const NAV_ITEMS: NavItem[] = [
     key: "recruitment",
     icon: BriefcaseBusiness,
     roles: RECRUITMENT_NAV_ROLES,
+  },
+  {
+    href: "/performance",
+    key: "performance",
+    icon: Target,
+    roles: PERFORMANCE_NAV_ROLES,
   },
   {
     href: "/command-center",

@@ -14,6 +14,7 @@ import metadata from "./metadata.json";
 import nav from "./nav.json";
 import notifications from "./notifications.json";
 import organizations from "./organizations.json";
+import performance from "./performance.json";
 import realtime from "./realtime.json";
 import recruitment from "./recruitment.json";
 import reports from "./reports.json";
@@ -37,6 +38,7 @@ const en = {
   notifications,
   organizations,
   overtime,
+  performance,
   payroll,
   users,
 };
