@@ -6,6 +6,8 @@ does the work.
 
 ## Now
 
+- [ ] Employee documents (`.ai/features/employee-documents.md`, draft): HR-maintained per-employee documents in private MinIO object storage — presigned two-step upload + short-lived presigned download, category/title/expiry metadata, soft-delete + purge, identifiers-only `document.uploaded`/`document.deleted` events, audit on every mutation; Documents tab on employee detail + "My documents"; MinIO joins docker compose. Open in `## Decisions needed`: field-level encryption of metadata, security-review sign-off.
+
 ## Later
 
 - [ ] Phase 4+: Employee documents

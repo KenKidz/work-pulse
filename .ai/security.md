@@ -35,6 +35,8 @@ Capability rows are the product's real authorization surface. `Y` = allowed,
 | Manage the skill catalog | — | — | Y | — | Y | Y |
 | Record employee skills | own | team | Y | — | Y | Y |
 | Manage employee records (create/update/terminate) | — | — | Y | — | Y | Y |
+| Upload / manage employee documents | — | — | Y | — | Y | Y |
+| View / download employee documents | own | team | Y | own | Y | Y |
 | Run recruitment (jobs, candidates, interviews, hiring) | — | assigned interviews only | Y | — | Y | Y |
 | Manage organization structure | — | — | Y | — | Y | Y |
 | View company-wide reports | — | — | Y | Y | Y | Y |
@@ -89,7 +91,8 @@ retrofit.
 - Append-only and immutable: insert-only table, no update/delete path in code.
 - Written for every sensitive mutation: employee create/update/transfer/
   terminate, attendance correction, leave & overtime decisions, payroll runs,
-  performance goals/reviews/feedback/skills, permission changes.
+  performance goals/reviews/feedback/skills, employee document upload/update/
+  delete, permission changes.
 - Entry shape: `id`, `tenant_id`, `actor_id`, `action`, `entity_type`,
   `entity_id`, `occurred_at`, `reason?`, `changes?` (field names + old/new for
   non-PII fields; PII changes recorded as "field changed", not values).

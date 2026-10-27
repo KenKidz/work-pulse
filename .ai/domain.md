@@ -9,7 +9,7 @@
 | Context | Purpose | Key aggregates | Phase |
 | --- | --- | --- | --- |
 | **Organization** | the structure the workforce hangs off | Department, Position, Location, Team | 1 |
-| **Employees** | the employee record and its employment history | Employee, Employment | 1 |
+| **Employees** | the employee record and its employment history | Employee, Employment, Document | 1 |
 | **Attendance** | presence in real time | AttendanceRecord, Shift | 1 |
 | **Identity & Access** | users, roles, permissions, sessions | User, Session, Role, PermissionGrant | 2 |
 | **Realtime Command Center** | live workforce board | PresenceState (hot state) | 2 |
@@ -58,6 +58,7 @@ Rules:
 | Tenant | one customer organization; the hard isolation boundary |
 | Employee | a person employed by a tenant; the core aggregate |
 | Employment | one period of engagement (position, department, location, type, effective dates). An employee has a history of employments |
+| Document | one file (contract, ID copy, certification) attached to an employee record; metadata in PostgreSQL, bytes in private object storage behind presigned URLs (`employee-documents.md`) |
 | Position | job title/role definition (e.g. "Senior Nurse") |
 | Department | organizational unit, may be nested |
 | Location | physical site, owns a timezone |
@@ -115,6 +116,8 @@ where it actually flows on the bus.
 | `performance.review_completed` | a review is finalized | 4+ | 4+ | Analytics |
 | `performance.review_cancelled` | a draft review is cancelled | 4+ | 4+ | Analytics (follow-up) |
 | `performance.feedback_submitted` | a nominated peer files feedback | 4+ | 4+ | Analytics (follow-up) |
+| `document.uploaded` | a document is confirmed onto an employee record | 4+ | 4+ | Analytics (follow-up) |
+| `document.deleted` | a document is soft-deleted and its object purged | 4+ | 4+ | Analytics (follow-up) |
 
 Envelope and versioning rules: `contracts/README.md`,
 `contracts/events/common/event-envelope.v1.json`.
