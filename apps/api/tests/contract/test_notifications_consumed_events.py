@@ -62,6 +62,7 @@ HIRED_EMPLOYEE_ID = UUID("00000000-0000-4000-8000-000000000012")
 GOAL_ID = UUID("00000000-0000-4000-8000-000000000013")
 REVIEW_ID = UUID("00000000-0000-4000-8000-000000000014")
 FEEDBACK_ID = UUID("00000000-0000-4000-8000-000000000015")
+DOCUMENT_ID = UUID("00000000-0000-4000-8000-000000000016")
 NOW = datetime(2026, 10, 21, 9, 0, tzinfo=UTC)
 WORKDAY = date(2026, 10, 21)
 END_DATE = date(2026, 10, 23)
@@ -476,6 +477,22 @@ BUILDER_CASES: dict[str, Callable[[], dict[str, Any]]] = {
             "feedback_id": str(FEEDBACK_ID),
             "review_id": str(REVIEW_ID),
             "employee_id": str(EMPLOYEE_ID),
+        },
+    ),
+    "documents/document-uploaded.v1.json": lambda: _raw_envelope(
+        "document.uploaded",
+        {
+            "document_id": str(DOCUMENT_ID),
+            "employee_id": str(EMPLOYEE_ID),
+            "category": "contract",
+        },
+    ),
+    "documents/document-deleted.v1.json": lambda: _raw_envelope(
+        "document.deleted",
+        {
+            "document_id": str(DOCUMENT_ID),
+            "employee_id": str(EMPLOYEE_ID),
+            "category": "certification",
         },
     ),
 }

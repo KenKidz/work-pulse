@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workpulse.dev/contracts/events/documents/document-deleted.v1.json",
+  "title": "WorkPulse document.deleted v1",
+  "description": "A document was soft-deleted and its stored object purged. Identifiers and category only — the title, original filename, storage keys and presigned URLs are PII and never leave the database (`.ai/features/employee-documents.md` → Events; `.ai/security.md`). The Kafka message key is `employee_id` (ADR 0012).",
+  "type": "object",
+  "required": ["document_id", "employee_id", "category"],
+  "additionalProperties": false,
+  "properties": {
+    "document_id": {
+      "type": "string",
+      "description": "The soft-deleted document row (UUIDv7 string)."
+    },
+    "employee_id": {
+      "type": "string",
+      "description": "Employee the document belonged to (UUIDv7 string). Also the Kafka message key (ADR 0012)."
+    },
+    "category": {
+      "type": "string",
+      "enum": ["contract", "identification", "certification", "other"],
+      "description": "Document category code. Never the title, filename or storage key."
+    }
+  }
+}
