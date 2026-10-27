@@ -6,6 +6,10 @@
 
 export type {
   Employee,
+  EmployeeSkill,
+  EmployeeSkillCreate,
+  EmployeeSkillList,
+  EmployeeSkillUpdate,
   EmployeeSummary,
   Goal,
   GoalCreate,
@@ -17,9 +21,16 @@ export type {
   ListSkillsParams,
   Page,
   Review,
+  ReviewCreate,
+  ReviewFeedback,
+  ReviewFeedbackCreate,
+  ReviewFeedbackList,
   ReviewListPage,
   ReviewStatus,
+  ReviewUpdate,
   Role,
   Skill,
+  SkillCreate,
   SkillListPage,
+  SkillUpdate,
 } from "@workpulse/api-client/index.schemas";

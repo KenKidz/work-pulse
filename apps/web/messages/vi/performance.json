@@ -30,10 +30,18 @@
   },
   "actions": {
     "newGoal": "Mục tiêu mới",
+    "newReview": "Đánh giá mới",
+    "newSkill": "Kỹ năng mới",
+    "addSkill": "Thêm kỹ năng",
     "edit": "Sửa",
+    "view": "Xem",
     "activate": "Kích hoạt",
     "complete": "Hoàn thành",
     "cancel": "Hủy",
+    "archive": "Lưu trữ",
+    "restore": "Khôi phục",
+    "remove": "Gỡ",
+    "giveFeedback": "Gửi phản hồi",
     "retry": "Thử lại",
     "backToFirstPage": "Về trang đầu"
   },
@@ -112,12 +120,14 @@
   },
   "reviews": {
     "title": "Đánh giá",
+    "myTitle": "Đánh giá của tôi",
     "description": "Các đánh giá đã hoàn thành và những đánh giá đang thực hiện.",
     "myDescription": "Các đánh giá đã hoàn thành của bạn. Bản nháp vẫn ở với quản lý cho đến khi hoàn tất.",
     "loading": "Đang tải đánh giá…",
     "loadError": "Không thể tải đánh giá.",
     "denied": "Bạn không có quyền xem những đánh giá này.",
     "empty": "Chưa có đánh giá nào. Đánh giá sẽ xuất hiện sau khi quản lý bắt đầu.",
+    "emptyFiltered": "Không có đánh giá nào khớp bộ lọc. Hãy xóa bộ lọc hoặc chọn trạng thái khác.",
     "emptyMine": "Chưa có đánh giá nào hoàn thành. Bản nháp của quản lý được ẩn cho đến khi hoàn tất.",
     "swipe": "Vuốt ngang để xem đầy đủ các trường của đánh giá.",
     "label": "Đánh giá",
@@ -127,14 +137,116 @@
       "period": "Kỳ",
       "rating": "Điểm",
       "status": "Trạng thái",
-      "completed": "Hoàn thành lúc"
+      "completed": "Hoàn thành lúc",
+      "actions": "Thao tác"
     },
     "ratingValue": "Điểm {rating} trên 5",
-    "paginationLabel": "đánh giá"
+    "viewAria": "Xem đánh giá của {name}",
+    "editAria": "Sửa đánh giá của {name}",
+    "completeAria": "Hoàn thành đánh giá của {name}",
+    "cancelAria": "Hủy đánh giá của {name}",
+    "paginationLabel": "đánh giá",
+    "filters": {
+      "statusAria": "Lọc theo trạng thái",
+      "anyStatus": "Tất cả trạng thái",
+      "employeeAria": "Lọc theo nhân viên",
+      "allEmployees": "Tất cả nhân viên"
+    },
+    "ratings": {
+      "option": "{rating} / 5"
+    },
+    "detail": {
+      "title": "Chi tiết đánh giá",
+      "description": "Đánh giá cho {name} · {period}",
+      "descriptionNoPeriod": "Đánh giá cho {name}",
+      "draftNotice": "Đánh giá này là bản nháp — nhân viên chỉ thấy sau khi hoàn thành.",
+      "rating": "Điểm",
+      "ratingValue": "{rating} / 5",
+      "noRating": "Chưa có điểm",
+      "completed": "Hoàn thành lúc",
+      "notCompleted": "Chưa hoàn thành",
+      "strengths": "Điểm mạnh",
+      "improvements": "Cần cải thiện",
+      "notRecorded": "Chưa ghi nhận"
+    },
+    "form": {
+      "createTitle": "Đánh giá mới",
+      "editTitle": "Sửa đánh giá",
+      "createDescription": "Bắt đầu đánh giá cho một thành viên, mời đồng nghiệp góp ý, sau đó thêm điểm và hoàn thành khi sẵn sàng.",
+      "editDescription": "Cập nhật bản nháp khi vẫn riêng tư với bạn và HR. Hoàn thành sẽ công bố cho nhân viên và không thể sửa.",
+      "employee": "Nhân viên",
+      "employeeHint": "Người được đánh giá. Không thể thay đổi sau khi tạo. Bạn không bao giờ tự đánh giá mình.",
+      "selectEmployee": "Chọn nhân viên",
+      "editingFor": "Đang đánh giá {name}",
+      "period": "Kỳ (không bắt buộc)",
+      "periodHint": "Nhãn ngắn như 2026-H1. Nhãn này xuất hiện trên đánh giá đã hoàn thành của nhân viên.",
+      "periodPlaceholder": "2026-H1",
+      "rating": "Điểm",
+      "ratingHint": "Từ 1 đến 5. Phải có điểm trước khi hoàn thành đánh giá.",
+      "chooseRating": "Chọn điểm",
+      "noRating": "Chưa chấm điểm",
+      "strengths": "Điểm mạnh (không bắt buộc)",
+      "strengthsHint": "Nhạy cảm: nhân viên thấy trong đánh giá đã hoàn thành, không bao giờ xuất hiện trong sự kiện.",
+      "strengthsPlaceholder": "Những gì nhân viên đã làm tốt trong kỳ này.",
+      "improvements": "Cần cải thiện (không bắt buộc)",
+      "improvementsHint": "Nhạy cảm: nhân viên thấy trong đánh giá đã hoàn thành, không bao giờ xuất hiện trong sự kiện.",
+      "improvementsPlaceholder": "Nên tập trung vào đâu tiếp theo và như thế nào.",
+      "providers": "Đồng nghiệp góp ý từ",
+      "providersHint": "Mời tối đa 10 nhân viên đang làm việc, không phải người được đánh giá và không phải bạn. Mỗi người gửi một bình luận khi đánh giá còn bản nháp.",
+      "providersEmpty": "Không có đồng nghiệp phù hợp trong danh sách của bạn.",
+      "providersCount": "Đã chọn {selected} / {max}",
+      "create": "Tạo đánh giá",
+      "save": "Lưu thay đổi",
+      "creating": "Đang tạo…",
+      "saving": "Đang lưu…"
+    },
+    "state": {
+      "completeTitle": "Hoàn thành đánh giá",
+      "completeDescription": "Hoàn thành đánh giá cho {name}? Phải có điểm và đánh giá đã hoàn thành không thể sửa.",
+      "cancelTitle": "Hủy đánh giá",
+      "cancelDescription": "Hủy đánh giá cho {name}? Phản hồi nháp vẫn đọc được bởi bạn và HR, nhưng không nhận thêm phản hồi.",
+      "completing": "Đang hoàn thành…",
+      "cancelling": "Đang hủy…",
+      "completeAction": "Hoàn thành đánh giá",
+      "cancelAction": "Hủy đánh giá"
+    }
   },
   "feedback": {
     "title": "Phản hồi",
-    "description": "Ý kiến đồng nghiệp về một đánh giá, chỉ người viết đánh giá và HR nhìn thấy."
+    "description": "Ý kiến đồng nghiệp về một đánh giá, chỉ người viết đánh giá và HR nhìn thấy.",
+    "worklist": {
+      "title": "Yêu cầu phản hồi",
+      "description": "Các đánh giá bạn được mời góp ý. Gửi một bình luận khi đánh giá còn bản nháp — không thể sửa sau đó.",
+      "swipe": "Vuốt ngang để xem đầy đủ các trường.",
+      "label": "Yêu cầu phản hồi",
+      "containerLabel": "Yêu cầu phản hồi. Cuộn ngang để đọc tất cả các cột.",
+      "columns": {
+        "employee": "Nhân viên",
+        "status": "Trạng thái",
+        "actions": "Thao tác"
+      },
+      "submitAria": "Gửi phản hồi cho đánh giá của {name}",
+      "empty": "Không còn yêu cầu phản hồi ở đây.",
+      "paginationLabel": "yêu cầu phản hồi"
+    },
+    "form": {
+      "title": "Gửi phản hồi",
+      "description": "Bình luận của bạn về đánh giá của {name}. Người đánh giá và HR đọc được; nhân viên không bao giờ thấy.",
+      "comment": "Bình luận",
+      "commentHint": "Nhạy cảm: chỉ người đánh giá và HR thấy. Mỗi đánh giá chỉ gửi một lần, không thể sửa sau khi gửi.",
+      "commentPlaceholder": "Người đánh giá nên biết điều gì về công việc của người này?",
+      "submit": "Gửi phản hồi",
+      "submitting": "Đang gửi…",
+      "denied": "Bạn không còn được mời góp ý cho đánh giá này nên không thể gửi phản hồi."
+    },
+    "panel": {
+      "title": "Phản hồi đồng nghiệp",
+      "description": "Bình luận từ những đồng nghiệp được mời cho đánh giá này.",
+      "loading": "Đang tải phản hồi…",
+      "loadError": "Không thể tải phản hồi.",
+      "denied": "Phản hồi chỉ người đánh giá và HR nhìn thấy.",
+      "empty": "Chưa có đồng nghiệp nào gửi phản hồi cho đánh giá này."
+    }
   },
   "skills": {
     "title": "Kỹ năng",
@@ -143,15 +255,102 @@
     "loadError": "Không thể tải kỹ năng.",
     "denied": "Bạn không có quyền xem danh mục kỹ năng.",
     "empty": "Danh mục chưa có kỹ năng nào.",
+    "emptyFiltered": "Không có kỹ năng nào khớp tìm kiếm. Hãy xóa tìm kiếm hoặc hiện kỹ năng đã lưu trữ.",
     "swipe": "Vuốt ngang để xem đầy đủ các trường của kỹ năng.",
     "label": "Kỹ năng",
     "containerLabel": "Kỹ năng. Cuộn ngang để đọc tất cả các cột.",
     "columns": {
       "name": "Kỹ năng",
       "description": "Mô tả",
-      "status": "Trạng thái"
+      "status": "Trạng thái",
+      "actions": "Thao tác"
     },
-    "paginationLabel": "kỹ năng"
+    "editAria": "Đổi tên {name}",
+    "archiveAria": "Lưu trữ {name}",
+    "restoreAria": "Khôi phục {name}",
+    "paginationLabel": "kỹ năng",
+    "filters": {
+      "searchAria": "Tìm trong danh mục kỹ năng",
+      "searchPlaceholder": "Tìm kỹ năng",
+      "showArchived": "Hiện đã lưu trữ"
+    },
+    "levels": {
+      "option": "{level} / 5"
+    },
+    "form": {
+      "createTitle": "Kỹ năng mới",
+      "editTitle": "Đổi tên kỹ năng",
+      "createDescription": "Thêm kỹ năng vào danh mục của tổ chức. Sau đó có thể ghi nhận mức thành thạo từ 1 đến 5 cho nhân viên.",
+      "editDescription": "Đổi tên hoặc mô tả kỹ năng. Tên vẫn duy nhất trên cả dòng đang dùng và đã lưu trữ.",
+      "name": "Kỹ năng",
+      "nameHint": "Tối đa 100 ký tự. Tên đã lưu trữ vẫn được giữ chỗ.",
+      "namePlaceholder": "Ứng phó sự cố",
+      "description": "Mô tả (không bắt buộc)",
+      "descriptionHint": "Nhạy cảm: mô tả danh mục hiển thị cho mọi nhân viên, không bao giờ xuất hiện trong sự kiện.",
+      "descriptionPlaceholder": "Kỹ năng này bao gồm những gì trong thực tế.",
+      "create": "Tạo kỹ năng",
+      "save": "Lưu thay đổi",
+      "creating": "Đang tạo…",
+      "saving": "Đang lưu…"
+    },
+    "state": {
+      "archiveTitle": "Lưu trữ kỹ năng",
+      "archiveDescription": "Lưu trữ “{name}”? Kỹ năng rời danh mục và bộ chọn, nhưng nhân viên đã có vẫn giữ và có thể cập nhật mức thành thạo.",
+      "restoreTitle": "Khôi phục kỹ năng",
+      "restoreDescription": "Khôi phục “{name}” vào danh mục và bộ chọn gán kỹ năng?",
+      "archiving": "Đang lưu trữ…",
+      "restoring": "Đang khôi phục…",
+      "archiveAction": "Lưu trữ kỹ năng",
+      "restoreAction": "Khôi phục kỹ năng"
+    },
+    "employee": {
+      "title": "Kỹ năng nhân viên",
+      "description": "Kỹ năng hiện có và mức thành thạo của một người, ghi nhận từ danh mục.",
+      "subjectAria": "Chọn nhân viên",
+      "selectEmployee": "Chọn nhân viên",
+      "loading": "Đang tải kỹ năng nhân viên…",
+      "loadError": "Không thể tải kỹ năng của nhân viên này.",
+      "empty": "Chưa ghi nhận kỹ năng nào cho {name}.",
+      "chooseEmployee": "Chọn một nhân viên để xem kỹ năng.",
+      "noCatalog": "Hãy thêm một kỹ năng đang dùng vào danh mục trước — không thể gán mới kỹ năng đã lưu trữ.",
+      "swipe": "Vuốt ngang để xem đầy đủ các trường kỹ năng.",
+      "label": "Kỹ năng nhân viên",
+      "containerLabel": "Kỹ năng nhân viên. Cuộn ngang để đọc tất cả các cột.",
+      "columns": {
+        "skill": "Kỹ năng",
+        "proficiency": "Mức thành thạo",
+        "note": "Ghi chú",
+        "actions": "Thao tác"
+      },
+      "proficiencyValue": "Mức thành thạo {level} trên 5",
+      "editAria": "Cập nhật {name}",
+      "removeAria": "Gỡ {name}"
+    },
+    "employeeForm": {
+      "createTitle": "Thêm kỹ năng",
+      "editTitle": "Cập nhật kỹ năng",
+      "createDescription": "Ghi nhận một kỹ năng cho {name} từ danh mục đang dùng.",
+      "editDescription": "Cập nhật mức thành thạo và ghi chú của {name}. Kỹ năng đã lưu trữ vẫn sửa được ở đây.",
+      "skill": "Kỹ năng",
+      "skillHint": "Chỉ có thể gán mới kỹ năng đang dùng trong danh mục.",
+      "selectSkill": "Chọn kỹ năng",
+      "proficiency": "Mức thành thạo",
+      "proficiencyHint": "Từ 1 đến 5, từ đang học đến chuyên gia.",
+      "selectProficiency": "Chọn mức",
+      "note": "Ghi chú (không bắt buộc)",
+      "noteHint": "Nhạy cảm: nhân viên, quản lý của họ và HR nhìn thấy, không bao giờ xuất hiện trong sự kiện.",
+      "notePlaceholder": "Kỹ năng này thể hiện ở đâu trong công việc của họ.",
+      "add": "Thêm kỹ năng",
+      "save": "Lưu thay đổi",
+      "adding": "Đang thêm…",
+      "saving": "Đang lưu…"
+    },
+    "employeeRemove": {
+      "title": "Gỡ kỹ năng",
+      "description": "Gỡ {skill} khỏi {name}? Không thể hoàn tác; sau này có thể gán lại kỹ năng cho nhân viên.",
+      "removing": "Đang gỡ…",
+      "removeAction": "Gỡ kỹ năng"
+    }
   },
   "errors": {
     "goalNotFound": "Mục tiêu này không còn khả dụng.",
@@ -163,7 +362,7 @@
     "reviewNotDraft": "Đánh giá này không còn là bản nháp. Hãy làm mới danh sách và thử lại.",
     "feedbackProviderInvalid": "Hãy chọn nhân viên đang làm việc, không phải người đánh giá hoặc người được đánh giá.",
     "feedbackAlreadySubmitted": "Bạn đã gửi phản hồi cho đánh giá này.",
-    "feedbackAccessDenied": "Phản hồi chỉ người viết đánh giá và HR nhìn thấy.",
+    "feedbackAccessDenied": "Phản hồi chỉ người đánh giá và HR nhìn thấy.",
     "skillNameTaken": "Đã có kỹ năng trùng tên, kể cả kỹ năng đã lưu trữ.",
     "skillArchived": "Kỹ năng này đã lưu trữ và không thể gán cho người mới.",
     "employeeSkillExists": "Nhân viên này đã có kỹ năng đó. Hãy cập nhật dòng hiện có.",
@@ -181,7 +380,19 @@
     "goalUpdated": "Đã cập nhật mục tiêu",
     "goalActivated": "Đã kích hoạt mục tiêu",
     "goalCompleted": "Đã hoàn thành mục tiêu",
-    "goalCancelled": "Đã hủy mục tiêu"
+    "goalCancelled": "Đã hủy mục tiêu",
+    "reviewCreated": "Đã tạo đánh giá",
+    "reviewUpdated": "Đã cập nhật đánh giá",
+    "reviewCompleted": "Đã hoàn thành đánh giá",
+    "reviewCancelled": "Đã hủy đánh giá",
+    "feedbackSubmitted": "Đã gửi phản hồi",
+    "skillCreated": "Đã tạo kỹ năng",
+    "skillUpdated": "Đã cập nhật kỹ năng",
+    "skillArchived": "Đã lưu trữ kỹ năng",
+    "skillRestored": "Đã khôi phục kỹ năng",
+    "employeeSkillAdded": "Đã thêm kỹ năng cho nhân viên",
+    "employeeSkillUpdated": "Đã cập nhật kỹ năng nhân viên",
+    "employeeSkillRemoved": "Đã gỡ kỹ năng nhân viên"
   },
   "validation": {
     "titleRequired": "Nhập tên mục tiêu",
@@ -191,7 +402,20 @@
     "dueDateInvalid": "Chọn ngày hợp lệ",
     "progressRequired": "Nhập tiến độ từ 0 đến 100",
     "progressInt": "Tiến độ phải là số nguyên",
-    "progressRange": "Tiến độ phải từ 0 đến 100"
+    "progressRange": "Tiến độ phải từ 0 đến 100",
+    "periodTooLong": "Kỳ tối đa 50 ký tự",
+    "ratingInvalid": "Chọn điểm từ 1 đến 5",
+    "strengthsTooLong": "Điểm mạnh tối đa 2.000 ký tự",
+    "improvementsTooLong": "Cần cải thiện tối đa 2.000 ký tự",
+    "maxProviders": "Chỉ được mời tối đa 10 người",
+    "commentRequired": "Nhập bình luận",
+    "commentTooLong": "Bình luận tối đa 2.000 ký tự",
+    "skillNameRequired": "Nhập tên kỹ năng",
+    "skillNameTooLong": "Tên kỹ năng tối đa 100 ký tự",
+    "skillDescriptionTooLong": "Mô tả kỹ năng tối đa 500 ký tự",
+    "skillRequired": "Chọn một kỹ năng",
+    "proficiencyInvalid": "Chọn mức thành thạo từ 1 đến 5",
+    "noteTooLong": "Ghi chú tối đa 500 ký tự"
   },
   "fallbacks": {
     "employee": "Nhân viên …{id}"

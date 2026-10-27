@@ -4,7 +4,9 @@
  * The generated client keys queries by URL + params, so invalidating with the
  * parameterless base key refreshes every variation — a status filter, a
  * different employee and the subject's own list all settle together after a
- * goal transition.
+ * review transition. Employee-skill rows are keyed by employee id, so catalog
+ * renames invalidate the whole `/employees` prefix while a single row change
+ * invalidates only that employee.
  */
 
 import type { QueryClient } from "@tanstack/react-query";
@@ -38,6 +40,22 @@ export function invalidateEmployeeSkills(
 ): Promise<void> {
   return queryClient.invalidateQueries({
     queryKey: [...getListEmployeeSkillsQueryKey(employeeId)],
+  });
+}
+
+/** A catalog rename shows through every employee-skill row (`skill_name`). */
+export function invalidateAllEmployeeSkills(queryClient: QueryClient): Promise<void> {
+  // The generated employee-skill key is one joined URL string, so a segmented
+  // array prefix cannot match it; predicate on the URL instead.
+  return queryClient.invalidateQueries({
+    predicate: (query) => {
+      const key = query.queryKey[0];
+      return (
+        typeof key === "string" &&
+        key.startsWith("/api/v1/performance/employees/") &&
+        key.endsWith("/skills")
+      );
+    },
   });
 }
 

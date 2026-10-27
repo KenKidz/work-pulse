@@ -30,10 +30,18 @@
   },
   "actions": {
     "newGoal": "New goal",
+    "newReview": "New review",
+    "newSkill": "New skill",
+    "addSkill": "Add skill",
     "edit": "Edit",
+    "view": "View",
     "activate": "Activate",
     "complete": "Complete",
     "cancel": "Cancel",
+    "archive": "Archive",
+    "restore": "Restore",
+    "remove": "Remove",
+    "giveFeedback": "Give feedback",
     "retry": "Retry",
     "backToFirstPage": "Back to first page"
   },
@@ -112,12 +120,14 @@
   },
   "reviews": {
     "title": "Reviews",
+    "myTitle": "My reviews",
     "description": "Completed reviews and the ones still in progress.",
     "myDescription": "Your completed reviews. Drafts stay with your manager until they are finished.",
     "loading": "Loading reviews…",
     "loadError": "Could not load reviews.",
     "denied": "You don't have permission to view these reviews.",
     "empty": "No reviews yet. A review appears here after a manager starts one.",
+    "emptyFiltered": "No reviews match these filters. Clear a filter or choose another status.",
     "emptyMine": "No completed reviews yet. Your manager's drafts stay hidden until they finish.",
     "swipe": "Swipe sideways to see every review field.",
     "label": "Reviews",
@@ -127,14 +137,116 @@
       "period": "Period",
       "rating": "Rating",
       "status": "Status",
-      "completed": "Completed"
+      "completed": "Completed",
+      "actions": "Actions"
     },
     "ratingValue": "Rating {rating} out of 5",
-    "paginationLabel": "reviews"
+    "viewAria": "View the review for {name}",
+    "editAria": "Edit the review for {name}",
+    "completeAria": "Complete the review for {name}",
+    "cancelAria": "Cancel the review for {name}",
+    "paginationLabel": "reviews",
+    "filters": {
+      "statusAria": "Filter by status",
+      "anyStatus": "All statuses",
+      "employeeAria": "Filter by employee",
+      "allEmployees": "All employees"
+    },
+    "ratings": {
+      "option": "{rating} / 5"
+    },
+    "detail": {
+      "title": "Review details",
+      "description": "Review for {name} · {period}",
+      "descriptionNoPeriod": "Review for {name}",
+      "draftNotice": "This review is a draft — the employee sees it only after it is completed.",
+      "rating": "Rating",
+      "ratingValue": "{rating} / 5",
+      "noRating": "No rating",
+      "completed": "Completed",
+      "notCompleted": "Not completed",
+      "strengths": "Strengths",
+      "improvements": "Improvements",
+      "notRecorded": "Not recorded"
+    },
+    "form": {
+      "createTitle": "New review",
+      "editTitle": "Edit review",
+      "createDescription": "Start a review for a team member, nominate peers for input, then add the rating and complete it when it is ready.",
+      "editDescription": "Update the draft while it stays private to you and HR. Completing publishes it to the employee and is final.",
+      "employee": "Employee",
+      "employeeHint": "The person being reviewed. It can't change after creation, and you can never review yourself.",
+      "selectEmployee": "Select an employee",
+      "editingFor": "Reviewing {name}",
+      "period": "Period (optional)",
+      "periodHint": "A short label such as 2026-H1. It appears on the employee's completed review.",
+      "periodPlaceholder": "2026-H1",
+      "rating": "Rating",
+      "ratingHint": "1 to 5. A rating is required before the review can be completed.",
+      "chooseRating": "Choose a rating",
+      "noRating": "Not rated yet",
+      "strengths": "Strengths (optional)",
+      "strengthsHint": "Sensitive: the employee sees this on the completed review, never in events.",
+      "strengthsPlaceholder": "What the employee did well this period.",
+      "improvements": "Improvements (optional)",
+      "improvementsHint": "Sensitive: the employee sees this on the completed review, never in events.",
+      "improvementsPlaceholder": "Where to focus next and how.",
+      "providers": "Peer feedback from",
+      "providersHint": "Nominate up to 10 active employees other than the employee and yourself. They file one comment each while the review is a draft.",
+      "providersEmpty": "No eligible peers are in your directory.",
+      "providersCount": "{selected} of {max} selected",
+      "create": "Create review",
+      "save": "Save changes",
+      "creating": "Creating…",
+      "saving": "Saving…"
+    },
+    "state": {
+      "completeTitle": "Complete review",
+      "completeDescription": "Complete the review for {name}? A rating is required, and a completed review can't be edited.",
+      "cancelTitle": "Cancel review",
+      "cancelDescription": "Cancel the review for {name}? Draft feedback stays readable to you and HR, but no further feedback is accepted.",
+      "completing": "Completing…",
+      "cancelling": "Cancelling…",
+      "completeAction": "Complete review",
+      "cancelAction": "Cancel review"
+    }
   },
   "feedback": {
     "title": "Feedback",
-    "description": "Peer input on a review, visible to the review author and HR."
+    "description": "Peer input on a review, visible to the review author and HR.",
+    "worklist": {
+      "title": "Feedback requested",
+      "description": "Reviews where you were nominated as a peer. Submit one comment while the review is still a draft — it can't be edited afterward.",
+      "swipe": "Swipe sideways to see every field.",
+      "label": "Feedback requested",
+      "containerLabel": "Feedback requested. Scroll horizontally to read all columns.",
+      "columns": {
+        "employee": "Employee",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "submitAria": "Give feedback on the review for {name}",
+      "empty": "No feedback requests left here.",
+      "paginationLabel": "feedback requests"
+    },
+    "form": {
+      "title": "Give feedback",
+      "description": "Your comment on the review for {name}. The review author and HR can read it; the employee never does.",
+      "comment": "Comment",
+      "commentHint": "Sensitive: visible to the review author and HR only. One submission per review, final once sent.",
+      "commentPlaceholder": "What should the reviewer know about this person's work?",
+      "submit": "Submit feedback",
+      "submitting": "Submitting…",
+      "denied": "You're no longer nominated for this review, so it can't accept your feedback."
+    },
+    "panel": {
+      "title": "Peer feedback",
+      "description": "Comments from the peers nominated for this review.",
+      "loading": "Loading feedback…",
+      "loadError": "Could not load feedback.",
+      "denied": "Feedback is visible to the review author and HR only.",
+      "empty": "No peer has filed feedback on this review yet."
+    }
   },
   "skills": {
     "title": "Skills",
@@ -143,15 +255,102 @@
     "loadError": "Could not load skills.",
     "denied": "You don't have permission to view the skill catalog.",
     "empty": "No skills in the catalog yet.",
+    "emptyFiltered": "No skills match this search. Clear the search or show archived skills.",
     "swipe": "Swipe sideways to see every skill field.",
     "label": "Skills",
     "containerLabel": "Skills. Scroll horizontally to read all columns.",
     "columns": {
       "name": "Skill",
       "description": "Description",
-      "status": "Status"
+      "status": "Status",
+      "actions": "Actions"
     },
-    "paginationLabel": "skills"
+    "editAria": "Rename {name}",
+    "archiveAria": "Archive {name}",
+    "restoreAria": "Restore {name}",
+    "paginationLabel": "skills",
+    "filters": {
+      "searchAria": "Search the skill catalog",
+      "searchPlaceholder": "Search skills",
+      "showArchived": "Show archived"
+    },
+    "levels": {
+      "option": "{level} / 5"
+    },
+    "form": {
+      "createTitle": "New skill",
+      "editTitle": "Rename skill",
+      "createDescription": "Add a skill to the tenant catalog. Employees can then be recorded at a proficiency from 1 to 5.",
+      "editDescription": "Rename or re-describe the skill. The name stays unique across active and archived rows.",
+      "name": "Skill",
+      "nameHint": "Up to 100 characters. Archived names stay reserved.",
+      "namePlaceholder": "Incident response",
+      "description": "Description (optional)",
+      "descriptionHint": "Sensitive: the catalog description is visible to every employee, never included in events.",
+      "descriptionPlaceholder": "What this skill covers in practice.",
+      "create": "Create skill",
+      "save": "Save changes",
+      "creating": "Creating…",
+      "saving": "Saving…"
+    },
+    "state": {
+      "archiveTitle": "Archive skill",
+      "archiveDescription": "Archive “{name}”? It leaves the catalog and pickers, but employees who already have it keep it and can still update their level.",
+      "restoreTitle": "Restore skill",
+      "restoreDescription": "Restore “{name}” to the catalog and the attach picker?",
+      "archiving": "Archiving…",
+      "restoring": "Restoring…",
+      "archiveAction": "Archive skill",
+      "restoreAction": "Restore skill"
+    },
+    "employee": {
+      "title": "Employee skills",
+      "description": "A person's current skills and proficiency, recorded from the catalog.",
+      "subjectAria": "Choose an employee",
+      "selectEmployee": "Select an employee",
+      "loading": "Loading employee skills…",
+      "loadError": "Could not load these employee skills.",
+      "empty": "No skills are recorded for {name} yet.",
+      "chooseEmployee": "Choose an employee to see their skills.",
+      "noCatalog": "Add an active catalog skill first — archived skills can't be newly assigned.",
+      "swipe": "Swipe sideways to see every skill field.",
+      "label": "Employee skills",
+      "containerLabel": "Employee skills. Scroll horizontally to read all columns.",
+      "columns": {
+        "skill": "Skill",
+        "proficiency": "Proficiency",
+        "note": "Note",
+        "actions": "Actions"
+      },
+      "proficiencyValue": "Proficiency {level} out of 5",
+      "editAria": "Update {name}",
+      "removeAria": "Remove {name}"
+    },
+    "employeeForm": {
+      "createTitle": "Add a skill",
+      "editTitle": "Update skill",
+      "createDescription": "Record a skill for {name} from the active catalog.",
+      "editDescription": "Update {name}'s proficiency and note. Archived skills stay editable here.",
+      "skill": "Skill",
+      "skillHint": "Only active catalog skills can be newly attached.",
+      "selectSkill": "Select a skill",
+      "proficiency": "Proficiency",
+      "proficiencyHint": "1 to 5, from learning to expert.",
+      "selectProficiency": "Choose a level",
+      "note": "Note (optional)",
+      "noteHint": "Sensitive: visible to the employee, their manager and HR, never included in events.",
+      "notePlaceholder": "Where this skill shows up in their work.",
+      "add": "Add skill",
+      "save": "Save changes",
+      "adding": "Adding…",
+      "saving": "Saving…"
+    },
+    "employeeRemove": {
+      "title": "Remove skill",
+      "description": "Remove {skill} from {name}? This can't be undone; the employee can be given the skill again later.",
+      "removing": "Removing…",
+      "removeAction": "Remove skill"
+    }
   },
   "errors": {
     "goalNotFound": "This goal is no longer available.",
@@ -181,7 +380,19 @@
     "goalUpdated": "Goal updated",
     "goalActivated": "Goal activated",
     "goalCompleted": "Goal completed",
-    "goalCancelled": "Goal cancelled"
+    "goalCancelled": "Goal cancelled",
+    "reviewCreated": "Review created",
+    "reviewUpdated": "Review updated",
+    "reviewCompleted": "Review completed",
+    "reviewCancelled": "Review cancelled",
+    "feedbackSubmitted": "Feedback submitted",
+    "skillCreated": "Skill created",
+    "skillUpdated": "Skill updated",
+    "skillArchived": "Skill archived",
+    "skillRestored": "Skill restored",
+    "employeeSkillAdded": "Employee skill added",
+    "employeeSkillUpdated": "Employee skill updated",
+    "employeeSkillRemoved": "Employee skill removed"
   },
   "validation": {
     "titleRequired": "Enter a goal title",
@@ -191,7 +402,20 @@
     "dueDateInvalid": "Choose a valid date",
     "progressRequired": "Enter progress from 0 to 100",
     "progressInt": "Progress must be a whole number",
-    "progressRange": "Progress must be between 0 and 100"
+    "progressRange": "Progress must be between 0 and 100",
+    "periodTooLong": "Period must be at most 50 characters",
+    "ratingInvalid": "Choose a rating from 1 to 5",
+    "strengthsTooLong": "Strengths must be at most 2,000 characters",
+    "improvementsTooLong": "Improvements must be at most 2,000 characters",
+    "maxProviders": "Nominate at most 10 people",
+    "commentRequired": "Enter a comment",
+    "commentTooLong": "Comment must be at most 2,000 characters",
+    "skillNameRequired": "Enter a skill name",
+    "skillNameTooLong": "Skill name must be at most 100 characters",
+    "skillDescriptionTooLong": "Skill description must be at most 500 characters",
+    "skillRequired": "Choose a skill",
+    "proficiencyInvalid": "Choose a proficiency from 1 to 5",
+    "noteTooLong": "Note must be at most 500 characters"
   },
   "fallbacks": {
     "employee": "Employee …{id}"
