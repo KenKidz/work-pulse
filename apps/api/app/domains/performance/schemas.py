@@ -181,6 +181,12 @@ class ReviewFeedback(BaseModel):
     created_at: datetime
 
 
+class ReviewFeedbackList(BaseModel):
+    """The pinned `GET …/reviews/{id}/feedback` envelope."""
+
+    items: list[ReviewFeedback]
+
+
 class Skill(BaseModel):
     """One catalog skill (pinned response shape)."""
 

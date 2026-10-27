@@ -179,3 +179,18 @@ class PerformanceDeniedError(WorkPulseError):
 
     def __init__(self) -> None:
         super().__init__("Not allowed to access performance")
+
+
+class PerformanceValidationError(WorkPulseError):
+    """A cross-field query rule the schema cannot express (422).
+
+    Pinned for `feedback_for_me=true` combined with a `status` other than
+    `draft`; the house validation shape (`{"error": {"code":
+    "validation_error"}}`) and a message that never echoes submitted values.
+    """
+
+    status_code = 422
+    code = "validation_error"
+
+    def __init__(self, message: str = "Request validation failed") -> None:
+        super().__init__(message)

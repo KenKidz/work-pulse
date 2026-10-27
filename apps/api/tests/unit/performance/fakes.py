@@ -32,6 +32,7 @@ from app.domains.performance.repository import (
     EmployeeFacts,
     GoalFilters,
     ReviewFilters,
+    ReviewRecord,
     SkillArchiveResult,
     SkillFilters,
 )
@@ -66,6 +67,8 @@ class FakePerformanceRepo:
         self.employee_skills: dict[tuple[UUID, UUID, UUID], EmployeeSkill] = {}
         # (tenant, employee) → facts — shared with `FakeEmployeeScope`.
         self.employees: dict[tuple[UUID, UUID], EmployeeFacts] = {}
+        # (tenant, user) → employee link, mirroring `users.employee_id`.
+        self.user_employees: dict[tuple[UUID, UUID], UUID | None] = {}
         self.calls: list[str] = []
         self.lose_next_transition = False
         self._created = 0
@@ -87,6 +90,19 @@ class FakePerformanceRepo:
         self, tenant_id: UUID, employee_id: UUID
     ) -> EmployeeFacts | None:
         return self.employees.get((tenant_id, employee_id))
+
+    async def employee_facts_many(
+        self, tenant_id: UUID, employee_ids: Sequence[UUID]
+    ) -> dict[UUID, EmployeeFacts]:
+        facts: dict[UUID, EmployeeFacts] = {}
+        for employee_id in dict.fromkeys(employee_ids):
+            row = self.employees.get((tenant_id, employee_id))
+            if row is not None:
+                facts[employee_id] = row
+        return facts
+
+    async def user_employee_id(self, tenant_id: UUID, user_id: UUID) -> UUID | None:
+        return self.user_employees.get((tenant_id, user_id))
 
     # --- goals ---------------------------------------------------------------
 
@@ -257,8 +273,14 @@ class FakePerformanceRepo:
     async def get_review(self, tenant_id: UUID, review_id: UUID) -> Review | None:
         return self.reviews.get((tenant_id, review_id))
 
-    async def review_author_id(self, tenant_id: UUID, review_id: UUID) -> UUID | None:
-        return self.review_authors.get((tenant_id, review_id))
+    async def get_review_with_author(
+        self, tenant_id: UUID, review_id: UUID
+    ) -> ReviewRecord | None:
+        review = self.reviews.get((tenant_id, review_id))
+        author_id = self.review_authors.get((tenant_id, review_id))
+        if review is None or author_id is None:
+            return None
+        return ReviewRecord(review=review, author_id=author_id)
 
     async def list_reviews(
         self, tenant_id: UUID, filters: ReviewFilters, page: PageParams
@@ -278,17 +300,28 @@ class FakePerformanceRepo:
                 grant = False
                 if filters.visible_employee_ids is not None:
                     grant = row.employee_id in set(filters.visible_employee_ids)
+                if filters.completed_only_employee_ids is not None:
+                    grant = grant or (
+                        row.employee_id in set(filters.completed_only_employee_ids)
+                        and row.status is ReviewStatus.COMPLETED
+                    )
                 if filters.author_id is not None:
                     author_id = self.review_authors.get((row_tenant, row.id))
                     grant = grant or author_id == filters.author_id
                 if (
                     filters.visible_employee_ids is not None
+                    or filters.completed_only_employee_ids is not None
                     or filters.author_id is not None
                 ) and not grant:
                     continue
             if (
                 filters.employee_id is not None
                 and row.employee_id != filters.employee_id
+            ):
+                continue
+            if filters.hidden_non_completed_employee_ids and (
+                row.employee_id in set(filters.hidden_non_completed_employee_ids)
+                and row.status is not ReviewStatus.COMPLETED
             ):
                 continue
             if filters.status is not None and row.status != filters.status:

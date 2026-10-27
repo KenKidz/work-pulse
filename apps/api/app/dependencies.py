@@ -42,7 +42,7 @@ from app.domains.payroll.repository import (
     OvertimeHoursPort,
 )
 from app.domains.payroll.service import PayrollService
-from app.domains.performance.service import GoalService
+from app.domains.performance.service import GoalService, ReviewService
 from app.domains.realtime.service import RealtimeService
 from app.domains.recruitment.service import RecruitmentService
 from app.domains.reports.exceptions import ReportsUnavailableError
@@ -215,6 +215,21 @@ def get_goal_service(session: SessionDep) -> GoalService:
     so a manager's goal scope cannot drift from their inbox scope.
     """
     return GoalService(
+        repo=PostgresPerformanceRepository(session),
+        scope=PostgresEmployeeScope(session),
+        audit=PostgresAuditWriter(session),
+        outbox=PostgresEventOutbox(session, clock=_utc_now),
+    )
+
+
+def get_review_service(session: SessionDep) -> ReviewService:
+    """Performance reviews and feedback (T6).
+
+    Same transaction discipline as goals: the conditional state write, its audit
+    entry and its event envelope share the request session (ADR 0012). Review
+    visibility reuses the shared self + direct-reports `PostgresEmployeeScope`.
+    """
+    return ReviewService(
         repo=PostgresPerformanceRepository(session),
         scope=PostgresEmployeeScope(session),
         audit=PostgresAuditWriter(session),
@@ -407,6 +422,7 @@ AttendanceServiceDep = Annotated[AttendanceService, Depends(get_attendance_servi
 LeaveServiceDep = Annotated[LeaveService, Depends(get_leave_service)]
 OvertimeServiceDep = Annotated[OvertimeService, Depends(get_overtime_service)]
 GoalServiceDep = Annotated[GoalService, Depends(get_goal_service)]
+ReviewServiceDep = Annotated[ReviewService, Depends(get_review_service)]
 RecruitmentServiceDep = Annotated[RecruitmentService, Depends(get_recruitment_service)]
 PayrollServiceDep = Annotated[PayrollService, Depends(get_payroll_service)]
 NotificationInboxServiceDep = Annotated[

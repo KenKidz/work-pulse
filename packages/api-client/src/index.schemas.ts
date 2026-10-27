@@ -1329,6 +1329,95 @@ export interface ResetPasswordRequest {
 }
 
 /**
+ * Pinned review lifecycle (`draft → completed | cancelled`).
+ */
+export type ReviewStatus = (typeof ReviewStatus)[keyof typeof ReviewStatus];
+
+export const ReviewStatus = {
+  draft: "draft",
+  completed: "completed",
+  cancelled: "cancelled",
+} as const;
+
+/**
+ * One review and its state (pinned response shape).
+ *
+ * The provider shell leaves every evaluative field `None`; the subject-facing
+ * serialization omits `feedback_provider_ids` (T6).
+ */
+export interface Review {
+  id: string;
+  employee_id: string;
+  period?: string | null;
+  rating?: number | null;
+  strengths?: string | null;
+  improvements?: string | null;
+  status: ReviewStatus;
+  feedback_provider_ids?: string[] | null;
+  created_at: string;
+  updated_at: string;
+  completed_at?: string | null;
+}
+
+/**
+ * Start a draft review for an active employee other than the actor.
+ */
+export interface ReviewCreate {
+  employee_id: string;
+  period?: string | null;
+  /** @maxItems 10 */
+  feedback_provider_ids?: string[];
+}
+
+/**
+ * One immutable feedback comment (pinned response shape).
+ */
+export interface ReviewFeedback {
+  id: string;
+  review_id: string;
+  author_id: string;
+  comment: string;
+  created_at: string;
+}
+
+/**
+ * A nominated provider's one feedback comment on a draft review.
+ */
+export interface ReviewFeedbackCreate {
+  /**
+   * @minLength 1
+   * @maxLength 2000
+   */
+  comment: string;
+}
+
+/**
+ * The pinned `GET …/reviews/{id}/feedback` envelope.
+ */
+export interface ReviewFeedbackList {
+  items: ReviewFeedback[];
+}
+
+export interface ReviewListPage {
+  items: Review[];
+  page: Page;
+}
+
+/**
+ * Edit a draft review; absent fields are unchanged.
+ *
+ * `feedback_provider_ids` may be cleared with `[]` but not `null` (omitting it
+ * means unchanged).
+ */
+export interface ReviewUpdate {
+  period?: string | null;
+  rating?: number | null;
+  strengths?: string | null;
+  improvements?: string | null;
+  feedback_provider_ids?: string[] | null;
+}
+
+/**
  * One append-only salary record (amount and currency are PII).
  */
 export interface Salary {
@@ -1534,6 +1623,14 @@ export type ListOvertimeRequestsParams = {
 export type ListGoalsParams = {
   employee_id?: string | null;
   status?: GoalStatus | null;
+  page?: number;
+  page_size?: number;
+};
+
+export type ListReviewsParams = {
+  employee_id?: string | null;
+  status?: ReviewStatus | null;
+  feedback_for_me?: boolean;
   page?: number;
   page_size?: number;
 };

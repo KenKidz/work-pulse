@@ -21,10 +21,14 @@ Provider churn and feedback submission lock the review row (`FOR UPDATE`) so a
 
 `GoalFilters.visible_employee_ids` / `ReviewFilters.visible_employee_ids` carry
 the *effective* subject scope: `None` means "no subject scoping" (HR/Admin/Super
-Admin), an empty sequence matches nothing. `ReviewFilters.author_id` adds the
-caller's own authored reviews to the union (an author sees their reviews in
-every state); `ReviewFilters.feedback_provider_id` is the nominated-provider
-worklist and restricts the list to that provider's draft reviews.
+Admin), an empty sequence matches nothing. `ReviewFilters.completed_only_employee_ids`
+adds subjects visible only once completed (the manager's own rows, draft
+invisibility); `ReviewFilters.hidden_non_completed_employee_ids` excludes the
+caller's own non-completed rows for every role (the management-subject case);
+`ReviewFilters.author_id` adds the caller's own authored reviews to the union (an
+author sees their reviews in every state); `ReviewFilters.feedback_provider_id`
+is the nominated-provider worklist and restricts the list to that provider's
+draft reviews.
 """
 
 from collections.abc import Sequence
@@ -54,6 +58,19 @@ class EmployeeFacts:
     id: UUID
     active: bool
     manager_id: UUID | None
+
+
+@dataclass(frozen=True, slots=True)
+class ReviewRecord:
+    """A review plus the author **user** id (ADR 0010).
+
+    `Review`'s pinned wire shape deliberately carries no `author_id`; the
+    service needs it for author-only mutations and feedback visibility. Both
+    come from one row read, so callers do not pay a second lookup.
+    """
+
+    review: Review
+    author_id: UUID
 
 
 @dataclass(frozen=True, slots=True)
@@ -93,11 +110,23 @@ class ReviewFilters(BaseModel):
     `feedback_provider_id` is the peer worklist: only reviews the employee is
     nominated on and only while they are `draft` (the service rejects a
     conflicting `status` before calling).
+
+    `completed_only_employee_ids` carries subjects whose reviews the caller may
+    see only once `completed` (the manager's own subject rows): draft reviews
+    about a manager stay invisible to them while direct reports stay visible in
+    every state.
+
+    `hidden_non_completed_employee_ids` is the universal draft-invisibility
+    exclusion: rows about those subjects are never returned unless `completed`.
+    It covers management-role callers, whose list is otherwise unscoped, so a
+    subject who happens to be HR/Admin cannot read their own draft.
     """
 
     employee_id: UUID | None = None
     status: ReviewStatus | None = None
     visible_employee_ids: Sequence[UUID] | None = None
+    completed_only_employee_ids: Sequence[UUID] | None = None
+    hidden_non_completed_employee_ids: Sequence[UUID] | None = None
     author_id: UUID | None = None
     feedback_provider_id: UUID | None = None
 
@@ -116,6 +145,21 @@ class PerformanceRepository(Protocol):
         self, tenant_id: UUID, employee_id: UUID
     ) -> EmployeeFacts | None:
         """Tenant-scoped employee facts; `None` for a foreign or unknown id."""
+        ...
+
+    async def employee_facts_many(
+        self, tenant_id: UUID, employee_ids: Sequence[UUID]
+    ) -> dict[UUID, EmployeeFacts]:
+        """Batch facts read; missing ids are simply absent from the mapping."""
+        ...
+
+    async def user_employee_id(self, tenant_id: UUID, user_id: UUID) -> UUID | None:
+        """The user's employee link in this tenant (ADR 0010), if any.
+
+        Provider eligibility excludes the review's author as well as the acting
+        user: `reviews.author_id` is a user id, so an HR/Admin editor needs this
+        resolution to keep the original author out of the nomination set.
+        """
         ...
 
     # --- goals ---------------------------------------------------------------
@@ -210,11 +254,11 @@ class PerformanceRepository(Protocol):
         """Tenant-scoped detail incl. `feedback_provider_ids`; `None` if foreign."""
         ...
 
-    async def review_author_id(self, tenant_id: UUID, review_id: UUID) -> UUID | None:
-        """The acting **user** id that authored the review (ADR 0010).
+    async def get_review_with_author(
+        self, tenant_id: UUID, review_id: UUID
+    ) -> ReviewRecord | None:
+        """Detail plus the author user id from the same row read.
 
-        `Review`'s pinned wire shape deliberately carries no `author_id`; the
-        service needs it for author-only mutations and feedback visibility.
         `None` when the review is missing or foreign.
         """
         ...

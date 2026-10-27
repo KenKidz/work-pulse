@@ -27,12 +27,13 @@ from datetime import date, datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import delete, func, or_, select, update
+from sqlalchemy import and_, delete, func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domains.employees import models as employees_orm
 from app.domains.employees.schemas import EmployeeStatus
+from app.domains.identity import models as identity_orm
 from app.domains.performance import models as orm
 from app.domains.performance.exceptions import (
     EmployeeSkillExistsError,
@@ -44,6 +45,7 @@ from app.domains.performance.repository import (
     EmployeeFacts,
     GoalFilters,
     ReviewFilters,
+    ReviewRecord,
     SkillArchiveResult,
     SkillFilters,
 )
@@ -184,6 +186,36 @@ class PostgresPerformanceRepository:
             active=EmployeeStatus(row.status) == EmployeeStatus.ACTIVE,
             manager_id=row.manager_id,
         )
+
+    async def employee_facts_many(
+        self, tenant_id: UUID, employee_ids: Sequence[UUID]
+    ) -> dict[UUID, EmployeeFacts]:
+        ids = list(dict.fromkeys(employee_ids))
+        if not ids:
+            return {}
+        stmt = select(
+            employees_orm.Employee.id,
+            employees_orm.Employee.status,
+            employees_orm.Employee.manager_id,
+        ).where(
+            employees_orm.Employee.tenant_id == tenant_id,
+            employees_orm.Employee.id.in_(ids),
+        )
+        return {
+            row.id: EmployeeFacts(
+                id=row.id,
+                active=EmployeeStatus(row.status) == EmployeeStatus.ACTIVE,
+                manager_id=row.manager_id,
+            )
+            for row in (await self._session.execute(stmt)).all()
+        }
+
+    async def user_employee_id(self, tenant_id: UUID, user_id: UUID) -> UUID | None:
+        stmt = select(identity_orm.User.employee_id).where(
+            identity_orm.User.tenant_id == tenant_id,
+            identity_orm.User.id == user_id,
+        )
+        return (await self._session.execute(stmt)).scalar_one_or_none()
 
     # --- goals ---------------------------------------------------------------
 
@@ -406,23 +438,33 @@ class PostgresPerformanceRepository:
         await self._session.refresh(row)
         return _review(row, provider_ids)
 
-    async def get_review(self, tenant_id: UUID, review_id: UUID) -> Review | None:
+    async def _review_orm_row(
+        self, tenant_id: UUID, review_id: UUID
+    ) -> orm.Review | None:
         stmt = select(orm.Review).where(
             orm.Review.tenant_id == tenant_id,
             orm.Review.id == review_id,
         )
-        row = (await self._session.execute(stmt)).scalar_one_or_none()
+        return (await self._session.execute(stmt)).scalar_one_or_none()
+
+    async def get_review(self, tenant_id: UUID, review_id: UUID) -> Review | None:
+        row = await self._review_orm_row(tenant_id, review_id)
         if row is None:
             return None
         providers = await self._provider_map(tenant_id, [review_id])
         return _review(row, providers.get(review_id, []))
 
-    async def review_author_id(self, tenant_id: UUID, review_id: UUID) -> UUID | None:
-        stmt = select(orm.Review.author_id).where(
-            orm.Review.tenant_id == tenant_id,
-            orm.Review.id == review_id,
+    async def get_review_with_author(
+        self, tenant_id: UUID, review_id: UUID
+    ) -> ReviewRecord | None:
+        row = await self._review_orm_row(tenant_id, review_id)
+        if row is None:
+            return None
+        providers = await self._provider_map(tenant_id, [review_id])
+        return ReviewRecord(
+            review=_review(row, providers.get(review_id, [])),
+            author_id=row.author_id,
         )
-        return (await self._session.execute(stmt)).scalar_one_or_none()
 
     async def list_reviews(
         self, tenant_id: UUID, filters: ReviewFilters, page: PageParams
@@ -446,16 +488,37 @@ class PostgresPerformanceRepository:
                     grants.append(
                         orm.Review.employee_id.in_(filters.visible_employee_ids)
                     )
+            if filters.completed_only_employee_ids:
+                # The manager's own rows: completed only, so a draft review
+                # about the manager never reaches their surface.
+                grants.append(
+                    and_(
+                        orm.Review.employee_id.in_(filters.completed_only_employee_ids),
+                        orm.Review.status == ReviewStatus.COMPLETED.value,
+                    )
+                )
             if filters.author_id is not None:
                 grants.append(orm.Review.author_id == filters.author_id)
             if (
                 filters.visible_employee_ids is not None
+                or filters.completed_only_employee_ids is not None
                 or filters.author_id is not None
             ):
                 if not grants:
                     return [], 0
                 conditions.append(or_(*grants))
 
+        if filters.hidden_non_completed_employee_ids:
+            # Draft/terminal invisibility for every role, including a
+            # management-role subject whose list is otherwise unscoped.
+            conditions.append(
+                ~and_(
+                    orm.Review.employee_id.in_(
+                        filters.hidden_non_completed_employee_ids
+                    ),
+                    orm.Review.status != ReviewStatus.COMPLETED.value,
+                )
+            )
         if filters.employee_id is not None:
             conditions.append(orm.Review.employee_id == filters.employee_id)
         if filters.status is not None:

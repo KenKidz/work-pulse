@@ -70,8 +70,8 @@ def ensure_can_nominate(identity: Identity, *, is_author: bool) -> None:
     """Nominate providers: HR/Admin/Super Admin, or the review's own author.
 
     The matrix grants a Manager nomination rights on **their own** reviews only;
-    `is_author` is resolved by the service from `review_author_id` before this
-    guard runs. Employee and Finance never author reviews and are always
+    `is_author` is resolved by the service from the review's author record
+    before this guard runs. Employee and Finance never author reviews and are always
     refused, even when a stale `is_author` flag says otherwise.
     """
     if identity.role in MANAGEMENT_ROLES:
