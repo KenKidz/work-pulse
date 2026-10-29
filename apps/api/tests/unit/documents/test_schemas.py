@@ -172,6 +172,19 @@ def test_title_at_the_upper_bound_is_accepted() -> None:
     )
 
 
+@pytest.mark.parametrize("title", ["a\x00b", "\x00"])
+def test_title_rejects_nul_characters(title: str) -> None:
+    """Postgres text cannot store NUL; the wire boundary rejects it first."""
+    with pytest.raises(ValidationError):
+        DocumentCreate(
+            upload_id=UPLOAD_ID,
+            title=title,
+            category=DocumentCategory.CONTRACT,
+        )
+    with pytest.raises(ValidationError):
+        DocumentUpdate(title=title)
+
+
 def test_category_enum_is_pinned() -> None:
     assert {category.value for category in DocumentCategory} == {
         "contract",

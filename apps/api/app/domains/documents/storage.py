@@ -67,6 +67,16 @@ class ObjectStat:
     metadata: Mapping[str, str]
 
 
+class ObjectMissingError(Exception):
+    """The source object vanished before a copy.
+
+    Raised by `DocumentStorage.copy` when a concurrent confirm won the staging
+    purge race after this call's HEAD. The service maps it to the pinned
+    `409 document_upload_not_completed`; a raw storage-client error must never
+    surface as a 500 (ADR 0022).
+    """
+
+
 class DocumentStorage(Protocol):
     """Private object storage for document bytes.
 
@@ -97,7 +107,12 @@ class DocumentStorage(Protocol):
         ...
 
     async def copy(self, source_key: str, destination_key: str) -> None:
-        """Server-side copy (confirm moves staging → final, ADR 0022)."""
+        """Server-side copy (confirm moves staging → final, ADR 0022).
+
+        Raises `ObjectMissingError` when the source no longer exists — a
+        concurrent confirm purged staging after this call's HEAD. The service
+        maps that to the pinned `409`, never a raw client error.
+        """
         ...
 
     async def delete(self, key: str) -> None:

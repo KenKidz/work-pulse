@@ -34,6 +34,7 @@ from app.domains.documents.storage import (
     MAX_DOWNLOAD_TTL,
     MAX_UPLOAD_TTL,
     DocumentStorage,
+    ObjectMissingError,
     ObjectStat,
     PresignedDownload,
     PresignedUpload,
@@ -162,14 +163,21 @@ class MinioDocumentStorage(DocumentStorage):
         )
 
     async def copy(self, source_key: str, destination_key: str) -> None:
-        await anyio.to_thread.run_sync(
-            partial(
-                self._client.copy_object,
-                Bucket=self._bucket,
-                Key=destination_key,
-                CopySource={"Bucket": self._bucket, "Key": source_key},
+        try:
+            await anyio.to_thread.run_sync(
+                partial(
+                    self._client.copy_object,
+                    Bucket=self._bucket,
+                    Key=destination_key,
+                    CopySource={"Bucket": self._bucket, "Key": source_key},
+                )
             )
-        )
+        except ClientError as exc:
+            if _is_missing(exc):
+                # A concurrent confirm purged staging after this call's HEAD.
+                # The service maps this to the pinned 409, never a 500.
+                raise ObjectMissingError() from None
+            raise
 
     async def delete(self, key: str) -> None:
         await anyio.to_thread.run_sync(

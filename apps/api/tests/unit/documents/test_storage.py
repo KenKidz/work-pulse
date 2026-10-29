@@ -21,6 +21,7 @@ from botocore.exceptions import ClientError
 from app.domains.documents.storage import (
     MAX_DOWNLOAD_TTL,
     MAX_UPLOAD_TTL,
+    ObjectMissingError,
     ObjectStat,
     document_key,
     staging_key,
@@ -43,6 +44,7 @@ class FakeS3Client:
         *,
         head: dict[str, Any] | None = None,
         head_error: ClientError | None = None,
+        copy_error: ClientError | None = None,
     ) -> None:
         self.post_calls: list[dict[str, Any]] = []
         self.url_calls: list[dict[str, Any]] = []
@@ -55,6 +57,7 @@ class FakeS3Client:
             "Metadata": {"filename": "contract.pdf", "claimed-size": "1024"},
         }
         self._head_error = head_error
+        self._copy_error = copy_error
         self._url_serial = 0
 
     def generate_presigned_post(
@@ -103,6 +106,8 @@ class FakeS3Client:
         self, *, Bucket: str, Key: str, CopySource: dict[str, str]
     ) -> dict[str, Any]:
         self.copy_calls.append({"Bucket": Bucket, "Key": Key, "CopySource": CopySource})
+        if self._copy_error is not None:
+            raise self._copy_error
         return {}
 
     def delete_object(self, *, Bucket: str, Key: str) -> dict[str, Any]:
@@ -287,6 +292,31 @@ async def test_copy_and_delete_use_the_private_bucket() -> None:
         }
     ]
     assert client.delete_calls == [{"Bucket": BUCKET, "Key": destination}]
+
+
+async def test_copy_missing_source_raises_object_missing() -> None:
+    """A lost staging-purge race is a port-level 409 signal, not a 500."""
+    client = FakeS3Client(copy_error=_client_error("NoSuchKey", status=404))
+    storage = _storage(client)
+
+    with pytest.raises(ObjectMissingError):
+        await storage.copy(
+            staging_key(TENANT_ID, UPLOAD_ID),
+            document_key(TENANT_ID, EMPLOYEE_ID, DOCUMENT_ID),
+        )
+
+
+async def test_copy_propagates_non_missing_errors() -> None:
+    error = _client_error("InternalError", status=500)
+    client = FakeS3Client(copy_error=error)
+    storage = _storage(client)
+
+    with pytest.raises(ClientError) as exc:
+        await storage.copy(
+            staging_key(TENANT_ID, UPLOAD_ID),
+            document_key(TENANT_ID, EMPLOYEE_ID, DOCUMENT_ID),
+        )
+    assert exc.value is error
 
 
 def test_keys_never_include_a_filename() -> None:

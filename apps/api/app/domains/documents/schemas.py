@@ -21,12 +21,20 @@ from enum import StrEnum
 from typing import Any, Self, cast
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.shared.pagination import Page
 
 #: The upload cap pinned by the feature spec (20 MB).
 MAX_DOCUMENT_SIZE_BYTES = 20 * 1024 * 1024
+
+
+def _require_no_nul(value: str) -> str:
+    """Reject NUL: Postgres text cannot store it, and storage runs before insert."""
+    if "\x00" in value:
+        raise ValueError("must not contain NUL characters")
+    return value
+
 
 #: MIME types an upload may claim (ADR 0022). The service enforces this set so
 #: a violation returns `document_type_not_allowed`, not `validation_error`.
@@ -111,6 +119,11 @@ class DocumentCreate(BaseModel):
         description="Optional `YYYY-MM-DD`; display-only in v1.",
     )
 
+    @field_validator("title")
+    @classmethod
+    def _title_has_no_nul(cls, value: str) -> str:
+        return _require_no_nul(value)
+
 
 class Document(BaseModel):
     """One document's metadata (pinned response shape).
@@ -161,6 +174,11 @@ class DocumentUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=200)
     category: DocumentCategory | None = None
     expiry_date: date | None = None
+
+    @field_validator("title")
+    @classmethod
+    def _title_has_no_nul(cls, value: str | None) -> str | None:
+        return None if value is None else _require_no_nul(value)
 
     @model_validator(mode="after")
     def _require_one_valid_field(self) -> Self:

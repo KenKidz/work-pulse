@@ -86,13 +86,17 @@ Alternatives considered:
    rule (ops-level, out of scope for v1).
 4. **Confirm copies before the row; delete purges before the row.**
    Confirm order is stat → checks → server-side copy → staging purge → row +
-   audit + event in one transaction. A transaction failure after the copy
-   leaves an orphan final object with no row and no event (bucket lifecycle /
-   ops cleans it); never a row without bytes. Delete purges the object first,
-   then sets `deleted_at` and writes the audit entry + `document.deleted` event
-   in one transaction. A purge failure leaves the row, object and audit trail
-   intact and the call retryable; a missing object is tolerated, because PII
-   minimization already succeeded. A second delete is `404 document_not_found`.
+   audit + event in one transaction. A staging object that vanished between the
+   HEAD and the copy (a concurrent confirm won the purge race) surfaces from the
+   storage port as `ObjectMissingError` and is mapped to the pinned
+   `409 document_upload_not_completed`, never a 500. A transaction failure after
+   the copy leaves an orphan final object with no row and no event (bucket
+   lifecycle / ops cleans it); never a row without bytes. Delete purges the
+   object first, then sets `deleted_at` and writes the audit entry +
+   `document.deleted` event in one transaction. A purge failure leaves the row,
+   object and audit trail intact and the call retryable; a missing object is
+   tolerated, because PII minimization already succeeded. A second delete is
+   `404 document_not_found`.
 5. **`DocumentStorage` is the domain port; MinIO is the adapter.**
    `apps/api/app/domains/documents/storage.py` defines `create_upload`, `stat`,
    `copy`, `delete` and `presign_download` over plain values;
@@ -121,9 +125,12 @@ Alternatives considered:
   the only access path is a short-lived URL scoped to one object.
 - Two failure windows are accepted and documented rather than hidden: an
   orphan final object after a failed confirm transaction, and a duplicate
-  confirm racing between copy and staging purge (the loser sees no staged
-  object and gets `409`). Both fail safe; a bucket lifecycle rule is the
-  cleanup mechanism.
+  confirm racing between copy and staging purge. If the loser's copy runs after
+  the winner's purge it sees no staged object and gets `409
+  document_upload_not_completed`; if both copies win before either purge, two
+  rows can be created from one intent (accepted: a stateless intent has no
+  row-level claim, and adding one would reintroduce a staging-intent row). Both
+  fail safe; a bucket lifecycle rule is the cleanup mechanism.
 - Presigned URLs are bearer credentials: they are returned only to an
   authorized caller, never logged, never cached and fetched per click. A stale
   URL is one click away from a fresh one.
