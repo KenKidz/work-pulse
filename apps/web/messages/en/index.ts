@@ -7,6 +7,7 @@ import attendance from "./attendance.json";
 import auth from "./auth.json";
 import common from "./common.json";
 import dashboard from "./dashboard.json";
+import documents from "./documents.json";
 import employees from "./employees.json";
 import home from "./home.json";
 import leave from "./leave.json";
@@ -27,6 +28,7 @@ const en = {
   auth,
   common,
   dashboard,
+  documents,
   employees,
   home,
   leave,

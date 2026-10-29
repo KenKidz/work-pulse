@@ -1,0 +1,99 @@
+{
+  "title": "Tài liệu",
+  "description": "Hợp đồng, giấy tờ định danh và chứng chỉ được lưu cùng hồ sơ nhân viên. Tệp nằm trong kho lưu trữ riêng và chỉ tải xuống qua liên kết tạm thời.",
+  "loading": "Đang tải tài liệu…",
+  "loadError": "Không thể tải tài liệu.",
+  "denied": "Bạn không có quyền xem tài liệu của nhân viên này.",
+  "empty": "Chưa có tài liệu nào. HR có thể tải lên hợp đồng đã ký, bản sao giấy tờ định danh hoặc chứng chỉ.",
+  "emptyFiltered": "Không có tài liệu nào thuộc danh mục này.",
+  "emptyPage": "Trang này trống. Danh sách đã thay đổi trong lúc bạn ở đây.",
+  "backToFirstPage": "Về trang đầu",
+  "swipe": "Vuốt ngang để xem mọi trường của tài liệu.",
+  "label": "Tài liệu của nhân viên",
+  "containerLabel": "Tài liệu của nhân viên. Cuộn ngang để đọc mọi cột.",
+  "expired": "Đã hết hạn",
+  "categories": {
+    "contract": "Hợp đồng",
+    "identification": "Giấy tờ định danh",
+    "certification": "Chứng chỉ",
+    "other": "Khác"
+  },
+  "filters": {
+    "categoryAria": "Lọc theo danh mục",
+    "allCategories": "Tất cả danh mục"
+  },
+  "columns": {
+    "title": "Tài liệu",
+    "category": "Danh mục",
+    "expiry": "Hết hạn",
+    "uploaded": "Tải lên",
+    "actions": "Thao tác"
+  },
+  "actions": {
+    "upload": "Tải tài liệu lên",
+    "download": "Tải xuống {title}",
+    "edit": "Sửa {title}",
+    "delete": "Xóa {title}"
+  },
+  "pagination": {
+    "previous": "Trước",
+    "previousAria": "Trang trước của {label}",
+    "next": "Sau",
+    "nextAria": "Trang sau của {label}",
+    "pageOf": "Trang {page} / {total}"
+  },
+  "upload": {
+    "title": "Tải tài liệu lên",
+    "description": "Tệp được tải trực tiếp vào kho lưu trữ riêng. Dùng PDF, PNG hoặc JPEG tối đa 20 MB.",
+    "file": "Tệp",
+    "fileHint": "PDF, PNG hoặc JPEG, tối đa 20 MB.",
+    "titlePlaceholder": "Hợp đồng lao động 2026",
+    "submit": "Tải lên",
+    "submitting": "Đang tải lên…",
+    "uploadFailed": "Không thể tải tệp lên. Vui lòng thử lại."
+  },
+  "edit": {
+    "title": "Sửa tài liệu",
+    "description": "Cập nhật thông tin của {title}. Tệp không thay đổi.",
+    "save": "Lưu thay đổi",
+    "saving": "Đang lưu…"
+  },
+  "metadata": {
+    "title": "Tiêu đề",
+    "category": "Danh mục",
+    "selectCategory": "Chọn danh mục",
+    "expiry": "Ngày hết hạn",
+    "expiryHint": "Tùy chọn. Chỉ hiển thị cùng tài liệu; phiên bản này không gửi nhắc nhở."
+  },
+  "delete": {
+    "title": "Xóa tài liệu",
+    "description": "Xóa {title}? Tệp sẽ bị xóa khỏi kho lưu trữ. Không thể hoàn tác.",
+    "action": "Xóa tài liệu",
+    "deleting": "Đang xóa…"
+  },
+  "toasts": {
+    "uploaded": "Đã tải tài liệu lên",
+    "updated": "Đã cập nhật tài liệu",
+    "deleted": "Đã xóa tài liệu"
+  },
+  "errors": {
+    "typeNotAllowed": "Loại tệp này không được hỗ trợ. Chọn PDF, PNG hoặc JPEG.",
+    "tooLarge": "Tệp lớn hơn 20 MB.",
+    "uploadNotCompleted": "Tải lên chưa hoàn tất. Hãy tải tệp lên lại.",
+    "documentNotFound": "Tài liệu này không còn khả dụng.",
+    "employeeNotFound": "Nhân viên này không còn khả dụng.",
+    "forbidden": "Bạn không có quyền thực hiện thao tác này.",
+    "validation": "Kiểm tra các trường được đánh dấu và thử lại.",
+    "notFound": "Mục này không còn khả dụng.",
+    "generic": "Đã xảy ra lỗi. Vui lòng thử lại."
+  },
+  "validation": {
+    "titleRequired": "Nhập tiêu đề tài liệu",
+    "titleTooLong": "Tiêu đề không được dài quá 200 ký tự",
+    "categoryRequired": "Chọn danh mục",
+    "expiryInvalid": "Chọn ngày hợp lệ",
+    "fileRequired": "Chọn một tệp để tải lên",
+    "fileType": "Chọn tệp PDF, PNG hoặc JPEG",
+    "fileTooLarge": "Tệp phải có kích thước từ 20 MB trở xuống"
+  }
+}

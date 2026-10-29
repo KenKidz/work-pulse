@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 
-import { EmployeeDetailCard } from "@/features/employees/components/EmployeeDetailCard";
+import { EmployeeDetailWorkspace } from "@/features/employees/components/EmployeeDetailWorkspace";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("employees");
@@ -10,5 +10,5 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function EmployeeDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  return <EmployeeDetailCard id={id} />;
+  return <EmployeeDetailWorkspace id={id} />;
 }

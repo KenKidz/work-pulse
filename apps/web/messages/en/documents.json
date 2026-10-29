@@ -1,0 +1,99 @@
+{
+  "title": "Documents",
+  "description": "Contracts, identification and certifications kept with the employee record. Files stay in private storage and are downloaded through short-lived links.",
+  "loading": "Loading documents…",
+  "loadError": "Could not load documents.",
+  "denied": "You don't have permission to view this employee's documents.",
+  "empty": "No documents yet. HR can upload a signed contract, an ID copy or a certification.",
+  "emptyFiltered": "No documents match this category.",
+  "emptyPage": "This page is empty. The list changed while you were here.",
+  "backToFirstPage": "Back to first page",
+  "swipe": "Swipe sideways to see every document field.",
+  "label": "Employee documents",
+  "containerLabel": "Employee documents. Scroll horizontally to read all columns.",
+  "expired": "Expired",
+  "categories": {
+    "contract": "Contract",
+    "identification": "Identification",
+    "certification": "Certification",
+    "other": "Other"
+  },
+  "filters": {
+    "categoryAria": "Filter by category",
+    "allCategories": "All categories"
+  },
+  "columns": {
+    "title": "Document",
+    "category": "Category",
+    "expiry": "Expiry",
+    "uploaded": "Uploaded",
+    "actions": "Actions"
+  },
+  "actions": {
+    "upload": "Upload document",
+    "download": "Download {title}",
+    "edit": "Edit {title}",
+    "delete": "Delete {title}"
+  },
+  "pagination": {
+    "previous": "Previous",
+    "previousAria": "Previous page of {label}",
+    "next": "Next",
+    "nextAria": "Next page of {label}",
+    "pageOf": "Page {page} of {total}"
+  },
+  "upload": {
+    "title": "Upload document",
+    "description": "The file uploads straight to private storage. Use a PDF, PNG or JPEG up to 20 MB.",
+    "file": "File",
+    "fileHint": "PDF, PNG or JPEG, up to 20 MB.",
+    "titlePlaceholder": "Employment contract 2026",
+    "submit": "Upload",
+    "submitting": "Uploading…",
+    "uploadFailed": "The file could not be uploaded. Try again."
+  },
+  "edit": {
+    "title": "Edit document",
+    "description": "Update the metadata of {title}. The file itself does not change.",
+    "save": "Save changes",
+    "saving": "Saving…"
+  },
+  "metadata": {
+    "title": "Title",
+    "category": "Category",
+    "selectCategory": "Choose a category",
+    "expiry": "Expiry date",
+    "expiryHint": "Optional. Shown with the document; WorkPulse sends no reminders in this version."
+  },
+  "delete": {
+    "title": "Delete document",
+    "description": "Delete {title}? The file is removed from storage. This can't be undone.",
+    "action": "Delete document",
+    "deleting": "Deleting…"
+  },
+  "toasts": {
+    "uploaded": "Document uploaded",
+    "updated": "Document updated",
+    "deleted": "Document deleted"
+  },
+  "errors": {
+    "typeNotAllowed": "This file type isn't supported. Use a PDF, PNG or JPEG.",
+    "tooLarge": "This file is larger than 20 MB.",
+    "uploadNotCompleted": "The upload wasn't completed. Upload the file again.",
+    "documentNotFound": "This document is no longer available.",
+    "employeeNotFound": "This employee is no longer available.",
+    "forbidden": "You don't have permission to do that.",
+    "validation": "Check the highlighted fields and try again.",
+    "notFound": "This item is no longer available.",
+    "generic": "Something went wrong. Please try again."
+  },
+  "validation": {
+    "titleRequired": "Enter a document title",
+    "titleTooLong": "Title must be at most 200 characters",
+    "categoryRequired": "Choose a category",
+    "expiryInvalid": "Choose a valid date",
+    "fileRequired": "Choose a file to upload",
+    "fileType": "Choose a PDF, PNG or JPEG file",
+    "fileTooLarge": "The file must be 20 MB or smaller"
+  }
+}

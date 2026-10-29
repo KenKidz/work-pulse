@@ -50,6 +50,11 @@
     "pageOf": "Trang {page} / {total}"
   },
   "detail": {
+    "tabs": {
+      "aria": "Các phần của hồ sơ nhân viên",
+      "overview": "Tổng quan",
+      "documents": "Tài liệu"
+    },
     "loading": "Đang tải nhân viên…",
     "loadError": "Không thể tải nhân viên này. Có thể nhân viên không tồn tại.",
     "backToEmployees": "Quay lại danh sách nhân viên",

@@ -50,6 +50,11 @@
     "pageOf": "Page {page} of {total}"
   },
   "detail": {
+    "tabs": {
+      "aria": "Employee record sections",
+      "overview": "Overview",
+      "documents": "Documents"
+    },
     "loading": "Loading employee…",
     "loadError": "Could not load this employee. It may not exist.",
     "backToEmployees": "Back to employees",
