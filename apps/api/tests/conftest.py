@@ -2,8 +2,9 @@
 
 Sets `DATABASE_URL` from `DATABASE_TEST_URL`, `REDIS_URL` from
 `REDIS_TEST_URL`, `KAFKA_BOOTSTRAP_SERVERS` from
-`KAFKA_TEST_BOOTSTRAP_SERVERS`, `CLICKHOUSE_URL` from `CLICKHOUSE_TEST_URL` and
-the `STORAGE_*` keys from their `STORAGE_TEST_*` twins BEFORE any `app.*`
+`KAFKA_TEST_BOOTSTRAP_SERVERS`, `CLICKHOUSE_URL` from `CLICKHOUSE_TEST_URL`,
+the `STORAGE_*` keys from their `STORAGE_TEST_*` twins and disables the worker
+Prometheus listeners (`*_METRICS_PORT=0`) BEFORE any `app.*`
 import so the lazily-created clients always target the throwaway services
 (`postgres-test`, :5433; `redis-test`, :6380; `kafka-test`, :9093;
 `clickhouse-test`, :8124; `minio-test`, :9002), regardless of which test
@@ -54,3 +55,8 @@ os.environ["STORAGE_SECRET_KEY"] = os.environ.get(
     "STORAGE_TEST_SECRET_KEY", "workpulse"
 )
 os.environ["STORAGE_BUCKET"] = os.environ.get("STORAGE_TEST_BUCKET", "documents-test")
+
+# Worker Prometheus listeners bind loopback ports in dev; under pytest they
+# must stay disabled so parallel runs never collide (ADR 0023).
+for _worker in ("relay", "realtime", "notifications", "payroll", "reports"):
+    os.environ[f"{_worker.upper()}_METRICS_PORT"] = "0"

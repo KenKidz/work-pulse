@@ -17,7 +17,15 @@ dependencies = [
     # `.ai/features/analytics-reports.md` / ADR 0019): ClickHouse HTTP client.
     "clickhouse-connect>=1.11.0",
     "fastapi>=0.115.0",
+    # Phase 6, observability (ADR 0006's pre-agreed gate; justified by
+    # `.ai/features/observability.md` / ADR 0023): tracing, metric collection
+    # and Prometheus exposition. Workers run in this same environment.
+    "opentelemetry-api>=1.39.0",
+    "opentelemetry-exporter-otlp-proto-http>=1.39.0",
+    "opentelemetry-exporter-prometheus>=0.60b1",
+    "opentelemetry-sdk>=1.39.0",
     "pydantic-settings>=2.6.0",
+    "prometheus-client>=0.24.0",
     "redis>=8.1.0",
     "resend>=2.50.0",
     "slack-sdk>=3.45.0",

@@ -6,10 +6,11 @@ does the work.
 
 ## Now
 
+- [ ] Phase 6: Observability — OpenTelemetry tracing, Prometheus metrics, Grafana dashboards (`.ai/features/observability.md`)
+
 ## Later
 
 - [ ] Phase 5: CDC / Debezium
-- [ ] Phase 6: OpenTelemetry / Prometheus / Grafana
 - [ ] Phase 7: load testing, rate limiting, circuit breakers
 - [ ] Phase 8: Docker images, Kubernetes, CI/CD
 

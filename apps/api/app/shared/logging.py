@@ -1,8 +1,9 @@
 """Structured logging (structlog, ADR 0006).
 
 Pretty console output in development, JSON elsewhere. The request middleware
-binds `request_id` to every log line of a request. Never log PII — ids and
-outcomes only (`.ai/security.md`).
+binds `request_id` to every log line of a request; a processor adds the active
+OpenTelemetry `trace_id`/`span_id` alongside it (ADR 0023). Never log PII —
+ids and outcomes only (`.ai/security.md`).
 """
 
 import logging
@@ -15,7 +16,27 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
+from app.shared.telemetry import trace_ids
+
 _CONFIGURED = False
+
+
+def add_trace_context(
+    _logger: object,
+    _method_name: str,
+    event_dict: structlog.typing.EventDict,
+) -> structlog.typing.EventDict:
+    """Bind the active span's W3C ids next to `request_id`.
+
+    Outside a span the fields are simply omitted — the processor never raises
+    and never invents ids.
+    """
+    trace_id, span_id = trace_ids()
+    if trace_id is not None:
+        event_dict["trace_id"] = trace_id
+    if span_id is not None:
+        event_dict["span_id"] = span_id
+    return event_dict
 
 
 def configure_logging(environment: str = "development") -> None:
@@ -33,6 +54,7 @@ def configure_logging(environment: str = "development") -> None:
     structlog.configure(
         processors=[
             structlog.contextvars.merge_contextvars,
+            add_trace_context,
             structlog.processors.add_log_level,
             structlog.processors.TimeStamper(fmt="iso", utc=True),
             structlog.processors.StackInfoRenderer(),

@@ -121,6 +121,20 @@ class Settings(BaseSettings):
     storage_test_secret_key: str = "workpulse"
     storage_test_bucket: str = "documents-test"
 
+    # --- Phase 6: observability (OpenTelemetry, ADR 0023) ---
+    # Spans are always collected in-process; OTLP HTTP export is opt-in so the
+    # default dev/test runs never attempt a network call. The API serves
+    # Prometheus text exposition on `GET /metrics`; each worker optionally
+    # starts its own loopback-only listener (`0` disables it — tests and
+    # parallel runs never bind a port).
+    otel_exporter_otlp_endpoint: str | None = None
+    otel_service_name: str = "workpulse"
+    relay_metrics_port: int = 9101
+    realtime_metrics_port: int = 9102
+    notifications_metrics_port: int = 9103
+    payroll_metrics_port: int = 9104
+    reports_metrics_port: int = 9105
+
     # --- Identity: sessions (pinned in `.ai/features/identity-access.md`) ---
     # Absolute session lifetime; the `wp_session` cookie itself is a session
     # cookie (no Max-Age) — the server-side TTL is the authority.
