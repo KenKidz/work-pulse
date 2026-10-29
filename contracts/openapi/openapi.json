@@ -2569,6 +2569,519 @@
         }
       }
     },
+    "/api/v1/employees/{employee_id}/documents/uploads": {
+      "post": {
+        "tags": [
+          "documents"
+        ],
+        "summary": "Create Document Upload",
+        "description": "Step 1: validate the claim and return a presigned POST for staging.",
+        "operationId": "createDocumentUpload",
+        "parameters": [
+          {
+            "name": "employee_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Employee Id"
+            }
+          },
+          {
+            "name": "wp_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Wp Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentUploadCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentUpload"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/employees/{employee_id}/documents": {
+      "post": {
+        "tags": [
+          "documents"
+        ],
+        "summary": "Create Document",
+        "description": "Step 3: confirm the staged object \u2192 metadata row, audit and event.",
+        "operationId": "createDocument",
+        "parameters": [
+          {
+            "name": "employee_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Employee Id"
+            }
+          },
+          {
+            "name": "wp_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Wp Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Document"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "documents"
+        ],
+        "summary": "List Documents",
+        "description": "Paged live documents, visibility-scoped first, then category-filtered.",
+        "operationId": "listDocuments",
+        "parameters": [
+          {
+            "name": "employee_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Employee Id"
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/DocumentCategory"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Category"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "title": "Page Size"
+            }
+          },
+          {
+            "name": "wp_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Wp Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentListPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/employees/{employee_id}/documents/{document_id}": {
+      "get": {
+        "tags": [
+          "documents"
+        ],
+        "summary": "Get Document",
+        "description": "One live document; unknown, deleted and cross-tenant ids are `404`.",
+        "operationId": "getDocument",
+        "parameters": [
+          {
+            "name": "employee_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Employee Id"
+            }
+          },
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Document Id"
+            }
+          },
+          {
+            "name": "wp_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Wp Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Document"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "documents"
+        ],
+        "summary": "Update Document",
+        "description": "Edit `title`/`category`/`expiry_date`; audited, never evented.",
+        "operationId": "updateDocument",
+        "parameters": [
+          {
+            "name": "employee_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Employee Id"
+            }
+          },
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Document Id"
+            }
+          },
+          {
+            "name": "wp_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Wp Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Document"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "documents"
+        ],
+        "summary": "Delete Document",
+        "description": "Soft-delete the row and purge the object; a second delete is `404`.",
+        "operationId": "deleteDocument",
+        "parameters": [
+          {
+            "name": "employee_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Employee Id"
+            }
+          },
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Document Id"
+            }
+          },
+          {
+            "name": "wp_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Wp Session"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/employees/{employee_id}/documents/{document_id}/download": {
+      "get": {
+        "tags": [
+          "documents"
+        ],
+        "summary": "Download Document",
+        "description": "Mint a fresh short-lived presigned GET for every authorized call.",
+        "operationId": "downloadDocument",
+        "parameters": [
+          {
+            "name": "employee_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Employee Id"
+            }
+          },
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Document Id"
+            }
+          },
+          {
+            "name": "wp_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Wp Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentDownload"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/attendance/check-ins": {
       "post": {
         "tags": [
@@ -10469,6 +10982,290 @@
         },
         "type": "object",
         "title": "DepartmentUpdate"
+      },
+      "Document": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "employee_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Employee Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "category": {
+            "$ref": "#/components/schemas/DocumentCategory"
+          },
+          "expiry_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expiry Date",
+            "description": "Optional `YYYY-MM-DD`; the UI flags past dates as expired."
+          },
+          "filename": {
+            "type": "string",
+            "maxLength": 255,
+            "title": "Filename",
+            "description": "Original client-supplied filename (percent-encoded UTF-8 in the staging object's `x-amz-meta-filename`, at most 255 decoded characters). Never logged or emitted."
+          },
+          "content_type": {
+            "type": "string",
+            "title": "Content Type"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "title": "Size Bytes"
+          },
+          "uploaded_by": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Uploaded By",
+            "description": "Authenticated user id that confirmed the upload (ADR 0010)."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "employee_id",
+          "title",
+          "category",
+          "filename",
+          "content_type",
+          "size_bytes",
+          "uploaded_by",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "Document",
+        "description": "One document's metadata (pinned response shape).\n\nDeleted rows never serialize: there is no `deleted_at` field, and the\nservice returns `404 document_not_found` instead."
+      },
+      "DocumentCategory": {
+        "type": "string",
+        "enum": [
+          "contract",
+          "identification",
+          "certification",
+          "other"
+        ],
+        "title": "DocumentCategory",
+        "description": "Pinned document category (`contract|identification|certification|other`)."
+      },
+      "DocumentCreate": {
+        "properties": {
+          "upload_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Upload Id",
+            "description": "The staging upload id from `createDocumentUpload`; the object must still exist at `staging/{tenant_id}/{upload_id}`."
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "category": {
+            "$ref": "#/components/schemas/DocumentCategory"
+          },
+          "expiry_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expiry Date",
+            "description": "Optional `YYYY-MM-DD`; display-only in v1."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "upload_id",
+          "title",
+          "category"
+        ],
+        "title": "DocumentCreate",
+        "description": "Step 3: confirm the staged object and create the metadata row."
+      },
+      "DocumentDownload": {
+        "properties": {
+          "url": {
+            "type": "string",
+            "title": "Url",
+            "description": "Presigned GET target; a credential \u2014 never log or cache it."
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "url",
+          "expires_at"
+        ],
+        "title": "DocumentDownload",
+        "description": "A fresh short-lived presigned GET URL (never cached or prefetched)."
+      },
+      "DocumentListPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Document"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "page": {
+            "$ref": "#/components/schemas/Page"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "page"
+        ],
+        "title": "DocumentListPage",
+        "description": "The pinned list envelope (`{\"items\": [...], \"page\": Page}`)."
+      },
+      "DocumentUpdate": {
+        "properties": {
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DocumentCategory"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "expiry_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expiry Date"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "DocumentUpdate",
+        "description": "Edit `title`, `category` or `expiry_date`; absent fields are unchanged.\n\nAt least one field is required. Explicit `null` clears `expiry_date` but is\nrejected for `title`/`category`."
+      },
+      "DocumentUpload": {
+        "properties": {
+          "upload_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Upload Id",
+            "description": "Opaque id of the staged upload; pass it back to confirm."
+          },
+          "url": {
+            "type": "string",
+            "title": "Url",
+            "description": "Presigned POST target; a credential \u2014 never log or cache it."
+          },
+          "fields": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Fields",
+            "description": "Signed form fields to send verbatim with the file and the client-supplied `x-amz-meta-filename` field."
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "upload_id",
+          "url",
+          "fields",
+          "expires_at"
+        ],
+        "title": "DocumentUpload",
+        "description": "Step 1 response: a presigned POST pinned to the staging key."
+      },
+      "DocumentUploadCreate": {
+        "properties": {
+          "content_type": {
+            "type": "string",
+            "enum": [
+              "application/pdf",
+              "image/jpeg",
+              "image/png"
+            ],
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Content Type",
+            "description": "Claimed MIME type; must be one of `application/pdf`, `image/png`, `image/jpeg` (the service returns `document_type_not_allowed` otherwise)."
+          },
+          "size_bytes": {
+            "type": "integer",
+            "maximum": 20971520.0,
+            "minimum": 1.0,
+            "title": "Size Bytes",
+            "description": "Claimed size in bytes (`1..20971520`). The 20 MB cap is enforced by the service so violations return `document_too_large`."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "content_type",
+          "size_bytes"
+        ],
+        "title": "DocumentUploadCreate",
+        "description": "Step 1: the claimed MIME type and size for a presigned upload."
       },
       "Employee": {
         "properties": {

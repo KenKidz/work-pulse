@@ -69,6 +69,7 @@ _SCHEMA_DIRECTORIES = {
     "job": "recruitment",
     "candidate": "recruitment",
     "interview": "recruitment",
+    "document": "documents",
 }
 
 

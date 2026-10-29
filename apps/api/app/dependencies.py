@@ -24,6 +24,7 @@ from app.domains.attendance.service import (
     BoardDetail,
     ShiftService,
 )
+from app.domains.documents.service import DocumentService
 from app.domains.employees.service import EmployeeService
 from app.domains.identity.credentials import SESSION_COOKIE_NAME
 from app.domains.identity.schemas import User
@@ -70,6 +71,9 @@ from app.infrastructure.postgres.repositories.attendance import (
     PostgresAttendanceRepository,
     PostgresShiftRepository,
 )
+from app.infrastructure.postgres.repositories.documents import (
+    PostgresDocumentRepository,
+)
 from app.infrastructure.postgres.repositories.employees import (
     PostgresEmployeeRepository,
     PostgresEmploymentRepository,
@@ -100,6 +104,7 @@ from app.infrastructure.postgres.repositories.recruitment import (
 from app.infrastructure.postgres.session import get_session
 from app.infrastructure.redis.client import get_redis
 from app.infrastructure.redis.streams import RedisPresenceStream
+from app.infrastructure.storage.minio import get_document_storage
 from app.shared.errors import UnauthenticatedError
 from app.shared.identity import Identity
 
@@ -206,6 +211,27 @@ def get_overtime_service(session: SessionDep) -> OvertimeService:
         audit=PostgresAuditWriter(session),
         # Same session, same transaction: the request row, its audit entry and
         # its event envelope commit together or not at all (ADR 0012).
+        outbox=PostgresEventOutbox(session, clock=_utc_now),
+    )
+
+
+def get_document_service(session: SessionDep) -> DocumentService:
+    """Employee documents (T5, ADR 0022).
+
+    Storage is the process-wide MinIO/S3 adapter: the bucket is private and
+    only presigned URLs leave the process. The outbox shares the request
+    session, so a confirmed upload or a delete writes its row, audit entry and
+    event envelope in one transaction (ADR 0012). Read visibility reuses the
+    shared self + direct-reports `PostgresEmployeeScope`; employee existence is
+    the tenant-scoped `PostgresEmployeeLink` read port, so this domain never
+    queries the Employees tables itself (architecture rule 3).
+    """
+    return DocumentService(
+        repo=PostgresDocumentRepository(session),
+        storage=get_document_storage(),
+        employees=PostgresEmployeeLink(session),
+        scope=PostgresEmployeeScope(session),
+        audit=PostgresAuditWriter(session),
         outbox=PostgresEventOutbox(session, clock=_utc_now),
     )
 
@@ -440,6 +466,7 @@ EmployeeServiceDep = Annotated[EmployeeService, Depends(get_employee_service)]
 AttendanceServiceDep = Annotated[AttendanceService, Depends(get_attendance_service)]
 LeaveServiceDep = Annotated[LeaveService, Depends(get_leave_service)]
 OvertimeServiceDep = Annotated[OvertimeService, Depends(get_overtime_service)]
+DocumentServiceDep = Annotated[DocumentService, Depends(get_document_service)]
 GoalServiceDep = Annotated[GoalService, Depends(get_goal_service)]
 ReviewServiceDep = Annotated[ReviewService, Depends(get_review_service)]
 SkillServiceDep = Annotated[SkillService, Depends(get_skill_service)]

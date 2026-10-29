@@ -42,6 +42,13 @@ import type {
   DepartmentCreate,
   DepartmentListPage,
   DepartmentUpdate,
+  Document,
+  DocumentCreate,
+  DocumentDownload,
+  DocumentListPage,
+  DocumentUpdate,
+  DocumentUpload,
+  DocumentUploadCreate,
   Employee,
   EmployeeDetail,
   EmployeeListPage,
@@ -82,6 +89,7 @@ import type {
   ListAttendanceRecordsParams,
   ListCandidatesParams,
   ListDepartmentsParams,
+  ListDocumentsParams,
   ListEmployeesParams,
   ListGoalsParams,
   ListInterviewsParams,
@@ -5739,6 +5747,1178 @@ export function useListEmployments<
   queryKey: DataTag<QueryKey, TData, TError>;
 } {
   const queryOptions = getListEmploymentsQueryOptions(id, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export type createDocumentUploadResponse201 = {
+  data: DocumentUpload;
+  status: 201;
+};
+
+export type createDocumentUploadResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type createDocumentUploadResponseSuccess =
+  createDocumentUploadResponse201 & {
+    headers: Headers;
+  };
+export type createDocumentUploadResponseError =
+  createDocumentUploadResponse422 & {
+    headers: Headers;
+  };
+
+export type createDocumentUploadResponse =
+  createDocumentUploadResponseSuccess | createDocumentUploadResponseError;
+
+export const getCreateDocumentUploadUrl = (employeeId: string) => {
+  return `/api/v1/employees/${employeeId}/documents/uploads`;
+};
+
+/**
+ * Step 1: validate the claim and return a presigned POST for staging.
+ * @summary Create Document Upload
+ */
+export const createDocumentUpload = async (
+  employeeId: string,
+  documentUploadCreate: DocumentUploadCreate,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<createDocumentUploadResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return customFetch<createDocumentUploadResponse>(
+    getCreateDocumentUploadUrl(employeeId),
+    {
+      ...options,
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...getHeaders(options?.headers),
+      },
+      body: JSON.stringify(documentUploadCreate),
+    },
+  );
+};
+
+export const getCreateDocumentUploadMutationKey = () =>
+  ["createDocumentUpload"] as const;
+
+export const getCreateDocumentUploadMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createDocumentUpload>>,
+    TError,
+    CreateDocumentUploadMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createDocumentUpload>>,
+  TError,
+  CreateDocumentUploadMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateDocumentUploadMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createDocumentUpload>>,
+    CreateDocumentUploadMutationVariables
+  > = (props) => {
+    const { employeeId, data } = props ?? {};
+
+    return createDocumentUpload(employeeId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateDocumentUploadMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createDocumentUpload>>
+>;
+export type CreateDocumentUploadMutationBody = DocumentUploadCreate;
+export type CreateDocumentUploadMutationError = HTTPValidationError;
+export type CreateDocumentUploadMutationVariables = {
+  employeeId: string;
+  data: DocumentUploadCreate;
+};
+
+/**
+ * @summary Create Document Upload
+ */
+export const useCreateDocumentUpload = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createDocumentUpload>>,
+      TError,
+      CreateDocumentUploadMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createDocumentUpload>>,
+  TError,
+  CreateDocumentUploadMutationVariables,
+  TContext
+> => {
+  return useMutation(
+    getCreateDocumentUploadMutationOptions(options),
+    queryClient,
+  );
+};
+
+export type createDocumentResponse201 = {
+  data: Document;
+  status: 201;
+};
+
+export type createDocumentResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type createDocumentResponseSuccess = createDocumentResponse201 & {
+  headers: Headers;
+};
+export type createDocumentResponseError = createDocumentResponse422 & {
+  headers: Headers;
+};
+
+export type createDocumentResponse =
+  createDocumentResponseSuccess | createDocumentResponseError;
+
+export const getCreateDocumentUrl = (employeeId: string) => {
+  return `/api/v1/employees/${employeeId}/documents`;
+};
+
+/**
+ * Step 3: confirm the staged object → metadata row, audit and event.
+ * @summary Create Document
+ */
+export const createDocument = async (
+  employeeId: string,
+  documentCreate: DocumentCreate,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<createDocumentResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return customFetch<createDocumentResponse>(getCreateDocumentUrl(employeeId), {
+    ...options,
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...getHeaders(options?.headers),
+    },
+    body: JSON.stringify(documentCreate),
+  });
+};
+
+export const getCreateDocumentMutationKey = () => ["createDocument"] as const;
+
+export const getCreateDocumentMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createDocument>>,
+    TError,
+    CreateDocumentMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createDocument>>,
+  TError,
+  CreateDocumentMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateDocumentMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createDocument>>,
+    CreateDocumentMutationVariables
+  > = (props) => {
+    const { employeeId, data } = props ?? {};
+
+    return createDocument(employeeId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateDocumentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createDocument>>
+>;
+export type CreateDocumentMutationBody = DocumentCreate;
+export type CreateDocumentMutationError = HTTPValidationError;
+export type CreateDocumentMutationVariables = {
+  employeeId: string;
+  data: DocumentCreate;
+};
+
+/**
+ * @summary Create Document
+ */
+export const useCreateDocument = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createDocument>>,
+      TError,
+      CreateDocumentMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createDocument>>,
+  TError,
+  CreateDocumentMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateDocumentMutationOptions(options), queryClient);
+};
+
+export type listDocumentsResponse200 = {
+  data: DocumentListPage;
+  status: 200;
+};
+
+export type listDocumentsResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type listDocumentsResponseSuccess = listDocumentsResponse200 & {
+  headers: Headers;
+};
+export type listDocumentsResponseError = listDocumentsResponse422 & {
+  headers: Headers;
+};
+
+export type listDocumentsResponse =
+  listDocumentsResponseSuccess | listDocumentsResponseError;
+
+export const getListDocumentsUrl = (
+  employeeId: string,
+  params?: ListDocumentsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/employees/${employeeId}/documents?${stringifiedParams}`
+    : `/api/v1/employees/${employeeId}/documents`;
+};
+
+/**
+ * Paged live documents, visibility-scoped first, then category-filtered.
+ * @summary List Documents
+ */
+export const listDocuments = async (
+  employeeId: string,
+  params?: ListDocumentsParams,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<listDocumentsResponse> => {
+  return customFetch<listDocumentsResponse>(
+    getListDocumentsUrl(employeeId, params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListDocumentsQueryKey = (
+  employeeId: string,
+  params?: ListDocumentsParams,
+) => {
+  return [
+    `/api/v1/employees/${employeeId}/documents`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getListDocumentsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listDocuments>>,
+  TError = HTTPValidationError,
+>(
+  employeeId: string,
+  params?: ListDocumentsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listDocuments>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListDocumentsQueryKey(employeeId, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listDocuments>>> = ({
+    signal,
+  }) => listDocuments(employeeId, params, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: employeeId !== null && employeeId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listDocuments>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListDocumentsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listDocuments>>
+>;
+export type ListDocumentsQueryError = HTTPValidationError;
+
+export function useListDocuments<
+  TData = Awaited<ReturnType<typeof listDocuments>>,
+  TError = HTTPValidationError,
+>(
+  employeeId: string,
+  params: undefined | ListDocumentsParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listDocuments>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listDocuments>>,
+          TError,
+          Awaited<ReturnType<typeof listDocuments>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useListDocuments<
+  TData = Awaited<ReturnType<typeof listDocuments>>,
+  TError = HTTPValidationError,
+>(
+  employeeId: string,
+  params?: ListDocumentsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listDocuments>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listDocuments>>,
+          TError,
+          Awaited<ReturnType<typeof listDocuments>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useListDocuments<
+  TData = Awaited<ReturnType<typeof listDocuments>>,
+  TError = HTTPValidationError,
+>(
+  employeeId: string,
+  params?: ListDocumentsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listDocuments>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary List Documents
+ */
+
+export function useListDocuments<
+  TData = Awaited<ReturnType<typeof listDocuments>>,
+  TError = HTTPValidationError,
+>(
+  employeeId: string,
+  params?: ListDocumentsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listDocuments>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getListDocumentsQueryOptions(
+    employeeId,
+    params,
+    options,
+  );
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export type getDocumentResponse200 = {
+  data: Document;
+  status: 200;
+};
+
+export type getDocumentResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type getDocumentResponseSuccess = getDocumentResponse200 & {
+  headers: Headers;
+};
+export type getDocumentResponseError = getDocumentResponse422 & {
+  headers: Headers;
+};
+
+export type getDocumentResponse =
+  getDocumentResponseSuccess | getDocumentResponseError;
+
+export const getGetDocumentUrl = (employeeId: string, documentId: string) => {
+  return `/api/v1/employees/${employeeId}/documents/${documentId}`;
+};
+
+/**
+ * One live document; unknown, deleted and cross-tenant ids are `404`.
+ * @summary Get Document
+ */
+export const getDocument = async (
+  employeeId: string,
+  documentId: string,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<getDocumentResponse> => {
+  return customFetch<getDocumentResponse>(
+    getGetDocumentUrl(employeeId, documentId),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetDocumentQueryKey = (
+  employeeId: string,
+  documentId: string,
+) => {
+  return [`/api/v1/employees/${employeeId}/documents/${documentId}`] as const;
+};
+
+export const getGetDocumentQueryOptions = <
+  TData = Awaited<ReturnType<typeof getDocument>>,
+  TError = HTTPValidationError,
+>(
+  employeeId: string,
+  documentId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getDocument>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetDocumentQueryKey(employeeId, documentId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getDocument>>> = ({
+    signal,
+  }) => getDocument(employeeId, documentId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled:
+      employeeId !== null &&
+      employeeId !== undefined &&
+      documentId !== null &&
+      documentId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getDocument>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetDocumentQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getDocument>>
+>;
+export type GetDocumentQueryError = HTTPValidationError;
+
+export function useGetDocument<
+  TData = Awaited<ReturnType<typeof getDocument>>,
+  TError = HTTPValidationError,
+>(
+  employeeId: string,
+  documentId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getDocument>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getDocument>>,
+          TError,
+          Awaited<ReturnType<typeof getDocument>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetDocument<
+  TData = Awaited<ReturnType<typeof getDocument>>,
+  TError = HTTPValidationError,
+>(
+  employeeId: string,
+  documentId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getDocument>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getDocument>>,
+          TError,
+          Awaited<ReturnType<typeof getDocument>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetDocument<
+  TData = Awaited<ReturnType<typeof getDocument>>,
+  TError = HTTPValidationError,
+>(
+  employeeId: string,
+  documentId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getDocument>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary Get Document
+ */
+
+export function useGetDocument<
+  TData = Awaited<ReturnType<typeof getDocument>>,
+  TError = HTTPValidationError,
+>(
+  employeeId: string,
+  documentId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getDocument>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetDocumentQueryOptions(
+    employeeId,
+    documentId,
+    options,
+  );
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export type updateDocumentResponse200 = {
+  data: Document;
+  status: 200;
+};
+
+export type updateDocumentResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type updateDocumentResponseSuccess = updateDocumentResponse200 & {
+  headers: Headers;
+};
+export type updateDocumentResponseError = updateDocumentResponse422 & {
+  headers: Headers;
+};
+
+export type updateDocumentResponse =
+  updateDocumentResponseSuccess | updateDocumentResponseError;
+
+export const getUpdateDocumentUrl = (
+  employeeId: string,
+  documentId: string,
+) => {
+  return `/api/v1/employees/${employeeId}/documents/${documentId}`;
+};
+
+/**
+ * Edit `title`/`category`/`expiry_date`; audited, never evented.
+ * @summary Update Document
+ */
+export const updateDocument = async (
+  employeeId: string,
+  documentId: string,
+  documentUpdate: DocumentUpdate,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<updateDocumentResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return customFetch<updateDocumentResponse>(
+    getUpdateDocumentUrl(employeeId, documentId),
+    {
+      ...options,
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        ...getHeaders(options?.headers),
+      },
+      body: JSON.stringify(documentUpdate),
+    },
+  );
+};
+
+export const getUpdateDocumentMutationKey = () => ["updateDocument"] as const;
+
+export const getUpdateDocumentMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateDocument>>,
+    TError,
+    UpdateDocumentMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateDocument>>,
+  TError,
+  UpdateDocumentMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateDocumentMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateDocument>>,
+    UpdateDocumentMutationVariables
+  > = (props) => {
+    const { employeeId, documentId, data } = props ?? {};
+
+    return updateDocument(employeeId, documentId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateDocumentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateDocument>>
+>;
+export type UpdateDocumentMutationBody = DocumentUpdate;
+export type UpdateDocumentMutationError = HTTPValidationError;
+export type UpdateDocumentMutationVariables = {
+  employeeId: string;
+  documentId: string;
+  data: DocumentUpdate;
+};
+
+/**
+ * @summary Update Document
+ */
+export const useUpdateDocument = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateDocument>>,
+      TError,
+      UpdateDocumentMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateDocument>>,
+  TError,
+  UpdateDocumentMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateDocumentMutationOptions(options), queryClient);
+};
+
+export type deleteDocumentResponse204 = {
+  data: void;
+  status: 204;
+};
+
+export type deleteDocumentResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type deleteDocumentResponseSuccess = deleteDocumentResponse204 & {
+  headers: Headers;
+};
+export type deleteDocumentResponseError = deleteDocumentResponse422 & {
+  headers: Headers;
+};
+
+export type deleteDocumentResponse =
+  deleteDocumentResponseSuccess | deleteDocumentResponseError;
+
+export const getDeleteDocumentUrl = (
+  employeeId: string,
+  documentId: string,
+) => {
+  return `/api/v1/employees/${employeeId}/documents/${documentId}`;
+};
+
+/**
+ * Soft-delete the row and purge the object; a second delete is `404`.
+ * @summary Delete Document
+ */
+export const deleteDocument = async (
+  employeeId: string,
+  documentId: string,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<deleteDocumentResponse> => {
+  return customFetch<deleteDocumentResponse>(
+    getDeleteDocumentUrl(employeeId, documentId),
+    {
+      ...options,
+      method: "DELETE",
+    },
+  );
+};
+
+export const getDeleteDocumentMutationKey = () => ["deleteDocument"] as const;
+
+export const getDeleteDocumentMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteDocument>>,
+    TError,
+    DeleteDocumentMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteDocument>>,
+  TError,
+  DeleteDocumentMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDeleteDocumentMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteDocument>>,
+    DeleteDocumentMutationVariables
+  > = (props) => {
+    const { employeeId, documentId } = props ?? {};
+
+    return deleteDocument(employeeId, documentId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteDocumentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteDocument>>
+>;
+
+export type DeleteDocumentMutationError = HTTPValidationError;
+export type DeleteDocumentMutationVariables = {
+  employeeId: string;
+  documentId: string;
+};
+
+/**
+ * @summary Delete Document
+ */
+export const useDeleteDocument = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteDocument>>,
+      TError,
+      DeleteDocumentMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteDocument>>,
+  TError,
+  DeleteDocumentMutationVariables,
+  TContext
+> => {
+  return useMutation(getDeleteDocumentMutationOptions(options), queryClient);
+};
+
+export type downloadDocumentResponse200 = {
+  data: DocumentDownload;
+  status: 200;
+};
+
+export type downloadDocumentResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type downloadDocumentResponseSuccess = downloadDocumentResponse200 & {
+  headers: Headers;
+};
+export type downloadDocumentResponseError = downloadDocumentResponse422 & {
+  headers: Headers;
+};
+
+export type downloadDocumentResponse =
+  downloadDocumentResponseSuccess | downloadDocumentResponseError;
+
+export const getDownloadDocumentUrl = (
+  employeeId: string,
+  documentId: string,
+) => {
+  return `/api/v1/employees/${employeeId}/documents/${documentId}/download`;
+};
+
+/**
+ * Mint a fresh short-lived presigned GET for every authorized call.
+ * @summary Download Document
+ */
+export const downloadDocument = async (
+  employeeId: string,
+  documentId: string,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<downloadDocumentResponse> => {
+  return customFetch<downloadDocumentResponse>(
+    getDownloadDocumentUrl(employeeId, documentId),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getDownloadDocumentQueryKey = (
+  employeeId: string,
+  documentId: string,
+) => {
+  return [
+    `/api/v1/employees/${employeeId}/documents/${documentId}/download`,
+  ] as const;
+};
+
+export const getDownloadDocumentQueryOptions = <
+  TData = Awaited<ReturnType<typeof downloadDocument>>,
+  TError = HTTPValidationError,
+>(
+  employeeId: string,
+  documentId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof downloadDocument>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getDownloadDocumentQueryKey(employeeId, documentId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof downloadDocument>>
+  > = ({ signal }) =>
+    downloadDocument(employeeId, documentId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled:
+      employeeId !== null &&
+      employeeId !== undefined &&
+      documentId !== null &&
+      documentId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof downloadDocument>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type DownloadDocumentQueryResult = NonNullable<
+  Awaited<ReturnType<typeof downloadDocument>>
+>;
+export type DownloadDocumentQueryError = HTTPValidationError;
+
+export function useDownloadDocument<
+  TData = Awaited<ReturnType<typeof downloadDocument>>,
+  TError = HTTPValidationError,
+>(
+  employeeId: string,
+  documentId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof downloadDocument>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadDocument>>,
+          TError,
+          Awaited<ReturnType<typeof downloadDocument>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useDownloadDocument<
+  TData = Awaited<ReturnType<typeof downloadDocument>>,
+  TError = HTTPValidationError,
+>(
+  employeeId: string,
+  documentId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof downloadDocument>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadDocument>>,
+          TError,
+          Awaited<ReturnType<typeof downloadDocument>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useDownloadDocument<
+  TData = Awaited<ReturnType<typeof downloadDocument>>,
+  TError = HTTPValidationError,
+>(
+  employeeId: string,
+  documentId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof downloadDocument>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary Download Document
+ */
+
+export function useDownloadDocument<
+  TData = Awaited<ReturnType<typeof downloadDocument>>,
+  TError = HTTPValidationError,
+>(
+  employeeId: string,
+  documentId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof downloadDocument>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getDownloadDocumentQueryOptions(
+    employeeId,
+    documentId,
+    options,
+  );
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<
     TData,

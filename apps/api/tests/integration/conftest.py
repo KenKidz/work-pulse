@@ -19,15 +19,20 @@ global engine/pool is created and used inside one event loop.
 from collections.abc import AsyncIterator, Callable, Iterator
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 from uuid import UUID
 
+import anyio
+import boto3
 import pytest
 from alembic.config import Config
+from botocore.config import Config as BotoConfig
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from alembic import command
+from app.config import get_settings
 from app.dependencies import (
     get_attendance_hours_port,
     get_identity,
@@ -417,3 +422,44 @@ async def client_factory(session: AsyncSession) -> AsyncIterator[ClientFactory]:
         yield factory
     finally:
         app.dependency_overrides.clear()
+
+
+def _document_bucket_client() -> Any:
+    """A boto3 client for the throwaway document bucket (test-only helper)."""
+    settings = get_settings()
+    return boto3.client(
+        "s3",
+        endpoint_url=settings.storage_endpoint,
+        aws_access_key_id=settings.storage_access_key,
+        aws_secret_access_key=settings.storage_secret_key,
+        region_name="us-east-1",
+        use_ssl=settings.storage_endpoint.lower().startswith("https://"),
+        config=BotoConfig(signature_version="s3v4", s3={"addressing_style": "path"}),
+    )
+
+
+def _purge_document_bucket(client: Any) -> None:
+    """Delete every object in the throwaway bucket (no public policy is kept)."""
+    bucket = get_settings().storage_bucket
+    while True:
+        listed = client.list_objects_v2(Bucket=bucket)
+        keys = [{"Key": item["Key"]} for item in listed.get("Contents", [])]
+        if not keys:
+            return
+        client.delete_objects(Bucket=bucket, Delete={"Objects": keys})
+
+
+@pytest.fixture
+async def document_bucket() -> AsyncIterator[Any]:
+    """An empty throwaway document bucket around one documents test.
+
+    Yields a boto3 client so a test can inspect objects (HEAD, direct PUT for
+    adversarial confirm cases) without going through the API. Not autouse: only
+    the documents suites need MinIO at all.
+    """
+    client = _document_bucket_client()
+    await anyio.to_thread.run_sync(_purge_document_bucket, client)
+    try:
+        yield client
+    finally:
+        await anyio.to_thread.run_sync(_purge_document_bucket, client)

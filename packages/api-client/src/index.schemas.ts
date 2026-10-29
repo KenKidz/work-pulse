@@ -419,6 +419,140 @@ export interface DepartmentUpdate {
   parent_department_id?: string | null;
 }
 
+/**
+ * Pinned document category (`contract|identification|certification|other`).
+ */
+export type DocumentCategory =
+  (typeof DocumentCategory)[keyof typeof DocumentCategory];
+
+export const DocumentCategory = {
+  contract: "contract",
+  identification: "identification",
+  certification: "certification",
+  other: "other",
+} as const;
+
+/**
+ * One document's metadata (pinned response shape).
+ *
+ * Deleted rows never serialize: there is no `deleted_at` field, and the
+ * service returns `404 document_not_found` instead.
+ */
+export interface Document {
+  id: string;
+  employee_id: string;
+  title: string;
+  category: DocumentCategory;
+  /** Optional `YYYY-MM-DD`; the UI flags past dates as expired. */
+  expiry_date?: string | null;
+  /**
+   * Original client-supplied filename (percent-encoded UTF-8 in the staging object's `x-amz-meta-filename`, at most 255 decoded characters). Never logged or emitted.
+   * @maxLength 255
+   */
+  filename: string;
+  content_type: string;
+  size_bytes: number;
+  /** Authenticated user id that confirmed the upload (ADR 0010). */
+  uploaded_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Step 3: confirm the staged object and create the metadata row.
+ */
+export interface DocumentCreate {
+  /** The staging upload id from `createDocumentUpload`; the object must still exist at `staging/{tenant_id}/{upload_id}`. */
+  upload_id: string;
+  /**
+   * @minLength 1
+   * @maxLength 200
+   */
+  title: string;
+  category: DocumentCategory;
+  /** Optional `YYYY-MM-DD`; display-only in v1. */
+  expiry_date?: string | null;
+}
+
+/**
+ * A fresh short-lived presigned GET URL (never cached or prefetched).
+ */
+export interface DocumentDownload {
+  /** Presigned GET target; a credential — never log or cache it. */
+  url: string;
+  expires_at: string;
+}
+
+/**
+ * The pinned list envelope (`{"items": [...], "page": Page}`).
+ */
+export interface DocumentListPage {
+  items: Document[];
+  page: Page;
+}
+
+/**
+ * Edit `title`, `category` or `expiry_date`; absent fields are unchanged.
+ *
+ * At least one field is required. Explicit `null` clears `expiry_date` but is
+ * rejected for `title`/`category`.
+ */
+export interface DocumentUpdate {
+  title?: string | null;
+  category?: DocumentCategory | null;
+  expiry_date?: string | null;
+}
+
+/**
+ * Signed form fields to send verbatim with the file and the client-supplied `x-amz-meta-filename` field.
+ */
+export type DocumentUploadFields = { [key: string]: string };
+
+/**
+ * Step 1 response: a presigned POST pinned to the staging key.
+ */
+export interface DocumentUpload {
+  /** Opaque id of the staged upload; pass it back to confirm. */
+  upload_id: string;
+  /** Presigned POST target; a credential — never log or cache it. */
+  url: string;
+  /** Signed form fields to send verbatim with the file and the client-supplied `x-amz-meta-filename` field. */
+  fields: DocumentUploadFields;
+  expires_at: string;
+}
+
+/**
+ * Claimed MIME type; must be one of `application/pdf`, `image/png`, `image/jpeg` (the service returns `document_type_not_allowed` otherwise).
+ * @minLength 1
+ * @maxLength 255
+ */
+export type DocumentUploadCreateContentType =
+  (typeof DocumentUploadCreateContentType)[keyof typeof DocumentUploadCreateContentType];
+
+export const DocumentUploadCreateContentType = {
+  "application/pdf": "application/pdf",
+  "image/jpeg": "image/jpeg",
+  "image/png": "image/png",
+} as const;
+
+/**
+ * Step 1: the claimed MIME type and size for a presigned upload.
+ */
+export interface DocumentUploadCreate {
+  /**
+   * Claimed MIME type; must be one of `application/pdf`, `image/png`, `image/jpeg` (the service returns `document_type_not_allowed` otherwise).
+   * @minLength 1
+   * @maxLength 255
+   */
+  content_type: DocumentUploadCreateContentType;
+  /**
+   * Claimed size in bytes (`1..20971520`). The 20 MB cap is enforced by the service so violations return `document_too_large`.
+   * @minimum 1
+   * @maximum 20971520
+   */
+  size_bytes: number;
+}
+
 export type EmployeeStatus =
   (typeof EmployeeStatus)[keyof typeof EmployeeStatus];
 
@@ -1659,6 +1793,12 @@ export type ListEmployeesParams = {
   location_id?: string | null;
   status?: EmployeeStatus | null;
   manager_id?: string | null;
+  page?: number;
+  page_size?: number;
+};
+
+export type ListDocumentsParams = {
+  category?: DocumentCategory | null;
   page?: number;
   page_size?: number;
 };
