@@ -15,6 +15,7 @@ export function createDocumentsApiClientMock() {
       ...(params ? [params] : []),
     ],
     // Queries and the imperative download call.
+    useGetCurrentEmployee: vi.fn(),
     useListDocuments: vi.fn(),
     downloadDocument: vi.fn(),
     // Mutations.

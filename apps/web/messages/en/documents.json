@@ -12,6 +12,13 @@
   "label": "Employee documents",
   "containerLabel": "Employee documents. Scroll horizontally to read all columns.",
   "expired": "Expired",
+  "myDocuments": {
+    "title": "My documents",
+    "description": "Documents HR keeps on your employee record. Files are downloaded through short-lived links; contact HR to change one.",
+    "loading": "Loading your documents…",
+    "loadError": "Could not load your employee record.",
+    "noEmployee": "Your account isn't linked to an employee record, so there are no documents to show."
+  },
   "categories": {
     "contract": "Contract",
     "identification": "Identification",

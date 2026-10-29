@@ -27,6 +27,12 @@ before running the gate.
   new employee → the in-use department's archive renders the Risk-1
   `409 department_archived_in_use` as a visible error (organizations AC5/AC9) →
   after the employee transfers out, the archive/restore round-trip completes.
+- `documents.spec.ts` — HR uploads a document through the two-step presigned
+  flow on the seeded worker's employee detail (file → private MinIO staging →
+  confirm → `document.uploaded` outbox row); the worker sees it under
+  "My documents", downloads it through a fresh presigned GET that resolves to
+  the private object, then HR deletes it and the row disappears from both
+  surfaces while a direct download request answers `404 document_not_found`.
 - `employees.spec.ts` — create → list → detail → transfer, and the duplicate
   email conflict rendered as a visible error state (employees AC12).
 - `attendance.spec.ts` — check in → the open record and its row appear →

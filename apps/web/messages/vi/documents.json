@@ -12,6 +12,13 @@
   "label": "Tài liệu của nhân viên",
   "containerLabel": "Tài liệu của nhân viên. Cuộn ngang để đọc mọi cột.",
   "expired": "Đã hết hạn",
+  "myDocuments": {
+    "title": "Tài liệu của tôi",
+    "description": "Tài liệu HR lưu trong hồ sơ nhân sự của bạn. Tệp được tải xuống qua liên kết tạm thời; liên hệ HR để thay đổi.",
+    "loading": "Đang tải tài liệu của bạn…",
+    "loadError": "Không thể tải hồ sơ nhân sự của bạn.",
+    "noEmployee": "Tài khoản của bạn chưa được liên kết với hồ sơ nhân sự nên chưa có tài liệu nào."
+  },
   "categories": {
     "contract": "Hợp đồng",
     "identification": "Giấy tờ định danh",

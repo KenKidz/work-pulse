@@ -5,6 +5,7 @@ import {
   CalendarClock,
   CalendarDays,
   ChartColumn,
+  IdCard,
   LayoutDashboard,
   MonitorDot,
   ReceiptText,
@@ -49,6 +50,7 @@ export type NavKey =
   | "overtime"
   | "payroll"
   | "myPayslips"
+  | "myDocuments"
   | "reports"
   | "recruitment"
   | "performance"
@@ -113,6 +115,7 @@ export const NAV_ITEMS: NavItem[] = [
     roles: PAYROLL_VIEW_ROLES,
   },
   { href: "/payroll/my-payslips", key: "myPayslips", icon: ReceiptText },
+  { href: "/profile", key: "myDocuments", icon: IdCard },
   {
     href: "/reports",
     key: "reports",

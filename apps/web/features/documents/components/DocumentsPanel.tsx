@@ -39,7 +39,13 @@ const DOCUMENTS_PAGE_SIZE = 20;
 const ALL_CATEGORIES = "all";
 const SKELETON_ROWS = 5;
 
-function DocumentsTableSkeleton({ label }: { label: string }) {
+export function DocumentsTableSkeleton({
+  label,
+  rows = SKELETON_ROWS,
+}: {
+  label: string;
+  rows?: number;
+}) {
   return (
     <div role="status" className="w-full">
       <span className="sr-only">{label}</span>
@@ -51,7 +57,7 @@ function DocumentsTableSkeleton({ label }: { label: string }) {
           <span className="h-3 w-24 rounded-sm bg-muted" />
           <span className="ml-auto h-3 w-16 rounded-sm bg-muted" />
         </div>
-        {Array.from({ length: SKELETON_ROWS }).map((_, index) => (
+        {Array.from({ length: rows }).map((_, index) => (
           <div key={index} className="flex h-12 items-center gap-4 border-b px-3 last:border-b-0">
             <span className="h-3 w-1/3 rounded-sm bg-muted" />
             <span className="h-3 w-20 rounded-sm bg-muted" />
