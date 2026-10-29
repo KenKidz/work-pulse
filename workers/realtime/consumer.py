@@ -32,6 +32,7 @@ from typing import Any, Protocol
 
 from app.shared.logging import get_logger
 from app.shared.presence import PresenceFact, PresencePublisher
+from app.shared.telemetry import event_type_label, worker_unit
 from workers.realtime.mapping import is_realtime_envelope, map_envelope
 
 _log = get_logger("realtime.consumer")
@@ -129,27 +130,42 @@ class RealtimeConsumer:
 
     async def _handle(self, value: bytes | None) -> None:
         """One message start-to-finish: parse → map → publish attempt → commit."""
-        fact = self._project(value)
-        if fact is not None:
-            try:
-                await self._publisher.publish(fact)
-            except Exception as exc:
-                # The port says implementations never raise; a violating
-                # adapter is still swallowed ids-only and the offset advances
-                # — the transient contract (the wall misses latency only).
-                _log.warning(
-                    "consumer_publish_failed",
-                    tenant_id=str(fact.tenant_id),
-                    employee_id=str(fact.employee_id),
-                    error=type(exc).__name__,
-                )
-        await self._commit()
-
-    def _project(self, value: bytes | None) -> PresenceFact | None:
-        """Parse + map one message; skips are logged ids-only, never raise."""
         envelope = _parse(value)
-        if envelope is None:
-            return None
+        event_type = (
+            event_type_label(envelope.get("event_type"))
+            if envelope is not None
+            else "unknown"
+        )
+        async with worker_unit("realtime", event_type) as unit:
+            if envelope is None:
+                unit.mark_skipped()
+                if not await self._commit():
+                    unit.mark_failed("commit_failed")
+                return
+
+            fact = self._project(envelope)
+            if fact is None:
+                unit.mark_skipped()
+            else:
+                try:
+                    await self._publisher.publish(fact)
+                except Exception as exc:
+                    # The port says implementations never raise; a violating
+                    # adapter is still swallowed ids-only and the offset
+                    # advances — the transient contract (the wall misses
+                    # latency only). The unit is recorded as failed.
+                    unit.mark_failed(type(exc).__name__)
+                    _log.warning(
+                        "consumer_publish_failed",
+                        tenant_id=str(fact.tenant_id),
+                        employee_id=str(fact.employee_id),
+                        error=type(exc).__name__,
+                    )
+            if not await self._commit():
+                unit.mark_failed("commit_failed")
+
+    def _project(self, envelope: Mapping[str, Any]) -> PresenceFact | None:
+        """Map one parsed message; skips are logged ids-only, never raise."""
         today = self._today()
         fact = map_envelope(envelope, today=today)
         if fact is None and is_realtime_envelope(envelope, today=today):
@@ -163,14 +179,19 @@ class RealtimeConsumer:
             )
         return fact
 
-    async def _commit(self) -> None:
-        """Advance the offset past the handled message (failures retry)."""
+    async def _commit(self) -> bool:
+        """Advance the offset past the handled message (failures retry).
+
+        Returns `False` when the commit failed; the offset simply stays put,
+        the message is redelivered and its identical upsert repeats —
+        at-least-once from Kafka, harmless. The loop keeps running.
+        """
         try:
             await self._source.commit()
+            return True
         except Exception as exc:
-            # The offset simply stays put: the message is redelivered and its
-            # identical upsert repeats — at-least-once from Kafka, harmless.
             _log.warning("consumer_commit_failed", error=type(exc).__name__)
+            return False
 
     def _backoff_seconds(self, consecutive_failures: int) -> float:
         """Exponential between fetches: base, 2×, 4×, … capped at `backoff_max`."""

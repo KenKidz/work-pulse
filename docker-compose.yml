@@ -261,8 +261,70 @@ services:
       minio-test:
         condition: service_healthy
 
+  # --- Phase 6: observability (`make observability-up`, ADR 0023) ---
+  # Prometheus scrapes the API (:8000/metrics) and the five loopback worker
+  # listeners (:9101–:9105) through Docker's host gateway because the apps run
+  # natively on the host. Grafana provisions its Prometheus datasource and the
+  # WorkPulse overview dashboard from version-controlled JSON under
+  # `ops/observability/`. Both bind to host loopback like the other infra; no
+  # otel-collector, Tempo or Jaeger service is part of this stack.
+
+  prometheus:
+    image: prom/prometheus:v3.0.1
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.listen-address=0.0.0.0:9090"
+    ports:
+      - "127.0.0.1:9090:9090"
+    extra_hosts:
+      # Resolves the host from inside the container on Linux; Docker Desktop
+      # already provides it on macOS/Windows.
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./ops/observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- --timeout=2 http://127.0.0.1:9090/-/healthy >/dev/null",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    environment:
+      # Local dev only: anonymous Viewer so `make observability-up` needs no
+      # login, while the admin account still exists for ad-hoc work.
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_USERS_DEFAULT_THEME: dark
+    ports:
+      - "127.0.0.1:3001:3000"
+    volumes:
+      - ./ops/observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./ops/observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- --timeout=2 http://127.0.0.1:3000/api/health >/dev/null",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
 volumes:
   postgres-data:
   kafka-data:
   clickhouse-data:
   minio-data:
+  prometheus-data:
+  grafana-data:

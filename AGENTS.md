@@ -31,12 +31,14 @@ Installed so far:
 - Datastore: PostgreSQL (source of truth, docker compose) — `database/postgres/`;
   ClickHouse (Phase 4 analytical projection, ADR 0019) — `database/clickhouse/`;
   MinIO (private employee-document bucket, ADR 0022)
+- Observability: in-process OpenTelemetry tracing/metrics + Prometheus + Grafana
+  (ADR 0023) — `apps/api/app/shared/telemetry.py`, `ops/observability/`
 
 Requires Python 3.12+, Node >= 20, pnpm, Docker, and uv.
 
 Later phases — **do not add these without a spec + ADR**: Redis + WebSocket (2),
 Kafka + outbox + workers (3), ClickHouse + payroll (4),
-CDC (5), observability (6), load/reliability (7), Kubernetes + CI/CD (8).
+CDC (5), load/reliability (7), Kubernetes + CI/CD (8).
 Roadmap: `.ai/architecture.md`.
 
 ## Quickstart
@@ -49,6 +51,7 @@ Roadmap: `.ai/architecture.md`.
 | `make db-test-up` | start the throwaway test PostgreSQL on :5433 |
 | `make redis-up` | start Redis (realtime fan-out, :6379; `make redis-test-up` for :6380) |
 | `make minio-up` | start MinIO (document storage, :9000; bucket provisioned; `make minio-test-up` for :9002) |
+| `make observability-up` | start Prometheus (:9090) + Grafana (:3001) with provisioned dashboards |
 | `make db-migrate` | apply Alembic migrations to the dev database |
 | `make db-seed` | seed the dev database (idempotent) |
 | `make dev-api` | FastAPI dev server on :8000 |
@@ -62,7 +65,7 @@ Roadmap: `.ai/architecture.md`.
 ```
 AGENTS.md             this file
 Makefile              single entry point (install / dev / db / check)
-docker-compose.yml    PostgreSQL, Redis, Kafka, ClickHouse and MinIO for local dev
+docker-compose.yml    PostgreSQL, Redis, Kafka, ClickHouse, MinIO, Prometheus and Grafana
 .ai/                  product, domain, architecture, conventions, security,
                       testing, decisions/, features/ (specs + backlog index)
 apps/web/             Next.js app (routes in app/, feature logic in features/)
@@ -71,6 +74,7 @@ workers/              background consumers (Phase 3)
 packages/api-client/  orval-generated typed client (`make gen-api`)
 contracts/            versioned event schemas + generated OpenAPI
 database/             postgres/ (seeds, scripts) · clickhouse/ (projection DDL)
+ops/observability/    Prometheus config · Grafana provisioning + dashboards
 scripts/              dev orchestration (`make dev`)
 tests/e2e/            cross-surface tests
 tasks/                TODO.md (backlog) · doc.md (original brief)

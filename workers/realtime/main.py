@@ -17,6 +17,11 @@ from aiokafka import AIOKafkaConsumer
 from app.config import get_settings
 from app.infrastructure.redis import RedisPresencePublisher, dispose_redis, get_redis
 from app.shared.logging import configure_logging, get_logger
+from app.shared.telemetry import (
+    configure_telemetry,
+    flush_worker_telemetry,
+    start_worker_metrics_server,
+)
 from workers.realtime.consumer import RealtimeConsumer
 
 _log = get_logger("realtime.main")
@@ -25,6 +30,7 @@ _log = get_logger("realtime.main")
 async def _run() -> None:
     settings = get_settings()
     configure_logging(settings.environment)
+    configure_telemetry(settings)
 
     source = AIOKafkaConsumer(
         settings.kafka_events_topic,
@@ -49,6 +55,7 @@ async def _run() -> None:
         loop.add_signal_handler(sig, consumer.stop)
 
     await source.start()
+    metrics_server = start_worker_metrics_server(settings.realtime_metrics_port)
     run_task = asyncio.create_task(consumer.run())
     started_task = asyncio.create_task(consumer.started.wait())
     try:
@@ -68,8 +75,11 @@ async def _run() -> None:
         await run_task
     finally:
         started_task.cancel()
+        if metrics_server is not None:
+            metrics_server.stop()
         await source.stop()
         await dispose_redis()
+        flush_worker_telemetry()
         _log.info("realtime_consumer_stopped")
 
 

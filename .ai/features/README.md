@@ -51,7 +51,7 @@ domain map in `.ai/domain.md` is their placeholder.
 | Internationalization (en + vi, next-intl) | cross-cutting | L | done | `i18n.md` |
 | Performance (goals, reviews, feedback, skills) | 4+ | M | done | `performance.md` |
 | Employee documents (presigned upload/download) | 4+ | M | done | `employee-documents.md` |
-| Observability (OTel, Prometheus, Grafana) | 6 | M | draft | `observability.md` |
+| Observability (OTel, Prometheus, Grafana) | 6 | M | done | `observability.md` |
 | Reliability (load tests, rate limiting, breakers) | 7 | M | planned | — |
 | Deployment (images, Kubernetes, CI/CD) | 8 | M | planned | — |
 

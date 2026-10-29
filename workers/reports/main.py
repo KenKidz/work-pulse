@@ -25,6 +25,11 @@ from app.infrastructure.clickhouse.client import create_clickhouse_client
 from app.infrastructure.clickhouse.projection import ClickhouseProjectionWriter
 from app.infrastructure.clickhouse.schema import apply_clickhouse_schema
 from app.shared.logging import configure_logging, get_logger
+from app.shared.telemetry import (
+    configure_telemetry,
+    flush_worker_telemetry,
+    start_worker_metrics_server,
+)
 from workers.reports.consumer import ReportsConsumer
 
 _log = get_logger("reports.main")
@@ -33,6 +38,7 @@ _log = get_logger("reports.main")
 async def _run() -> None:
     settings = get_settings()
     configure_logging(settings.environment)
+    configure_telemetry(settings)
 
     client = create_clickhouse_client()
     try:
@@ -65,6 +71,7 @@ async def _run() -> None:
             loop.add_signal_handler(sig, consumer.stop)
 
         await source.start()
+        metrics_server = start_worker_metrics_server(settings.reports_metrics_port)
         run_task = asyncio.create_task(consumer.run())
         started_task = asyncio.create_task(consumer.started.wait())
         try:
@@ -85,7 +92,10 @@ async def _run() -> None:
             await run_task
         finally:
             started_task.cancel()
+            if metrics_server is not None:
+                metrics_server.stop()
             await source.stop()
+            flush_worker_telemetry()
             _log.info("reports_stopped")
     finally:
         client.close()

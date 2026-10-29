@@ -17,6 +17,11 @@ from app.config import get_settings
 from app.infrastructure.postgres.engine import dispose_engine, get_session_factory
 from app.infrastructure.postgres.outbox import PostgresOutboxRepository
 from app.shared.logging import configure_logging, get_logger
+from app.shared.telemetry import (
+    configure_telemetry,
+    flush_worker_telemetry,
+    start_worker_metrics_server,
+)
 from workers.relay.publisher import KafkaEnvelopePublisher
 from workers.relay.relay import OutboxRelay
 
@@ -31,6 +36,7 @@ def _utc_now() -> datetime:
 async def _run() -> None:
     settings = get_settings()
     configure_logging(settings.environment)
+    configure_telemetry(settings)
 
     publisher = KafkaEnvelopePublisher(
         bootstrap_servers=settings.kafka_bootstrap_servers,
@@ -53,6 +59,7 @@ async def _run() -> None:
         loop.add_signal_handler(sig, relay.stop)
 
     await publisher.start()
+    metrics_server = start_worker_metrics_server(settings.relay_metrics_port)
     _log.info(
         "relay_started",
         bootstrap_servers=settings.kafka_bootstrap_servers,
@@ -62,8 +69,11 @@ async def _run() -> None:
     try:
         await relay.run()
     finally:
+        if metrics_server is not None:
+            metrics_server.stop()
         await publisher.stop()
         await dispose_engine()
+        flush_worker_telemetry()
         _log.info("relay_stopped")
 
 

@@ -33,8 +33,13 @@ from uuid import UUID
 
 from app.domains.payroll.schemas import PayrollRun
 from app.shared.logging import get_logger
+from app.shared.telemetry import worker_unit
 
 _log = get_logger("payroll.worker")
+
+#: Bounded synthetic unit label for payroll jobs: a queued run is work, not a
+#: domain event, so it has no `event_type` on the wire (ADR 0023).
+PAYROLL_RUN_UNIT = "payroll.run"
 
 # A bounded exponent: an unbounded `2 ** n` overflows to a float error after
 # ~1025 consecutive failures and would kill the loop mid-outage.
@@ -193,25 +198,29 @@ class PayrollRunWorker:
         for run_id in run_ids:
             if self._stopping.is_set():
                 break  # this run stays queued for the next process start
-            try:
-                async with self._unit_factory() as unit:
-                    run = await unit.calculate(run_id, self._clock())
-            except Exception as exc:
-                # The unit's transaction rolled back; the run is still queued
-                # and the next pass retries it after a bounded backoff.
-                failures += 1
-                _log.warning(
-                    "payroll_run_failed",
+            async with worker_unit("payroll", PAYROLL_RUN_UNIT) as unit_span:
+                try:
+                    async with self._unit_factory() as unit:
+                        run = await unit.calculate(run_id, self._clock())
+                except Exception as exc:
+                    # The unit's transaction rolled back; the run is still
+                    # queued and the next pass retries it after a bounded
+                    # backoff. Logged inside the span so the failure line
+                    # stays trace-correlated.
+                    unit_span.mark_failed(type(exc).__name__)
+                    failures += 1
+                    _log.warning(
+                        "payroll_run_failed",
+                        run_id=str(run_id),
+                        error=type(exc).__name__,
+                    )
+                    continue
+                processed += 1
+                _log.info(
+                    "payroll_run_processed",
                     run_id=str(run_id),
-                    error=type(exc).__name__,
+                    status=run.status.value,
                 )
-                continue
-            processed += 1
-            _log.info(
-                "payroll_run_processed",
-                run_id=str(run_id),
-                status=run.status.value,
-            )
         return processed, failures
 
     def _backoff_seconds(self, consecutive_failures: int) -> float:

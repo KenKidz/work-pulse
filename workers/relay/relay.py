@@ -25,7 +25,7 @@ unit tests drive this exact loop with in-memory stubs — no DB, no broker
 """
 
 import asyncio
-from collections.abc import Callable, Iterator, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import AbstractAsyncContextManager
 from datetime import datetime
 from typing import Any, Protocol
@@ -37,6 +37,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.infrastructure.postgres.models_outbox import EventOutboxRow
 from app.shared.logging import get_logger
 from app.shared.redaction import redaction_needles, safe_error_text
+from app.shared.telemetry import event_type_label, worker_unit
 
 _log = get_logger("relay")
 
@@ -92,6 +93,11 @@ def _safe_error(exc: BaseException, envelope: dict[str, Any]) -> str:
     — and therefore PII — never reach the error column (`.ai/security.md`).
     """
     return safe_error_text(exc, redaction_needles(_string_leaves(envelope)))
+
+
+def _event_type(envelope: Mapping[str, Any]) -> str:
+    """Bounded span/metric label from the stored envelope (never raw text)."""
+    return event_type_label(envelope.get("event_type"))
 
 
 class OutboxRelay:
@@ -176,18 +182,22 @@ class OutboxRelay:
         for row in rows:
             if self._stopping.is_set():
                 break  # stop between rows: this row is not published this run
-            try:
-                await self._publisher.publish(row.payload)
-            except Exception as exc:
-                # Any publish failure is bookkept and retried by a later poll —
-                # never propagated (a broker outage must not kill the worker).
-                await self._mark_failed(row.id, _safe_error(exc, row.payload))
-                _log.warning(
-                    "publish_failed",
-                    event_id=row.event_id,
-                    error=type(exc).__name__,
-                )
-                return published, True
+            async with worker_unit("relay", _event_type(row.payload)) as unit:
+                try:
+                    await self._publisher.publish(row.payload)
+                except Exception as exc:
+                    # Any publish failure is bookkept and retried by a later
+                    # poll — never propagated (a broker outage must not kill
+                    # the worker). Recorded and logged inside the unit span so
+                    # the failure line stays trace-correlated.
+                    unit.mark_failed(type(exc).__name__)
+                    await self._mark_failed(row.id, _safe_error(exc, row.payload))
+                    _log.warning(
+                        "publish_failed",
+                        event_id=row.event_id,
+                        error=type(exc).__name__,
+                    )
+                    return published, True
             await self._mark_published(row.id)
             published += 1
         return published, False

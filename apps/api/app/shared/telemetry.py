@@ -20,16 +20,23 @@ Design notes (ADR 0023):
   *template*, never a raw path), `status_code`, `worker`, `event_type`,
   `status`. Tenant/employee/user/request/event identifiers never become
   labels (business rule 5).
+- Each background worker wraps one batch/message/job in `worker_unit`: a
+  root span with the same bounded instruments, plus a loopback-only
+  `prometheus_client` listener (`start_worker_metrics_server`) when its
+  configured port is non-zero.
 """
 
 from __future__ import annotations
 
+import re
 import threading
 import time
-from collections.abc import Awaitable, Callable, Mapping
+from collections.abc import AsyncIterator, Awaitable, Callable, Mapping
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import Any
 
+import structlog
 from opentelemetry import context as otel_context
 from opentelemetry import metrics as otel_metrics
 from opentelemetry import trace as otel_trace
@@ -42,7 +49,7 @@ from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, SpanExporter
 from opentelemetry.trace import SpanKind, Status, StatusCode
-from prometheus_client import CollectorRegistry, generate_latest
+from prometheus_client import CollectorRegistry, generate_latest, start_http_server
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
@@ -142,6 +149,24 @@ def resolve_route_template(scope: Mapping[str, Any]) -> str:
     if isinstance(path, str) and path:
         return path
     return UNMATCHED_ROUTE
+
+
+#: Event-type label shape: contract events are dotted lowercase identifiers
+#: (`attendance.checked_in`). Anything else — hostile topic text, PII, an
+#: over-long value — collapses to `unknown` so it cannot inflate or poison a
+#: metric label (business rule 5).
+_EVENT_TYPE_PATTERN = re.compile(r"[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)+")
+
+
+def event_type_label(value: object) -> str:
+    """A bounded, PII-safe `event_type` label for spans and worker metrics."""
+    if (
+        isinstance(value, str)
+        and len(value) <= 64
+        and _EVENT_TYPE_PATTERN.fullmatch(value) is not None
+    ):
+        return value
+    return "unknown"
 
 
 @dataclass(frozen=True, slots=True)
@@ -334,6 +359,144 @@ def configure_telemetry(settings: Settings | None = None) -> Telemetry:
 def get_telemetry() -> Telemetry | None:
     """The configured bundle, or `None` before `configure_telemetry`."""
     return _TELEMETRY
+
+
+def flush_worker_telemetry() -> None:
+    """Best-effort span/metric flush for a worker shutdown (never raises).
+
+    The worker's `*_stopped` log line is load-bearing for dev teardown; a
+    metric-reader or exporter hiccup must never suppress it (business rule 6).
+    """
+    telemetry = get_telemetry()
+    if telemetry is None:
+        return
+    try:
+        telemetry.flush()
+    except Exception as exc:
+        structlog.get_logger("workpulse.telemetry").warning(
+            "telemetry_flush_failed",
+            error=type(exc).__name__,
+        )
+
+
+@dataclass(slots=True)
+class WorkerUnit:
+    """Mutable outcome of one worker batch/message/job.
+
+    Callers that swallow an error inside the unit record it with
+    `mark_failed`; deliberate skips call `mark_skipped`. The context manager
+    records the final status and duration exactly once, in `finally`.
+    """
+
+    worker: str
+    event_type: str
+    status: str = "succeeded"
+    span: otel_trace.Span | None = None
+
+    def mark_skipped(self) -> None:
+        """Record a deliberate, terminal skip (never a failure)."""
+        if self.status == "succeeded":
+            self.status = "skipped"
+
+    def mark_failed(self, error_type: str) -> None:
+        """Record a handled failure without ever logging its message (rule 5)."""
+        self.status = "failed"
+        if self.span is not None:
+            self.span.set_attribute("error.type", error_type)
+            self.span.set_status(Status(StatusCode.ERROR))
+
+
+@asynccontextmanager
+async def worker_unit(worker: str, event_type: str) -> AsyncIterator[WorkerUnit]:
+    """Wrap one unit of worker work in a root span plus bounded metrics.
+
+    Every worker batch/message/job gets its own root span (worker spans are
+    not linked across the bus — no `eventparent`/Kafka header propagation in
+    scope) and the active span feeds `structlog`'s `trace_id`/`span_id`
+    processor for the duration of the unit. Success, failure and skip all
+    record `workpulse_worker_events_total` and
+    `workpulse_worker_unit_duration_seconds` with bounded labels only.
+
+    Without a configured telemetry stack (unit tests) the helper is inert:
+    worker loops keep running exactly as before (business rule 6).
+    """
+    telemetry = get_telemetry()
+    unit = WorkerUnit(worker=worker, event_type=event_type)
+    if telemetry is None:
+        yield unit
+        return
+
+    tracer = telemetry.tracer_provider.get_tracer("workpulse.worker")
+    span = tracer.start_span(
+        f"{worker} {event_type}",
+        context=otel_context.Context(),
+        kind=SpanKind.CONSUMER,
+    )
+    span.set_attribute("workpulse.worker", worker)
+    span.set_attribute("workpulse.event_type", event_type)
+    unit.span = span
+    token = otel_context.attach(otel_trace.set_span_in_context(span))
+    started = time.perf_counter()
+    try:
+        yield unit
+    except BaseException as exc:
+        # Re-raise for the worker's existing loop/backoff handling; only the
+        # exception type reaches the span, never its message (rule 5).
+        unit.mark_failed(type(exc).__name__)
+        raise
+    finally:
+        span.set_attribute("workpulse.status", unit.status)
+        telemetry.record_worker_unit(
+            worker=worker,
+            event_type=event_type,
+            status=unit.status,
+            duration_seconds=time.perf_counter() - started,
+        )
+        otel_context.detach(token)
+        span.end()
+
+
+@dataclass(frozen=True, slots=True)
+class WorkerMetricsServer:
+    """A loopback-only Prometheus exposition listener for one worker process."""
+
+    server: Any
+    thread: threading.Thread
+
+    def stop(self) -> None:
+        """Stop serving and release the port."""
+        self.server.shutdown()
+        self.server.server_close()
+        self.thread.join(timeout=5)
+
+
+def start_worker_metrics_server(port: int) -> WorkerMetricsServer | None:
+    """Expose the process registry on `127.0.0.1:<port>` when configured.
+
+    `port <= 0` disables the listener so tests and parallel runs never bind.
+    A bind failure is logged and swallowed: scraping is optional and must
+    never take a worker down (business rule 6).
+    """
+    if port <= 0:
+        return None
+    telemetry = get_telemetry()
+    if telemetry is None:
+        return None
+
+    try:
+        server, thread = start_http_server(
+            port,
+            addr="127.0.0.1",
+            registry=telemetry.registry,
+        )
+    except OSError as exc:
+        structlog.get_logger("workpulse.telemetry").warning(
+            "worker_metrics_server_failed",
+            port=port,
+            error=type(exc).__name__,
+        )
+        return None
+    return WorkerMetricsServer(server=server, thread=thread)
 
 
 class TelemetryMiddleware(BaseHTTPMiddleware):

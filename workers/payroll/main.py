@@ -37,6 +37,11 @@ from app.infrastructure.postgres.payroll_facts import (
 )
 from app.infrastructure.postgres.repositories.payroll import PostgresPayrollRepository
 from app.shared.logging import configure_logging, get_logger
+from app.shared.telemetry import (
+    configure_telemetry,
+    flush_worker_telemetry,
+    start_worker_metrics_server,
+)
 from workers.payroll.runner import PayrollJobUnit, PayrollRunWorker
 
 _log = get_logger("payroll.main")
@@ -67,6 +72,7 @@ def build_job_unit(session: AsyncSession) -> PayrollJobUnit:
 async def _run() -> None:
     settings = get_settings()
     configure_logging(settings.environment)
+    configure_telemetry(settings)
 
     session_factory = get_session_factory()
 
@@ -89,6 +95,7 @@ async def _run() -> None:
     for sig in (signal.SIGINT, signal.SIGTERM):
         loop.add_signal_handler(sig, worker.stop)
 
+    metrics_server = start_worker_metrics_server(settings.payroll_metrics_port)
     run_task = asyncio.create_task(worker.run())
     started_task = asyncio.create_task(worker.started.wait())
     try:
@@ -106,7 +113,10 @@ async def _run() -> None:
         await run_task
     finally:
         started_task.cancel()
+        if metrics_server is not None:
+            metrics_server.stop()
         await dispose_engine()
+        flush_worker_telemetry()
         _log.info("payroll_worker_stopped")
 
 

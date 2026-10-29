@@ -3,7 +3,7 @@
 API_DIR := apps/api
 WEB_DIR := apps/web
 
-.PHONY: help install dev db-up db-down db-test-up redis-up redis-test-up kafka-up kafka-test-up clickhouse-up clickhouse-down clickhouse-test-up minio-up minio-test-up db-migrate db-seed dev-api dev-web dev-relay dev-realtime dev-notifications dev-payroll dev-reports check check-api check-web check-e2e gen-api format-web
+.PHONY: help install dev db-up db-down db-test-up redis-up redis-test-up kafka-up kafka-test-up clickhouse-up clickhouse-down clickhouse-test-up minio-up minio-test-up observability-up observability-down db-migrate db-seed dev-api dev-web dev-relay dev-realtime dev-notifications dev-payroll dev-reports check check-api check-web check-e2e gen-api format-web
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -46,6 +46,12 @@ minio-up: ## Start MinIO (document storage, :9000; bucket provisioned)
 minio-test-up: ## Start the throwaway test MinIO on :9002 (bucket provisioned)
 	docker compose up -d --wait minio-test
 	docker compose run --rm minio-test-init
+
+observability-up: ## Start Prometheus (:9090) + Grafana (:3001) with provisioned dashboards
+	docker compose up -d --wait prometheus grafana
+
+observability-down: ## Stop Prometheus + Grafana (configs and dashboards stay in version control)
+	docker compose stop prometheus grafana
 
 db-migrate: ## Apply Alembic migrations to the dev database
 	cd $(API_DIR) && uv run alembic upgrade head

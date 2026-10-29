@@ -36,6 +36,7 @@ from app.domains.reports.folds import (
 )
 from app.domains.reports.repository import ProjectionWriter
 from app.shared.logging import get_logger
+from app.shared.telemetry import event_type_label, worker_unit
 from workers.reports.mapping import (
     FoldCommand,
     FoldKind,
@@ -128,17 +129,34 @@ class ReportsConsumer:
 
     async def _handle(self, value: bytes | None) -> None:
         """One message start-to-finish, or a committed deliberate skip."""
-        command = self._map(value)
-        if command is None:
-            await self._commit()
-            return
-        await self._project(command)
-
-    def _map(self, value: bytes | None) -> FoldCommand | None:
-        """Parse + map one message; skips are logged ids-only, never raise."""
         envelope = _parse(value)
-        if envelope is None:
-            return None
+        event_type = (
+            event_type_label(envelope.get("event_type"))
+            if envelope is not None
+            else "unknown"
+        )
+        async with worker_unit("reports", event_type) as unit:
+            if envelope is None:
+                unit.mark_skipped()
+                if not await self._commit():
+                    unit.mark_failed("commit_failed")
+                return
+
+            command = self._map(envelope)
+            if command is None:
+                unit.mark_skipped()
+                if not await self._commit():
+                    unit.mark_failed("commit_failed")
+                return
+
+            outcome = await self._project(command)
+            if outcome in ("skipped", "stopped"):
+                unit.mark_skipped()
+            elif outcome == "failed":
+                unit.mark_failed("projection_failed")
+
+    def _map(self, envelope: Mapping[str, Any]) -> FoldCommand | None:
+        """Map one parsed message; skips are logged ids-only, never raise."""
         try:
             command = map_envelope(envelope)
         except FoldError as exc:
@@ -172,8 +190,15 @@ class ReportsConsumer:
             )
         return None
 
-    async def _project(self, command: FoldCommand) -> None:
-        """Fold, write and commit; store errors retry before any commit."""
+    async def _project(self, command: FoldCommand) -> str:
+        """Fold, write and commit; return the message outcome.
+
+        `succeeded` — written and the offset committed; `skipped` — a fold
+        rejected the payload and the offset committed; `failed` — a store or
+        commit failure left the offset uncommitted; `stopped` — `stop()`
+        arrived before the write became durable. Store errors retry in-process
+        with bounded backoff and never kill the loop.
+        """
         failures = 0
         while not self._stopping.is_set():
             try:
@@ -188,8 +213,7 @@ class ReportsConsumer:
                     error="invalid_envelope",
                     reason=str(exc),
                 )
-                await self._commit()
-                return
+                return "skipped" if await self._commit() else "failed"
             except Exception as exc:
                 # ClickHouse outage: back off and retry the same message. Never
                 # commit past it; the type only — driver text can embed row data.
@@ -202,9 +226,9 @@ class ReportsConsumer:
                 )
                 await self._pause(self._backoff_seconds(failures))
                 continue
-            await self._commit()
-            return
+            return "succeeded" if await self._commit() else "failed"
         # Stopped before the write became durable: the offset stays put.
+        return "failed" if failures else "stopped"
 
     def _apply(self, command: FoldCommand) -> None:
         """Apply one command's fold to the projection store (synchronous I/O).
@@ -271,14 +295,19 @@ class ReportsConsumer:
         if leave is not None:
             writer.upsert_leave(leave)
 
-    async def _commit(self) -> None:
-        """Advance the offset past the handled/skipped message (failures retry)."""
+    async def _commit(self) -> bool:
+        """Advance the offset past the handled/skipped message (failures retry).
+
+        Returns `False` when the commit failed; the offset simply stays put
+        and the rows already written make the redelivery a convergent no-op —
+        at-least-once from Kafka. The loop keeps running.
+        """
         try:
             await self._source.commit()
+            return True
         except Exception as exc:
-            # The offset simply stays put; the rows already written make the
-            # redelivery a convergent no-op — at-least-once from Kafka.
             _log.warning("consumer_commit_failed", error=type(exc).__name__)
+            return False
 
     def _backoff_seconds(self, consecutive_failures: int) -> float:
         """Exponential between attempts: base, 2×, 4×, … capped at `backoff_max`."""

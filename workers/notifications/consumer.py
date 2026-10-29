@@ -33,6 +33,7 @@ from app.domains.notifications.models import DeliverySummary, RenderedMessage
 from app.domains.notifications.ports import RecipientDirectory
 from app.domains.notifications.schemas import NotificationIntent, Recipient
 from app.shared.logging import get_logger
+from app.shared.telemetry import event_type_label, worker_unit
 from workers.notifications.mapping import (
     is_known_event_type,
     is_trigger_envelope,
@@ -173,20 +174,45 @@ class NotificationsConsumer:
     async def _handle(self, value: bytes | None) -> None:
         """One message start-to-finish, or a committed deliberate skip."""
         envelope = _parse(value)
-        if envelope is None:
-            await self._commit()
-            return
-        intent = self._map(envelope)
-        if intent is None:
-            await self._commit()
-            return
-        await self._deliver(intent)
+        event_type = (
+            event_type_label(envelope.get("event_type"))
+            if envelope is not None
+            else "unknown"
+        )
+        async with worker_unit("notifications", event_type) as unit:
+            if envelope is None:
+                unit.mark_skipped()
+                if not await self._commit():
+                    unit.mark_failed("commit_failed")
+                return
 
-    async def _deliver(self, intent: NotificationIntent) -> None:
-        """Resolve, render and deliver; store errors retry before any commit."""
+            intent = self._map(envelope)
+            if intent is None:
+                unit.mark_skipped()
+                if not await self._commit():
+                    unit.mark_failed("commit_failed")
+                return
+
+            outcome = await self._deliver(intent)
+            if outcome in ("skipped", "stopped"):
+                unit.mark_skipped()
+            elif outcome == "failed":
+                unit.mark_failed("delivery_failed")
+
+    async def _deliver(self, intent: NotificationIntent) -> str:
+        """Resolve, render and deliver; return the message outcome.
+
+        `succeeded` — every delivery terminal and the offset committed;
+        `skipped` — a deliberate terminal skip (no recipient, invalid
+        content) and the offset committed; `failed` — a store/commit failure
+        left the offset uncommitted; `stopped` — `stop()` arrived before the
+        message became terminal. Store errors retry in-process before any
+        commit, so one poisoning is not a loop failure.
+        """
         failures = 0
         while not self._stopping.is_set():
             try:
+                prepared: _Prepared | None = None
                 async with self._unit_factory() as unit:
                     prepared = await self._prepare(intent, unit.directory)
                     if prepared is not None:
@@ -200,8 +226,9 @@ class NotificationsConsumer:
                             # The service promises terminal summaries; a
                             # non-terminal one must never authorize a commit.
                             raise RuntimeError("delivery summary is not terminal")
-                await self._commit()
-                return
+                if not await self._commit():
+                    return "failed"
+                return "succeeded" if prepared is not None else "skipped"
             except Exception as exc:
                 # Store/reference outage: back off and retry the same message.
                 # Never commit past it (at-least-once toward the store); the
@@ -214,6 +241,7 @@ class NotificationsConsumer:
                 )
                 await self._pause(self._backoff_seconds(failures))
         # Stopped before the message became terminal: the offset stays put.
+        return "failed" if failures else "stopped"
 
     async def _prepare(
         self, intent: NotificationIntent, directory: RecipientDirectory
@@ -304,14 +332,19 @@ class NotificationsConsumer:
             )
         return None
 
-    async def _commit(self) -> None:
-        """Advance the offset past the handled/skipped message (failures retry)."""
+    async def _commit(self) -> bool:
+        """Advance the offset past the handled/skipped message (failures retry).
+
+        Returns `False` when the commit failed; the offset simply stays put
+        and the rows already stored make the redelivery a dedupe no-op —
+        at-least-once from Kafka, harmless. The loop keeps running.
+        """
         try:
             await self._source.commit()
+            return True
         except Exception as exc:
-            # The offset simply stays put; the rows already stored make the
-            # redelivery a dedupe no-op — at-least-once from Kafka, harmless.
             _log.warning("consumer_commit_failed", error=type(exc).__name__)
+            return False
 
     def _backoff_seconds(self, consecutive_failures: int) -> float:
         """Exponential between attempts: base, 2×, 4×, … capped at `backoff_max`."""

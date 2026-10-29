@@ -112,7 +112,7 @@ state and Kafka as the durable backbone so the separation stays honest.
 
 - **CDC (Phase 5):** `PostgreSQL ──► Debezium ──► Kafka ──► ClickHouse` —
   replaces hand-written analytics projections.
-- **Observability (Phase 6):** `OpenTelemetry ──► Prometheus ──► Grafana`.
+- **Observability (Phase 6):** `OpenTelemetry ──► Prometheus ──► Grafana` — in-process tracing/metrics, direct scrape of the API and workers, and a provisioned local stack (ADR 0023).
 
 ## Phase roadmap
 
@@ -149,6 +149,7 @@ and an ADR — not because it looks good on a CV.
 | Background workers | `workers/` (Phase 3) |
 | Versioned contracts (OpenAPI, events) | `contracts/` |
 | Database assets (seeds, scripts, migrations) | `database/` |
+| Local observability stack (Prometheus, Grafana) | `ops/observability/` |
 | Cross-surface tests | `tests/` |
 | Verification entry point | `make check` |
 

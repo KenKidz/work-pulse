@@ -1,0 +1,19 @@
+# Grafana dashboard provider (Phase 6, ADR 0023).
+#
+# Dashboards are code: the container mounts `ops/observability/grafana/
+# dashboards` read-only at the path below, so every `make observability-up`
+# boots the WorkPulse overview with zero manual UI clicks. UI edits are
+# disabled to keep the checked-in JSON authoritative.
+apiVersion: 1
+
+providers:
+  - name: WorkPulse
+    orgId: 1
+    folder: WorkPulse
+    type: file
+    disableDeletion: true
+    allowUiUpdates: false
+    updateIntervalSeconds: 30
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false

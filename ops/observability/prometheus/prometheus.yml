@@ -1,0 +1,36 @@
+# WorkPulse local Prometheus configuration (Phase 6, ADR 0023).
+#
+# Prometheus runs in the `prometheus` compose service and scrapes the API and
+# every background worker through Docker's host gateway (`extra_hosts` in
+# `docker-compose.yml`), because the apps run natively on the host. The API
+# serves `GET /metrics` on :8000; each worker optionally serves the same
+# exposition on its loopback port (RELAY_METRICS_PORT … REPORTS_METRICS_PORT).
+# There is no otel-collector in between: the OTel SDK bridges instruments into
+# a prometheus_client registry in-process (ADR 0023).
+#
+# Keep these ports in sync with `Settings` in apps/api/app/config.py — the
+# `test_observability_config.py` gate parses this file and fails on drift.
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: workpulse-api
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["host.docker.internal:8000"]
+        labels:
+          component: api
+
+  - job_name: workpulse-workers
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - host.docker.internal:9101
+          - host.docker.internal:9102
+          - host.docker.internal:9103
+          - host.docker.internal:9104
+          - host.docker.internal:9105
+        labels:
+          component: worker

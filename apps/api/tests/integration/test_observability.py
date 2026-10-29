@@ -30,6 +30,8 @@ from app.shared.telemetry import (
     HTTP_IN_FLIGHT_LABELS,
     HTTP_REQUEST_LABELS,
     METRICS_PATH,
+    WORKER_EVENT_LABELS,
+    WORKER_UNIT_LABELS,
     TelemetryMiddleware,
     configure_telemetry,
     get_telemetry,
@@ -211,7 +213,16 @@ async def test_metrics_and_spans_expose_no_tenant_pii_or_identifiers(
     assert scrape.status_code == 200
 
     labels = _labels_in(scrape.text)
-    assert labels <= set(HTTP_REQUEST_LABELS) | set(HTTP_IN_FLIGHT_LABELS)
+    # Workers share this process (and therefore the telemetry registry) in
+    # integration tests; production workers expose the same bounded labels on
+    # their own scrape ports. Only the contract's label set is allowed either
+    # way, and never an identifier or PII value.
+    assert labels <= (
+        set(HTTP_REQUEST_LABELS)
+        | set(HTTP_IN_FLIGHT_LABELS)
+        | set(WORKER_EVENT_LABELS)
+        | set(WORKER_UNIT_LABELS)
+    )
     assert labels.isdisjoint(FORBIDDEN_METRIC_LABELS)
 
     text = scrape.text

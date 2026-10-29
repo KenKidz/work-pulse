@@ -1,0 +1,15 @@
+# Grafana datasource provisioning (Phase 6, ADR 0023).
+#
+# Grafana and Prometheus are separate compose services on the same Docker
+# network, so the datasource addresses Prometheus by service name. The UID is
+# pinned because the provisioned dashboard references it directly.
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    uid: workpulse-prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false

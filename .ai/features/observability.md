@@ -1,6 +1,6 @@
 # Feature: Observability (OpenTelemetry, Prometheus, Grafana)
 
-- **Status:** approved
+- **Status:** done
 - **Phase:** 6
 - **Size:** M
 - **Surfaces:** api+web+events+workers (web and event contracts untouched — the
@@ -202,40 +202,40 @@ None added or changed.
 
 ## Acceptance criteria
 
-- [ ] API (tracing + headers): given any HTTP request to `apps/api`, when it
+- [x] API (tracing + headers): given any HTTP request to `apps/api`, when it
       completes, then an OpenTelemetry server span is recorded, the response
       carries a 32-hex `X-Trace-Id` header, and `structlog` output for the
       request includes matching `trace_id` and `span_id` fields alongside
       `request_id`.
-- [ ] API (W3C `traceparent` propagation): given a request with a valid W3C
+- [x] API (W3C `traceparent` propagation): given a request with a valid W3C
       `traceparent` header (`00-<trace_id>-<parent_span_id>-01`), when `apps/api`
       handles it, then the server span adopts `<trace_id>` as its trace id and
       echoes it in `X-Trace-Id`.
-- [ ] API (failure — malformed `traceparent`): given a request with an invalid
+- [x] API (failure — malformed `traceparent`): given a request with an invalid
       `traceparent: garbage` header, when `apps/api` handles it, then the
       request is not rejected and a fresh valid 32-hex `X-Trace-Id` is generated
       and returned.
-- [ ] API (metrics + route-template cardinality): given requests to a
+- [x] API (metrics + route-template cardinality): given requests to a
       parameterized route (`/api/v1/employees/{employee_id}`) and an unknown path
       (`/api/v1/unknown-random-slug`), when `GET /metrics` is scraped, then
       `workpulse_http_requests_total` and
       `workpulse_http_request_duration_seconds` expose `route="/api/v1/employees/{employee_id}"`
       and `route="UNMATCHED"` — never raw UUIDs or raw unmatched paths.
-- [ ] API (PII & tenant label isolation): given authenticated requests and
+- [x] API (PII & tenant label isolation): given authenticated requests and
       domain errors across tenants, when spans, logs and `GET /metrics` output
       are inspected, then no PII values and no `tenant_id` / `employee_id` /
       `user_id` / `request_id` appear in Prometheus metric labels, and cross-tenant
       reads still return `404` with no tenant leakage on `/metrics`.
-- [ ] Contract (no OpenAPI drift): given `GET /metrics` registered on the
+- [x] Contract (no OpenAPI drift): given `GET /metrics` registered on the
       FastAPI app, when `test_openapi_drift.py` and `make gen-api` run, then
       `contracts/openapi/openapi.json` and `packages/api-client` have zero diff.
-- [ ] Workers (tracing + metrics + failure recording): given a worker unit in
+- [x] Workers (tracing + metrics + failure recording): given a worker unit in
       `relay`, `realtime`, `notifications`, `payroll`, and `reports`, when a
       batch/event succeeds or fails, then a worker span is recorded with
       `trace_id`/`span_id` bound in `structlog`, and `workpulse_worker_events_total`
       + `workpulse_worker_unit_duration_seconds` increment with `status="succeeded"`
       or `status="failed"` without killing the worker loop.
-- [ ] Provisioned Prometheus & Grafana (config + dashboard contract): given the
+- [x] Provisioned Prometheus & Grafana (config + dashboard contract): given the
       checked-in Prometheus configuration and Grafana provisioning/dashboard
       JSON, when validated, then Prometheus targets match the configured ports
       and the Grafana dashboard defines valid panels for HTTP p95 latency, HTTP
@@ -456,6 +456,13 @@ reports).**
   `X-Trace-Id`/logs unless `OTEL_EXPORTER_OTLP_ENDPOINT` points at an external
   collector — acceptable per PO decision 2, so the Grafana dashboards carry
   metrics only (no trace-exemplar panels in scope).
+- **Host-gateway scrape reachability**: Prometheus runs in the compose bridge
+  network and targets `host.docker.internal`. Docker Desktop forwards that to
+  host loopback, while a plain Linux Docker engine maps it to the bridge
+  gateway, where listeners bound strictly to `127.0.0.1` (the dev API and worker
+  metrics servers) are not reachable. `make observability-up` readiness,
+  dashboard provisioning and the config test remain the gate; live target data
+  on Linux needs a reachable bind (recorded in ADR 0023, Consequences).
 
 ### Test strategy
 

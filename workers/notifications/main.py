@@ -28,6 +28,11 @@ from app.infrastructure.postgres.repositories.notifications import (
     PostgresNotificationRepository,
 )
 from app.shared.logging import configure_logging, get_logger
+from app.shared.telemetry import (
+    configure_telemetry,
+    flush_worker_telemetry,
+    start_worker_metrics_server,
+)
 from workers.notifications.consumer import NotificationsConsumer, NotificationUnit
 
 _log = get_logger("notifications.main")
@@ -36,6 +41,7 @@ _log = get_logger("notifications.main")
 async def _run() -> None:
     settings = get_settings()
     configure_logging(settings.environment)
+    configure_telemetry(settings)
 
     session_factory = get_session_factory()
     # Provider identities are built once: both SDKs are stateless wrappers and
@@ -91,6 +97,7 @@ async def _run() -> None:
         loop.add_signal_handler(sig, consumer.stop)
 
     await source.start()
+    metrics_server = start_worker_metrics_server(settings.notifications_metrics_port)
     run_task = asyncio.create_task(consumer.run())
     started_task = asyncio.create_task(consumer.started.wait())
     try:
@@ -110,8 +117,11 @@ async def _run() -> None:
         await run_task
     finally:
         started_task.cancel()
+        if metrics_server is not None:
+            metrics_server.stop()
         await source.stop()
         await dispose_engine()
+        flush_worker_telemetry()
         _log.info("notifications_consumer_stopped")
 
 
