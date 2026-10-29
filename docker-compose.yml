@@ -1,6 +1,6 @@
 # Local development infrastructure (PostgreSQL + Phase-2 Redis + Phase-3 Kafka
-# + Phase-4 ClickHouse). The apps run natively via `make dev-api` /
-# `make dev-web` — see the Makefile.
+# + Phase-4 ClickHouse + Phase-4+ MinIO object storage). The apps run natively
+# via `make dev-api` / `make dev-web` — see the Makefile.
 
 services:
   postgres:
@@ -184,7 +184,85 @@ services:
       timeout: 3s
       retries: 10
 
+  # --- Phase 4+: employee documents object storage (`make minio-up`, ADR 0022)
+  # Private S3-compatible bucket; the API returns presigned URLs only. MinIO
+  # stopped publishing community images in Oct 2025, so this pins the
+  # `alpine/minio` mirror of the last community release (upstream MinIO at that
+  # tag). Root is used only to make a fresh named/tmpfs volume writable; the
+  # stores are loopback-only and never leave the host.
+
+  minio:
+    image: alpine/minio:RELEASE.2025-10-15T17-29-55Z
+    user: "0:0"
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: workpulse
+      MINIO_ROOT_PASSWORD: workpulse
+      # The web dev origin may POST/GET presigned URLs directly (ADR 0022).
+      MINIO_API_CORS_ALLOW_ORIGIN: "http://localhost:3000"
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- --timeout=2 http://127.0.0.1:9000/minio/health/live",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  minio-test:
+    image: alpine/minio:RELEASE.2025-10-15T17-29-55Z
+    user: "0:0"
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: workpulse
+      MINIO_ROOT_PASSWORD: workpulse
+    ports:
+      - "127.0.0.1:9002:9000"
+      - "127.0.0.1:9003:9001"
+    tmpfs:
+      - /data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- --timeout=2 http://127.0.0.1:9000/minio/health/live",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # One-shot bucket provisioning (private by default — `mc mb` adds no
+  # anonymous policy). The official `minio/mc` image is gone too, so these use
+  # Chainguard's digest-pinned `minio-client` (the `mc` binary).
+  # `docker compose run --rm <service>` is how the Makefile waits for it.
+  minio-init:
+    image: cgr.dev/chainguard/minio-client@sha256:778b2dac231584d5d5749ab663f9f61979d60dd5c00abf682af888db6a9f46e4
+    entrypoint: ["/usr/bin/mc"]
+    environment:
+      MC_HOST_dev: http://workpulse:workpulse@minio:9000
+    command: ["mb", "--ignore-existing", "dev/documents"]
+    depends_on:
+      minio:
+        condition: service_healthy
+
+  minio-test-init:
+    image: cgr.dev/chainguard/minio-client@sha256:778b2dac231584d5d5749ab663f9f61979d60dd5c00abf682af888db6a9f46e4
+    entrypoint: ["/usr/bin/mc"]
+    environment:
+      MC_HOST_test: http://workpulse:workpulse@minio-test:9000
+    command: ["mb", "--ignore-existing", "test/documents-test"]
+    depends_on:
+      minio-test:
+        condition: service_healthy
+
 volumes:
   postgres-data:
   kafka-data:
   clickhouse-data:
+  minio-data:

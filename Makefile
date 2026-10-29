@@ -3,7 +3,7 @@
 API_DIR := apps/api
 WEB_DIR := apps/web
 
-.PHONY: help install dev db-up db-down db-test-up redis-up redis-test-up kafka-up kafka-test-up clickhouse-up clickhouse-down clickhouse-test-up db-migrate db-seed dev-api dev-web dev-relay dev-realtime dev-notifications dev-payroll dev-reports check check-api check-web check-e2e gen-api format-web
+.PHONY: help install dev db-up db-down db-test-up redis-up redis-test-up kafka-up kafka-test-up clickhouse-up clickhouse-down clickhouse-test-up minio-up minio-test-up db-migrate db-seed dev-api dev-web dev-relay dev-realtime dev-notifications dev-payroll dev-reports check check-api check-web check-e2e gen-api format-web
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -39,6 +39,14 @@ clickhouse-test-up: ## Start the throwaway test ClickHouse on :8124 (detached)
 clickhouse-down: ## Stop ClickHouse (the dev data volume is kept)
 	docker compose stop clickhouse
 
+minio-up: ## Start MinIO (document storage, :9000; bucket provisioned)
+	docker compose up -d --wait minio
+	docker compose run --rm minio-init
+
+minio-test-up: ## Start the throwaway test MinIO on :9002 (bucket provisioned)
+	docker compose up -d --wait minio-test
+	docker compose run --rm minio-test-init
+
 db-migrate: ## Apply Alembic migrations to the dev database
 	cd $(API_DIR) && uv run alembic upgrade head
 
@@ -51,7 +59,7 @@ db-seed: ## Seed the dev database — idempotent, safe to re-run
 db-down: ## Stop docker compose services (data volume is kept)
 	docker compose down
 
-dev: db-up redis-up kafka-up clickhouse-up db-migrate db-seed ## Run everything for browser testing (infra + migrate + seed + API :8000 + web :3000 + workers)
+dev: db-up redis-up kafka-up clickhouse-up minio-up db-migrate db-seed ## Run everything for browser testing (infra + migrate + seed + API :8000 + web :3000 + workers)
 	bash scripts/dev.sh
 
 dev-api: ## Run the FastAPI dev server on :8000
@@ -77,7 +85,7 @@ dev-reports: ## Run the reports projection worker (events → ClickHouse, ADR 00
 
 check: check-api check-web check-e2e ## Run every gate — run before claiming done
 
-check-api: db-test-up redis-test-up kafka-test-up clickhouse-test-up ## API gate: ruff + pyright + pytest (ADR 0006)
+check-api: db-test-up redis-test-up kafka-test-up clickhouse-test-up minio-test-up ## API gate: ruff + pyright + pytest (ADR 0006)
 	cd $(API_DIR) && uv run ruff check . ../../workers
 	cd $(API_DIR) && uv run ruff format --check . ../../workers
 	cd $(API_DIR) && uv run pyright . ../../workers
@@ -86,7 +94,7 @@ check-api: db-test-up redis-test-up kafka-test-up clickhouse-test-up ## API gate
 check-web: ## Web gate: typecheck + ESLint + Vitest
 	cd $(WEB_DIR) && pnpm run typecheck && pnpm run lint && pnpm run test
 
-check-e2e: db-up redis-up kafka-test-up clickhouse-test-up db-migrate db-seed ## E2E gate: Playwright across the full event hop (kafka-test + ClickHouse + relay + realtime + payroll + reports)
+check-e2e: db-up redis-up kafka-test-up clickhouse-test-up minio-up db-migrate db-seed ## E2E gate: Playwright across the full event hop (kafka-test + ClickHouse + relay + realtime + payroll + reports)
 	bash tests/e2e/full-hop.sh
 
 gen-api: ## Regenerate OpenAPI contract + typed API client

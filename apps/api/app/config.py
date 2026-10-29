@@ -103,6 +103,24 @@ class Settings(BaseSettings):
     reports_backoff_base_seconds: float = 1.0
     reports_backoff_max_seconds: float = 30.0
 
+    # --- Phase 4+: employee documents (`make minio-up`, ADR 0022) ---
+    # Private S3-compatible bucket; the API returns presigned URLs only and
+    # never a key or a public path. The test twin points at the throwaway
+    # `minio-test` service on :9002 — `tests/conftest.py` pins `STORAGE_*` to
+    # the `STORAGE_TEST_*` values before any `app.*` import. The adapter clamps
+    # TTLs to the feature caps (upload ≤ 10 min, download ≤ 5 min).
+    storage_endpoint: str = "http://127.0.0.1:9000"
+    storage_access_key: str = "workpulse"
+    storage_secret_key: str = "workpulse"
+    storage_bucket: str = "documents"
+    storage_upload_ttl_seconds: int = 600
+    storage_download_ttl_seconds: int = 300
+
+    storage_test_endpoint: str = "http://127.0.0.1:9002"
+    storage_test_access_key: str = "workpulse"
+    storage_test_secret_key: str = "workpulse"
+    storage_test_bucket: str = "documents-test"
+
     # --- Identity: sessions (pinned in `.ai/features/identity-access.md`) ---
     # Absolute session lifetime; the `wp_session` cookie itself is a session
     # cookie (no Max-Age) — the server-side TTL is the authority.

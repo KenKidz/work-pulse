@@ -41,6 +41,7 @@ FEATURE_TABLES = {
     "performance_review_feedback",
     "performance_skills",
     "performance_employee_skills",
+    "document",
     "payroll_configs",
     "payroll_deduction_lines",
     "salary_records",

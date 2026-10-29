@@ -2,12 +2,13 @@
 
 Sets `DATABASE_URL` from `DATABASE_TEST_URL`, `REDIS_URL` from
 `REDIS_TEST_URL`, `KAFKA_BOOTSTRAP_SERVERS` from
-`KAFKA_TEST_BOOTSTRAP_SERVERS` and `CLICKHOUSE_URL` from `CLICKHOUSE_TEST_URL`
-BEFORE any `app.*` import so the lazily-created clients always target the
-throwaway services (`postgres-test`, :5433; `redis-test`, :6380;
-`kafka-test`, :9093; `clickhouse-test`, :8124), regardless of which test
+`KAFKA_TEST_BOOTSTRAP_SERVERS`, `CLICKHOUSE_URL` from `CLICKHOUSE_TEST_URL` and
+the `STORAGE_*` keys from their `STORAGE_TEST_*` twins BEFORE any `app.*`
+import so the lazily-created clients always target the throwaway services
+(`postgres-test`, :5433; `redis-test`, :6380; `kafka-test`, :9093;
+`clickhouse-test`, :8124; `minio-test`, :9002), regardless of which test
 directory is collected first. Tests must never touch the dev database, Redis,
-Kafka or ClickHouse.
+Kafka, ClickHouse or the dev document bucket.
 """
 
 import os
@@ -38,3 +39,18 @@ TEST_CLICKHOUSE_URL = os.environ.get(
     "CLICKHOUSE_TEST_URL", _DEFAULT_TEST_CLICKHOUSE_URL
 )
 os.environ["CLICKHOUSE_URL"] = TEST_CLICKHOUSE_URL
+
+# And the document bucket: `STORAGE_ENDPOINT` et al. point at the dev MinIO on
+# :9000 otherwise. Credentials and bucket are the `minio-test` provisioning
+# (ADR 0022); TTLs may keep their defaults.
+_DEFAULT_TEST_STORAGE_ENDPOINT = "http://127.0.0.1:9002"
+os.environ["STORAGE_ENDPOINT"] = os.environ.get(
+    "STORAGE_TEST_ENDPOINT", _DEFAULT_TEST_STORAGE_ENDPOINT
+)
+os.environ["STORAGE_ACCESS_KEY"] = os.environ.get(
+    "STORAGE_TEST_ACCESS_KEY", "workpulse"
+)
+os.environ["STORAGE_SECRET_KEY"] = os.environ.get(
+    "STORAGE_TEST_SECRET_KEY", "workpulse"
+)
+os.environ["STORAGE_BUCKET"] = os.environ.get("STORAGE_TEST_BUCKET", "documents-test")

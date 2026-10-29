@@ -29,7 +29,8 @@ Installed so far:
 - AuthN: argon2id passwords + DB-backed opaque sessions (`wp_session` cookie),
   session-resolved identity (ADR 0010)
 - Datastore: PostgreSQL (source of truth, docker compose) — `database/postgres/`;
-  ClickHouse (Phase 4 analytical projection, ADR 0019) — `database/clickhouse/`
+  ClickHouse (Phase 4 analytical projection, ADR 0019) — `database/clickhouse/`;
+  MinIO (private employee-document bucket, ADR 0022)
 
 Requires Python 3.12+, Node >= 20, pnpm, Docker, and uv.
 
@@ -47,6 +48,7 @@ Roadmap: `.ai/architecture.md`.
 | `make db-up` / `make db-down` | start / stop PostgreSQL |
 | `make db-test-up` | start the throwaway test PostgreSQL on :5433 |
 | `make redis-up` | start Redis (realtime fan-out, :6379; `make redis-test-up` for :6380) |
+| `make minio-up` | start MinIO (document storage, :9000; bucket provisioned; `make minio-test-up` for :9002) |
 | `make db-migrate` | apply Alembic migrations to the dev database |
 | `make db-seed` | seed the dev database (idempotent) |
 | `make dev-api` | FastAPI dev server on :8000 |
@@ -60,7 +62,7 @@ Roadmap: `.ai/architecture.md`.
 ```
 AGENTS.md             this file
 Makefile              single entry point (install / dev / db / check)
-docker-compose.yml    PostgreSQL, Redis, Kafka and ClickHouse for local dev
+docker-compose.yml    PostgreSQL, Redis, Kafka, ClickHouse and MinIO for local dev
 .ai/                  product, domain, architecture, conventions, security,
                       testing, decisions/, features/ (specs + backlog index)
 apps/web/             Next.js app (routes in app/, feature logic in features/)

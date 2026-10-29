@@ -10,4 +10,5 @@ edges (routers, dependencies, workers).
 | `redis/` | Phase 2 — realtime hot state |
 | `kafka/` | Phase 3 — producer/consumer plumbing (outbox) |
 | `clickhouse/` | Phase 4 — analytical writes |
-| `storage/`, `email/` | when a spec needs them |
+| `storage/` | Phase 4+ — employee documents (MinIO/S3, ADR 0022) |
+| `email/` | when a spec needs it |
