@@ -6,11 +6,8 @@ does the work.
 
 ## Now
 
-- [ ] Employee documents (`.ai/features/employee-documents.md`, draft): HR-maintained per-employee documents in private MinIO object storage — presigned two-step upload + short-lived presigned download, category/title/expiry metadata, soft-delete + purge, identifiers-only `document.uploaded`/`document.deleted` events, audit on every mutation; Documents tab on employee detail + "My documents"; MinIO joins docker compose. Open in `## Decisions needed`: field-level encryption of metadata, security-review sign-off.
-
 ## Later
 
-- [ ] Phase 4+: Employee documents
 - [ ] Phase 5: CDC / Debezium
 - [ ] Phase 6: OpenTelemetry / Prometheus / Grafana
 - [ ] Phase 7: load testing, rate limiting, circuit breakers
@@ -18,6 +15,7 @@ does the work.
 
 ## Done
 
+- [x] Employee documents built end-to-end (`.ai/features/employee-documents.md`, T1–T9, 2026-10-27 → 2026-10-29): HR-maintained per-employee documents in a private MinIO bucket with presigned-only access — a stateless two-step upload (intent pins the exact staging key + claimed type/size in the POST policy, confirm HEAD-checks, server-side copies to `documents/{tenant_id}/{employee_id}/{document_id}`, purges staging, then writes row + audit + event in one transaction), fresh short-lived download URLs per click, category/title/expiry metadata, soft-delete row + purge object, and identifiers-only `document.uploaded`/`document.deleted` v1 contracts; **ADR 0022** pins the storage decision (boto3, purge-first delete, copy-before-row confirm, field-encryption deferral and the security-review record), migration `0019`, read scope through the house one-level `EmployeeScope` port, HR/Admin-only writes, audit with PII sentinels on every mutation; web ships the employee-detail Documents tab (Overview | Documents) and the read-only `/profile` "My documents" surface with en + vi catalogs; `tests/e2e/documents.spec.ts` proves HR upload → employee sees and downloads → HR deletes → gone from both surfaces with a post-delete 404. Gates green (1825 API / 446 web / 27 e2e, `make gen-api` diff-free).
 - [x] Performance built end-to-end (`.ai/features/performance.md`, T1–T14, 2026-10-26 → 2026-10-27): the Performance context — a tenant skill catalog with per-employee proficiency rows (ADR 0021 pins the one deliberate ADR 0007 divergence: archiving a skill in use is allowed, only new assignment is blocked), the goal lifecycle (`draft → active → completed | cancelled`) with self/manager/HR authorship, ad-hoc manager/HR reviews (`draft → completed | cancelled`) with nominated peer providers and one immutable feedback comment each, manager/HR-only feedback the subject never sees, draft invisibility and never-self rules, PII-safe audit/events; eight `performance/*` v1 contracts land before their producers (every payload carries `employee_id`, so ADR 0012's message key needs no amendment), migration `0018`, and the web `/performance` workspace (Goals · Reviews · Skills tabs by role, "My reviews", the feedback worklist, pinned error copy, en + vi catalogs); `tests/e2e/performance.spec.ts` proves manager creates a review → nominates the peer → complete-without-rating is refused → peer files feedback and a duplicate is refused → manager completes → the employee sees the completed review and never the peer text, with `full-hop.sh` resetting the tenant's performance rows and provisioning the deterministic peer login. Gates green (1661 API / 419 web / 26 e2e).
 
 - [x] Web i18n integrated (`.ai/features/i18n.md`, 2026-10-26): `next-intl` v4 with English + Vietnamese catalogs, a cookie-backed locale switcher (no URL prefix), server/client translation, localized page metadata, locale-aware dates/numbers/money across every feature, and a Vitest runtime that resolves the real English catalog; catalog parity, switcher and server-action tests added. Gates green (typecheck, ESLint, 369 Vitest, `next build`).

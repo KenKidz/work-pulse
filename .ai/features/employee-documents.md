@@ -1,6 +1,6 @@
 # Feature: Employee documents
 
-- **Status:** approved
+- **Status:** done
 - **Phase:** 4+ (the Employees context of `.ai/domain.md`; documents deferred here
   by product decision 4, `.ai/product.md` — "presigned URLs after a security
   review")
@@ -245,61 +245,90 @@ in `.ai/domain.md` with the feature (Contract 4+, Published 4+).
 
 ## Acceptance criteria
 
-- [ ] API (upload intent): given HR acting on an employee, when
+- [x] API (upload intent): given HR acting on an employee, when
       `createDocumentUpload` posts `application/pdf` at 1 MB, then 201 returns
       a presigned POST pinned to `staging/{tenant_id}/{upload_id}` expiring
-      within 10 minutes.
-- [ ] API (intent failure): given `content_type: "text/html"` or `size_bytes`
+      within 10 minutes. — `test_documents_api.py::test_upload_intent_returns_presigned_post_for_the_staging_key`
+      (AC1), `test_service.py::test_create_upload_presigns_the_staging_key`,
+      `test_storage.py::test_create_upload_pins_the_staging_policy`,
+      `test_storage.py::test_create_upload_uses_the_configured_default_ttl`,
+      `test_storage.py::test_create_upload_clamps_an_overlong_ttl`.
+- [x] API (intent failure): given `content_type: "text/html"` or `size_bytes`
       over 20 MB, when `createDocumentUpload` posts, then 422
       `document_type_not_allowed` / `document_too_large` and no presigned URL
-      is returned.
-- [ ] API (confirm): given a staged object in storage, when `createDocument`
+      is returned. — `test_documents_failures.py::test_intent_rejects_disallowed_type_or_size`
+      (AC2), `test_service.py::test_create_upload_rejects_a_type_outside_the_allowlist`,
+      `test_service.py::test_create_upload_rejects_a_size_over_the_cap`.
+- [x] API (confirm): given a staged object in storage, when `createDocument`
       confirms with title/category/expiry, then 201 returns a Document whose
       `filename`/`content_type`/`size_bytes` match the staged object, the
       object now lives at `documents/{tenant_id}/{employee_id}/{document_id}`,
       a `document.uploaded` audit entry exists, and the outbox row carries ids
-      + category only.
-- [ ] API (confirm failure): given no staged object for the `upload_id`, when
+      + category only. — `test_documents_api.py::test_confirm_moves_the_object_creates_the_row_and_emits_ids_only`
+      (AC3), `test_service.py::test_confirm_copies_purges_and_writes_row_audit_and_event`,
+      `test_documents_events.py`.
+- [x] API (confirm failure): given no staged object for the `upload_id`, when
       `createDocument` confirms, then 409 `document_upload_not_completed` with
-      no row, no audit entry and no event.
-- [ ] API (denied write): given an Employee, Manager or Finance identity, when
+      no row, no audit entry and no event. — `test_documents_api.py::test_confirm_without_a_staged_object_writes_nothing`
+      (AC4), `test_documents_failures.py::test_confirm_without_an_object_is_incomplete`
+      / `test_confirm_replay_after_success_is_incomplete`,
+      `test_service.py::test_confirm_without_a_staged_object_writes_nothing`.
+- [x] API (denied write): given an Employee, Manager or Finance identity, when
       any upload/confirm/update/delete call is made, then 403 `forbidden` with
-      no row and no audit entry.
-- [ ] API (read scope): given a manager, when `listDocuments` runs for self and
+      no row and no audit entry. — `test_documents_roles.py::test_non_management_roles_cannot_write`
+      (AC5), `test_policies.py::test_non_management_roles_may_not_manage`,
+      `test_service.py::test_create_upload_denied_for_non_management`.
+- [x] API (read scope): given a manager, when `listDocuments` runs for self and
       for a direct report, then both lists return; when it runs for a
-      non-report, then 403 `forbidden`.
-- [ ] API (denied read): given an Employee identity naming another employee's
+      non-report, then 403 `forbidden`. — `test_documents_roles.py::test_read_scope_matrix`
+      (AC6), `test_service.py::test_manager_lists_self_and_direct_reports_only`.
+- [x] API (denied read): given an Employee identity naming another employee's
       document, when `downloadDocument` runs, then 403 `forbidden` and no
-      presigned URL is returned.
-- [ ] API (delete): given HR on an existing document, when `deleteDocument`
+      presigned URL is returned. — `test_documents_roles.py::test_denied_download_returns_no_presigned_url`
+      (AC7), `test_service.py::test_denied_download_mints_no_url`.
+- [x] API (delete): given HR on an existing document, when `deleteDocument`
       runs, then 204, the object is gone from storage, `deleted_at` is set,
       list/get/download all return 404, and a `document.deleted` audit entry +
-      outbox row exist; a second delete returns 404.
-- [ ] API (metadata update): when `updateDocument` changes `title`, then 200
+      outbox row exist; a second delete returns 404. — `test_documents_api.py::test_delete_purges_the_object_and_hides_every_read`
+      (AC8), `test_documents_failures.py::test_deleted_document_is_404_on_every_operational_read`,
+      `test_service.py::test_delete_purges_the_object_before_soft_deleting`.
+- [x] API (metadata update): when `updateDocument` changes `title`, then 200
       returns the new value with a `document.updated` audit entry and **no**
-      outbox row.
-- [ ] API (tenant isolation): given another tenant's identity naming the same
+      outbox row. — `test_documents_api.py::test_update_metadata_is_audited_without_an_event`
+      (AC9), `test_service.py::test_update_audits_title_without_its_value_and_emits_no_event`,
+      `test_documents_audit.py::test_documents_are_audited_without_pii`.
+- [x] API (tenant isolation): given another tenant's identity naming the same
       document id, when any read/download/update/delete runs, then 404
-      `document_not_found` and storage is untouched.
-- [ ] Web (HR): given the employee detail page, when HR completes the upload
+      `document_not_found` and storage is untouched. — `test_documents_tenant_isolation.py::test_cross_tenant_document_access_is_404_and_leaves_storage_alone`
+      (AC10), `test_service.py::test_a_foreign_tenant_cannot_reach_a_document`.
+- [x] Web (HR): given the employee detail page, when HR completes the upload
       dialog (file + title + category + expiry), then the row appears in the
       Documents tab with category and expiry and a success toast; download
-      opens the presigned URL in a new tab.
-- [ ] Web (My documents): given an Employee identity, when the own-profile
+      opens the presigned URL in a new tab. — `apps/web/tests/documents/upload-document-dialog.test.tsx::uploads to storage, then confirms the metadata and closes`,
+      `documents-panel.test.tsx::lists documents with category and expiry, and gives HR every action`
+      / `mints a fresh download URL per click and opens it in a new tab`.
+- [x] Web (My documents): given an Employee identity, when the own-profile
       "My documents" surface loads, then only their own documents are listed
-      and no upload/delete control is rendered.
-- [ ] Web (manager read-only): given a Manager on a direct report's detail
+      and no upload/delete control is rendered. — `apps/web/tests/documents/my-documents.test.tsx::lists the current employee's documents and never renders write controls`.
+- [x] Web (manager read-only): given a Manager on a direct report's detail
       page, then the Documents tab lists the report's documents with no
-      upload/delete controls.
-- [ ] Web (failure): when the confirm call fails, then a toast shows the
+      upload/delete controls. — `documents-panel.test.tsx::gives a manager a read-only list on a direct report's record`
+      / `shows the manager's read-only table inside the employee detail workspace copy`.
+- [x] Web (failure): when the confirm call fails, then a toast shows the
       pinned `document_upload_not_completed` copy and the list is unchanged;
-      when the list fetch fails, the tab shows the error state with retry.
-- [ ] Web (expired): given a document with a past `expiry_date`, when it is
-      rendered, then it shows the expired indicator in en and vi.
-- [ ] E2E: given a seeded tenant, when HR uploads a document to an employee
+      when the list fetch fails, the tab shows the error state with retry. —
+      `upload-document-dialog.test.tsx::shows the pinned toast and keeps the dialog open when confirm fails`,
+      `documents-panel.test.tsx::shows the error state with a retry that refetches the list`.
+- [x] Web (expired): given a document with a past `expiry_date`, when it is
+      rendered, then it shows the expired indicator in en and vi. —
+      `documents-panel.test.tsx::lists documents with category and expiry, and gives HR every action`
+      (Expired badge) / `has the documents surface translated in Vietnamese`
+      (`documents.expired` = "Đã hết hạn").
+- [x] E2E: given a seeded tenant, when HR uploads a document to an employee
       through the UI, then the employee sees it under "My documents" and can
       download it; after HR deletes it, it disappears from both surfaces and a
-      direct download request returns 404.
+      direct download request returns 404. — `tests/e2e/documents.spec.ts::HR uploads, the employee downloads, HR deletes`
+      (AC16).
 
 ## Decisions (PO, 2026-10-27)
 
