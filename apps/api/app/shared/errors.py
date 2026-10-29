@@ -11,6 +11,8 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
+from app.shared.telemetry import TRACE_ID_SCOPE_KEY
+
 
 class WorkPulseError(Exception):
     """Base class for expected WorkPulse errors.
@@ -71,3 +73,23 @@ def register_error_handlers(application: FastAPI) -> None:
                 }
             },
         )
+
+    @application.exception_handler(Exception)
+    async def _handle_unexpected_error(request: Request, __: Exception) -> JSONResponse:
+        # Uniform 500 shape, no exception detail (`.ai/security.md`). Starlette
+        # renders this response outside the user middleware stack, so the
+        # telemetry middleware hands the trace id over on the request scope
+        # (ADR 0023); debug tracebacks bypass exception handlers by design.
+        response = JSONResponse(
+            status_code=500,
+            content={
+                "error": {
+                    "code": "internal_error",
+                    "message": "Internal server error",
+                }
+            },
+        )
+        trace_id = request.scope.get(TRACE_ID_SCOPE_KEY)
+        if isinstance(trace_id, str) and trace_id:
+            response.headers["X-Trace-Id"] = trace_id
+        return response

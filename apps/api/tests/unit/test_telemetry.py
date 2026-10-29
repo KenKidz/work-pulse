@@ -96,6 +96,29 @@ def test_route_template_uses_the_matched_template_not_the_raw_path() -> None:
     assert resolve_route_template(scope) == "/api/v1/employees/{employee_id}"
 
 
+def test_included_router_uses_the_effective_prefixed_template() -> None:
+    """FastAPI keeps the router-relative path on `scope["route"]`.
+
+    The effective context carries the include prefix; the metric label must
+    use `/api/v1/employees/{employee_id}`, not `/employees/{employee_id}` and
+    never the concrete UUID.
+    """
+
+    class _RouterRelativeRoute:
+        path = "/employees/{id}"
+
+    class _EffectiveRoute:
+        path = "/api/v1/employees/{employee_id}"
+
+    scope = {
+        "fastapi": {"effective_route_context": _EffectiveRoute()},
+        "route": _RouterRelativeRoute(),
+        "path": "/api/v1/employees/0190a3de-6b1f-7c2a-9f00-5f0e7d1a2b3c",
+    }
+
+    assert resolve_route_template(scope) == "/api/v1/employees/{employee_id}"
+
+
 def test_unmatched_routes_collapse_to_the_unmatched_label() -> None:
     assert resolve_route_template({}) == UNMATCHED_ROUTE
     assert (

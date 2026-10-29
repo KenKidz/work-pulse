@@ -91,15 +91,20 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
 
         log = get_logger("http")
         started = time.perf_counter()
-        response = await call_next(request)
-        duration_ms = (time.perf_counter() - started) * 1000
-
-        log.info(
-            "request",
-            method=request.method,
-            path=request.url.path,
-            status_code=response.status_code,
-            duration_ms=round(duration_ms, 2),
-        )
-        response.headers["X-Request-Id"] = request_id
-        return response
+        response: Response | None = None
+        try:
+            response = await call_next(request)
+            return response
+        finally:
+            # Log failures too, and while the telemetry span is still active:
+            # an unhandled exception still gets a trace-correlated request log
+            # with the 500 it will surface as.
+            log.info(
+                "request",
+                method=request.method,
+                path=request.url.path,
+                status_code=response.status_code if response is not None else 500,
+                duration_ms=round((time.perf_counter() - started) * 1000, 2),
+            )
+            if response is not None:
+                response.headers["X-Request-Id"] = request_id

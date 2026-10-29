@@ -25,20 +25,27 @@ Design notes (ADR 0023):
 from __future__ import annotations
 
 import threading
-from collections.abc import Mapping
+import time
+from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
 from typing import Any
 
+from opentelemetry import context as otel_context
 from opentelemetry import metrics as otel_metrics
 from opentelemetry import trace as otel_trace
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.exporter.prometheus import PrometheusMetricReader
 from opentelemetry.metrics import Counter, Histogram, Meter, UpDownCounter
+from opentelemetry.propagate import extract
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, SpanExporter
+from opentelemetry.trace import SpanKind, Status, StatusCode
 from prometheus_client import CollectorRegistry, generate_latest
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from starlette.responses import Response
 
 from app.config import Settings, get_settings
 
@@ -57,6 +64,16 @@ FORBIDDEN_METRIC_LABELS = frozenset(
 )
 
 UNMATCHED_ROUTE = "UNMATCHED"
+
+#: Operational scrape endpoint on the API. Excluded from HTTP metrics so
+#: Prometheus scrapes never distort the application error-rate panels.
+METRICS_PATH = "/metrics"
+
+#: Scope key carrying the request's formatted W3C trace id. Starlette's
+#: `ServerErrorMiddleware` renders unhandled 500s outside the user middleware
+#: stack, so the global 500 handler reads the id from here to keep the
+#: response correlatable (ADR 0023).
+TRACE_ID_SCOPE_KEY = "workpulse.trace_id"
 
 #: Latency buckets in seconds, centred on the 300 ms p95 target.
 HTTP_DURATION_BUCKETS = (
@@ -105,11 +122,21 @@ def trace_ids() -> tuple[str | None, str | None]:
 def resolve_route_template(scope: Mapping[str, Any]) -> str:
     """Return the matched FastAPI route template, or `UNMATCHED`.
 
-    `scope["route"]` is the matched `APIRoute` (with an `APIRoute.path`
-    template such as `/api/v1/employees/{employee_id}`); unmatched requests
-    have no route. Raw URL paths and query strings never reach a metric label,
-    so arbitrary/scanner traffic cannot blow up label cardinality.
+    Routes mounted through `include_router` keep their router-relative
+    `path` (e.g. `/employees/{id}`) on `scope["route"]`; FastAPI publishes
+    the *effective* template (prefix included) under its scope namespace.
+    Fall back to `scope["route"].path` for top-level routes, and to
+    `UNMATCHED` when nothing matched. Raw URL paths and query strings never
+    reach a metric label, so arbitrary/scanner traffic cannot blow up label
+    cardinality.
     """
+    fastapi_scope = scope.get("fastapi")
+    if isinstance(fastapi_scope, Mapping):
+        context = fastapi_scope.get("effective_route_context")
+        path = getattr(context, "path", None)
+        if isinstance(path, str) and path:
+            return path
+
     route = scope.get("route")
     path = getattr(route, "path", None)
     if isinstance(path, str) and path:
@@ -174,16 +201,20 @@ class Telemetry:
         """Prometheus text exposition (`text/plain; version=0.0.4`)."""
         return generate_latest(self.registry)
 
-    def flush(self) -> None:
+    def flush(self, timeout_millis: int = 5000) -> None:
         """Flush pending spans/metrics without tearing providers down.
 
         The global OTel providers are process-wide and set once; shutting them
         down at an app lifespan boundary would silently disable telemetry for
         a later app instance in the same process (tests, TestClient). Flushing
         is the useful part of shutdown for the OTLP batch processor.
+
+        Callers must offload this to a worker thread: the SDK's force-flush is
+        a blocking export and the timeout is advisory (an unreachable collector
+        can still hold a batch for the exporter's own timeout).
         """
-        self.tracer_provider.force_flush()
-        self.meter_provider.force_flush()
+        self.tracer_provider.force_flush(timeout_millis=timeout_millis)
+        self.meter_provider.force_flush(timeout_millis=timeout_millis)
 
 
 def _resolve_otlp_endpoint(raw: str | None) -> str | None:
@@ -303,3 +334,90 @@ def configure_telemetry(settings: Settings | None = None) -> Telemetry:
 def get_telemetry() -> Telemetry | None:
     """The configured bundle, or `None` before `configure_telemetry`."""
     return _TELEMETRY
+
+
+class TelemetryMiddleware(BaseHTTPMiddleware):
+    """Trace every HTTP request and record the bounded HTTP metrics.
+
+    Placed inside CORS and outside `RequestContextMiddleware` (see
+    `app.main.create_app`) so the request log line runs while the server span
+    is active and picks up `trace_id`/`span_id` (business rule 1). Incoming
+    W3C `traceparent`/`tracestate` headers are extracted best-effort: malformed
+    values start a fresh root span instead of failing the request (rule 2).
+
+    An unconfigured telemetry stack passes traffic straight through — spans,
+    metrics and log correlation can never break the write or read path
+    (rule 6).
+    """
+
+    async def dispatch(
+        self,
+        request: Request,
+        call_next: Callable[[Request], Awaitable[Response]],
+    ) -> Response:
+        telemetry = get_telemetry()
+        if telemetry is None:
+            return await call_next(request)
+
+        parent_context = extract(carrier=dict(request.headers))
+        tracer = telemetry.tracer_provider.get_tracer("workpulse.http")
+        # Start with a bounded name; the route template is set once in `finally`
+        # so every termination path (including cancellation) exports a template
+        # and no `on_start` processor sees a raw path.
+        span = tracer.start_span(
+            request.method,
+            context=parent_context,
+            kind=SpanKind.SERVER,
+        )
+        span.set_attribute("http.request.method", request.method)
+        trace_id = format(span.get_span_context().trace_id, "032x")
+        token = otel_context.attach(
+            otel_trace.set_span_in_context(span, parent_context)
+        )
+
+        method = request.method
+        is_scrape = request.url.path == METRICS_PATH
+        started = time.perf_counter()
+        status_code = 500
+        in_flight_started = False
+
+        try:
+            if not is_scrape:
+                telemetry.http_request_started(method=method)
+                in_flight_started = True
+            response = await call_next(request)
+            status_code = response.status_code
+            response.headers["X-Trace-Id"] = trace_id
+            return response
+        except Exception as exc:
+            # Exception type only, never its message (rule 5); the handler
+            # above still receives the original exception.
+            span.set_attribute("error.type", type(exc).__name__)
+            raise
+        finally:
+            route = resolve_route_template(request.scope)
+            span.update_name(f"{method} {route}")
+            span.set_attribute("http.route", route)
+            span.set_attribute("http.response.status_code", status_code)
+            if status_code >= 500:
+                # Status only: exception messages may carry values (rule 5).
+                span.set_status(Status(StatusCode.ERROR))
+
+            # The outermost 500 handler runs outside this middleware; hand it
+            # the trace id so unhandled errors stay correlatable (decisions).
+            request.scope[TRACE_ID_SCOPE_KEY] = trace_id
+
+            if not is_scrape:
+                telemetry.record_http_request(
+                    method=method,
+                    route=route,
+                    status_code=status_code,
+                    duration_seconds=time.perf_counter() - started,
+                )
+                # Always decremented once incremented — even on cancellation
+                # or exceptions — so the in-flight gauge can never leak
+                # (edge cases).
+                if in_flight_started:
+                    telemetry.http_request_finished(method=method)
+            otel_context.detach(token)
+            span.end()
