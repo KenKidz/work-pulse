@@ -19,9 +19,10 @@ Configured TTLs are clamped to the domain maxima (`MAX_UPLOAD_TTL` /
 feature spec allows. Keys, filenames and URLs are never logged here.
 """
 
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from functools import partial
-from typing import Any, Protocol, cast
+from typing import Any, Protocol, TypeVar, cast
 from uuid import UUID
 
 import anyio
@@ -40,6 +41,9 @@ from app.domains.documents.storage import (
     PresignedUpload,
     staging_key,
 )
+from app.shared.circuit_breaker import CircuitBreaker
+
+T = TypeVar("T")
 
 #: MinIO ignores the region, but SigV4 requires a value (the S3 default).
 _REGION = "us-east-1"
@@ -88,7 +92,21 @@ class S3Client(Protocol):
 
 
 class MinioDocumentStorage(DocumentStorage):
-    """`DocumentStorage` over a private MinIO/S3 bucket."""
+    """`DocumentStorage` over a private MinIO/S3 bucket.
+
+    Every client call runs through the `minio` circuit breaker (Phase 7, ADR
+    0025): once the breaker is open the adapter raises `CircuitOpenError`
+    without touching the network, and the house handler renders the pinned
+    `503 dependency_unavailable`. Expected missing-object answers are resolved
+    inside the operation, so an abandoned upload never counts as a dependency
+    failure.
+
+    Presigning is offline SigV4 work that never contacts MinIO. Those calls are
+    guarded (fail fast while the breaker is not closed) but deliberately do not
+    record health: a presign succeeding during an outage must not reset the
+    failure streak or close a half-open trial. `stat`, `copy` and `delete` are
+    the only health-observing operations.
+    """
 
     def __init__(
         self,
@@ -97,11 +115,26 @@ class MinioDocumentStorage(DocumentStorage):
         bucket: str,
         upload_ttl_seconds: int,
         download_ttl_seconds: int,
+        breaker: CircuitBreaker | None = None,
     ) -> None:
         self._client = client
         self._bucket = bucket
         self._upload_ttl_seconds = upload_ttl_seconds
         self._download_ttl_seconds = download_ttl_seconds
+        self._breaker = breaker or CircuitBreaker.from_settings("minio")
+
+    async def _call(self, operation: Callable[[], T]) -> T:
+        """Run one blocking client call off the loop through the breaker.
+
+        Only dependency-exercising operations use this; their outcome is the
+        breaker's health signal.
+        """
+        return await self._breaker.call(lambda: anyio.to_thread.run_sync(operation))
+
+    async def _presign(self, operation: Callable[[], T]) -> T:
+        """Run one offline presign off the loop; guard only, never health."""
+        self._breaker.guard()
+        return await anyio.to_thread.run_sync(operation)
 
     async def create_upload(
         self,
@@ -127,7 +160,7 @@ class MinioDocumentStorage(DocumentStorage):
             ["content-length-range", 1, size_bytes],
         ]
         expires_at = datetime.now(UTC) + timedelta(seconds=seconds)
-        response = await anyio.to_thread.run_sync(
+        response = await self._presign(
             partial(
                 self._client.generate_presigned_post,
                 Bucket=self._bucket,
@@ -144,43 +177,59 @@ class MinioDocumentStorage(DocumentStorage):
         )
 
     async def stat(self, key: str) -> ObjectStat | None:
-        try:
-            head = await anyio.to_thread.run_sync(
-                partial(self._client.head_object, Bucket=self._bucket, Key=key)
-            )
-        except ClientError as exc:
-            if _is_missing(exc):
-                return None
-            raise
+        missing = False
+
+        def head() -> dict[str, Any]:
+            nonlocal missing
+            try:
+                return self._client.head_object(Bucket=self._bucket, Key=key)
+            except ClientError as exc:
+                if _is_missing(exc):
+                    # A protocol answer, not a dependency failure: the breaker
+                    # must not open because uploads were abandoned.
+                    missing = True
+                    return {}
+                raise
+
+        head_result = await self._call(head)
+        if missing:
+            return None
         metadata = {
             str(name).lower(): str(value)
-            for name, value in (head.get("Metadata") or {}).items()
+            for name, value in (head_result.get("Metadata") or {}).items()
         }
         return ObjectStat(
-            size_bytes=int(head.get("ContentLength", 0)),
-            content_type=str(head.get("ContentType", "")),
+            size_bytes=int(head_result.get("ContentLength", 0)),
+            content_type=str(head_result.get("ContentType", "")),
             metadata=metadata,
         )
 
     async def copy(self, source_key: str, destination_key: str) -> None:
-        try:
-            await anyio.to_thread.run_sync(
-                partial(
-                    self._client.copy_object,
+        missing = False
+
+        def copy_object() -> None:
+            nonlocal missing
+            try:
+                self._client.copy_object(
                     Bucket=self._bucket,
                     Key=destination_key,
                     CopySource={"Bucket": self._bucket, "Key": source_key},
                 )
-            )
-        except ClientError as exc:
-            if _is_missing(exc):
-                # A concurrent confirm purged staging after this call's HEAD.
-                # The service maps this to the pinned 409, never a 500.
-                raise ObjectMissingError() from None
-            raise
+            except ClientError as exc:
+                if _is_missing(exc):
+                    # A concurrent confirm purged staging after this call's
+                    # HEAD. The service maps this to the pinned 409, never a
+                    # 500; like stat, a lost race is not a dependency failure.
+                    missing = True
+                    return
+                raise
+
+        await self._call(copy_object)
+        if missing:
+            raise ObjectMissingError()
 
     async def delete(self, key: str) -> None:
-        await anyio.to_thread.run_sync(
+        await self._call(
             partial(self._client.delete_object, Bucket=self._bucket, Key=key)
         )
 
@@ -189,7 +238,7 @@ class MinioDocumentStorage(DocumentStorage):
     ) -> PresignedDownload:
         seconds = _ttl_seconds(ttl, self._download_ttl_seconds, MAX_DOWNLOAD_TTL)
         expires_at = datetime.now(UTC) + timedelta(seconds=seconds)
-        url = await anyio.to_thread.run_sync(
+        url = await self._presign(
             partial(
                 self._client.generate_presigned_url,
                 "get_object",
@@ -214,7 +263,16 @@ def create_document_storage(settings: Settings | None = None) -> MinioDocumentSt
             use_ssl=resolved.storage_endpoint.lower().startswith("https://"),
             # MinIO is addressed path-style (localhost:9000/bucket/key); the
             # same client works against a real S3 deployment later (ADR 0022).
-            config=Config(signature_version="s3v4", s3={"addressing_style": "path"}),
+            # Timeouts are per attempt, so retries are pinned to one attempt:
+            # the breaker's fail-fast window must equal the configured
+            # connect/read bound (ADR 0025).
+            config=Config(
+                signature_version="s3v4",
+                s3={"addressing_style": "path"},
+                connect_timeout=resolved.storage_connect_timeout_seconds,
+                read_timeout=resolved.storage_read_timeout_seconds,
+                retries={"total_max_attempts": 1},
+            ),
         ),
     )
     return MinioDocumentStorage(
@@ -222,6 +280,7 @@ def create_document_storage(settings: Settings | None = None) -> MinioDocumentSt
         bucket=resolved.storage_bucket,
         upload_ttl_seconds=resolved.storage_upload_ttl_seconds,
         download_ttl_seconds=resolved.storage_download_ttl_seconds,
+        breaker=CircuitBreaker.from_settings("minio", resolved),
     )
 
 

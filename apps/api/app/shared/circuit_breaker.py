@@ -143,6 +143,24 @@ class CircuitBreaker:
         with self._lock:
             return self._state
 
+    def guard(self) -> None:
+        """Fail fast while not closed, without recording dependency health.
+
+        Used by calls that never exercise the dependency (offline SigV4
+        presigning): they must still be refused while the breaker is open, but
+        their success says nothing about dependency health — it must not reset
+        the failure streak, close a half-open trial, or consume the trial
+        permit. Rejections count under the same bounded `dependency` label as
+        call rejections.
+        """
+        with self._lock:
+            if not self._enabled:
+                return
+            if self._state is BreakerState.CLOSED:
+                return
+            record_circuit_breaker_rejected(self._dependency)
+            raise CircuitOpenError(self._dependency)
+
     async def call(self, operation: Callable[[], Awaitable[T]]) -> T:
         """Run an async operation through the breaker."""
         trial = self._acquire()

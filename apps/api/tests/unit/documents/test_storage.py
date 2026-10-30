@@ -12,12 +12,13 @@ behavior.
 """
 
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 import pytest
 from botocore.exceptions import ClientError
 
+from app.config import Settings
 from app.domains.documents.storage import (
     MAX_DOWNLOAD_TTL,
     MAX_UPLOAD_TTL,
@@ -26,7 +27,16 @@ from app.domains.documents.storage import (
     document_key,
     staging_key,
 )
-from app.infrastructure.storage.minio import MinioDocumentStorage, S3Client
+from app.infrastructure.storage.minio import (
+    MinioDocumentStorage,
+    S3Client,
+    create_document_storage,
+)
+from app.shared.circuit_breaker import (
+    BreakerState,
+    CircuitBreaker,
+    CircuitOpenError,
+)
 
 TENANT_ID = UUID("00000000-0000-4000-8000-000000000001")
 EMPLOYEE_ID = UUID("00000000-0000-4000-8000-000000000002")
@@ -120,12 +130,38 @@ def _storage(
     *,
     upload_ttl_seconds: int = 600,
     download_ttl_seconds: int = 300,
+    breaker: CircuitBreaker | None = None,
 ) -> MinioDocumentStorage:
     return MinioDocumentStorage(
         client=client,
         bucket=BUCKET,
         upload_ttl_seconds=upload_ttl_seconds,
         download_ttl_seconds=download_ttl_seconds,
+        breaker=breaker,
+    )
+
+
+class FakeClock:
+    """Monotonic clock driven explicitly by tests — no wall-clock sleeps."""
+
+    def __init__(self, now: float = 100.0) -> None:
+        self.now = now
+
+    def __call__(self) -> float:
+        return self.now
+
+    def advance(self, seconds: float) -> None:
+        self.now += seconds
+
+
+def _breaker(
+    clock: FakeClock, *, threshold: int = 3, cooldown: float = 30.0
+) -> CircuitBreaker:
+    return CircuitBreaker(
+        "minio",
+        failure_threshold=threshold,
+        cooldown_seconds=cooldown,
+        clock=clock,
     )
 
 
@@ -325,3 +361,105 @@ def test_keys_never_include_a_filename() -> None:
         document_key(TENANT_ID, EMPLOYEE_ID, DOCUMENT_ID)
         == f"documents/{TENANT_ID}/{EMPLOYEE_ID}/{DOCUMENT_ID}"
     )
+
+
+def test_create_document_storage_sets_bounded_timeouts() -> None:
+    """One hung MinIO call must be bounded before the breaker can help (T3)."""
+    storage = create_document_storage(
+        Settings(
+            storage_connect_timeout_seconds=2.5,
+            storage_read_timeout_seconds=12.0,
+        )
+    )
+    config = cast(Any, storage._client).meta.config
+
+    assert config.connect_timeout == 2.5
+    assert config.read_timeout == 12.0
+    # Timeouts are per attempt: pin one attempt so they bound the whole call.
+    assert config.retries["total_max_attempts"] == 1
+
+
+async def test_adapter_breaker_opens_after_the_threshold_and_fails_fast() -> None:
+    """A failing store trips the breaker; the next call does no client I/O."""
+    clock = FakeClock()
+    client = FakeS3Client(
+        head_error=_client_error("InternalError", status=500),
+    )
+    storage = _storage(client, breaker=_breaker(clock, threshold=3))
+
+    for _ in range(3):
+        with pytest.raises(ClientError):
+            await storage.stat("staging/k")
+    assert storage._breaker.state is BreakerState.OPEN
+    assert len(client.head_calls) == 3
+
+    with pytest.raises(CircuitOpenError):
+        await storage.stat("staging/k")
+    assert len(client.head_calls) == 3  # no outbound I/O while open
+
+
+async def test_adapter_breaker_recovers_after_the_cooldown_trial() -> None:
+    """A successful single half-open trial closes the breaker again."""
+    clock = FakeClock()
+    client = FakeS3Client(head_error=_client_error("InternalError", status=500))
+    breaker = _breaker(clock, threshold=1)
+    storage = _storage(client, breaker=breaker)
+
+    with pytest.raises(ClientError):
+        await storage.stat("staging/k")
+    assert breaker.state is BreakerState.OPEN
+
+    clock.advance(30.0)
+    client._head_error = None  # the store recovered
+
+    # Presigning is offline: it must fail fast while not closed, but it can
+    # neither consume the half-open permit nor "prove" recovery.
+    with pytest.raises(CircuitOpenError):
+        await storage.create_upload(
+            TENANT_ID, UPLOAD_ID, content_type="application/pdf", size_bytes=1
+        )
+    assert breaker.state is BreakerState.OPEN
+
+    assert (await storage.stat("staging/k")) is not None
+    assert breaker.state is BreakerState.CLOSED
+
+
+async def test_missing_objects_do_not_trip_the_breaker() -> None:
+    """An abandoned upload is a protocol answer, not a dependency failure."""
+    clock = FakeClock()
+    client = FakeS3Client(head_error=_client_error("NoSuchKey", status=404))
+    breaker = _breaker(clock, threshold=1)
+    storage = _storage(client, breaker=breaker)
+
+    for _ in range(4):
+        assert await storage.stat("staging/k") is None
+
+    assert breaker.state is BreakerState.CLOSED
+    assert len(client.head_calls) == 4
+
+
+async def test_presign_success_does_not_reset_the_failure_streak() -> None:
+    """Offline presigning is guarded but never a dependency-health signal."""
+    clock = FakeClock()
+    client = FakeS3Client(head_error=_client_error("InternalError", status=500))
+    breaker = _breaker(clock, threshold=2)
+    storage = _storage(client, breaker=breaker)
+
+    with pytest.raises(ClientError):
+        await storage.stat("staging/k")  # failure 1
+
+    for _ in range(3):
+        upload = await storage.create_upload(
+            TENANT_ID, UPLOAD_ID, content_type="application/pdf", size_bytes=1
+        )
+        assert upload.url
+
+    with pytest.raises(ClientError):
+        await storage.stat("staging/k")  # failure 2: the presigns did not reset
+    assert breaker.state is BreakerState.OPEN
+
+    with pytest.raises(CircuitOpenError):
+        await storage.create_upload(
+            TENANT_ID, UPLOAD_ID, content_type="application/pdf", size_bytes=1
+        )
+    assert len(client.post_calls) == 3  # the guard did no I/O

@@ -6,7 +6,7 @@ does the work.
 
 ## Now
 
-- [ ] Phase 7: Reliability — plan approved (`.ai/features/reliability.md`, T1–T10); T1–T2 done (error contract with `Retry-After`/503 codes, circuit-breaker core + bounded metrics); next T3 (MinIO breaker + timeouts).
+- [ ] Phase 7: Reliability — plan approved (`.ai/features/reliability.md`, T1–T10); T1–T3 done (error contract with `Retry-After`/503 codes, circuit-breaker core + bounded metrics, MinIO breaker + bounded timeouts); next T4 (relay Kafka breaker).
 
 ## Later
 

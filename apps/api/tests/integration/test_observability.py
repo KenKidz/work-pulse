@@ -26,6 +26,8 @@ from app.main import app
 from app.shared.errors import register_error_handlers
 from app.shared.logging import RequestContextMiddleware, add_trace_context
 from app.shared.telemetry import (
+    CIRCUIT_BREAKER_DEPENDENCY_LABELS,
+    CIRCUIT_BREAKER_STATE_LABELS,
     FORBIDDEN_METRIC_LABELS,
     HTTP_IN_FLIGHT_LABELS,
     HTTP_REQUEST_LABELS,
@@ -222,6 +224,8 @@ async def test_metrics_and_spans_expose_no_tenant_pii_or_identifiers(
         | set(HTTP_IN_FLIGHT_LABELS)
         | set(WORKER_EVENT_LABELS)
         | set(WORKER_UNIT_LABELS)
+        | set(CIRCUIT_BREAKER_STATE_LABELS)
+        | set(CIRCUIT_BREAKER_DEPENDENCY_LABELS)
     )
     assert labels.isdisjoint(FORBIDDEN_METRIC_LABELS)
 

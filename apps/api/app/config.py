@@ -125,6 +125,14 @@ class Settings(BaseSettings):
     storage_bucket: str = "documents"
     storage_upload_ttl_seconds: int = 600
     storage_download_ttl_seconds: int = 300
+    # Bounded client timeouts (Phase 7, ADR 0025): the MinIO breaker can only
+    # fail fast if a single hung call is itself bounded and botocore retries are
+    # pinned to one attempt (the adapter's Config). Uploads bypass the API
+    # (browser → presigned POST); API calls are HEAD/copy/delete of at most the
+    # 20 MB document cap, so the read timeout stays well below the breaker
+    # cooldown to avoid pinning a worker thread for the full 30s.
+    storage_connect_timeout_seconds: float = Field(default=3.0, gt=0)
+    storage_read_timeout_seconds: float = Field(default=5.0, gt=0)
 
     storage_test_endpoint: str = "http://127.0.0.1:9002"
     storage_test_access_key: str = "workpulse"

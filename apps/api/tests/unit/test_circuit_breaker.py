@@ -190,6 +190,64 @@ def test_disabled_breaker_passes_every_call_through() -> None:
     assert breaker.call_sync(_ok) == "ok"
 
 
+def test_guard_rejects_while_open_without_changing_state() -> None:
+    clock = FakeClock()
+    breaker = make_breaker(clock, threshold=1)
+
+    with pytest.raises(RuntimeError):
+        breaker.call_sync(_fail)
+    assert breaker.state is BreakerState.OPEN
+
+    # Offline presigning must fail fast while the breaker is not closed.
+    with pytest.raises(CircuitOpenError):
+        breaker.guard()
+    assert breaker.state is BreakerState.OPEN
+
+
+def test_guard_does_not_reset_the_failure_streak() -> None:
+    clock = FakeClock()
+    breaker = make_breaker(clock, threshold=2)
+
+    with pytest.raises(RuntimeError):
+        breaker.call_sync(_fail)  # failure 1
+    for _ in range(5):
+        breaker.guard()  # no health signal: must not reset failure 1
+    assert breaker.state is BreakerState.CLOSED
+
+    with pytest.raises(RuntimeError):
+        breaker.call_sync(_fail)  # failure 2 reaches the threshold
+    assert breaker.state is BreakerState.OPEN
+
+
+def test_guard_rejects_during_the_half_open_trial() -> None:
+    clock = FakeClock()
+    breaker = make_breaker(clock, threshold=1)
+
+    with pytest.raises(RuntimeError):
+        breaker.call_sync(_fail)
+    clock.advance(30.0)
+
+    def trial() -> str:
+        assert breaker.state is BreakerState.HALF_OPEN
+        with pytest.raises(CircuitOpenError):
+            breaker.guard()
+        return "ok"
+
+    assert breaker.call_sync(trial) == "ok"
+    assert breaker.state is BreakerState.CLOSED
+
+
+def test_guard_passes_when_closed_or_disabled() -> None:
+    breaker = make_breaker(FakeClock(), threshold=1, enabled=False)
+    breaker.guard()
+    assert breaker.state is BreakerState.CLOSED
+    assert breaker.call_sync(_ok) == "ok"
+
+    closed = make_breaker(FakeClock())
+    closed.guard()
+    assert closed.state is BreakerState.CLOSED
+
+
 def test_from_settings_uses_the_circuit_breaker_block() -> None:
     clock = FakeClock()
     settings = Settings(
