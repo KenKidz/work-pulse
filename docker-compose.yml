@@ -352,8 +352,8 @@ services:
         condition: service_healthy
 
   # --- Phase 6: observability (`make observability-up`, ADR 0023) ---
-  # Prometheus scrapes the API (:8000/metrics) and the five loopback worker
-  # listeners (:9101–:9105) through Docker's host gateway because the apps run
+  # Prometheus scrapes the API (:8000/metrics) and the six loopback worker
+  # listeners (:9101–:9106) through Docker's host gateway because the apps run
   # natively on the host. Grafana provisions its Prometheus datasource and the
   # WorkPulse overview dashboard from version-controlled JSON under
   # `ops/observability/`. Both bind to host loopback like the other infra; no

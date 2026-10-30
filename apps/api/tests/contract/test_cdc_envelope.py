@@ -25,6 +25,7 @@ CONTRACTS_DIR = REPO_ROOT / "contracts" / "cdc"
 ENVELOPE_PATH = CONTRACTS_DIR / "change-envelope.v1.json"
 ROWS_DIR = CONTRACTS_DIR / "rows"
 FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures" / "cdc"
+RECORDED_DIR = FIXTURES_DIR / "recorded"
 
 # Rule 4 / D8 — the captured tables and their exact column include sets.
 # The connector config gate (T3) asserts the same sets; contract and pipeline
@@ -235,6 +236,19 @@ def test_row_schemas_pin_exactly_the_captured_columns(
     assert schema["additionalProperties"] is False
 
 
+def _recorded_cases() -> list[Any]:
+    cases: list[Any] = []
+    for path in sorted(RECORDED_DIR.glob("*.json")):
+        table, op_class = path.stem.rsplit(".", 1)
+        cases.append(
+            pytest.param(path, table, op_class, id=f"recorded-{table}-{op_class}")
+        )
+    return cases
+
+
+RECORDED_CASES = _recorded_cases()
+
+
 def test_fixtures_cover_every_table_and_op_class() -> None:
     """Synthetic fixtures exist for every captured table × operation class."""
     expected = {
@@ -277,6 +291,71 @@ def test_fixture_validates_envelope_and_row_contract(
         # that exercises their row contract.
         row_validators[table].validate(before)
         assert set(before) == CAPTURED_COLUMNS[table]
+
+
+def test_recorded_fixtures_cover_every_table_and_op_class() -> None:
+    """Real Debezium 3.2.4 messages are checked in for the whole matrix (T7)."""
+    expected = {
+        f"{table}.{op_class}"
+        for table in CAPTURED_TABLES
+        for op_class in OP_BY_OP_CLASS
+    }
+    assert {path.stem for path in RECORDED_DIR.glob("*.json")} == expected
+
+
+@pytest.mark.parametrize(("fixture_path", "table", "op_class"), RECORDED_CASES)
+def test_recorded_fixture_validates_the_contract(
+    envelope_validator: Draft202012Validator,
+    row_validators: dict[str, Draft202012Validator],
+    fixture_path: Path,
+    table: str,
+    op_class: str,
+) -> None:
+    """Every recorded message validates the envelope; post-images validate rows.
+
+    Debezium's `before` image is intentionally not row-schema validated for
+    updates/deletes: with `column.include.list` it can be null (updates) or a
+    placeholder-filled key image (deletes). The sink never uses it — updates
+    upsert the post-image and deletes are dropped — so only `after` is a
+    projection input.
+    """
+    envelope = _load(fixture_path)
+
+    envelope_validator.validate(envelope)
+
+    assert envelope["op"] == OP_BY_OP_CLASS[op_class]
+    assert envelope["source"]["table"] == table
+
+    after = envelope["after"]
+    if after is not None:
+        row_validators[table].validate(after)
+        assert set(after) == CAPTURED_COLUMNS[table]
+
+    pii = _pii_keys({"before": envelope["before"], "after": after})
+    assert pii == [], f"PII-shaped key(s) in {fixture_path.name}: {pii}"
+
+
+def test_recorded_messages_pin_real_debezium_wire_behavior() -> None:
+    """The recorded set deliberately includes the behaviours that bit us:
+
+    - a streaming update with a null `before` (column filtering removes the
+      replica-identity image);
+    - Debezium 3.x snapshot markers beyond `true`/`last`;
+    - processing timestamps in µs/ns.
+    """
+    snapshots = [_load(path) for path in RECORDED_DIR.glob("*.snapshot.json")]
+    assert {envelope["source"]["snapshot"] for envelope in snapshots} >= {
+        "first",
+        "first_in_data_collection",
+        "last_in_data_collection",
+    }
+
+    updates = [_load(path) for path in RECORDED_DIR.glob("*.updated.json")]
+    assert any(envelope["before"] is None for envelope in updates)
+
+    for envelope in snapshots + updates:
+        assert "ts_us" in envelope
+        assert "ts_ns" in envelope
 
 
 def test_snapshot_fixtures_cover_true_and_last_markers() -> None:
@@ -414,6 +493,28 @@ def test_envelope_allows_debezium_source_extras(
     envelope = _load(FIXTURES_DIR / "employees.created.json")
     envelope["source"]["slot_name"] = "workpulse_slot"
     envelope_validator.validate(envelope)
+
+
+def test_envelope_allows_debezium_3x_timestamps_and_snapshot_markers(
+    envelope_validator: Draft202012Validator,
+) -> None:
+    """Debezium 3.x adds µs/ns timestamps and richer snapshot markers."""
+    envelope = _load(FIXTURES_DIR / "employees.snapshot.json")
+    envelope["ts_us"] = 1767225600001000
+    envelope["ts_ns"] = 1767225600001000000
+
+    for marker in (
+        "first",
+        "first_in_data_collection",
+        "last_in_data_collection",
+        "last",
+    ):
+        envelope["source"]["snapshot"] = marker
+        envelope_validator.validate(envelope)
+
+    with pytest.raises(ValidationError):
+        envelope["source"]["snapshot"] = "maybe"
+        envelope_validator.validate(envelope)
 
 
 def test_envelope_allows_optional_transaction_metadata(

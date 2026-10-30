@@ -112,6 +112,12 @@ class Settings(BaseSettings):
     cdc_sink_consumer_group: str = "workpulse-cdc-sink"
     cdc_projection_database: str = "workpulse_cdc"
     cdc_connect_url: str = "http://localhost:8083"
+    #: Connector + replication slot the T8 health poller reads (must match
+    #: `ops/cdc/connector.json` / `ops/cdc/register.sh`; the test instance
+    #: overrides the slot to `workpulse_cdc_test`).
+    cdc_connector_name: str = "workpulse-cdc"
+    cdc_slot_name: str = "workpulse_cdc"
+    cdc_health_poll_seconds: float = 15.0
     cdc_poll_seconds: float = 1.0
     cdc_backoff_base_seconds: float = 1.0
     cdc_backoff_max_seconds: float = 30.0

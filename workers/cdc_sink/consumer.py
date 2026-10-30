@@ -226,6 +226,10 @@ class CdcSinkConsumer:
 
     async def _handle(self, value: bytes | None) -> datetime | None:
         """Process one message; return its snapshot-done timestamp, if any."""
+        if not value:
+            # Kafka tombstones (null value) are compacted delete markers, not
+            # CDC changes; they carry no row and are a deliberate silent skip.
+            return None
         try:
             event = parse_message(value)
         except CdcMappingError as exc:

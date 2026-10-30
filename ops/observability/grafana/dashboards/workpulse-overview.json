@@ -570,11 +570,329 @@
       ],
       "title": "Worker failures",
       "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "workpulse-prometheus"
+      },
+      "description": "Debezium connector and task state, one-hot by the closed state vocabulary (FAILED wins over a stale RUNNING connector object).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 24
+      },
+      "id": 7,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "workpulse-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "max by (connector, state) (workpulse_cdc_connector_state)",
+          "instant": false,
+          "legendFormat": "{{connector}} · {{state}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "CDC connector state",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "workpulse-prometheus"
+      },
+      "description": "WAL retained by the PostgreSQL replication slot. Growth means the sink or connector is behind; the compose slot is capped at 1 GB.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 24
+      },
+      "id": 8,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "workpulse-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "max by (slot) (workpulse_cdc_slot_lag_bytes)",
+          "instant": false,
+          "legendFormat": "{{slot}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "CDC replication slot lag",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "workpulse-prometheus"
+      },
+      "description": "Uncommitted Kafka offsets per captured table topic. A flat non-zero line means the sink is not committing.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 24
+      },
+      "id": 9,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "workpulse-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by (topic) (workpulse_cdc_consumer_lag)",
+          "instant": false,
+          "legendFormat": "{{topic}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "CDC consumer lag",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "workpulse-prometheus"
+      },
+      "description": "Delete/truncate changes dropped by the sink. The projection never removes rows, so any non-zero rate is a source anomaly worth investigating.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0.01
+              }
+            ]
+          },
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 32
+      },
+      "id": 10,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "workpulse-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(workpulse_cdc_dropped_deletes_total[5m]))",
+          "instant": false,
+          "legendFormat": "dropped deletes",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "CDC dropped deletes",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "workpulse-prometheus"
+      },
+      "description": "Transient CDC sink failures (store/commit retries). A sustained non-zero rate means the sink loop is not reaching a clean flush.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0.01
+              }
+            ]
+          },
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 32
+      },
+      "id": 11,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "workpulse-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(workpulse_cdc_sink_errors_total[5m]))",
+          "instant": false,
+          "legendFormat": "sink errors",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "CDC sink errors",
+      "type": "timeseries"
     }
   ],
   "refresh": "30s",
   "schemaVersion": 39,
-  "tags": ["workpulse", "phase-6"],
+  "tags": ["workpulse", "phase-6", "phase-5"],
   "templating": {
     "list": []
   },

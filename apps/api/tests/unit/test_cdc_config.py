@@ -248,6 +248,10 @@ def test_connector_pins_the_wire_and_snapshot_contract() -> None:
     assert config["publication.autocreate.mode"] == "filtered"
     assert config["decimal.handling.mode"] == "string"
     assert int(config["heartbeat.interval.ms"]) > 0
+    # Debezium defaults to skipping truncates; the sink must see `t` so it can
+    # drop-and-count it (feature rule 8), so the connector explicitly captures
+    # every operation.
+    assert config["skipped.operations"] == "none"
     assert config["key.converter.schemas.enable"] == "false"
     assert config["value.converter.schemas.enable"] == "false"
 

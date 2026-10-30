@@ -16,6 +16,7 @@ configuration/schema errors exit loudly — restart policy is Phase 8's.
 """
 
 import asyncio
+import contextlib
 import signal
 from collections.abc import Sequence
 from typing import Protocol
@@ -32,6 +33,12 @@ from app.shared.telemetry import (
     start_worker_metrics_server,
 )
 from workers.cdc_sink.consumer import CdcSinkConsumer
+from workers.cdc_sink.health import (
+    CdcHealthPoller,
+    fetch_connector_state,
+    fetch_consumer_lag,
+    fetch_slot_lag_bytes,
+)
 from workers.cdc_sink.mapping import (
     DATA_TOPICS,
     HEARTBEAT_TOPIC,
@@ -188,11 +195,28 @@ async def _run() -> None:
             leave_types=leave_types,
         )
 
+        health = CdcHealthPoller(
+            connector_name=settings.cdc_connector_name,
+            slot_name=settings.cdc_slot_name,
+            topics=DATA_TOPICS,
+            fetch_connector_state=lambda: fetch_connector_state(
+                settings.cdc_connect_url, settings.cdc_connector_name
+            ),
+            fetch_slot_lag=lambda: fetch_slot_lag_bytes(settings.cdc_slot_name),
+            fetch_consumer_lag=lambda: fetch_consumer_lag(source, DATA_TOPICS),
+            poll_seconds=settings.cdc_health_poll_seconds,
+        )
+
+        def _stop() -> None:
+            consumer.stop()
+            health.stop()
+
         loop = asyncio.get_running_loop()
         for sig in (signal.SIGINT, signal.SIGTERM):
-            loop.add_signal_handler(sig, consumer.stop)
+            loop.add_signal_handler(sig, _stop)
 
         metrics_server = start_worker_metrics_server(settings.cdc_sink_metrics_port)
+        health_task = asyncio.create_task(health.run())
         run_task = asyncio.create_task(consumer.run())
         started_task = asyncio.create_task(consumer.started.wait())
         try:
@@ -214,6 +238,10 @@ async def _run() -> None:
             await run_task
         finally:
             started_task.cancel()
+            health.stop()
+            health_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await health_task
             if metrics_server is not None:
                 metrics_server.stop()
             await source.stop()

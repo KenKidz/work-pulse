@@ -197,10 +197,13 @@ def parse_message(value: bytes | None) -> Change | Heartbeat | None:
     before = _row_image(payload.get("before"), "before")
     if op in ("c", "r") and after is None:
         raise CdcMappingError("after is missing")
-    if op == "u" and (after is None or before is None):
-        raise CdcMappingError("after or before is missing")
-    if op == "d" and before is None:
-        raise CdcMappingError("before is missing")
+    # `u` and `d` need only the post-image for the sink's upsert; Debezium may
+    # emit a null `before` (or a placeholder-filled one) when `column.include`
+    # filtering removes the replica-identity columns. Delete/truncate are
+    # dropped before mapping, so requiring `before` would only misclassify a
+    # real change as malformed.
+    if op == "u" and after is None:
+        raise CdcMappingError("after is missing")
 
     return Change(
         op=op,
@@ -219,7 +222,17 @@ def _snapshot(value: object) -> str | None:
         return "true"
     if value is False:
         return "false"
-    if isinstance(value, str) and value in ("true", "false", "last"):
+    if isinstance(value, str) and value in (
+        "true",
+        "false",
+        "last",
+        # Debezium 3.x initial/incremental snapshot markers. `first` and
+        # `last_in_data_collection` are still snapshot rows and must not flip
+        # readiness; only `last`/streaming/heartbeat are completion evidence.
+        "first",
+        "first_in_data_collection",
+        "last_in_data_collection",
+    ):
         return value
     raise CdcMappingError("source.snapshot is invalid")
 

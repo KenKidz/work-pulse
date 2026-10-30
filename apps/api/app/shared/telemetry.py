@@ -62,6 +62,12 @@ HTTP_REQUEST_LABELS = ("method", "route", "status_code")
 HTTP_IN_FLIGHT_LABELS = ("method",)
 WORKER_EVENT_LABELS = ("worker", "event_type", "status")
 WORKER_UNIT_LABELS = ("worker", "status")
+#: CDC pipeline health labels (T8). `connector`, `slot` and `topic` are
+#: operator-configured identifiers, never tenant/employee data; `state` is a
+#: closed vocabulary.
+CDC_CONNECTOR_LABELS = ("connector", "state")
+CDC_SLOT_LABELS = ("slot",)
+CDC_TOPIC_LABELS = ("topic",)
 
 #: Identifiers that must never become Prometheus labels: they are either PII
 #: or unbounded (tenant-scoped) values. They remain usable in logs and span
@@ -111,6 +117,9 @@ _WORKER_DURATION = "workpulse_worker_unit_duration_seconds"
 _CDC_DROPPED_DELETES = "workpulse_cdc_dropped_deletes"
 _CDC_SINK_ERRORS = "workpulse_cdc_sink_errors"
 _CDC_REFERENCE_MISSES = "workpulse_cdc_reference_misses"
+_CDC_CONNECTOR_STATE = "workpulse_cdc_connector_state"
+_CDC_SLOT_LAG_BYTES = "workpulse_cdc_slot_lag_bytes"
+_CDC_CONSUMER_LAG = "workpulse_cdc_consumer_lag"
 
 
 def trace_ids() -> tuple[str | None, str | None]:
@@ -187,6 +196,12 @@ class Telemetry:
     cdc_dropped_deletes: Counter
     cdc_sink_errors: Counter
     cdc_reference_misses: Counter
+    #: OTel's gauge instrument type is not re-exported by opentelemetry.metrics
+    #: in the pinned SDK; the concrete type is SDK-internal and only `set` is
+    #: used, so the fields stay intentionally structural.
+    cdc_connector_state: Any
+    cdc_slot_lag_bytes: Any
+    cdc_consumer_lag: Any
     otlp_export_enabled: bool
 
     def record_http_request(
@@ -239,6 +254,27 @@ class Telemetry:
     def record_cdc_reference_miss(self) -> None:
         """Count a leave-type reference miss that fell back to `unknown`."""
         self.cdc_reference_misses.add(1)
+
+    def set_cdc_connector_states(
+        self, connector: str, states: Mapping[str, int]
+    ) -> None:
+        """Expose the current connector state as a one-hot gauge.
+
+        Every known state is written on every poll (1 for the current one, 0
+        for the rest) so the series set is stable across state transitions.
+        """
+        for state, value in states.items():
+            self.cdc_connector_state.set(
+                float(value), {"connector": connector, "state": state}
+            )
+
+    def record_cdc_slot_lag(self, slot: str, lag_bytes: int) -> None:
+        """Expose WAL retained by the source replication slot, in bytes."""
+        self.cdc_slot_lag_bytes.set(float(lag_bytes), {"slot": slot})
+
+    def record_cdc_consumer_lag(self, topic: str, lag: int) -> None:
+        """Expose the sink consumer-group lag for one captured topic."""
+        self.cdc_consumer_lag.set(float(lag), {"topic": topic})
 
     def metrics_text(self) -> bytes:
         """Prometheus text exposition (`text/plain; version=0.0.4`)."""
@@ -353,6 +389,21 @@ def create_telemetry(
         unit="1",
         description="CDC leave-type reference misses resolved to unknown.",
     )
+    cdc_connector_state = meter.create_gauge(
+        _CDC_CONNECTOR_STATE,
+        unit="1",
+        description="CDC connector state (one-hot by bounded state label).",
+    )
+    cdc_slot_lag_bytes = meter.create_gauge(
+        _CDC_SLOT_LAG_BYTES,
+        unit="By",
+        description="WAL bytes retained by the CDC replication slot.",
+    )
+    cdc_consumer_lag = meter.create_gauge(
+        _CDC_CONSUMER_LAG,
+        unit="1",
+        description="Uncommitted Kafka offset lag per captured table topic.",
+    )
 
     return Telemetry(
         tracer_provider=tracer_provider,
@@ -366,6 +417,9 @@ def create_telemetry(
         cdc_dropped_deletes=cdc_dropped_deletes,
         cdc_sink_errors=cdc_sink_errors,
         cdc_reference_misses=cdc_reference_misses,
+        cdc_connector_state=cdc_connector_state,
+        cdc_slot_lag_bytes=cdc_slot_lag_bytes,
+        cdc_consumer_lag=cdc_consumer_lag,
         otlp_export_enabled=otlp_export_enabled,
     )
 
@@ -434,6 +488,27 @@ def record_cdc_reference_miss() -> None:
     telemetry = get_telemetry()
     if telemetry is not None:
         telemetry.record_cdc_reference_miss()
+
+
+def record_cdc_connector_state(connector: str, states: Mapping[str, int]) -> None:
+    """Expose the connector state one-hot gauge (inert without telemetry)."""
+    telemetry = get_telemetry()
+    if telemetry is not None:
+        telemetry.set_cdc_connector_states(connector, states)
+
+
+def record_cdc_slot_lag(slot: str, lag_bytes: int) -> None:
+    """Expose the replication-slot lag gauge (inert without telemetry)."""
+    telemetry = get_telemetry()
+    if telemetry is not None:
+        telemetry.record_cdc_slot_lag(slot, lag_bytes)
+
+
+def record_cdc_consumer_lag(topic: str, lag: int) -> None:
+    """Expose one topic's consumer lag (inert without telemetry)."""
+    telemetry = get_telemetry()
+    if telemetry is not None:
+        telemetry.record_cdc_consumer_lag(topic, lag)
 
 
 @dataclass(slots=True)

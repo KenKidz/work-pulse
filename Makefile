@@ -121,7 +121,7 @@ check-api: db-test-up redis-test-up kafka-test-up clickhouse-test-up minio-test-
 check-web: ## Web gate: typecheck + ESLint + Vitest
 	cd $(WEB_DIR) && pnpm run typecheck && pnpm run lint && pnpm run test
 
-check-e2e: db-up redis-up kafka-test-up clickhouse-test-up minio-up db-migrate db-seed ## E2E gate: Playwright across the full event hop (kafka-test + ClickHouse + relay + realtime + payroll + reports)
+check-e2e: db-up redis-up kafka-test-up clickhouse-test-up minio-up db-migrate db-seed cdc-test-up ## E2E gate: Playwright across the full event hop (kafka-test + ClickHouse + Connect + relay + realtime + payroll + reports + CDC)
 	bash tests/e2e/full-hop.sh
 
 gen-api: ## Regenerate OpenAPI contract + typed API client

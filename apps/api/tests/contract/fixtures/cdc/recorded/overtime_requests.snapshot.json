@@ -1,0 +1,32 @@
+{
+  "before": null,
+  "after": {
+    "id": "00000000-0000-4000-8000-00000000c001",
+    "tenant_id": "00000000-0000-4000-8000-00000000000a",
+    "employee_id": "00000000-0000-4000-8000-000000000001",
+    "work_date": 20746,
+    "hours": "2.50",
+    "status": "hr_verified"
+  },
+  "source": {
+    "version": "3.2.4.Final",
+    "connector": "postgresql",
+    "name": "workpulse.cdc.record",
+    "ts_ms": 1793346891256,
+    "snapshot": "last_in_data_collection",
+    "db": "workpulse_test",
+    "sequence": "[null,\"1034535176\"]",
+    "ts_us": 1793346891256607,
+    "ts_ns": 1793346891256607000,
+    "schema": "public",
+    "table": "overtime_requests",
+    "txId": 10635,
+    "lsn": 1034535176,
+    "xmin": null
+  },
+  "transaction": null,
+  "op": "r",
+  "ts_ms": 1793346891296,
+  "ts_us": 1793346891296009,
+  "ts_ns": 1793346891296009890
+}

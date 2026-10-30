@@ -3,14 +3,17 @@
 Cross-surface flows: tests that exercise Next.js + FastAPI + PostgreSQL
 together — the paths per-surface tests deliberately don't cover.
 
-Run with `make check-e2e`: it brings PostgreSQL, Redis and Kafka
-(`kafka-test`, :9093) up, applies migrations and seeds the dev database,
-then `full-hop.sh` starts the outbox relay, the realtime consumer and the
-payroll calculation worker — the full event hop (ADR 0013) plus the
-database-backed payroll job — before Playwright starts both dev servers
+Run with `make check-e2e`: it brings PostgreSQL, Redis, Kafka
+(`kafka-test`, :9093) and Kafka Connect (`kafka-connect-test`, :8084) up,
+applies migrations and seeds the dev database, then `full-hop.sh` starts the
+outbox relay, the realtime consumer, the payroll calculation worker and the
+CDC sink — the full event hop (ADR 0013), the database-backed payroll job and
+the Phase-5 Debezium projection — before Playwright starts both dev servers
 (`apps/api` on :8000, `apps/web` on :3000) and runs the suite in Chromium.
 The command-center live-delta test is measured through that hop: the bus is
-the wall's only input.
+the wall's only input. After the suite, the hop compares the serving (fold)
+and CDC shadow projections through the production report repository and fails
+on any aggregate drift; `reports.spec.ts` itself stays unchanged.
 The suite is part of `make check` — it earned its place on 2026-09-29 with
 three consecutive green runs at ~20s each (`.ai/testing.md` decision 3).
 Run one `make check-e2e` at a time per dev database: the specs share the
@@ -104,3 +107,11 @@ ledger; approved/verified overtime claims are terminal too, so the overtime
 and seam fixtures need a free work date and exact countable hours; and
 performance reviews/feedback/catalog names are mutable across runs. Leave types
 stay — the service provisions them per tenant.
+
+The reports fixture is special after T7: `reset_reports_fixtures` writes the
+People Ops fixture as **both** the synthetic envelopes the fold worker consumes
+and the matching OLTP rows Debezium captures (`tests/e2e/full-hop.sh`), with the
+shadow projection truncated first and a bounded wait for the annual leave-type
+row before the sink starts. The post-suite parity step then proves the two
+independent projections agree for the fixture employee; recorded real Debezium
+messages live under `apps/api/tests/contract/fixtures/cdc/recorded/`.

@@ -4,7 +4,7 @@
 # every background worker through Docker's host gateway (`extra_hosts` in
 # `docker-compose.yml`), because the apps run natively on the host. The API
 # serves `GET /metrics` on :8000; each worker optionally serves the same
-# exposition on its loopback port (RELAY_METRICS_PORT … REPORTS_METRICS_PORT).
+# exposition on its loopback port (RELAY_METRICS_PORT … CDC_SINK_METRICS_PORT).
 # There is no otel-collector in between: the OTel SDK bridges instruments into
 # a prometheus_client registry in-process (ADR 0023).
 #
@@ -32,5 +32,6 @@ scrape_configs:
           - host.docker.internal:9103
           - host.docker.internal:9104
           - host.docker.internal:9105
+          - host.docker.internal:9106
         labels:
           component: worker

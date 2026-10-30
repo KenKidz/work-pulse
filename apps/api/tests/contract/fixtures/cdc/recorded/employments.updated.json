@@ -1,0 +1,33 @@
+{
+  "before": null,
+  "after": {
+    "tenant_id": "00000000-0000-4000-8000-00000000000a",
+    "employee_id": "00000000-0000-4000-8000-000000000002",
+    "department_id": "00000000-0000-4000-8000-0000000000d1",
+    "position_id": "00000000-0000-4000-8000-0000000000e1",
+    "location_id": "00000000-0000-4000-8000-0000000000c1",
+    "effective_from": 20122,
+    "effective_to": 20756
+  },
+  "source": {
+    "version": "3.2.4.Final",
+    "connector": "postgresql",
+    "name": "workpulse.cdc.record",
+    "ts_ms": 1793346897208,
+    "snapshot": "false",
+    "db": "workpulse_test",
+    "sequence": "[\"1034538320\",\"1034538568\"]",
+    "ts_us": 1793346897208315,
+    "ts_ns": 1793346897208315000,
+    "schema": "public",
+    "table": "employments",
+    "txId": 10637,
+    "lsn": 1034538568,
+    "xmin": null
+  },
+  "transaction": null,
+  "op": "u",
+  "ts_ms": 1793346897418,
+  "ts_us": 1793346897418097,
+  "ts_ns": 1793346897418097311
+}

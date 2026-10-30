@@ -1,6 +1,6 @@
 # Feature: Change Data Capture (Debezium projection pipeline)
 
-- **Status:** approved
+- **Status:** implementing
 - **Phase:** 5
 - **Size:** L
 - **Surfaces:** api+web+events+workers
@@ -613,6 +613,23 @@ delete op removes nothing and increments the counter (AC 6); `ready` gate
   real messages).
 - `tests/e2e/reports.spec.ts` — unchanged (AC 11).
 *Verify:* `make check-e2e` green with the spec expectations untouched.
+*Implementation (2026-10-30):* `check-e2e` now depends on `cdc-test-up`;
+  `full-hop.sh` starts the CDC sink against Connect-test and the
+  `workpulse_test_cdc` shadow, writes the report fixture as both OLTP rows and
+  fold envelopes, and after Playwright runs
+  `apps/api/scripts/compare_reports_parity.py` (fixture employee scope, exact
+  four-report equality, bounded poll). The real hop exposed three wire-format
+  gaps the synthetic contracts missed: Debezium 3.2.4 uses
+  `first`/`first_in_data_collection`/`last_in_data_collection` snapshot markers
+  in addition to `true`/`last`, it emits `ts_us`/`ts_ns` top-level fields, and
+  `column.include.list` can make an update's `before` null. The envelope schema
+  and `workers/cdc_sink/mapping.py` were widened for those real messages, and
+  the connector now pins `skipped.operations: none` (Debezium defaults to
+  skipping truncates, which would hide the drop-and-count path). Kafka
+  tombstones are skipped silently. Recorded real messages for all six tables ×
+  five op classes live in `tests/contract/fixtures/cdc/recorded/` and are
+  validated by `test_cdc_envelope.py`; a test pins the real markers/null-before
+  behaviour.
 
 **T8 — Observability (AC 13).**
 - `workers/cdc_sink/` health poller (~15 s): `workpulse_cdc_connector_state`
@@ -629,6 +646,16 @@ delete op removes nothing and increments the counter (AC 6); `ready` gate
   covers the new panels (bounded metrics, no forbidden labels, no UUIDs).
 *Verify:* `make check-api` green; `make observability-up` shows the panels
 (manual check noted in the record step).
+*Implementation (2026-10-30):* `workers/cdc_sink/health.py` adds a 15 s
+  best-effort poller and the three gauges on `cdc_sink_metrics_port` (9106):
+  connector/task state from Connect REST (one-hot over a closed state set),
+  `pg_replication_slots` WAL lag, and per-topic uncommitted offset lag. The
+  poller is injected with its probes (unit-tested without infra), failures are
+  logged by category and never stop the sink, and every label stays bounded
+  (`connector`, `slot`, `topic`, state). Prometheus scrapes 9106 and the
+  existing overview dashboard gained the connector-state, slot-lag,
+  consumer-lag, dropped-delete and sink-error panels; the config gate covers
+  the new metrics/panels and the settings port parity.
 
 **T9 — Cutover: retire the fold, rebuild from snapshot + WAL, docs, ADR 0024 (AC 12).**
 - Rebuild + flip (ops/cdc/README runbook executed): stop `workers/reports`

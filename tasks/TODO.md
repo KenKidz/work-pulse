@@ -6,7 +6,7 @@ does the work.
 
 ## Now
 
-- [ ] Change Data Capture (`.ai/features/change-data-capture.md`) — spec approved with the T1–T9 plan (CDC replaces the reports fold, PII excluded at the connector, parity-then-retire cutover). T1 contracts, T2 `minutes_late`, T3 Debezium infra + config gates, T4 CDC sink + landing layer/readiness, T5 query-time as-of attribution, and T6 parity/isolation/ready-gate harness landed 2026-10-30; next is T7 (real Debezium in the e2e hop + recorded fixtures).
+- [ ] Change Data Capture (`.ai/features/change-data-capture.md`) — status `implementing` with the T1–T9 plan (CDC replaces the reports fold, PII excluded at the connector, parity-then-retire cutover). T1 contracts, T2 `minutes_late`, T3 Debezium infra + config gates, T4 CDC sink + landing layer/readiness, T5 query-time as-of attribution, T6 parity/isolation/ready-gate harness, T7 real Debezium in the e2e hop + recorded fixtures, and T8 connector/lag/consumer metrics + Grafana panels landed 2026-10-30; next is T9 (cutover, fold retirement, ADR 0024, docs).
 
 ## Later
 

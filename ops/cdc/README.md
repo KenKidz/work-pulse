@@ -25,6 +25,13 @@ reasons, notes and decision columns are excluded by `column.include.list`.
 `tests/unit/test_cdc_config.py` fails if the captured-table set or an include
 list drifts, naming the offending column.
 
+The connector also pins `skipped.operations: none`: Debezium defaults to
+skipping `t` (truncate) events, but the sink must see every dropped
+delete/truncate to count it (feature rule 8). Real Debezium 3.2.4 messages are
+recorded under `apps/api/tests/contract/fixtures/cdc/recorded/`; the extra
+`first`/`first_in_data_collection`/`last_in_data_collection` snapshot markers
+and `ts_us`/`ts_ns` fields are part of the accepted envelope contract.
+
 ## Prerequisites
 
 - Docker compose services: PostgreSQL, Kafka, ClickHouse and Kafka Connect
@@ -72,9 +79,10 @@ CDC_PROJECTION_DATABASE=workpulse_test_cdc \
 bash ops/cdc/register.sh
 ```
 
-The sink (`make dev-cdc-sink`, Phase-5 T4) consumes `earliest` with a stable
+The sink (`make dev-cdc-sink`, Phase-5 T4/T8) consumes `earliest` with a stable
 group, so it can start before or after `make cdc-up`; starting it first makes
-readiness flips and lag easiest to read. When the broker disables
+readiness flips and lag easiest to read. `CDC_SLOT_NAME` should match the slot
+the connector registration used so the slot-lag gauge reads the right slot. When the broker disables
 auto-topic-creation (`auto.create.topics.enable=false`), start the connector
 first or pre-create the six `workpulse.cdc.<table>` topics and
 `__debezium-heartbeat.workpulse.cdc`; the sink retries startup with backoff
@@ -86,7 +94,24 @@ while they are missing instead of exiting.
 curl -s localhost:8083/connectors/workpulse-cdc/status | jq
 docker compose exec kafka /opt/kafka/bin/kafka-topics.sh \
   --bootstrap-server localhost:9092 --list | grep '^workpulse.cdc'
+curl -s localhost:9106/metrics | grep '^workpulse_cdc'
 ```
+
+`workers/cdc_sink/health.py` polls every 15 s and publishes bounded gauges:
+`workpulse_cdc_connector_state{connector,state}` (one-hot; a failed task makes
+the connector `FAILED`), `workpulse_cdc_slot_lag_bytes{slot}` (WAL retained at
+`restart_lsn`) and `workpulse_cdc_consumer_lag{topic}` (uncommitted offsets).
+`workpulse_cdc_dropped_deletes_total` and `workpulse_cdc_sink_errors_total`
+ride the same Prometheus target. Probe failures are logged by category and
+never stop the sink; see the Grafana overview dashboard's CDC panels.
+
+`make check-e2e` runs the real path end-to-end: `cdc-test-up` registers a
+connector against the dev PostgreSQL with slot `workpulse_cdc_test`, the hop
+starts `workers/cdc_sink` against `workpulse_test_cdc`, and after Playwright a
+bounded parity step compares the serving (fold) and shadow (CDC) projections
+through the production report repository. Recorded real messages for the
+contract test are checked in under `apps/api/tests/contract/fixtures/cdc/
+recorded/`.
 
 Topic naming is `workpulse.cdc.<table>`. Debezium's PostgreSQL default would be
 `workpulse.cdc.public.<table>` (schema included), so `connector.json` pins a

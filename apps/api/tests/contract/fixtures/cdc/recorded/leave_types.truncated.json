@@ -1,0 +1,25 @@
+{
+  "before": null,
+  "after": null,
+  "source": {
+    "version": "3.2.4.Final",
+    "connector": "postgresql",
+    "name": "workpulse.cdc.record",
+    "ts_ms": 1793346901226,
+    "snapshot": "false",
+    "db": "workpulse_test",
+    "sequence": "[\"1034541072\",\"1034625512\"]",
+    "ts_us": 1793346901226808,
+    "ts_ns": 1793346901226808000,
+    "schema": "public",
+    "table": "leave_types",
+    "txId": 10639,
+    "lsn": 1034625512,
+    "xmin": null
+  },
+  "transaction": null,
+  "op": "t",
+  "ts_ms": 1793346901478,
+  "ts_us": 1793346901478670,
+  "ts_ns": 1793346901478670415
+}

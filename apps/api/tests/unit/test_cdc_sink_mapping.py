@@ -25,6 +25,7 @@ from workers.cdc_sink.mapping import (
     HEARTBEAT_TOPIC,
     LEAVE_TYPE_TOPIC,
     CdcMappingError,
+    Change,
     Heartbeat,
     LeaveType,
     LeaveTypeBook,
@@ -218,6 +219,17 @@ def test_parse_change_keeps_snapshot_in_progress_out_of_evidence() -> None:
     assert change.snapshot_done is False
 
 
+def test_parse_change_accepts_debezium_3x_snapshot_markers() -> None:
+    """`first`/`last_in_data_collection` are snapshot rows, not completion."""
+    for marker in ("first", "first_in_data_collection", "last_in_data_collection"):
+        change = parse_message(
+            _wire(_envelope("employees", _employee_row(), op="r", snapshot=marker))
+        )
+        assert isinstance(change, Change)
+        assert change.snapshot == marker
+        assert change.snapshot_done is False
+
+
 def test_parse_change_decodes_last_snapshot_row() -> None:
     change = parse_message(
         _wire(_envelope("employees", _employee_row(), op="r", snapshot="last"))
@@ -291,8 +303,8 @@ def test_parse_skips_messages_outside_the_contract(value: bytes | None) -> None:
         ),
         pytest.param(_envelope("employees", None, op="c"), id="missing-after"),
         pytest.param(
-            _envelope("employees", _employee_row(), op="u", before=None),
-            id="missing-before",
+            _envelope("employees", None, op="u", before=None),
+            id="missing-update-after",
         ),
     ],
 )
@@ -303,6 +315,23 @@ def test_parse_rejects_a_malformed_change_naming_the_field(
         parse_message(_wire(payload))
     message = str(error.value)
     assert "missing" in message or "invalid" in message or "not an object" in message
+
+
+def test_update_without_a_before_image_is_accepted() -> None:
+    """Real Debezium may omit `before` when column filtering removes the key."""
+    change = parse_message(
+        _wire(
+            _envelope(
+                "employees",
+                _employee_row(),
+                op="u",
+                before=None,
+            )
+        )
+    )
+    assert isinstance(change, Change)
+    assert change.before is None
+    assert change.after == _employee_row()
 
 
 def test_delete_and_truncate_are_marked_dropped() -> None:

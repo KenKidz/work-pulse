@@ -42,6 +42,7 @@ WORKER_METRICS_PORTS = {
     "notifications": 9103,
     "payroll": 9104,
     "reports": 9105,
+    "cdc_sink": 9106,
 }
 
 #: Metrics the `## API contract` table exports. Dashboard queries may only
@@ -52,6 +53,11 @@ BOUNDED_METRICS = {
     "workpulse_http_requests_in_flight",
     "workpulse_worker_events_total",
     "workpulse_worker_unit_duration_seconds",
+    "workpulse_cdc_connector_state",
+    "workpulse_cdc_slot_lag_bytes",
+    "workpulse_cdc_consumer_lag",
+    "workpulse_cdc_dropped_deletes_total",
+    "workpulse_cdc_sink_errors_total",
 }
 
 FORBIDDEN_LABELS = {
@@ -70,6 +76,11 @@ REQUIRED_PANELS = {
     "In-flight requests": "workpulse_http_requests_in_flight",
     "Worker throughput": "workpulse_worker_events_total",
     "Worker failures": "workpulse_worker_events_total",
+    "CDC connector state": "workpulse_cdc_connector_state",
+    "CDC replication slot lag": "workpulse_cdc_slot_lag_bytes",
+    "CDC consumer lag": "workpulse_cdc_consumer_lag",
+    "CDC dropped deletes": "workpulse_cdc_dropped_deletes_total",
+    "CDC sink errors": "workpulse_cdc_sink_errors_total",
 }
 
 _UUID_PATTERN = re.compile(
