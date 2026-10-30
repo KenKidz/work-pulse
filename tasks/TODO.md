@@ -6,11 +6,10 @@ does the work.
 
 ## Now
 
-_Nothing in progress._
+- [ ] Phase 7: Reliability — spec drafted (`.ai/features/reliability.md`, PO decisions answered 2026-10-30); next `/plan`.
 
 ## Later
 
-- [ ] Phase 7: load testing, rate limiting, circuit breakers
 - [ ] Phase 8: Docker images, Kubernetes, CI/CD
 
 ## Done

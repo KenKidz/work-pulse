@@ -53,7 +53,7 @@ domain map in `.ai/domain.md` is their placeholder.
 | Employee documents (presigned upload/download) | 4+ | M | done | `employee-documents.md` |
 | Change Data Capture (Debezium projection pipeline) | 5 | L | done | `change-data-capture.md` |
 | Observability (OTel, Prometheus, Grafana) | 6 | M | done | `observability.md` |
-| Reliability (load tests, rate limiting, breakers) | 7 | M | planned | — |
+| Reliability (load tests, rate limiting, breakers) | 7 | M | draft | `reliability.md` |
 | Deployment (images, Kubernetes, CI/CD) | 8 | M | planned | — |
 
 Build order inside Phase 1: **Organizations → Employees → Attendance** (each
