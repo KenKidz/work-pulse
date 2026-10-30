@@ -18,8 +18,8 @@ Design notes (ADR 0023):
   the `## API contract` table exactly.
 - Metric labels are deliberately bounded: `method`, `route` (a FastAPI route
   *template*, never a raw path), `status_code`, `worker`, `event_type`,
-  `status`. Tenant/employee/user/request/event identifiers never become
-  labels (business rule 5).
+  `status`, `dependency`, `state`. Tenant/employee/user/request/event
+  identifiers never become labels (business rule 5).
 - Each background worker wraps one batch/message/job in `worker_unit`: a
   root span with the same bounded instruments, plus a loopback-only
   `prometheus_client` listener (`start_worker_metrics_server`) when its
@@ -68,6 +68,12 @@ WORKER_UNIT_LABELS = ("worker", "status")
 CDC_CONNECTOR_LABELS = ("connector", "state")
 CDC_SLOT_LABELS = ("slot",)
 CDC_TOPIC_LABELS = ("topic",)
+#: Reliability plumbing (Phase 7, ADR 0025). `dependency` is a closed
+#: vocabulary (`minio`, `kafka`, `resend`, `slack`) and `state` is one of
+#: `CIRCUIT_BREAKER_STATES`; neither carries tenant/employee identity.
+CIRCUIT_BREAKER_STATE_LABELS = ("dependency", "state")
+CIRCUIT_BREAKER_DEPENDENCY_LABELS = ("dependency",)
+CIRCUIT_BREAKER_STATES = ("closed", "half_open", "open")
 
 #: Identifiers that must never become Prometheus labels: they are either PII
 #: or unbounded (tenant-scoped) values. They remain usable in logs and span
@@ -120,6 +126,9 @@ _CDC_REFERENCE_MISSES = "workpulse_cdc_reference_misses"
 _CDC_CONNECTOR_STATE = "workpulse_cdc_connector_state"
 _CDC_SLOT_LAG_BYTES = "workpulse_cdc_slot_lag_bytes"
 _CDC_CONSUMER_LAG = "workpulse_cdc_consumer_lag"
+_CIRCUIT_BREAKER_STATE = "workpulse_circuit_breaker_state"
+_CIRCUIT_BREAKER_REJECTED = "workpulse_circuit_breaker_rejected"
+_CIRCUIT_BREAKER_TRANSITIONS = "workpulse_circuit_breaker_transitions"
 
 
 def trace_ids() -> tuple[str | None, str | None]:
@@ -202,6 +211,9 @@ class Telemetry:
     cdc_connector_state: Any
     cdc_slot_lag_bytes: Any
     cdc_consumer_lag: Any
+    circuit_breaker_state: Any
+    circuit_breaker_rejected: Counter
+    circuit_breaker_transitions: Counter
     otlp_export_enabled: bool
 
     def record_http_request(
@@ -275,6 +287,29 @@ class Telemetry:
     def record_cdc_consumer_lag(self, topic: str, lag: int) -> None:
         """Expose the sink consumer-group lag for one captured topic."""
         self.cdc_consumer_lag.set(float(lag), {"topic": topic})
+
+    def set_circuit_breaker_state(self, dependency: str, state: str) -> None:
+        """Expose one breaker's state as a one-hot gauge.
+
+        Every known state is written (1 for the current one, 0 for the rest),
+        so the series set stays stable across transitions — the CDC connector
+        state precedent.
+        """
+        for candidate in CIRCUIT_BREAKER_STATES:
+            self.circuit_breaker_state.set(
+                1.0 if candidate == state else 0.0,
+                {"dependency": dependency, "state": candidate},
+            )
+
+    def record_circuit_breaker_rejected(self, dependency: str) -> None:
+        """Count a call rejected fast because the breaker was not closed."""
+        self.circuit_breaker_rejected.add(1, {"dependency": dependency})
+
+    def record_circuit_breaker_transition(self, dependency: str, state: str) -> None:
+        """Count one closed/open/half-open transition into `state`."""
+        self.circuit_breaker_transitions.add(
+            1, {"dependency": dependency, "state": state}
+        )
 
     def metrics_text(self) -> bytes:
         """Prometheus text exposition (`text/plain; version=0.0.4`)."""
@@ -404,6 +439,21 @@ def create_telemetry(
         unit="1",
         description="Uncommitted Kafka offset lag per captured table topic.",
     )
+    circuit_breaker_state = meter.create_gauge(
+        _CIRCUIT_BREAKER_STATE,
+        unit="1",
+        description="Circuit breaker state (one-hot by dependency and state).",
+    )
+    circuit_breaker_rejected = meter.create_counter(
+        _CIRCUIT_BREAKER_REJECTED,
+        unit="1",
+        description="Outbound calls rejected fast by an open breaker.",
+    )
+    circuit_breaker_transitions = meter.create_counter(
+        _CIRCUIT_BREAKER_TRANSITIONS,
+        unit="1",
+        description="Circuit breaker state transitions.",
+    )
 
     return Telemetry(
         tracer_provider=tracer_provider,
@@ -420,6 +470,9 @@ def create_telemetry(
         cdc_connector_state=cdc_connector_state,
         cdc_slot_lag_bytes=cdc_slot_lag_bytes,
         cdc_consumer_lag=cdc_consumer_lag,
+        circuit_breaker_state=circuit_breaker_state,
+        circuit_breaker_rejected=circuit_breaker_rejected,
+        circuit_breaker_transitions=circuit_breaker_transitions,
         otlp_export_enabled=otlp_export_enabled,
     )
 
@@ -509,6 +562,27 @@ def record_cdc_consumer_lag(topic: str, lag: int) -> None:
     telemetry = get_telemetry()
     if telemetry is not None:
         telemetry.record_cdc_consumer_lag(topic, lag)
+
+
+def record_circuit_breaker_state(dependency: str, state: str) -> None:
+    """Expose a breaker state one-hot (inert without telemetry)."""
+    telemetry = get_telemetry()
+    if telemetry is not None:
+        telemetry.set_circuit_breaker_state(dependency, state)
+
+
+def record_circuit_breaker_rejected(dependency: str) -> None:
+    """Count one fast rejection by an open/half-open breaker."""
+    telemetry = get_telemetry()
+    if telemetry is not None:
+        telemetry.record_circuit_breaker_rejected(dependency)
+
+
+def record_circuit_breaker_transition(dependency: str, state: str) -> None:
+    """Count one breaker transition into `state`."""
+    telemetry = get_telemetry()
+    if telemetry is not None:
+        telemetry.record_circuit_breaker_transition(dependency, state)
 
 
 @dataclass(slots=True)

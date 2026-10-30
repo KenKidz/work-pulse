@@ -465,8 +465,11 @@ needed).
   every `POST`/`PUT`/`PATCH`/`DELETE` under `/api/v1` (incl.
   `POST /auth/logout`) → mutation tier keyed by session user id, falling back
   to client IP when no session resolves; all `GET`, `/healthz`, `/metrics`
-  exempt. Short-circuit with `RateLimitedError` (429 + `Retry-After`) before
-  router/service work — no audit, no event.
+  exempt. Short-circuit by returning `error_response(RateLimitedError(...))`
+  (429 + `Retry-After`) before router/service work — no audit, no event.
+  User middleware runs outside Starlette's `ExceptionMiddleware`, so raising
+  the error from `dispatch` would become a generic 500; the middleware must
+  render the response itself (T1's `error_response` helper).
 - App seam for tests: the limiter is constructed with the settings + clock and
   reachable from the app (e.g. `app.state`) so integration tests can build the
   app with an injected clock and a small explicit budget.

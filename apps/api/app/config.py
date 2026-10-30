@@ -2,6 +2,7 @@
 
 from functools import lru_cache
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -143,6 +144,17 @@ class Settings(BaseSettings):
     notifications_metrics_port: int = 9103
     payroll_metrics_port: int = 9104
     cdc_sink_metrics_port: int = 9106
+
+    # --- Phase 7: reliability shared plumbing (ADR 0025) ---
+    # Circuit breakers wrap only non-critical outbound calls (Kafka publish,
+    # MinIO storage, Resend/Slack). State is per process; a dependency that is
+    # down in this monolith stays down, so PostgreSQL/Redis/ClickHouse are not
+    # wrapped. `CIRCUIT_BREAKER_ENABLED=false` passes calls straight through.
+    circuit_breaker_enabled: bool = True
+    circuit_breaker_failure_threshold: int = Field(default=5, ge=1)
+    circuit_breaker_cooldown_seconds: float = Field(
+        default=30.0, ge=0, allow_inf_nan=False
+    )
 
     # --- Identity: sessions (pinned in `.ai/features/identity-access.md`) ---
     # Absolute session lifetime; the `wp_session` cookie itself is a session

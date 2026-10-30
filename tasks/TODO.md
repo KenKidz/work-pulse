@@ -6,7 +6,7 @@ does the work.
 
 ## Now
 
-- [ ] Phase 7: Reliability — spec drafted (`.ai/features/reliability.md`, PO decisions answered 2026-10-30); next `/plan`.
+- [ ] Phase 7: Reliability — plan approved (`.ai/features/reliability.md`, T1–T10); T1–T2 done (error contract with `Retry-After`/503 codes, circuit-breaker core + bounded metrics); next T3 (MinIO breaker + timeouts).
 
 ## Later
 

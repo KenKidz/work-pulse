@@ -17,6 +17,8 @@ from prometheus_client.parser import text_string_to_metric_families
 from app.config import Settings
 from app.shared.logging import add_trace_context
 from app.shared.telemetry import (
+    CIRCUIT_BREAKER_DEPENDENCY_LABELS,
+    CIRCUIT_BREAKER_STATE_LABELS,
     FORBIDDEN_METRIC_LABELS,
     HTTP_IN_FLIGHT_LABELS,
     HTTP_REQUEST_LABELS,
@@ -37,6 +39,8 @@ _ALL_ALLOWED_LABELS = (
     | set(HTTP_IN_FLIGHT_LABELS)
     | set(WORKER_EVENT_LABELS)
     | set(WORKER_UNIT_LABELS)
+    | set(CIRCUIT_BREAKER_STATE_LABELS)
+    | set(CIRCUIT_BREAKER_DEPENDENCY_LABELS)
 )
 
 
@@ -199,6 +203,35 @@ def test_worker_metrics_use_bounded_labels(telemetry: Telemetry) -> None:
 
     labels = _labels_in(text)
     assert labels == set(WORKER_EVENT_LABELS)
+    assert labels.isdisjoint(FORBIDDEN_METRIC_LABELS)
+
+
+def test_circuit_breaker_metrics_use_bounded_labels(telemetry: Telemetry) -> None:
+    """T2: state is one-hot; rejections/transitions carry closed vocabularies."""
+    telemetry.set_circuit_breaker_state("minio", "half_open")
+    telemetry.record_circuit_breaker_rejected("minio")
+    telemetry.record_circuit_breaker_transition("minio", "open")
+
+    text = telemetry.metrics_text().decode()
+
+    assert (
+        'workpulse_circuit_breaker_state{dependency="minio",state="closed"} 0.0' in text
+    )
+    assert (
+        'workpulse_circuit_breaker_state{dependency="minio",state="half_open"} 1.0'
+        in text
+    )
+    assert (
+        'workpulse_circuit_breaker_state{dependency="minio",state="open"} 0.0' in text
+    )
+    assert 'workpulse_circuit_breaker_rejected_total{dependency="minio"} 1.0' in text
+    assert (
+        'workpulse_circuit_breaker_transitions_total{dependency="minio",'
+        'state="open"} 1.0' in text
+    )
+
+    labels = _labels_in(text)
+    assert labels == set(CIRCUIT_BREAKER_STATE_LABELS)
     assert labels.isdisjoint(FORBIDDEN_METRIC_LABELS)
 
 
