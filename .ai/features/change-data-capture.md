@@ -513,7 +513,13 @@ Everything orders so `make check` stays green after every task.
 - `app/infrastructure/clickhouse/cdc_projection.py` — `ClickhouseCdcWriter`:
   target-database client (`cdc_projection_database`, shadow by default, D2),
   `CREATE DATABASE IF NOT EXISTS` + `schema.sql` apply on startup, per-table
-  upserts; the worker constructs it (F1 precedent).
+  buffered upserts flushed once per fetched batch; the worker constructs it
+  (F1 precedent).
+- `database/clickhouse/schema.sql` — widen `fact_leave.approved_day_count` to
+  `UInt32` (unpaid leave is not balance-capped, so a valid OLTP `days` must fit
+  the projection) with an idempotent `ALTER` for existing projections; the
+  row contract gains the matching maximum and ADR 0019's table line records
+  the width.
 - `app/config.py` — `cdc_sink_consumer_group`, `cdc_projection_database`,
   `cdc_connect_url`, `cdc_sink_metrics_port: int = 9106`; `.env.example`.
 - `Makefile` `dev-cdc-sink`; `scripts/dev.sh` — eighth process +

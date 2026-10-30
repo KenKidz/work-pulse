@@ -42,7 +42,8 @@
     "days": {
       "type": "integer",
       "minimum": 1,
-      "description": "Approved inclusive day count (`days`, the fold's `approved_day_count`)."
+      "maximum": 4294967295,
+      "description": "Approved inclusive day count (`days`, the fold's `approved_day_count`). The maximum matches the UInt32 ClickHouse projection column."
     },
     "status": {
       "type": "string",

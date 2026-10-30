@@ -74,7 +74,11 @@ bash ops/cdc/register.sh
 
 The sink (`make dev-cdc-sink`, Phase-5 T4) consumes `earliest` with a stable
 group, so it can start before or after `make cdc-up`; starting it first makes
-readiness flips and lag easiest to read.
+readiness flips and lag easiest to read. When the broker disables
+auto-topic-creation (`auto.create.topics.enable=false`), start the connector
+first or pre-create the six `workpulse.cdc.<table>` topics and
+`__debezium-heartbeat.workpulse.cdc`; the sink retries startup with backoff
+while they are missing instead of exiting.
 
 ## Verify
 
@@ -109,7 +113,9 @@ the slot — it never replays `workpulse.events`:
 6. start the sink, then register the connector (`snapshot.mode=initial`);
 7. readiness flips to `ready = 1` when the final snapshot row arrives
    (`source.snapshot == "last"`), a heartbeat lands for an empty snapshot, or
-   the first non-snapshot change arrives.
+   the first non-snapshot change arrives — provided the evidence is at or
+   after the fence timestamp (replayed pre-rebuild history cannot un-fence a
+   truncated projection).
 
 ## Sink/connector down
 

@@ -20,18 +20,22 @@ _client: Client | None = None
 
 def create_clickhouse_client(
     *,
+    database: str | None = None,
     connect_timeout: int = 2,
     send_receive_timeout: int = 30,
     query_retries: int = 2,
 ) -> Client:
     """Create a client from settings. The caller owns its lifetime.
 
-    The report path uses the defaults (a 30s read timeout is ample for an
-    aggregate query). The API's best-effort startup schema check passes much
-    tighter values so a half-up ClickHouse cannot hold boot open.
+    `database` overrides the DSN database (the CDC sink points at its shadow
+    database; the database must already exist). The report path uses the
+    defaults (a 30s read timeout is ample for an aggregate query). The API's
+    best-effort startup schema check passes much tighter values so a half-up
+    ClickHouse cannot hold boot open.
     """
     return get_client(
         dsn=get_settings().clickhouse_url,
+        database=database,
         connect_timeout=connect_timeout,
         send_receive_timeout=send_receive_timeout,
         query_retries=query_retries,

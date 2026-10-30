@@ -41,6 +41,13 @@ TEST_CLICKHOUSE_URL = os.environ.get(
 )
 os.environ["CLICKHOUSE_URL"] = TEST_CLICKHOUSE_URL
 
+# The CDC sink targets the D2 shadow database. Tests pin it to the throwaway
+# twin (created by the sink/writer on startup) so a test never writes the
+# canonical projection the reports fold owns.
+os.environ["CDC_PROJECTION_DATABASE"] = os.environ.get(
+    "CDC_TEST_PROJECTION_DATABASE", "workpulse_test_cdc"
+)
+
 # And the document bucket: `STORAGE_ENDPOINT` et al. point at the dev MinIO on
 # :9000 otherwise. Credentials and bucket are the `minio-test` provisioning
 # (ADR 0022); TTLs may keep their defaults.
@@ -58,5 +65,5 @@ os.environ["STORAGE_BUCKET"] = os.environ.get("STORAGE_TEST_BUCKET", "documents-
 
 # Worker Prometheus listeners bind loopback ports in dev; under pytest they
 # must stay disabled so parallel runs never collide (ADR 0023).
-for _worker in ("relay", "realtime", "notifications", "payroll", "reports"):
+for _worker in ("relay", "realtime", "notifications", "payroll", "reports", "cdc_sink"):
     os.environ[f"{_worker.upper()}_METRICS_PORT"] = "0"

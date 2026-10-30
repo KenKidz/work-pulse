@@ -3,7 +3,7 @@
 API_DIR := apps/api
 WEB_DIR := apps/web
 
-.PHONY: help install dev db-up db-down db-test-up redis-up redis-test-up kafka-up kafka-test-up clickhouse-up clickhouse-down clickhouse-test-up minio-up minio-test-up observability-up observability-down cdc-up cdc-down cdc-test-up cdc-test-down db-migrate db-seed dev-api dev-web dev-relay dev-realtime dev-notifications dev-payroll dev-reports check check-api check-web check-e2e gen-api format-web
+.PHONY: help install dev db-up db-down db-test-up redis-up redis-test-up kafka-up kafka-test-up clickhouse-up clickhouse-down clickhouse-test-up minio-up minio-test-up observability-up observability-down cdc-up cdc-down cdc-test-up cdc-test-down db-migrate db-seed dev-api dev-web dev-relay dev-realtime dev-notifications dev-payroll dev-reports dev-cdc-sink check check-api check-web check-e2e gen-api format-web
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -106,6 +106,9 @@ dev-payroll: ## Run the payroll calculation worker (queued runs → calculated, 
 
 dev-reports: ## Run the reports projection worker (events → ClickHouse, ADR 0019)
 	cd $(API_DIR) && PYTHONPATH="../..:." uv run python -m workers.reports.main
+
+dev-cdc-sink: ## Run the CDC projection sink (Debezium topics → ClickHouse shadow, ADR 0024)
+	cd $(API_DIR) && PYTHONPATH="../..:." uv run python -m workers.cdc_sink.main
 
 check: check-api check-web check-e2e ## Run every gate — run before claiming done
 

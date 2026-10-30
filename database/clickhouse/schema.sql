@@ -79,7 +79,10 @@ CREATE TABLE IF NOT EXISTS fact_leave
     employee_id UUID,
     start_date Date,
     leave_type_code LowCardinality(String),
-    approved_day_count UInt16,
+    -- UInt32 since Phase 5: `leave_requests.days` spans the full calendar
+    -- range for balance-free types (unpaid), and every positive int32 the
+    -- OLTP check allows must fit the CDC projection (ADR 0024).
+    approved_day_count UInt32,
     department_id Nullable(UUID),
     position_id Nullable(UUID),
     location_id Nullable(UUID),
@@ -89,6 +92,11 @@ CREATE TABLE IF NOT EXISTS fact_leave
 ENGINE = ReplacingMergeTree(updated_at)
 PARTITION BY toYYYYMM(start_date)
 ORDER BY (tenant_id, leave_request_id);
+
+-- Widen projections created before Phase 5 in place. `MODIFY COLUMN` to the
+-- same type is a no-op, so applying the DDL repeatedly stays idempotent.
+ALTER TABLE fact_leave
+    MODIFY COLUMN approved_day_count UInt32;
 
 -- Rebuild fence (ADR 0019 decision 7): the rebuild procedure writes
 -- `ready = 0` before truncating and `ready = 1` once the replay has caught up.

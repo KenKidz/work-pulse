@@ -112,3 +112,15 @@ def test_schema_pins_the_adr_table_design(clickhouse: Client) -> None:
         assert "ReplacingMergeTree(updated_at)" in engine_full, table
         assert actual_sorting_key == sorting_key, table
         assert actual_partition_key == partition_key, table
+
+
+def test_fact_leave_day_count_is_wide_enough_for_cdc(clickhouse: Client) -> None:
+    """Unpaid leave is not balance-capped; the projection must hold Int32 days."""
+    apply_clickhouse_schema(clickhouse)
+
+    column_type = clickhouse.command(
+        "SELECT type FROM system.columns "
+        "WHERE database = currentDatabase() "
+        "AND table = 'fact_leave' AND name = 'approved_day_count'"
+    )
+    assert column_type == "UInt32"

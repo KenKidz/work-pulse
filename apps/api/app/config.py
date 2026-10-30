@@ -103,6 +103,19 @@ class Settings(BaseSettings):
     reports_backoff_base_seconds: float = 1.0
     reports_backoff_max_seconds: float = 30.0
 
+    # --- Phase 5: CDC projection sink (`make cdc-up`, ADR 0024) ---
+    # Debezium writes `workpulse.cdc.<table>`; the sink lands the change rows
+    # in the ClickHouse projection. It consumes `earliest` with a stable group
+    # and applies its own readiness fence (D5). During the parallel run it
+    # targets the D2 shadow database; cutover flips this to empty (the
+    # `CLICKHOUSE_URL` database) and drops the shadow.
+    cdc_sink_consumer_group: str = "workpulse-cdc-sink"
+    cdc_projection_database: str = "workpulse_cdc"
+    cdc_connect_url: str = "http://localhost:8083"
+    cdc_poll_seconds: float = 1.0
+    cdc_backoff_base_seconds: float = 1.0
+    cdc_backoff_max_seconds: float = 30.0
+
     # --- Phase 4+: employee documents (`make minio-up`, ADR 0022) ---
     # Private S3-compatible bucket; the API returns presigned URLs only and
     # never a key or a public path. The test twin points at the throwaway
@@ -134,6 +147,7 @@ class Settings(BaseSettings):
     notifications_metrics_port: int = 9103
     payroll_metrics_port: int = 9104
     reports_metrics_port: int = 9105
+    cdc_sink_metrics_port: int = 9106
 
     # --- Identity: sessions (pinned in `.ai/features/identity-access.md`) ---
     # Absolute session lifetime; the `wp_session` cookie itself is a session

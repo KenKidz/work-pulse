@@ -108,6 +108,9 @@ _HTTP_DURATION = "workpulse_http_request_duration_seconds"
 _HTTP_IN_FLIGHT = "workpulse_http_requests_in_flight"
 _WORKER_EVENTS = "workpulse_worker_events"
 _WORKER_DURATION = "workpulse_worker_unit_duration_seconds"
+_CDC_DROPPED_DELETES = "workpulse_cdc_dropped_deletes"
+_CDC_SINK_ERRORS = "workpulse_cdc_sink_errors"
+_CDC_REFERENCE_MISSES = "workpulse_cdc_reference_misses"
 
 
 def trace_ids() -> tuple[str | None, str | None]:
@@ -181,6 +184,9 @@ class Telemetry:
     http_in_flight: UpDownCounter
     worker_events: Counter
     worker_duration: Histogram
+    cdc_dropped_deletes: Counter
+    cdc_sink_errors: Counter
+    cdc_reference_misses: Counter
     otlp_export_enabled: bool
 
     def record_http_request(
@@ -221,6 +227,18 @@ class Telemetry:
             duration_seconds,
             {"worker": worker, "status": status},
         )
+
+    def record_cdc_dropped_delete(self) -> None:
+        """Count a dropped CDC delete/truncate op (no projection row removed)."""
+        self.cdc_dropped_deletes.add(1)
+
+    def record_cdc_sink_error(self) -> None:
+        """Count a transient CDC sink failure (store/commit retry)."""
+        self.cdc_sink_errors.add(1)
+
+    def record_cdc_reference_miss(self) -> None:
+        """Count a leave-type reference miss that fell back to `unknown`."""
+        self.cdc_reference_misses.add(1)
 
     def metrics_text(self) -> bytes:
         """Prometheus text exposition (`text/plain; version=0.0.4`)."""
@@ -320,6 +338,21 @@ def create_telemetry(
         description="Duration of one worker batch/message/job in seconds.",
         explicit_bucket_boundaries_advisory=WORKER_DURATION_BUCKETS,
     )
+    cdc_dropped_deletes = meter.create_counter(
+        _CDC_DROPPED_DELETES,
+        unit="1",
+        description="CDC delete/truncate changes dropped without deleting a row.",
+    )
+    cdc_sink_errors = meter.create_counter(
+        _CDC_SINK_ERRORS,
+        unit="1",
+        description="Transient CDC sink failures retried in place.",
+    )
+    cdc_reference_misses = meter.create_counter(
+        _CDC_REFERENCE_MISSES,
+        unit="1",
+        description="CDC leave-type reference misses resolved to unknown.",
+    )
 
     return Telemetry(
         tracer_provider=tracer_provider,
@@ -330,6 +363,9 @@ def create_telemetry(
         http_in_flight=http_in_flight,
         worker_events=worker_events,
         worker_duration=worker_duration,
+        cdc_dropped_deletes=cdc_dropped_deletes,
+        cdc_sink_errors=cdc_sink_errors,
+        cdc_reference_misses=cdc_reference_misses,
         otlp_export_enabled=otlp_export_enabled,
     )
 
@@ -377,6 +413,27 @@ def flush_worker_telemetry() -> None:
             "telemetry_flush_failed",
             error=type(exc).__name__,
         )
+
+
+def record_cdc_dropped_delete() -> None:
+    """Count a dropped CDC delete/truncate op (inert without telemetry)."""
+    telemetry = get_telemetry()
+    if telemetry is not None:
+        telemetry.record_cdc_dropped_delete()
+
+
+def record_cdc_sink_error() -> None:
+    """Count a transient CDC sink failure (inert without telemetry)."""
+    telemetry = get_telemetry()
+    if telemetry is not None:
+        telemetry.record_cdc_sink_error()
+
+
+def record_cdc_reference_miss() -> None:
+    """Count a leave-type reference miss (inert without telemetry)."""
+    telemetry = get_telemetry()
+    if telemetry is not None:
+        telemetry.record_cdc_reference_miss()
 
 
 @dataclass(slots=True)
