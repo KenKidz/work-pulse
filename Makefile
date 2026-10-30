@@ -3,7 +3,7 @@
 API_DIR := apps/api
 WEB_DIR := apps/web
 
-.PHONY: help install dev db-up db-down db-test-up redis-up redis-test-up kafka-up kafka-test-up clickhouse-up clickhouse-down clickhouse-test-up minio-up minio-test-up observability-up observability-down db-migrate db-seed dev-api dev-web dev-relay dev-realtime dev-notifications dev-payroll dev-reports check check-api check-web check-e2e gen-api format-web
+.PHONY: help install dev db-up db-down db-test-up redis-up redis-test-up kafka-up kafka-test-up clickhouse-up clickhouse-down clickhouse-test-up minio-up minio-test-up observability-up observability-down cdc-up cdc-down cdc-test-up cdc-test-down db-migrate db-seed dev-api dev-web dev-relay dev-realtime dev-notifications dev-payroll dev-reports check check-api check-web check-e2e gen-api format-web
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -52,6 +52,24 @@ observability-up: ## Start Prometheus (:9090) + Grafana (:3001) with provisioned
 
 observability-down: ## Stop Prometheus + Grafana (configs and dashboards stay in version control)
 	docker compose stop prometheus grafana
+
+cdc-up: db-up db-migrate clickhouse-up ## Start PostgreSQL/ClickHouse/Kafka/Connect and register the CDC shadow
+	docker compose up -d --wait kafka kafka-connect
+	CDC_PROJECTION_DATABASE=workpulse_cdc bash ops/cdc/register.sh
+
+cdc-down: ## Stop Kafka Connect (connector and offset state stay in Kafka)
+	docker compose stop kafka-connect
+
+cdc-test-up: db-up db-migrate clickhouse-test-up ## Start the throwaway test Kafka Connect (:8084) and register against kafka-test
+	docker compose up -d --wait kafka-test kafka-connect-test
+	CONNECT_URL=http://localhost:8084 \
+	CDC_SLOT_NAME=workpulse_cdc_test \
+	CDC_CLICKHOUSE_SERVICE=clickhouse-test \
+	CDC_PROJECTION_DATABASE=workpulse_test_cdc \
+	bash ops/cdc/register.sh
+
+cdc-test-down: ## Stop the throwaway test Kafka Connect (:8084)
+	docker compose stop kafka-connect-test
 
 db-migrate: ## Apply Alembic migrations to the dev database
 	cd $(API_DIR) && uv run alembic upgrade head

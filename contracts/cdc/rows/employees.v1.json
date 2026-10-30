@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workpulse.dev/contracts/cdc/rows/employees.v1.json",
+  "title": "WorkPulse CDC employees row v1",
+  "description": "Captured `employees` columns for the reports projection — identifiers, tenure state and timestamps only. No names, emails, phones or other PII (`.ai/security.md`).",
+  "type": "object",
+  "required": ["id", "tenant_id", "hired_at", "terminated_at"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Employee id (UUIDv7 string)."
+    },
+    "tenant_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Tenant the row belongs to — enforced end-to-end."
+    },
+    "hired_at": {
+      "type": "integer",
+      "description": "First day of the initial employment period, Debezium epoch-day encoding."
+    },
+    "terminated_at": {
+      "type": ["integer", "null"],
+      "description": "Termination day, Debezium epoch-day encoding; null while active."
+    }
+  }
+}

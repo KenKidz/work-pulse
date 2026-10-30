@@ -201,6 +201,7 @@ async def seed_record(
     duration_minutes: int | None = None,
     check_in_note: str | None = None,
     check_out_note: str | None = None,
+    minutes_late: int | None = None,
 ) -> AttendanceRecord:
     record = await repo.add(
         tenant_id,
@@ -212,6 +213,7 @@ async def seed_record(
         late=late,
         shift_id=shift_id,
         check_in_note=check_in_note,
+        minutes_late=minutes_late,
     )
     if checked_out_at is None:
         return record

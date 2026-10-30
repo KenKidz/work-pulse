@@ -1,0 +1,29 @@
+{
+  "before": null,
+  "after": {
+    "id": "00000000-0000-4000-8000-000000000009",
+    "tenant_id": "00000000-0000-4000-8000-000000000001",
+    "employee_id": "00000000-0000-4000-8000-000000000002",
+    "leave_type_id": "00000000-0000-4000-8000-000000000006",
+    "start_date": 20724,
+    "days": 3,
+    "status": "approved"
+  },
+  "source": {
+    "version": "3.0.0.Final",
+    "connector": "postgresql",
+    "name": "workpulse-cdc",
+    "ts_ms": 1767225623000,
+    "snapshot": "true",
+    "db": "workpulse",
+    "sequence": "[\"24046720\",\"24046720\"]",
+    "schema": "public",
+    "table": "leave_requests",
+    "txId": 575,
+    "lsn": 24046720,
+    "xmin": null
+  },
+  "op": "r",
+  "ts_ms": 1767225623001,
+  "transaction": null
+}

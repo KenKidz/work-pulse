@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workpulse.dev/contracts/cdc/rows/leave_requests.v1.json",
+  "title": "WorkPulse CDC leave_requests row v1",
+  "description": "Captured `leave_requests` columns for the leave fact — type reference, start date, approved day count and status. Reasons and decision notes never cross.",
+  "type": "object",
+  "required": [
+    "id",
+    "tenant_id",
+    "employee_id",
+    "leave_type_id",
+    "start_date",
+    "days",
+    "status"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Leave request id (UUIDv7 string)."
+    },
+    "tenant_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Tenant the row belongs to — enforced end-to-end."
+    },
+    "employee_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Employee the request belongs to (UUIDv7 string)."
+    },
+    "leave_type_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Leave type reference; resolved to its code by the sink's leave-type dictionary."
+    },
+    "start_date": {
+      "type": "integer",
+      "description": "First day of leave, Debezium epoch-day encoding."
+    },
+    "days": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Approved inclusive day count (`days`, the fold's `approved_day_count`)."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "approved", "rejected", "withdrawn"],
+      "description": "Leave lifecycle status. The projection writes fact rows for `approved` only (terminal state)."
+    }
+  }
+}

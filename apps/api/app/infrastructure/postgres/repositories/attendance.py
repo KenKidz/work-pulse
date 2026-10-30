@@ -158,6 +158,7 @@ class PostgresAttendanceRepository:
         late: bool,
         shift_id: UUID | None,
         check_in_note: str | None,
+        minutes_late: int | None = None,
     ) -> AttendanceRecord:
         row = orm.AttendanceRecord(
             id=record_id,
@@ -168,6 +169,7 @@ class PostgresAttendanceRepository:
             checked_out_at=None,
             work_mode=work_mode.value,
             late=late,
+            minutes_late=minutes_late,
             shift_id=shift_id,
             check_in_note=check_in_note,
             check_out_note=None,

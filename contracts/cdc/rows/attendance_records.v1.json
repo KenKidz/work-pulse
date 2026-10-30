@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workpulse.dev/contracts/cdc/rows/attendance_records.v1.json",
+  "title": "WorkPulse CDC attendance_records row v1",
+  "description": "Captured `attendance_records` columns for the attendance fact — work date, late state, minutes late and duration only. No notes, names or client-supplied free text.",
+  "type": "object",
+  "required": [
+    "id",
+    "tenant_id",
+    "employee_id",
+    "workday",
+    "duration_minutes",
+    "late",
+    "minutes_late"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Attendance record id (UUIDv7 string)."
+    },
+    "tenant_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Tenant the row belongs to — enforced end-to-end."
+    },
+    "employee_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Employee the record belongs to (UUIDv7 string)."
+    },
+    "workday": {
+      "type": "integer",
+      "description": "Calendar date of the record, Debezium epoch-day encoding."
+    },
+    "duration_minutes": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "description": "Worked minutes, set at check-out; null while the record is still open."
+    },
+    "late": {
+      "type": "boolean",
+      "description": "Lateness flag set once at check-in and never cleared."
+    },
+    "minutes_late": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "description": "Whole minutes past shift start + grace when `late` is true; null when not late. Added to the OLTP row by the rule-5 migration so the projection no longer needs the event payload."
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "before": null,
+  "after": null,
+  "source": {
+    "version": "3.0.0.Final",
+    "connector": "postgresql",
+    "name": "workpulse-cdc",
+    "ts_ms": 1767225609000,
+    "snapshot": "false",
+    "db": "workpulse",
+    "sequence": "[\"24032384\",\"24032384\"]",
+    "schema": "public",
+    "table": "employments",
+    "txId": 561,
+    "lsn": 24032384,
+    "xmin": null
+  },
+  "op": "t",
+  "ts_ms": 1767225609001,
+  "transaction": null
+}

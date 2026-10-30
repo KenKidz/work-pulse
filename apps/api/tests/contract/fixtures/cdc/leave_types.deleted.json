@@ -1,0 +1,25 @@
+{
+  "before": {
+    "id": "00000000-0000-4000-8000-000000000010",
+    "tenant_id": "00000000-0000-4000-8000-000000000001",
+    "code": "annual"
+  },
+  "after": null,
+  "source": {
+    "version": "3.0.0.Final",
+    "connector": "postgresql",
+    "name": "workpulse-cdc",
+    "ts_ms": 1767225627000,
+    "snapshot": "false",
+    "db": "workpulse",
+    "sequence": "[\"24050816\",\"24050816\"]",
+    "schema": "public",
+    "table": "leave_types",
+    "txId": 579,
+    "lsn": 24050816,
+    "xmin": null
+  },
+  "op": "d",
+  "ts_ms": 1767225627001,
+  "transaction": null
+}

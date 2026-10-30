@@ -158,21 +158,39 @@ def _presence_status(
     return "present"
 
 
+def _minutes_past_boundary(
+    checked_in_at: datetime,
+    workday: date,
+    shift: Shift | None,
+    timezone: ZoneInfo,
+) -> int | None:
+    """Whole minutes past `shift.start + grace`; `None` without a shift.
+
+    The one lateness arithmetic shared by the check-in row/events and the
+    read-time board rows. Clamped at 0 so the wire contract's `minimum: 0`
+    always holds.
+    """
+    if shift is None:
+        return None
+    boundary = _shift_boundary(shift, workday, timezone)
+    return max(0, int((checked_in_at - boundary).total_seconds() // 60))
+
+
 def _minutes_late(
     record: AttendanceRecord, shift: Shift | None, timezone: ZoneInfo
 ) -> int | None:
     """Whole minutes past `shift.start + grace`, recomputed at read time.
 
     `None` when the record is not `late` or its shift no longer resolves.
-    Recomputing (instead of storing) means an edit to the shift changes the
-    displayed minutes after a late check-in — accepted drift; the `late` flag
-    itself never changes (realtime spec, risk 3). Clamped at 0 so the wire
-    contract's `minimum: 0` always holds.
+    Recomputing (instead of reading the persisted check-in value) means an
+    edit to the shift changes the displayed minutes after a late check-in —
+    accepted drift; the `late` flag itself never changes (realtime spec,
+    risk 3). The persisted column is the CDC projection's source (rule 5),
+    not the read-time board's.
     """
-    if not record.late or shift is None:
+    if not record.late:
         return None
-    boundary = _shift_boundary(shift, record.workday, timezone)
-    return max(0, int((record.checked_in_at - boundary).total_seconds() // 60))
+    return _minutes_past_boundary(record.checked_in_at, record.workday, shift, timezone)
 
 
 def _presence_row(
@@ -318,6 +336,15 @@ class AttendanceService:
         if shift is not None:
             late = now > _shift_boundary(shift, workday, location_timezone)
 
+        # The one minutes-late rule (`_minutes_past_boundary`) computed once:
+        # the row persists it (rule 5 — CDC projects row state, not events)
+        # and the events carry the same value.
+        persisted_minutes_late = (
+            _minutes_past_boundary(now, workday, shift, location_timezone)
+            if late
+            else None
+        )
+
         record = await self._repo.add(
             tenant_id,
             uuid7(),
@@ -328,14 +355,13 @@ class AttendanceService:
             late=late,
             shift_id=shift.id if shift is not None else None,
             check_in_note=payload.check_in_note,
+            minutes_late=persisted_minutes_late,
         )
 
-        # The one minutes-late rule (`_minutes_late`) on the persisted record,
-        # so the event payloads and the board rows share the math. `0` stands
-        # in for "not late"; the late event is only emitted when `late` is
-        # true, and then the value is the computed minutes. The checked-in
-        # payload nulls it when not late (ADR 0013's wire rule).
-        minutes_late = _minutes_late(record, shift, location_timezone) or 0
+        # `0` stands in for "not late"; the late event is only emitted when
+        # `late` is true, and then the value is the computed minutes. The
+        # checked-in payload nulls it when not late (ADR 0013's wire rule).
+        minutes_late = persisted_minutes_late or 0
 
         produced: list[dict[str, Any]] = [
             attendance_checked_in(

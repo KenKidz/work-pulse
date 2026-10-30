@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workpulse.dev/contracts/cdc/rows/overtime_requests.v1.json",
+  "title": "WorkPulse CDC overtime_requests row v1",
+  "description": "Captured `overtime_requests` columns for the overtime fact. `hours` keeps ADR 0017's decimal-as-string encoding; notes and decision text never cross.",
+  "type": "object",
+  "required": ["id", "tenant_id", "employee_id", "work_date", "hours", "status"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Overtime request id (UUIDv7 string)."
+    },
+    "tenant_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Tenant the row belongs to — enforced end-to-end."
+    },
+    "employee_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Employee the claim belongs to (UUIDv7 string)."
+    },
+    "work_date": {
+      "type": "integer",
+      "description": "Day the overtime was worked, Debezium epoch-day encoding."
+    },
+    "hours": {
+      "type": "string",
+      "pattern": "^(?:[0-9]|1[0-2])(?:\\.[0-9]{1,2})?$",
+      "description": "Approved-claim hours as a decimal string (`decimal.handling.mode=string`, ADR 0017) — e.g. \"2.50\". Never a float."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "requested",
+        "manager_approved",
+        "hr_verified",
+        "included_in_payroll",
+        "rejected",
+        "withdrawn"
+      ],
+      "description": "Overtime state-machine status. The projection maps `included_in_payroll` to the existing `hr_verified` fact state."
+    }
+  }
+}

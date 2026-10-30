@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workpulse.dev/contracts/cdc/rows/leave_types.v1.json",
+  "title": "WorkPulse CDC leave_types row v1",
+  "description": "Captured `leave_types` reference columns — the type code dictionary for `fact_leave.leave_type_code`. Entitlement settings are not captured.",
+  "type": "object",
+  "required": ["id", "tenant_id", "code"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Leave type id (UUIDv7 string)."
+    },
+    "tenant_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Tenant the reference row belongs to — enforced end-to-end."
+    },
+    "code": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 20,
+      "description": "Stable type code (seeded: annual, sick, unpaid); matches the `leave_requests` reference without crossing PII."
+    }
+  }
+}

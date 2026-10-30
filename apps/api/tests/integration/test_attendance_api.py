@@ -6,12 +6,15 @@ from zoneinfo import ZoneInfo
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1 import attendance as attendance_api
+from app.domains.attendance import models as attendance_orm
 from app.domains.attendance.service import AttendanceService
 from app.domains.employees.schemas import EmployeeStatus, EmploymentType
 from app.infrastructure.postgres.audit import PostgresAuditWriter
+from app.infrastructure.postgres.models_outbox import EventOutboxRow
 from app.infrastructure.postgres.repositories.attendance import (
     PostgresAttendanceRepository,
     PostgresShiftRepository,
@@ -138,6 +141,16 @@ async def test_check_in_returns_201_with_pinned_body_and_location_workday(
     assert body["check_in_note"] == "morning"
     assert body["check_out_note"] is None
     assert body["checked_in_at"].endswith("Z")  # date-time on the wire
+
+    # Rule 5: not late → the persisted CDC source stays null.
+    persisted = (
+        await session.execute(
+            select(attendance_orm.AttendanceRecord.minutes_late).where(
+                attendance_orm.AttendanceRecord.id == UUID(body["id"])
+            )
+        )
+    ).scalar_one()
+    assert persisted is None
 
 
 async def test_check_out_closes_record_and_reports_duration(
@@ -561,6 +574,69 @@ async def test_shift_makes_the_check_in_late_and_the_board_counts_it(
         "checked_out": 0,
     }
     assert [item["id"] for item in late_only["items"]] == [record["id"]]
+
+
+async def test_late_check_in_persists_the_event_minutes_until_check_out(
+    client_factory: ClientFactory, session: AsyncSession
+) -> None:
+    """Rule 5: the CDC source row carries the same minutes the event does.
+
+    The row value is written once at check-in; a check-out closes the record
+    without touching it (the fold's recomputed event value is unchanged here).
+    """
+    async with client_factory() as client:
+        refs = await create_org_refs(client)
+    await _seed_actor(session, refs)
+
+    async with client_factory() as admin:
+        shift = await admin.post(
+            "/api/v1/shifts",
+            json={
+                "name": "Always past",
+                "start_time": "00:00",
+                "end_time": "23:59",
+                "grace_minutes": 0,
+            },
+        )
+        assert shift.status_code == 201
+
+    async with client_factory() as client:
+        record = (
+            await client.post(
+                "/api/v1/attendance/check-ins", json={"work_mode": "onsite"}
+            )
+        ).json()
+
+    persisted = (
+        await session.execute(
+            select(attendance_orm.AttendanceRecord.minutes_late).where(
+                attendance_orm.AttendanceRecord.id == UUID(record["id"])
+            )
+        )
+    ).scalar_one()
+    checked_in = (
+        await session.execute(
+            select(EventOutboxRow).where(
+                EventOutboxRow.event_type == "attendance.checked_in"
+            )
+        )
+    ).scalar_one()
+    assert persisted is not None and persisted >= 0
+    assert persisted == checked_in.payload["data"]["minutes_late"]
+
+    async with client_factory() as client:
+        closed = await client.post(
+            f"/api/v1/attendance/records/{record['id']}/check-out", json={}
+        )
+    assert closed.status_code == 200
+    after_check_out = (
+        await session.execute(
+            select(attendance_orm.AttendanceRecord.minutes_late).where(
+                attendance_orm.AttendanceRecord.id == UUID(record["id"])
+            )
+        )
+    ).scalar_one()
+    assert after_check_out == persisted
 
 
 async def test_shifts_crud_happy_path(client_factory: ClientFactory) -> None:

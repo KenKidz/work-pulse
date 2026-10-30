@@ -1,0 +1,26 @@
+{
+  "before": {
+    "id": "00000000-0000-4000-8000-000000000002",
+    "tenant_id": "00000000-0000-4000-8000-000000000001",
+    "hired_at": 20103,
+    "terminated_at": 20726
+  },
+  "after": null,
+  "source": {
+    "version": "3.0.0.Final",
+    "connector": "postgresql",
+    "name": "workpulse-cdc",
+    "ts_ms": 1767225602000,
+    "snapshot": "false",
+    "db": "workpulse",
+    "sequence": "[\"24025216\",\"24025216\"]",
+    "schema": "public",
+    "table": "employees",
+    "txId": 554,
+    "lsn": 24025216,
+    "xmin": null
+  },
+  "op": "d",
+  "ts_ms": 1767225602001,
+  "transaction": null
+}

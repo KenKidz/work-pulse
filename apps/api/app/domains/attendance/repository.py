@@ -94,6 +94,7 @@ class AttendanceRepository(Protocol):
         late: bool,
         shift_id: UUID | None,
         check_in_note: str | None,
+        minutes_late: int | None = None,
     ) -> AttendanceRecord:
         """Insert the open record; the open-record unique index is the backstop."""
         ...

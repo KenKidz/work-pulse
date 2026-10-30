@@ -1,0 +1,169 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workpulse.dev/contracts/cdc/change-envelope.v1.json",
+  "title": "WorkPulse CDC change envelope v1",
+  "description": "Debezium change envelope for one captured row change on `workpulse.cdc.<table>`. Captured columns are restricted to identifiers, state and timestamps (`.ai/security.md`); row shapes live under `contracts/cdc/rows/`.",
+  "type": "object",
+  "required": ["before", "after", "op", "source", "ts_ms"],
+  "additionalProperties": false,
+  "properties": {
+    "before": {
+      "type": ["object", "null"],
+      "description": "Row image before the change (Debezium `before`). In delete/update events Debezium emits only the replica-identity columns, so `before` may be a filtered subset of the row schema. Null for create/read/truncate."
+    },
+    "after": {
+      "type": ["object", "null"],
+      "description": "Row image after the change (Debezium `after`), matching the per-table row schema under `contracts/cdc/rows/`. Null for delete/truncate."
+    },
+    "op": {
+      "type": "string",
+      "enum": ["c", "u", "d", "r", "t"],
+      "description": "Operation: create, update, delete, snapshot read, truncate. The sink drops `d`/`t` and never deletes projection rows."
+    },
+    "source": {
+      "$ref": "#/$defs/source"
+    },
+    "ts_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Debezium processing timestamp in epoch milliseconds. Projection versioning uses `source.ts_ms` instead — never ingest wall clock."
+    },
+    "transaction": {
+      "type": ["object", "null"],
+      "description": "Optional Debezium transaction metadata; not used by the pipeline."
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": ["op"],
+        "properties": {"op": {"const": "c"}}
+      },
+      "then": {
+        "properties": {
+          "before": {"type": "null"},
+          "after": {"type": "object"}
+        }
+      }
+    },
+    {
+      "if": {
+        "required": ["op"],
+        "properties": {"op": {"const": "u"}}
+      },
+      "then": {
+        "properties": {
+          "before": {"type": "object"},
+          "after": {"type": "object"}
+        }
+      }
+    },
+    {
+      "if": {
+        "required": ["op"],
+        "properties": {"op": {"const": "d"}}
+      },
+      "then": {
+        "properties": {
+          "before": {"type": "object"},
+          "after": {"type": "null"}
+        }
+      }
+    },
+    {
+      "if": {
+        "required": ["op"],
+        "properties": {"op": {"const": "r"}}
+      },
+      "then": {
+        "properties": {
+          "before": {"type": "null"},
+          "after": {"type": "object"}
+        }
+      }
+    },
+    {
+      "if": {
+        "required": ["op"],
+        "properties": {"op": {"const": "t"}}
+      },
+      "then": {
+        "properties": {
+          "before": {"type": "null"},
+          "after": {"type": "null"}
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "source": {
+      "type": "object",
+      "required": ["ts_ms", "lsn", "snapshot", "db", "schema", "table"],
+      "additionalProperties": true,
+      "description": "Debezium source metadata. Extra connector fields (version, connector, name, sequence, txId, xmin, ...) are allowed by design — the pinned fields are the pipeline contract.",
+      "properties": {
+        "ts_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Source transaction commit timestamp in epoch milliseconds — the projection row's `updated_at`."
+        },
+        "lsn": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "PostgreSQL log sequence number of the change; the `(commit_ts, lsn)` tie-breaker fallback."
+        },
+        "snapshot": {
+          "type": ["string", "null"],
+          "enum": ["true", "false", "last", null],
+          "description": "Debezium snapshot marker: `true` for initial-snapshot rows, `last` for the final snapshot row, `false` when streaming. Null when the source does not report it."
+        },
+        "db": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Source database name."
+        },
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Source schema name (`public` for the WorkPulse OLTP tables)."
+        },
+        "table": {
+          "type": "string",
+          "enum": [
+            "employees",
+            "employments",
+            "attendance_records",
+            "overtime_requests",
+            "leave_requests",
+            "leave_types"
+          ],
+          "description": "Captured table; decides which row schema applies to `after`."
+        },
+        "version": {
+          "type": "string",
+          "description": "Debezium version (informational)."
+        },
+        "connector": {
+          "type": "string",
+          "description": "Debezium connector plugin, e.g. `postgresql` (informational)."
+        },
+        "name": {
+          "type": "string",
+          "description": "Debezium logical connector name (informational)."
+        },
+        "sequence": {
+          "type": ["string", "null"],
+          "description": "Debezium change sequence (informational)."
+        },
+        "txId": {
+          "type": ["integer", "null"],
+          "description": "Source transaction id (informational)."
+        },
+        "xmin": {
+          "type": ["integer", "null"],
+          "description": "Source transaction xmin (informational)."
+        }
+      }
+    }
+  }
+}

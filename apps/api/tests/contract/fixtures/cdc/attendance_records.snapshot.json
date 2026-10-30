@@ -1,0 +1,29 @@
+{
+  "before": null,
+  "after": {
+    "id": "00000000-0000-4000-8000-000000000007",
+    "tenant_id": "00000000-0000-4000-8000-000000000001",
+    "employee_id": "00000000-0000-4000-8000-000000000002",
+    "workday": 20724,
+    "duration_minutes": 481,
+    "late": true,
+    "minutes_late": 12
+  },
+  "source": {
+    "version": "3.0.0.Final",
+    "connector": "postgresql",
+    "name": "workpulse-cdc",
+    "ts_ms": 1767225613000,
+    "snapshot": "true",
+    "db": "workpulse",
+    "sequence": "[\"24036480\",\"24036480\"]",
+    "schema": "public",
+    "table": "attendance_records",
+    "txId": 565,
+    "lsn": 24036480,
+    "xmin": null
+  },
+  "op": "r",
+  "ts_ms": 1767225613001,
+  "transaction": null
+}

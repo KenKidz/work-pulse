@@ -1,0 +1,21 @@
+{
+  "before": null,
+  "after": null,
+  "source": {
+    "version": "3.0.0.Final",
+    "connector": "postgresql",
+    "name": "workpulse-cdc",
+    "ts_ms": 1767225624000,
+    "snapshot": "false",
+    "db": "workpulse",
+    "sequence": "[\"24047744\",\"24047744\"]",
+    "schema": "public",
+    "table": "leave_requests",
+    "txId": 576,
+    "lsn": 24047744,
+    "xmin": null
+  },
+  "op": "t",
+  "ts_ms": 1767225624001,
+  "transaction": null
+}

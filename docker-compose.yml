@@ -5,6 +5,17 @@
 services:
   postgres:
     image: postgres:16
+    # Logical WAL for the Phase-5 Debezium connector (`make cdc-up`). Bound
+    # retention so a stopped connector cannot fill the volume; exceeding it
+    # invalidates the slot and requires a re-snapshot (ops/cdc/README.md).
+    command:
+      [
+        "postgres",
+        "-c",
+        "wal_level=logical",
+        "-c",
+        "max_slot_wal_keep_size=1GB",
+      ]
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -25,6 +36,14 @@ services:
 
   postgres-test:
     image: postgres:16
+    command:
+      [
+        "postgres",
+        "-c",
+        "wal_level=logical",
+        "-c",
+        "max_slot_wal_keep_size=1GB",
+      ]
     environment:
       POSTGRES_USER: workpulse
       POSTGRES_PASSWORD: workpulse
@@ -78,11 +97,13 @@ services:
       CLUSTER_ID: tdRbhqiJR7-1XAqpVhXFtQ
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      # INTERNAL is the container-network listener (Kafka Connect, `kafka:29092`);
+      # host clients keep `localhost:9092` for the API/workers/tests.
+      KAFKA_LISTENERS: PLAINTEXT://:9092,INTERNAL://:29092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,INTERNAL://kafka:29092
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,INTERNAL:PLAINTEXT
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
       KAFKA_LOG_DIRS: /var/lib/kafka/data
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
@@ -112,11 +133,13 @@ services:
       CLUSTER_ID: gqyPCL89QVOEcQ-Kuoj7Ww
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_LISTENERS: PLAINTEXT://:9093,CONTROLLER://:19093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9093
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      # See `kafka`: `localhost:9093` for host clients, `kafka-test:29093` for
+      # the test Connect worker.
+      KAFKA_LISTENERS: PLAINTEXT://:9093,INTERNAL://:29093,CONTROLLER://:19093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9093,INTERNAL://kafka-test:29093
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,INTERNAL:PLAINTEXT
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:19093
       KAFKA_LOG_DIRS: /var/lib/kafka/data
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
@@ -129,6 +152,73 @@ services:
     healthcheck:
       # See `kafka` — same TCP probe, on this service's PLAINTEXT port.
       test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/9093'"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  # --- Phase 5: CDC capture (`make cdc-up`, ADR 0024) ---
+  # Debezium Kafka Connect (distributed mode). Connector/offset/status state
+  # lives in compacted Kafka topics, so there is no data volume to keep. The
+  # REST API is loopback-only; `ops/cdc/register.sh` seeds the readiness fence
+  # and registers the Postgres connector. The image is pinned (Debezium
+  # 3.2.4.Final) so connector wire encodings cannot drift with a floating tag.
+
+  kafka-connect:
+    image: quay.io/debezium/connect:3.2.4.Final
+    ports:
+      - "127.0.0.1:8083:8083"
+    environment:
+      BOOTSTRAP_SERVERS: kafka:29092
+      GROUP_ID: workpulse-cdc-connect
+      CONFIG_STORAGE_TOPIC: workpulse.cdc.connect.configs
+      OFFSET_STORAGE_TOPIC: workpulse.cdc.connect.offsets
+      STATUS_STORAGE_TOPIC: workpulse.cdc.connect.status
+      # Single-node broker: Connect's default replication factor of 3 would
+      # fail topic creation. The entrypoint maps CONNECT_* envs to worker
+      # properties.
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: "1"
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: "1"
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: "1"
+      CONNECT_KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE: "false"
+      CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
+    depends_on:
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/8083'"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  kafka-connect-test:
+    image: quay.io/debezium/connect:3.2.4.Final
+    ports:
+      - "127.0.0.1:8084:8083"
+    environment:
+      BOOTSTRAP_SERVERS: kafka-test:29093
+      GROUP_ID: workpulse-cdc-connect-test
+      CONFIG_STORAGE_TOPIC: workpulse.cdc.connect.configs
+      OFFSET_STORAGE_TOPIC: workpulse.cdc.connect.offsets
+      STATUS_STORAGE_TOPIC: workpulse.cdc.connect.status
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: "1"
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: "1"
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: "1"
+      CONNECT_KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE: "false"
+      CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
+    depends_on:
+      kafka-test:
+        condition: service_healthy
+    tmpfs:
+      # Connect writes little locally (state is in Kafka), but keep the
+      # throwaway instance off the host disk. Debezium's image runs as the
+      # `kafka` user (uid/gid 1001).
+      - /kafka/data:uid=1001,gid=1001
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/8083'"]
       interval: 5s
       timeout: 3s
       retries: 30

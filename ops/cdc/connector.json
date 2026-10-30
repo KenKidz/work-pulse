@@ -1,0 +1,31 @@
+{
+  "name": "workpulse-cdc",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "tasks.max": "1",
+    "database.hostname": "postgres",
+    "database.port": "5432",
+    "database.user": "workpulse",
+    "database.password": "workpulse",
+    "database.dbname": "workpulse",
+    "plugin.name": "pgoutput",
+    "slot.name": "workpulse_cdc",
+    "publication.name": "workpulse_cdc",
+    "publication.autocreate.mode": "filtered",
+    "topic.prefix": "workpulse.cdc",
+    "transforms": "route",
+    "transforms.route.type": "org.apache.kafka.connect.transforms.RegexRouter",
+    "transforms.route.regex": "workpulse\\.cdc\\.public\\.(.*)",
+    "transforms.route.replacement": "workpulse.cdc.$1",
+    "snapshot.mode": "initial",
+    "table.include.list": "public.employees,public.employments,public.attendance_records,public.overtime_requests,public.leave_requests,public.leave_types",
+    "column.include.list": "public.employees.id,public.employees.tenant_id,public.employees.hired_at,public.employees.terminated_at,public.employments.tenant_id,public.employments.employee_id,public.employments.department_id,public.employments.position_id,public.employments.location_id,public.employments.effective_from,public.employments.effective_to,public.attendance_records.id,public.attendance_records.tenant_id,public.attendance_records.employee_id,public.attendance_records.workday,public.attendance_records.duration_minutes,public.attendance_records.late,public.attendance_records.minutes_late,public.overtime_requests.id,public.overtime_requests.tenant_id,public.overtime_requests.employee_id,public.overtime_requests.work_date,public.overtime_requests.hours,public.overtime_requests.status,public.leave_requests.id,public.leave_requests.tenant_id,public.leave_requests.employee_id,public.leave_requests.leave_type_id,public.leave_requests.start_date,public.leave_requests.days,public.leave_requests.status,public.leave_types.id,public.leave_types.tenant_id,public.leave_types.code",
+    "decimal.handling.mode": "string",
+    "heartbeat.interval.ms": "10000",
+    "include.schema.changes": "false",
+    "key.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "key.converter.schemas.enable": "false",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter.schemas.enable": "false"
+  }
+}

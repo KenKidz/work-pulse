@@ -29,6 +29,9 @@ class FakeAttendanceRepo:
     def __init__(self) -> None:
         self.records: dict[tuple[UUID, UUID], AttendanceRecord] = {}
         self.employees: dict[tuple[UUID, UUID], EmployeeContext] = {}
+        # Persisted lateness minutes (the OLTP column has no wire twin on the
+        # record schema): (tenant, record) → minutes. Check-out leaves it.
+        self.minutes_late: dict[tuple[UUID, UUID], int | None] = {}
         # Approved-leave coverage: (tenant, employee, workday) triples. The
         # real adapter joins `leave_requests`; the fake stores resolved days.
         self.leave_days: set[tuple[UUID, UUID, date]] = set()
@@ -100,6 +103,7 @@ class FakeAttendanceRepo:
         late: bool,
         shift_id: UUID | None,
         check_in_note: str | None,
+        minutes_late: int | None = None,
     ) -> AttendanceRecord:
         if await self.open_for_employee(tenant_id, employee_id) is not None:
             # Partial unique index backstop: at most one open record.
@@ -120,6 +124,7 @@ class FakeAttendanceRepo:
             created_at=CREATED_AT,
         )
         self.records[(tenant_id, record_id)] = record
+        self.minutes_late[(tenant_id, record_id)] = minutes_late
         return record
 
     async def close(

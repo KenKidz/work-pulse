@@ -1,0 +1,21 @@
+{
+  "before": null,
+  "after": null,
+  "source": {
+    "version": "3.0.0.Final",
+    "connector": "postgresql",
+    "name": "workpulse-cdc",
+    "ts_ms": 1767225619000,
+    "snapshot": "false",
+    "db": "workpulse",
+    "sequence": "[\"24042624\",\"24042624\"]",
+    "schema": "public",
+    "table": "overtime_requests",
+    "txId": 571,
+    "lsn": 24042624,
+    "xmin": null
+  },
+  "op": "t",
+  "ts_ms": 1767225619001,
+  "transaction": null
+}

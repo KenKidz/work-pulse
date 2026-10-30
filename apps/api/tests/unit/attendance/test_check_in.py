@@ -58,6 +58,8 @@ async def test_check_in_records_open_record_and_audit(
     assert record.shift_id == shift.id
     assert record.check_in_note == "commute"
     assert record.duration_minutes is None
+    # Rule 5: not late → the persisted CDC source stays null.
+    assert attendance_repo.minutes_late[(record.tenant_id, record.id)] is None
 
     assert [event["event_type"] for event in mutation.events] == [
         "attendance.checked_in"
@@ -107,6 +109,11 @@ async def test_check_in_past_boundary_is_late_with_minutes_and_late_event(
     mutation = await check_in(service, now=LATE_30)
 
     assert mutation.record.late is True
+    # Rule 5: the row persists the same minutes the events carry.
+    assert (
+        attendance_repo.minutes_late[(mutation.record.tenant_id, mutation.record.id)]
+        == 30
+    )
     assert [event["event_type"] for event in mutation.events] == [
         "attendance.checked_in",
         "attendance.late",
@@ -257,6 +264,7 @@ class _RaceLostRepo(FakeAttendanceRepo):
         late: bool,
         shift_id: UUID | None,
         check_in_note: str | None,
+        minutes_late: int | None = None,
     ) -> AttendanceRecord:
         # What the Postgres adapter raises after mapping the partial unique
         # index violation.

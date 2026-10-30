@@ -108,6 +108,10 @@ class AttendanceRecord(Base):
     )
     work_mode: Mapped[str] = mapped_column(String(20), nullable=False)
     late: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    # Check-in lateness minutes (rule 5): the CDC projection's source. Null
+    # when not late or when the row predates migration 0020; check-out never
+    # rewrites it.
+    minutes_late: Mapped[int | None] = mapped_column(Integer, nullable=True)
     shift_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("shifts.id"), nullable=True
     )

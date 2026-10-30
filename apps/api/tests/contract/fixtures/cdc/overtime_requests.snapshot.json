@@ -1,0 +1,28 @@
+{
+  "before": null,
+  "after": {
+    "id": "00000000-0000-4000-8000-000000000008",
+    "tenant_id": "00000000-0000-4000-8000-000000000001",
+    "employee_id": "00000000-0000-4000-8000-000000000002",
+    "work_date": 20724,
+    "hours": "2.50",
+    "status": "hr_verified"
+  },
+  "source": {
+    "version": "3.0.0.Final",
+    "connector": "postgresql",
+    "name": "workpulse-cdc",
+    "ts_ms": 1767225618000,
+    "snapshot": "true",
+    "db": "workpulse",
+    "sequence": "[\"24041600\",\"24041600\"]",
+    "schema": "public",
+    "table": "overtime_requests",
+    "txId": 570,
+    "lsn": 24041600,
+    "xmin": null
+  },
+  "op": "r",
+  "ts_ms": 1767225618001,
+  "transaction": null
+}

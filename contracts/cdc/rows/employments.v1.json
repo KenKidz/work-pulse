@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workpulse.dev/contracts/cdc/rows/employments.v1.json",
+  "title": "WorkPulse CDC employments row v1",
+  "description": "Captured `employments` interval columns — the as-of dimension source for attributable facts. The row id is deliberately not captured; intervals are keyed by employee and `effective_from`.",
+  "type": "object",
+  "required": [
+    "tenant_id",
+    "employee_id",
+    "department_id",
+    "position_id",
+    "location_id",
+    "effective_from",
+    "effective_to"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "tenant_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Tenant the row belongs to — enforced end-to-end."
+    },
+    "employee_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Employee the interval belongs to (UUIDv7 string)."
+    },
+    "department_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Department in effect for the interval."
+    },
+    "position_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Position in effect for the interval."
+    },
+    "location_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Location in effect for the interval."
+    },
+    "effective_from": {
+      "type": "integer",
+      "description": "First day of the interval (inclusive), Debezium epoch-day encoding."
+    },
+    "effective_to": {
+      "type": ["integer", "null"],
+      "description": "First day after the interval (end-exclusive), Debezium epoch-day encoding; null while open. A transfer closes the old period at the new period's effective_from."
+    }
+  }
+}

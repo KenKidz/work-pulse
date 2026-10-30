@@ -6,10 +6,10 @@ does the work.
 
 ## Now
 
+- [ ] Change Data Capture (`.ai/features/change-data-capture.md`) — spec approved with the T1–T9 plan (CDC replaces the reports fold, PII excluded at the connector, parity-then-retire cutover). T1 contracts, T2 `minutes_late`, and T3 Debezium infra + config gates landed 2026-10-30; next is T4 (CDC sink + landing layer).
 
 ## Later
 
-- [ ] Phase 5: CDC / Debezium
 - [ ] Phase 7: load testing, rate limiting, circuit breakers
 - [ ] Phase 8: Docker images, Kubernetes, CI/CD
 
