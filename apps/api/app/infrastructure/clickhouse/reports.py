@@ -9,6 +9,15 @@ dedupe surfaces as doubled aggregates in tests rather than silent drift
 - `day` → the work date; `week` → Monday (`toStartOfWeek(…, 1)`);
 - `month` → the month start; `total` → one `bucket = null` group.
 
+Attribution is query-time as-of (CDC decision D3): facts carry no live
+dimension stamps, so every fact row resolves its assignment interval — and its
+tenure anchor from `dim_employee` — at read time, exactly as
+`folds.resolve_assignment` does (latest interval starting on or before the fact
+date, earliest-interval fallback, `unknown` when the employee has no
+intervals). A late/backdated `dim_assignment` row therefore corrects
+attribution on the next query with no re-stamp pass, and a fact with no
+dimension history is never dropped.
+
 Seniority is resolved per fact date in SQL (tenure measured at the bucket end,
 clipped to `to`) with the same anniversary thresholds as the fold's
 `seniority_band`; a pre-extension fact (null `hired_at`) groups as `unknown`.
@@ -436,37 +445,87 @@ ORDER BY {ordinals}
         metrics: str,
         extra_conditions: Sequence[str] = (),
     ) -> tuple[str, dict[str, Any]]:
+        """One grouped aggregate with query-time as-of attribution (D3).
+
+        The fact table joins the `dim_assignment` lookup with `ASOF LEFT JOIN`
+        on the fact's business date. The lookup adds a synthetic pre-history row
+        (`effective_from = 1970-01-01`) per employee carrying the earliest
+        interval's dimensions, so a fact predating the first known interval
+        still resolves to that interval — the same fallback as
+        `folds.resolve_assignment`; an employee with no intervals matches
+        nothing and groups as `unknown` rather than disappearing.
+        """
         parameters: dict[str, Any] = {
             "tenant_id": query.tenant_id,
             "start": query.start,
             "end": query.end,
         }
+        date_expression = f"f.{date_column}"
         conditions = [
-            "tenant_id = {tenant_id:UUID}",
-            f"{date_column} >= {{start:Date}}",
-            f"{date_column} <= {{end:Date}}",
+            "f.tenant_id = {tenant_id:UUID}",
+            f"{date_expression} >= {{start:Date}}",
+            f"{date_expression} <= {{end:Date}}",
             *extra_conditions,
         ]
-        self._add_filters(query, conditions, parameters)
-        self._add_scope(query, conditions, parameters)
+        self._add_filters(query, conditions, parameters, prefix="a.")
+        self._add_scope(query, conditions, parameters, prefix="f.")
+        scope_condition = ""
+        if query.employee_scope is not None:
+            scope_condition = " AND employee_id IN {scope:Array(UUID)}"
 
         if query.interval == "total":
             selected = ["CAST(NULL, 'Nullable(Date)') AS bucket"]
         else:
-            selected = [f"{_bucket_expression(date_column, query.interval)} AS bucket"]
+            selected = [
+                f"{_bucket_expression(date_expression, query.interval)} AS bucket"
+            ]
         for index, dimension in enumerate(query.group_by):
-            expression = _group_expression(dimension, date_column, query.interval)
+            expression = _group_expression(dimension, date_expression, query.interval)
             selected.append(f"{expression} AS k{index}")
         selected.append(metrics)
 
         ordinals = ", ".join(
             str(position) for position in range(1, 2 + len(query.group_by))
         )
-        sql = (
-            f"SELECT {', '.join(selected)} FROM {table} FINAL "
-            f"WHERE {' AND '.join(conditions)} "
-            f"GROUP BY {ordinals} ORDER BY {ordinals}"
-        )
+        sql = f"""
+WITH assignments AS (
+    SELECT tenant_id, employee_id, effective_from,
+           tuple(department_id, position_id, location_id) AS dimensions
+    FROM dim_assignment FINAL
+    WHERE tenant_id = {{tenant_id:UUID}}{scope_condition}
+),
+first_assignment AS (
+    SELECT tenant_id, employee_id,
+           argMin(dimensions, effective_from) AS dimensions
+    FROM assignments
+    GROUP BY tenant_id, employee_id
+),
+assignment_lookup AS (
+    SELECT tenant_id, employee_id, effective_from,
+           tupleElement(dimensions, 1) AS department_id,
+           tupleElement(dimensions, 2) AS position_id,
+           tupleElement(dimensions, 3) AS location_id
+    FROM assignments
+    UNION ALL
+    SELECT tenant_id, employee_id, toDate('1970-01-01') AS effective_from,
+           tupleElement(dimensions, 1) AS department_id,
+           tupleElement(dimensions, 2) AS position_id,
+           tupleElement(dimensions, 3) AS location_id
+    FROM first_assignment
+)
+SELECT {", ".join(selected)}
+FROM {table} AS f FINAL
+ASOF LEFT JOIN assignment_lookup AS a
+    ON a.tenant_id = f.tenant_id
+   AND a.employee_id = f.employee_id
+   AND {date_expression} >= a.effective_from
+LEFT JOIN dim_employee AS e FINAL
+    ON e.tenant_id = f.tenant_id
+   AND e.employee_id = f.employee_id
+WHERE {" AND ".join(conditions)}
+GROUP BY {ordinals}
+ORDER BY {ordinals}
+"""
         return sql, parameters
 
     @staticmethod
@@ -474,6 +533,8 @@ ORDER BY {ordinals}
         query: ReportQuery,
         conditions: list[str],
         parameters: dict[str, Any],
+        *,
+        prefix: str = "",
     ) -> None:
         for name, value in (
             ("department_id", query.department_id),
@@ -481,7 +542,7 @@ ORDER BY {ordinals}
             ("position_id", query.position_id),
         ):
             if value is not None:
-                conditions.append(f"{name} = {{{name}:UUID}}")
+                conditions.append(f"{prefix}{name} = {{{name}:UUID}}")
                 parameters[name] = value
 
     @staticmethod
@@ -489,9 +550,11 @@ ORDER BY {ordinals}
         query: ReportQuery,
         conditions: list[str],
         parameters: dict[str, Any],
+        *,
+        prefix: str = "",
     ) -> None:
         if query.employee_scope is not None:
-            conditions.append("employee_id IN {scope:Array(UUID)}")
+            conditions.append(f"{prefix}employee_id IN {{scope:Array(UUID)}}")
             parameters["scope"] = list(query.employee_scope)
 
     @staticmethod
@@ -522,13 +585,15 @@ def _bucket_expression(date_column: str, interval: str) -> str:
 
 
 def _group_expression(dimension: str, date_column: str, interval: str) -> str:
+    """The SQL group key; dims resolve through the as-of join (`a`), tenure
+    through the employee dimension (`e`), leave type straight off the fact."""
     if dimension in _UUID_KEY_COLUMNS:
         column = _UUID_KEY_COLUMNS[dimension]
-        return f"ifNull(toString({column}), '{UNKNOWN_GROUP_KEY}')"
+        return f"ifNull(toString(a.{column}), '{UNKNOWN_GROUP_KEY}')"
     if dimension == "seniority":
-        return _seniority_expression(date_column, interval)
+        return _seniority_expression("e.hired_at", date_column, interval)
     # The leave report's fifth dimension.
-    return "leave_type_code"
+    return "f.leave_type_code"
 
 
 #: Tenure thresholds shared by every SQL seniority band (the Python twin lives
@@ -556,7 +621,7 @@ def _denominator_group_expression(dimension: str) -> str:
     return f"'{UNKNOWN_GROUP_KEY}'"
 
 
-def _seniority_expression(date_column: str, interval: str) -> str:
+def _seniority_expression(hired_column: str, date_column: str, interval: str) -> str:
     """SQL twin of `folds.seniority_band` at the row's bucket end."""
     if interval == "total":
         tenure_at = "{end:Date}"
@@ -566,7 +631,7 @@ def _seniority_expression(date_column: str, interval: str) -> str:
         tenure_at = f"least(addDays(toStartOfWeek({date_column}, 1), 6), {{end:Date}})"
     else:
         tenure_at = f"least(toLastDayOfMonth({date_column}), {{end:Date}})"
-    return _seniority_band_expression("hired_at", tenure_at)
+    return _seniority_band_expression(hired_column, tenure_at)
 
 
 def _bucket_label_sql(bucket: date | None) -> str:

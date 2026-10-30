@@ -546,11 +546,22 @@ delete op removes nothing and increments the counter (AC 6); `ready` gate
   `ReportsUnavailableError` wrap unchanged; headcount and
   `_active_employee_counts` logic unchanged (already read-time).
 *Tests:* existing `tests/integration/test_reports_api.py` +
-`test_reports_benchmark.py` must pass **unchanged** (they seed through the
-fold writer, which writes intervals); add attribution cases where thin:
-mid-period transfer splits, backdated transfer corrects on the next query,
-no-interval fact → `unknown` never dropped. The <1s flagship benchmark is
-the join's performance gate.
+  `test_reports_benchmark.py` must pass **unchanged** (they seed through the
+  fold writer, which writes intervals); add attribution cases where thin:
+  mid-period transfer splits, backdated transfer corrects on the next query,
+  no-interval fact → `unknown` never dropped. The <1s flagship benchmark is
+  the join's performance gate.
+*Implementation (2026-10-30):* the as-of join is an `ASOF LEFT JOIN` onto a
+  `dim_assignment` lookup that appends a synthetic pre-history row per employee
+  (the earliest interval's dimensions at `effective_from = 1970-01-01`), which
+  reproduces `resolve_assignment`'s earliest-interval fallback in one join;
+  employees with no intervals stay unmatched → `unknown`. The seniority
+  boundary test was the plan's non-blocking unknown — it seeded stamped facts
+  without interval rows, and now seeds the interval the fold writer always
+  produced. New cases: a backdated transfer re-attributes an already-projected
+  fact (stamp A → groups B, and a department filter follows the resolved
+  assignment, not a pre-filtered interval set) and a no-dimension fact reports
+  under `unknown` with its counts retained.
 *Verify:* `make check-api` green; diff confined to `reports.py` + tests.
 
 **T6 — Parity harness + CDC-fed failure/isolation coverage (AC 2–5).**

@@ -1005,6 +1005,154 @@ async def test_termination_on_bucket_start_keeps_the_denominator_group(
 
 
 @pytest.mark.asyncio
+async def test_backdated_transfer_corrects_attribution_without_restamp(
+    client_factory: ClientFactory, clickhouse: Client
+) -> None:
+    """Attribution reads captured interval history, not the fact's stamp.
+
+    The fact is projected before the transfer is known, so its stored
+    `department_id` still points at A. When the backdated `dim_assignment`
+    interval lands, the next query must attribute the fact to B — the CDC
+    path's replacement for the fold's re-stamp pass (rule 6 / D3). Dimension
+    filters apply to the *resolved* assignment, never to a pre-filtered
+    interval set, so the same read filtered by A is empty.
+    """
+    writer = ClickhouseProjectionWriter(clickhouse)
+    employee_id = UUID("00000000-0000-4000-8000-0000000000f4")
+    department_a = UUID("00000000-0000-4000-8000-0000000000d4")
+    department_b = UUID("00000000-0000-4000-8000-0000000000d5")
+    position_id = UUID("00000000-0000-4000-8000-0000000000e4")
+    location_id = UUID("00000000-0000-4000-8000-0000000000f5")
+    fact_date = date(2026, 2, 20)
+    transfer_date = date(2026, 2, 15)
+
+    _seed_dimension(
+        writer,
+        employee_id,
+        hired_at=HIRED,
+        assignments=(
+            AssignmentRow(
+                tenant_id=TENANT_A,
+                employee_id=employee_id,
+                effective_from=HIRED,
+                effective_to=None,
+                department_id=department_a,
+                position_id=position_id,
+                location_id=location_id,
+            ),
+        ),
+    )
+    _overtime(
+        writer,
+        UUID("00000000-0000-4000-8000-0000000000c9"),
+        employee_id,
+        work_date=fact_date,
+        hours="2.50",
+        status="hr_verified",
+        refs=(str(department_a), str(position_id), str(location_id)),
+    )
+
+    async def hours_by_department(
+        department_id: UUID | None = None,
+    ) -> dict[str, str]:
+        params: dict[str, str] = {
+            "from": fact_date.isoformat(),
+            "to": fact_date.isoformat(),
+            "group_by": "department",
+            "interval": "total",
+        }
+        if department_id is not None:
+            params["department_id"] = str(department_id)
+        async with client_factory() as client:
+            response = await client.get("/api/v1/reports/overtime", params=params)
+            assert response.status_code == 200, response.text
+            return {
+                row["groups"][0]["key"]: row["verified_hours"]
+                for row in response.json()["rows"]
+            }
+
+    assert await hours_by_department() == {str(department_a): "2.50"}
+
+    # The transfer is backdated to before the already-projected fact: A closes
+    # and B opens at `transfer_date`, with no fact rewrite.
+    _seed_dimension(
+        writer,
+        employee_id,
+        hired_at=HIRED,
+        assignments=(
+            AssignmentRow(
+                tenant_id=TENANT_A,
+                employee_id=employee_id,
+                effective_from=HIRED,
+                effective_to=transfer_date,
+                department_id=department_a,
+                position_id=position_id,
+                location_id=location_id,
+            ),
+            AssignmentRow(
+                tenant_id=TENANT_A,
+                employee_id=employee_id,
+                effective_from=transfer_date,
+                effective_to=None,
+                department_id=department_b,
+                position_id=position_id,
+                location_id=location_id,
+            ),
+        ),
+    )
+
+    assert await hours_by_department() == {str(department_b): "2.50"}
+    assert await hours_by_department(department_a) == {}
+    assert await hours_by_department(department_b) == {str(department_b): "2.50"}
+
+
+@pytest.mark.asyncio
+async def test_fact_without_dimension_history_groups_as_unknown(
+    client_factory: ClientFactory, clickhouse: Client
+) -> None:
+    """A fact whose employee has no captured intervals is never dropped.
+
+    The stream can start after the employee existed, so neither `dim_employee`
+    nor `dim_assignment` has a row; the fact still reports under `unknown`
+    dimensions (rule 6 / analytics-reports rule 3).
+    """
+    writer = ClickhouseProjectionWriter(clickhouse)
+    employee_id = UUID("00000000-0000-4000-8000-0000000000f9")
+    _overtime(
+        writer,
+        UUID("00000000-0000-4000-8000-0000000000ca"),
+        employee_id,
+        work_date=date(2026, 2, 17),
+        hours="2.50",
+        status="hr_verified",
+        refs=(
+            "00000000-0000-4000-8000-0000000000d3",
+            "00000000-0000-4000-8000-0000000000e3",
+            "00000000-0000-4000-8000-0000000000f0",
+        ),
+    )
+
+    async with client_factory() as client:
+        response = await client.get(
+            "/api/v1/reports/overtime",
+            params={
+                "from": "2026-02-17",
+                "to": "2026-02-17",
+                "group_by": "department,seniority",
+                "interval": "total",
+            },
+        )
+        assert response.status_code == 200, response.text
+        [row] = response.json()["rows"]
+        assert [group["key"] for group in row["groups"]] == ["unknown", "unknown"]
+        assert row["verified_hours"] == "2.50"
+        assert row["verified_request_count"] == 1
+        # No dimension history means no denominator employee, never a dropped
+        # fact row.
+        assert row["active_employee_count"] == 0
+
+
+@pytest.mark.asyncio
 async def test_seniority_sql_matches_python_fold_at_boundaries(
     client_factory: ClientFactory, clickhouse: Client
 ) -> None:
@@ -1033,6 +1181,25 @@ async def test_seniority_sql_matches_python_fold_at_boundaries(
     for index, (employee_id, hired_at, fact_date) in enumerate(cases):
         expected_by_date.setdefault(fact_date, set()).add(
             seniority_band(hired_at, fact_date)
+        )
+        # Attribution is query-time from the dimension tables (CDC D3), so the
+        # employee needs the interval the fold writer would have produced.
+        first_start = hired_at or fact_date
+        _seed_dimension(
+            writer,
+            employee_id,
+            hired_at=hired_at,
+            assignments=(
+                AssignmentRow(
+                    tenant_id=TENANT_A,
+                    employee_id=employee_id,
+                    effective_from=first_start,
+                    effective_to=None,
+                    department_id=department_id,
+                    position_id=position_id,
+                    location_id=location_id,
+                ),
+            ),
         )
         _overtime(
             writer,
