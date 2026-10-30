@@ -48,7 +48,7 @@ and `ts_us`/`ts_ns` fields are part of the accepted envelope contract.
 ## Lifecycle
 
 ```bash
-make cdc-up        # PostgreSQL + migrations + ClickHouse + Kafka + Connect; seeds workpulse_cdc
+make cdc-up        # PostgreSQL + migrations + ClickHouse + Kafka + Connect; seeds workpulse
 make cdc-down      # stop kafka-connect (connector state lives in Kafka)
 make cdc-test-up   # PostgreSQL + migrations + clickhouse-test + kafka-test + Connect-test
 make cdc-test-down # stop kafka-connect-test
@@ -64,9 +64,9 @@ make cdc-test-down # stop kafka-connect-test
 3. waits for the Connect REST API and fails unless the connector and every
    task reach `RUNNING`.
 
-The dev target is the D2 shadow database `workpulse_cdc`; the fold-served
-canonical `workpulse` database is only fenced during the T9 cutover. The test
-target is `workpulse_test_cdc`. The dev connector uses PostgreSQL
+After the T9 cutover the dev target is the canonical reporting database
+`workpulse` and the test target is `workpulse_test`; the parity shadow
+databases were dropped. The dev connector uses PostgreSQL
 `postgres:5432` / `workpulse` and slot `workpulse_cdc`. The test instance points
 at the same dev PostgreSQL but uses `CDC_SLOT_NAME=workpulse_cdc_test` so the
 two connectors never share a slot:
@@ -75,7 +75,7 @@ two connectors never share a slot:
 CONNECT_URL=http://localhost:8084 \
 CDC_SLOT_NAME=workpulse_cdc_test \
 CDC_CLICKHOUSE_SERVICE=clickhouse-test \
-CDC_PROJECTION_DATABASE=workpulse_test_cdc \
+CDC_PROJECTION_DATABASE=workpulse_test \
 bash ops/cdc/register.sh
 ```
 
@@ -107,11 +107,10 @@ never stop the sink; see the Grafana overview dashboard's CDC panels.
 
 `make check-e2e` runs the real path end-to-end: `cdc-test-up` registers a
 connector against the dev PostgreSQL with slot `workpulse_cdc_test`, the hop
-starts `workers/cdc_sink` against `workpulse_test_cdc`, and after Playwright a
-bounded parity step compares the serving (fold) and shadow (CDC) projections
-through the production report repository. Recorded real messages for the
-contract test are checked in under `apps/api/tests/contract/fixtures/cdc/
-recorded/`.
+starts `workers/cdc_sink` against the canonical `workpulse_test` database, and
+Playwright's report spec reads the pipeline-fed projection through the API.
+Recorded real messages for the contract test are checked in under
+`apps/api/tests/contract/fixtures/cdc/recorded/`.
 
 Topic naming is `workpulse.cdc.<table>`. Debezium's PostgreSQL default would be
 `workpulse.cdc.public.<table>` (schema included), so `connector.json` pins a

@@ -1,11 +1,12 @@
 /**
  * Analytics & Reports e2e — the projection hop and the role-scoped surface.
  *
- * The reports worker runs in `full-hop.sh` beside the relay/realtime/payroll
- * workers; `full-hop.sh` publishes deterministic synthetic envelopes before it
- * starts. The fixture uses a synthetic employee in the seeded People Ops
- * department and fixed dates, so earlier specs' Backend facts cannot satisfy
- * these assertions and a rerun converges on the same rows.
+ * The CDC sink runs in `full-hop.sh` beside the relay/realtime/payroll
+ * workers; `full-hop.sh` writes the deterministic OLTP fixture rows before it
+ * starts, and real Debezium captures them into the projection. The fixture uses
+ * a synthetic employee in the seeded People Ops department and fixed dates, so
+ * earlier specs' Backend facts cannot satisfy these assertions and a rerun
+ * converges on the same rows.
  *
  * The spec waits on the API (bounded poll) rather than a fixed sleep: an empty
  * response is a projection that has not caught up yet, and the first HR view
@@ -89,13 +90,13 @@ async function loggedIn(browser: Browser, email: string) {
 
 test.describe.serial("reports", () => {
   test("HR reads the projected reports; an employee is denied", async ({ browser }) => {
-    // The worker may still be folding the fixtures when Playwright starts.
-    // Wait for the fixture's exact metrics in all four families on the real
-    // API — the same request the web surface makes — instead of sleeping.
+    // The CDC pipeline may still be landing the fixtures when Playwright
+    // starts. Wait for the fixture's exact metrics in all four families on the
+    // real API — the same request the web surface makes — instead of sleeping.
     const hrApi = await apiLogin(HR_EMAIL);
     await expect
       .poll(() => fixtureProjected(hrApi), {
-        message: "the reports worker projects the People Ops fixtures",
+        message: "the CDC pipeline projects the People Ops fixtures",
         timeout: 60_000,
         intervals: [250, 500, 1000],
       })

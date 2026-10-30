@@ -1,10 +1,10 @@
 """T5 — Reports read API over real ClickHouse (`clickhouse-test`, :8124).
 
 Every test drives the real router, report service, ClickHouse repository and
-the two Postgres lookup ports. The projection is seeded through the T4
-`ClickhouseProjectionWriter` (complete current-state rows, exactly what the
-worker writes); Postgres holds the Organizations/Employees reference rows so
-labels and manager scope resolve for real.
+the two Postgres lookup ports. The projection is seeded through
+`ClickhouseCdcWriter` (the production CDC landing adapter: stamp-free fact rows
+and as-of dimension intervals); Postgres holds the Organizations/Employees
+reference rows so labels and manager scope resolve for real.
 
 Covered (`.ai/features/analytics-reports.md` → acceptance criteria):
 
@@ -19,8 +19,8 @@ Covered (`.ai/features/analytics-reports.md` → acceptance criteria):
 """
 
 from collections.abc import AsyncIterator, Iterator
-from dataclasses import dataclass, replace
-from datetime import UTC, date, datetime
+from dataclasses import dataclass
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
@@ -31,20 +31,19 @@ from httpx import AsyncClient
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domains.reports.folds import seniority_band
+from app.domains.reports.attribution import seniority_band
 from app.domains.reports.schemas import (
     AssignmentRow,
     AttendanceFact,
-    DimensionFold,
     EmployeeRow,
     LeaveFact,
     OvertimeFact,
 )
+from app.infrastructure.clickhouse.cdc_projection import ClickhouseCdcWriter
 from app.infrastructure.clickhouse.client import (
     dispose_clickhouse,
     get_clickhouse_client,
 )
-from app.infrastructure.clickhouse.projection import ClickhouseProjectionWriter
 from app.infrastructure.clickhouse.schema import (
     SCHEMA_TABLES,
     apply_clickhouse_schema,
@@ -104,6 +103,23 @@ def _drop_tables(client: Client) -> None:
         client.command(f"DROP TABLE IF EXISTS {table}")
 
 
+_BASE_STAMP = datetime(2026, 10, 30, 12, 0, tzinfo=UTC)
+_stamp_sequence = 0
+
+
+def _next_stamp() -> datetime:
+    """A monotonically increasing write version for one test process.
+
+    `ReplacingMergeTree` resolves equal versions non-deterministically, and the
+    tests rewrite the same dimension/fact key (for example a backdated transfer
+    closing an interval). The source commit timestamp plays this role in
+    production; here each seed write is one microsecond newer than the last.
+    """
+    global _stamp_sequence
+    _stamp_sequence += 1
+    return _BASE_STAMP + timedelta(microseconds=_stamp_sequence)
+
+
 async def _create_employee(
     admin: AsyncClient,
     refs: tuple[str, str, str],
@@ -130,24 +146,25 @@ async def _create_employee(
 
 
 def _seed_dimension(
-    writer: ClickhouseProjectionWriter,
+    writer: ClickhouseCdcWriter,
     employee_id: UUID,
     *,
     hired_at: date | None,
     assignments: tuple[AssignmentRow, ...],
     terminated_at: date | None = None,
 ) -> None:
-    writer.apply_dimension_fold(
-        DimensionFold(
-            employee=EmployeeRow(
-                tenant_id=TENANT_A,
-                employee_id=employee_id,
-                hired_at=hired_at,
-                terminated_at=terminated_at,
-            ),
-            assignments=assignments,
-        )
+    writer.upsert_employee(
+        EmployeeRow(
+            tenant_id=TENANT_A,
+            employee_id=employee_id,
+            hired_at=hired_at,
+            terminated_at=terminated_at,
+        ),
+        _next_stamp(),
     )
+    for assignment in assignments:
+        writer.upsert_assignment(assignment, _next_stamp())
+    writer.flush()
 
 
 def _assignment(
@@ -170,7 +187,7 @@ def _assignment(
 
 
 def _overtime(
-    writer: ClickhouseProjectionWriter,
+    writer: ClickhouseCdcWriter,
     overtime_id: UUID,
     employee_id: UUID,
     *,
@@ -180,7 +197,10 @@ def _overtime(
     refs: tuple[str, str, str],
     hired_at: date | None = HIRED,
 ) -> None:
-    department_id, position_id, location_id = refs
+    # `refs`/`hired_at` stay in the signature because callers describe the
+    # fixture's dimensions; the CDC writer leaves the stamps null and the read
+    # side resolves them as of `work_date` (ADR 0024 D3).
+    del refs, hired_at
     writer.upsert_overtime(
         OvertimeFact(
             tenant_id=TENANT_A,
@@ -189,16 +209,14 @@ def _overtime(
             work_date=work_date,
             hours=Decimal(hours),
             status=status,
-            department_id=UUID(department_id),
-            position_id=UUID(position_id),
-            location_id=UUID(location_id),
-            hired_at=hired_at,
-        )
+        ),
+        _next_stamp(),
     )
+    writer.flush()
 
 
 def _attendance(
-    writer: ClickhouseProjectionWriter,
+    writer: ClickhouseCdcWriter,
     attendance_id: UUID,
     employee_id: UUID,
     *,
@@ -209,7 +227,7 @@ def _attendance(
     refs: tuple[str, str, str],
     hired_at: date | None = HIRED,
 ) -> None:
-    department_id, position_id, location_id = refs
+    del refs, hired_at
     writer.upsert_attendance(
         AttendanceFact(
             tenant_id=TENANT_A,
@@ -219,16 +237,14 @@ def _attendance(
             duration_minutes=duration_minutes,
             late=late,
             minutes_late=minutes_late,
-            department_id=UUID(department_id),
-            position_id=UUID(position_id),
-            location_id=UUID(location_id),
-            hired_at=hired_at,
-        )
+        ),
+        _next_stamp(),
     )
+    writer.flush()
 
 
 def _leave(
-    writer: ClickhouseProjectionWriter,
+    writer: ClickhouseCdcWriter,
     leave_request_id: UUID,
     employee_id: UUID,
     *,
@@ -238,7 +254,7 @@ def _leave(
     refs: tuple[str, str, str],
     hired_at: date | None = HIRED,
 ) -> None:
-    department_id, position_id, location_id = refs
+    del refs, hired_at
     writer.upsert_leave(
         LeaveFact(
             tenant_id=TENANT_A,
@@ -247,12 +263,10 @@ def _leave(
             start_date=start_date,
             leave_type_code=leave_type_code,
             approved_day_count=days,
-            department_id=UUID(department_id),
-            position_id=UUID(position_id),
-            location_id=UUID(location_id),
-            hired_at=hired_at,
-        )
+        ),
+        _next_stamp(),
     )
+    writer.flush()
 
 
 @pytest.fixture
@@ -316,7 +330,7 @@ async def seeded(
             email="tara.transfer@example.test",
         )
 
-    writer = ClickhouseProjectionWriter(clickhouse)
+    writer = ClickhouseCdcWriter(clickhouse)
     manager_id = UUID(manager["id"])
     manager_two_id = UUID(manager_two["id"])
     report_id = UUID(report["id"])
@@ -418,8 +432,8 @@ async def seeded(
         writer,
         UUID("00000000-0000-4000-8000-0000000000c5"),
         transferee_id,
-        # Before the 2026-03-01 transfer: the only valid stamp is the old
-        # department (a post-transfer fact would be stamped/restamped B).
+        # Before the 2026-03-01 transfer: the as-of join resolves the old
+        # department (a post-transfer fact would resolve to B).
         work_date=date(2026, 2, 20),
         hours="2.00",
         status="hr_verified",
@@ -901,7 +915,7 @@ async def test_clickhouse_down_and_rebuild_fence_answer_503(
 async def test_pre_extension_employee_uses_first_assignment_anchor(
     client_factory: ClientFactory, clickhouse: Client
 ) -> None:
-    writer = ClickhouseProjectionWriter(clickhouse)
+    writer = ClickhouseCdcWriter(clickhouse)
     employee_id = UUID("00000000-0000-4000-8000-0000000000f1")
     department_id = UUID("00000000-0000-4000-8000-0000000000d9")
     _seed_dimension(
@@ -951,7 +965,7 @@ async def test_termination_on_bucket_start_keeps_the_denominator_group(
     the denominator under `unknown` while their fact row is grouped by the
     department, making `hours_per_employee` 0.00 for that day.
     """
-    writer = ClickhouseProjectionWriter(clickhouse)
+    writer = ClickhouseCdcWriter(clickhouse)
     employee_id = UUID("00000000-0000-4000-8000-0000000000f2")
     department_id = UUID("00000000-0000-4000-8000-0000000000d8")
     position_id = UUID("00000000-0000-4000-8000-0000000000e8")
@@ -1013,11 +1027,12 @@ async def test_backdated_transfer_corrects_attribution_without_restamp(
     The fact is projected before the transfer is known, so its stored
     `department_id` still points at A. When the backdated `dim_assignment`
     interval lands, the next query must attribute the fact to B — the CDC
-    path's replacement for the fold's re-stamp pass (rule 6 / D3). Dimension
+    path's replacement for the retired fold's re-stamp pass (rule 6 / D3).
+    Dimension
     filters apply to the *resolved* assignment, never to a pre-filtered
     interval set, so the same read filtered by A is empty.
     """
-    writer = ClickhouseProjectionWriter(clickhouse)
+    writer = ClickhouseCdcWriter(clickhouse)
     employee_id = UUID("00000000-0000-4000-8000-0000000000f4")
     department_a = UUID("00000000-0000-4000-8000-0000000000d4")
     department_b = UUID("00000000-0000-4000-8000-0000000000d5")
@@ -1116,7 +1131,7 @@ async def test_fact_without_dimension_history_groups_as_unknown(
     nor `dim_assignment` has a row; the fact still reports under `unknown`
     dimensions (rule 6 / analytics-reports rule 3).
     """
-    writer = ClickhouseProjectionWriter(clickhouse)
+    writer = ClickhouseCdcWriter(clickhouse)
     employee_id = UUID("00000000-0000-4000-8000-0000000000f9")
     _overtime(
         writer,
@@ -1153,17 +1168,17 @@ async def test_fact_without_dimension_history_groups_as_unknown(
 
 
 @pytest.mark.asyncio
-async def test_seniority_sql_matches_python_fold_at_boundaries(
+async def test_seniority_sql_matches_python_attribution_at_boundaries(
     client_factory: ClientFactory, clickhouse: Client
 ) -> None:
-    """The ClickHouse band expression and `folds.seniority_band` must agree.
+    """The ClickHouse band expression and `attribution.seniority_band` agree.
 
     Covers the leap-day clamp (2020-02-29 + 5y = 2025-02-28) and both sides of
     the 1y/3y/5y anniversaries, plus the no-tenure `unknown` band. Expected
-    keys are computed with the Python fold, so a threshold drift on either side
-    fails here.
+    keys are computed with the Python helper, so a threshold drift on either
+    side fails here.
     """
-    writer = ClickhouseProjectionWriter(clickhouse)
+    writer = ClickhouseCdcWriter(clickhouse)
     department_id = UUID("00000000-0000-4000-8000-0000000000d6")
     position_id = UUID("00000000-0000-4000-8000-0000000000e6")
     location_id = UUID("00000000-0000-4000-8000-0000000000f6")
@@ -1183,7 +1198,8 @@ async def test_seniority_sql_matches_python_fold_at_boundaries(
             seniority_band(hired_at, fact_date)
         )
         # Attribution is query-time from the dimension tables (CDC D3), so the
-        # employee needs the interval the fold writer would have produced.
+        # employee needs the interval the retired fold writer would have
+        # produced.
         first_start = hired_at or fact_date
         _seed_dimension(
             writer,
@@ -1233,7 +1249,7 @@ async def test_replacing_merge_tree_rows_are_deduplicated(
     client_factory: ClientFactory, clickhouse: Client
 ) -> None:
     """The read side must use `FINAL`: a corrected row counts once, newest wins."""
-    writer = ClickhouseProjectionWriter(clickhouse)
+    writer = ClickhouseCdcWriter(clickhouse)
     employee_id = UUID("00000000-0000-4000-8000-0000000000f3")
     department_id = UUID("00000000-0000-4000-8000-0000000000d7")
     position_id = UUID("00000000-0000-4000-8000-0000000000e7")
@@ -1254,21 +1270,27 @@ async def test_replacing_merge_tree_rows_are_deduplicated(
             ),
         ),
     )
-    fact = OvertimeFact(
-        tenant_id=TENANT_A,
-        overtime_id=UUID("00000000-0000-4000-8000-0000000000c8"),
-        employee_id=employee_id,
+    overtime_id = UUID("00000000-0000-4000-8000-0000000000c8")
+    refs = (str(department_id), str(position_id), str(location_id))
+    _overtime(
+        writer,
+        overtime_id,
+        employee_id,
         work_date=date(2026, 2, 1),
-        hours=Decimal("2.50"),
+        hours="2.50",
         status="hr_verified",
-        department_id=department_id,
-        position_id=position_id,
-        location_id=location_id,
-        hired_at=HIRED,
+        refs=refs,
     )
-    writer.upsert_overtime(fact)
-    # The writer's monotonic `updated_at` makes this the winning version.
-    writer.upsert_overtime(replace(fact, hours=Decimal("3.00")))
+    # The monotonically increasing `updated_at` makes this the winning version.
+    _overtime(
+        writer,
+        overtime_id,
+        employee_id,
+        work_date=date(2026, 2, 1),
+        hours="3.00",
+        status="hr_verified",
+        refs=refs,
+    )
 
     async with client_factory() as client:
         response = await client.get(

@@ -85,32 +85,22 @@ class Settings(BaseSettings):
     payroll_worker_backoff_max_seconds: float = 30.0
 
     # --- Phase 4: analytical projection (`make clickhouse-up`, ADR 0019) ---
-    # Reports read from ClickHouse; only the reports consumer writes it. The
-    # test URL points at the throwaway `clickhouse-test` service on :8124 —
-    # `tests/conftest.py` pins `CLICKHOUSE_URL` to it before any `app.*` import.
+    # Reports read from ClickHouse; the CDC sink writes it. The test URL points
+    # at the throwaway `clickhouse-test` service on :8124 — `tests/conftest.py`
+    # pins `CLICKHOUSE_URL` to it before any `app.*` import.
     clickhouse_url: str = "http://workpulse:workpulse@127.0.0.1:8123/workpulse"
     clickhouse_test_url: str = (
         "http://workpulse:workpulse@127.0.0.1:8124/workpulse_test"
     )
 
-    # The reports consumer (workers/reports, ADR 0019): `workpulse.events` →
-    # ClickHouse. A stable group with `earliest` builds the retained history on
-    # a first start and resumes committed offsets on restart. Poll/backoff knobs
-    # mirror the other consumers; a store outage retries head-of-line with the
-    # offset held, so the backoff cap bounds that retry cadence.
-    reports_consumer_group: str = "workpulse-reports"
-    reports_poll_seconds: float = 1.0
-    reports_backoff_base_seconds: float = 1.0
-    reports_backoff_max_seconds: float = 30.0
-
     # --- Phase 5: CDC projection sink (`make cdc-up`, ADR 0024) ---
     # Debezium writes `workpulse.cdc.<table>`; the sink lands the change rows
     # in the ClickHouse projection. It consumes `earliest` with a stable group
-    # and applies its own readiness fence (D5). During the parallel run it
-    # targets the D2 shadow database; cutover flips this to empty (the
-    # `CLICKHOUSE_URL` database) and drops the shadow.
+    # and applies its own readiness fence (D5). After the T9 cutover an empty
+    # value targets the canonical `CLICKHOUSE_URL` database; the shadow
+    # database used for parity is retired.
     cdc_sink_consumer_group: str = "workpulse-cdc-sink"
-    cdc_projection_database: str = "workpulse_cdc"
+    cdc_projection_database: str = ""
     cdc_connect_url: str = "http://localhost:8083"
     #: Connector + replication slot the T8 health poller reads (must match
     #: `ops/cdc/connector.json` / `ops/cdc/register.sh`; the test instance
@@ -152,7 +142,6 @@ class Settings(BaseSettings):
     realtime_metrics_port: int = 9102
     notifications_metrics_port: int = 9103
     payroll_metrics_port: int = 9104
-    reports_metrics_port: int = 9105
     cdc_sink_metrics_port: int = 9106
 
     # --- Identity: sessions (pinned in `.ai/features/identity-access.md`) ---

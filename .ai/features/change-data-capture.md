@@ -1,6 +1,6 @@
 # Feature: Change Data Capture (Debezium projection pipeline)
 
-- **Status:** implementing
+- **Status:** done
 - **Phase:** 5
 - **Size:** L
 - **Surfaces:** api+web+events+workers
@@ -206,45 +206,45 @@ This feature adds **no domain events** and touches none of the
 
 ## Acceptance criteria
 
-- [ ] Pipeline (happy): given the stack is up via `make cdc-up`, when an API
+- [x] Pipeline (happy): given the stack is up via `make cdc-up`, when an API
       write touches a captured table, then the change lands in the projection
       tables and the report aggregates include it.
-- [ ] API (parity): given identical seeded API writes (transfers + a backdated
+- [x] API (parity): given identical seeded API writes (transfers + a backdated
       transfer, the overtime state machine, approved leave) drive both paths to
       quiescence, when the four reports are queried, then the CDC projection
       returns aggregates identical to the fold projection.
-- [ ] API (attribution, edge): given an employee with a mid-period transfer and
+- [x] API (attribution, edge): given an employee with a mid-period transfer and
       a backdated transfer, when reports aggregate by department, then each
       fact attributes to the assignment in effect on its business date — on
       both paths.
-- [ ] API (tenant isolation): given captured rows for two tenants, when reports
+- [x] API (tenant isolation): given captured rows for two tenants, when reports
       run as tenant A, then no tenant B fact or dimension appears (existing
       isolation tests re-run against CDC-fed data).
-- [ ] API (failure): given `projection_state.ready = 0`, when a report is
+- [x] API (failure): given `projection_state.ready = 0`, when a report is
       requested, then the API fails with the existing `ReportsUnavailableError`
       code — never empty numbers.
-- [ ] Pipeline (failure): given a delete op on a captured table, when the sink
+- [x] Pipeline (failure): given a delete op on a captured table, when the sink
       processes it, then no projection row is removed and the dropped-delete
       counter increments.
-- [ ] Pipeline (idempotency): given a redelivered change (same commit
+- [x] Pipeline (idempotency): given a redelivered change (same commit
       timestamp), when it is upserted twice, then the aggregates are unchanged.
-- [ ] Config gate (PII): given a change adds a PII column (e.g.
+- [x] Config gate (PII): given a change adds a PII column (e.g.
       `employees.email`, `leave_requests.reason`) to the connector include
       list, when the gate runs, then it fails naming the column.
-- [ ] Config gate (scope): the connector's captured-table list equals the
+- [x] Config gate (scope): the connector's captured-table list equals the
       rule-4 set exactly — no more, no less.
-- [ ] Contract: the change-envelope schema exists under `contracts/cdc/` and a
+- [x] Contract: the change-envelope schema exists under `contracts/cdc/` and a
       contract test validates captured messages against it — identifiers and
       state only, no PII fields.
-- [ ] E2E: with ClickHouse + the CDC pipeline in the hop, an HR login opens
+- [x] E2E: with ClickHouse + the CDC pipeline in the hop, an HR login opens
       Reports and sees non-empty correct aggregates — the existing
       `tests/e2e/reports.spec.ts` expectations pass unchanged.
-- [ ] Cutover: after parity is green, the `workers/reports/` fold is removed,
+- [x] Cutover: after parity is green, the `workers/reports/` fold is removed,
       `make check` is green (API/web/e2e), `analytics-reports.md` acceptance
       criteria are updated to CDC semantics, and ADR 0024 amends ADR 0019
       (attribution representation, rebuild = snapshot + WAL, `updated_at` =
       commit timestamp, `minutes_late` source).
-- [ ] Observability: connector state, lag, dropped deletes and sink errors are
+- [x] Observability: connector state, lag, dropped deletes and sink errors are
       exposed on the existing Prometheus target conventions and visible in
       Grafana (ADR 0023 conventions).
 
@@ -689,6 +689,20 @@ delete op removes nothing and increments the counter (AC 6); `ready` gate
 *Verify:* `make check` green (check-api + check-web + check-e2e); a
 `verifier` pass over the removal diff (nothing outside the retirement set);
 OpenAPI diff empty (no `make gen-api` needed anywhere in this feature).
+*Implementation (2026-10-30):* the canonical flip is `cdc_projection_database=""`
+(the `CLICKHOUSE_URL` database) and `make cdc-up` / `cdc-test-up` register
+against the canonical dev/test databases (`workpulse`, `workpulse_test`); the
+shadow databases are retired. `folds.py`'s two surviving read-side helpers
+(`seniority_band`, `resolve_ordered_assignment`) moved to
+`domains/reports/attribution.py`; the read repository, `reports` DTOs and API
+tests seed through `ClickhouseCdcWriter`. The fold-dependent parity harness
+(`test_cdc_parity.py`/`cdc_parity_helpers.py`) and its e2e comparator script
+retired with the fold — the cutover evidence stays recorded in this spec, and
+`test_cdc_sink.py` + `test_reports_api.py` keep the sink and read path covered.
+`workers/reports`, the fold unit/broker tests, the writer tests, the
+`reports_*` settings, the `dev-reports` target, the dev-script process and the
+Prometheus `:9105` target are gone; `full-hop.sh` writes the fixture as OLTP
+rows only and the CDC sink lands them in the canonical test database.
 
 ### Test strategy
 

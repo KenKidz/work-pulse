@@ -3,8 +3,8 @@
 #
 # The wall's live-delta spec is only meaningful when its only input is the
 # bus, so the e2e gate runs the full hop around Playwright: the outbox relay,
-# the realtime consumer, the payroll calculation worker, the reports projection
-# worker and the CDC sink (real Debezium → kafka-test → ClickHouse shadow)
+# the realtime consumer, the payroll calculation worker and the CDC projection
+# sink (real Debezium → kafka-test → ClickHouse canonical test database)
 # against the throwaway kafka-test broker (:9093), Connect-test (:8084) and
 # clickhouse-test store (:8124), while the dev PostgreSQL and Redis — the same
 # services Playwright's uvicorn reads — keep serving the app. `make check-e2e`
@@ -25,16 +25,16 @@ API_DIR="$ROOT_DIR/apps/api"
 # recorded PID is the worker itself (no wrapper to forward signals through).
 PYTHON="$API_DIR/.venv/bin/python"
 BOOTSTRAP="localhost:9093" # the kafka-test service the Makefile brings up
-# Reports read and project the throwaway analytics store. Pin it rather than
-# honoring a caller's CLICKHOUSE_URL: synthetic fixtures must never reach
-# another store, and the Playwright-managed API must read the same database
-# the reports worker writes (the DSN is the clickhouse-test service).
+# Reports read and the CDC sink projects the throwaway analytics store. Pin it
+# rather than honoring a caller's CLICKHOUSE_URL: synthetic fixtures must never
+# reach another store, and the Playwright-managed API must read the same
+# database the sink writes (the DSN is the clickhouse-test service). An empty
+# CDC_PROJECTION_DATABASE targets that canonical database after the T9 cutover.
 CLICKHOUSE_URL="http://workpulse:workpulse@127.0.0.1:8124/workpulse_test"
 export CLICKHOUSE_URL
-# The CDC sink reads the real Debezium connector on kafka-test/Connect-test and
-# lands in the throwaway shadow database. `cdc-test-up` owns the connector;
-# this run only consumes its topics.
-CDC_PROJECTION_DATABASE="workpulse_test_cdc"
+# The CDC sink reads the real Debezium connector on kafka-test/Connect-test.
+# `cdc-test-up` owns the connector; this run only consumes its topics.
+CDC_PROJECTION_DATABASE=""
 CDC_CONNECT_URL="http://localhost:8084"
 CDC_SLOT_NAME="workpulse_cdc_test"
 CDC_SINK_METRICS_PORT=0
@@ -49,12 +49,10 @@ LOG_DIR="$(mktemp -d)"
 RELAY_LOG="$LOG_DIR/relay.log"
 REALTIME_LOG="$LOG_DIR/realtime.log"
 PAYROLL_LOG="$LOG_DIR/payroll.log"
-REPORTS_LOG="$LOG_DIR/reports.log"
 CDC_SINK_LOG="$LOG_DIR/cdc-sink.log"
 RELAY_PID=""
 REALTIME_PID=""
 PAYROLL_PID=""
-REPORTS_PID=""
 CDC_SINK_PID=""
 
 # Ids-only worker logs: safe to surface when the hop misbehaves (a readiness
@@ -67,8 +65,6 @@ dump_logs() {
   tail -n 40 "$REALTIME_LOG" >&2 || true
   echo "full-hop: payroll log (tail):" >&2
   tail -n 40 "$PAYROLL_LOG" >&2 || true
-  echo "full-hop: reports log (tail):" >&2
-  tail -n 40 "$REPORTS_LOG" >&2 || true
   echo "full-hop: cdc sink log (tail):" >&2
   tail -n 40 "$CDC_SINK_LOG" >&2 || true
 }
@@ -91,13 +87,12 @@ cleanup() {
   trap - EXIT
   set +e
   stop_worker "$CDC_SINK_PID"
-  stop_worker "$REPORTS_PID"
   stop_worker "$PAYROLL_PID"
   stop_worker "$REALTIME_PID"
   stop_worker "$RELAY_PID"
   # Pre-flight guard failures have no worker logs (and no Kafka dependency to
   # diagnose); only dump the tails once a worker was actually launched.
-  if ((status != 0)) && [[ -n "$RELAY_PID$REALTIME_PID$PAYROLL_PID$REPORTS_PID$CDC_SINK_PID" ]]; then
+  if ((status != 0)) && [[ -n "$RELAY_PID$REALTIME_PID$PAYROLL_PID$CDC_SINK_PID" ]]; then
     dump_logs
   fi
   rm -rf "$LOG_DIR"
@@ -133,19 +128,19 @@ assert_no_other_workers() {
     echo "full-hop: 'pgrep' is required to check for concurrent workers." >&2
     exit 1
   fi
-  pids="$(pgrep -f 'workers\.(relay|realtime|payroll|reports|cdc_sink)\.main' || true)"
+  pids="$(pgrep -f 'workers\.(relay|realtime|payroll|cdc_sink)\.main' || true)"
   if [[ -n "$pids" ]]; then
-    echo "full-hop: another relay/realtime/payroll/reports/cdc-sink worker is already running:" >&2
+    echo "full-hop: another relay/realtime/payroll/cdc-sink worker is already running:" >&2
     echo "full-hop:   $(echo "$pids" | tr '\n' ' ')" >&2
     echo "full-hop: stop 'make dev-relay' / 'make dev-realtime' / 'make" >&2
-    echo "full-hop: dev-payroll' / 'make dev-reports' / 'make dev-cdc-sink' (or" >&2
+    echo "full-hop: dev-payroll' / 'make dev-cdc-sink' (or" >&2
     echo "full-hop: a leaked worker from an earlier gate) before running the hop." >&2
     exit 1
   fi
 }
 
 # Playwright reuses an existing API server outside CI. That server keeps the
-# ClickHouse URL it was started with, while this run's reports worker uses the
+# ClickHouse URL it was started with, while this run's CDC sink writes the
 # pinned test store — the report polls and UI would read a different database.
 # Refuse before anything writes, so the gate can never false-green on stale
 # dev rows or timeout against an empty dev projection.
@@ -156,7 +151,7 @@ sock.settimeout(0.2)
 sys.exit(0 if sock.connect_ex(("127.0.0.1", 8000)) == 0 else 1)'; then
     echo "full-hop: an API is already listening on :8000. Playwright would" >&2
     echo "full-hop: reuse it with a different ClickHouse URL than this run's" >&2
-    echo "full-hop: reports worker. Stop 'make dev-api' (or the stray" >&2
+    echo "full-hop: CDC sink. Stop 'make dev-api' (or the stray" >&2
     echo "full-hop: uvicorn) before running the hop." >&2
     exit 1
   fi
@@ -434,14 +429,12 @@ reset_performance_fixtures() {
   fi
 }
 
-# The reports spec asserts exact, labelled rows, so the fixture is written
-# twice from the same facts before the workers start: real builder envelopes
-# published to kafka-test (the fold path) and the matching OLTP rows captured
-# by Debezium (the CDC path, T7). Both projections are truncated first and the
-# synthetic People Ops employee uses fixed dates, so earlier specs and reruns
-# cannot satisfy the assertions or leave a duplicate month-partitioned leave
-# row. The post-spec parity step then proves both paths agree. Synthetic data
-# only (`.ai/testing.md` rule 6).
+# The reports spec asserts exact, labelled rows, so the OLTP fixture rows are
+# written before the workers start and captured by real Debezium. The
+# projection is truncated first and the synthetic People Ops employee uses
+# fixed dates, so earlier specs and reruns cannot satisfy the assertions or
+# leave a duplicate month-partitioned leave row. Synthetic data only
+# (`.ai/testing.md` rule 6).
 reset_reports_fixtures() {
   if ! (
     cd "$API_DIR" || exit 1
@@ -453,27 +446,15 @@ from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
-from aiokafka import AIOKafkaConsumer, AIOKafkaProducer, TopicPartition
+from aiokafka import AIOKafkaConsumer, TopicPartition
 from sqlalchemy import delete
 
 from app.config import get_settings
 import app.domains.organizations.models  # noqa: F401 - registers FK targets
-from app.domains.attendance.events import (
-    attendance_checked_in,
-    attendance_checked_out,
-)
 from app.domains.attendance.models import AttendanceRecord
-from app.domains.employees.events import employee_created
 from app.domains.employees.models import Employee, Employment
-from app.domains.leave.events import leave_approved
 from app.domains.leave.models import LeaveRequest
-from app.domains.overtime.events import (
-    overtime_approved,
-    overtime_requested,
-    overtime_verified,
-)
 from app.domains.overtime.models import OvertimeRequest
-from app.infrastructure.clickhouse.cdc_projection import ClickhouseCdcWriter
 from app.infrastructure.clickhouse.client import create_clickhouse_client
 from app.infrastructure.clickhouse.schema import SCHEMA_TABLES
 from app.infrastructure.postgres.engine import (
@@ -508,97 +489,17 @@ WORK_DATE = date(2026, 6, 15)
 LEAVE_START = date(2026, 6, 20)
 
 
-def fixtures() -> list[dict[str, object]]:
-    now = datetime.now(UTC)
-    return [
-        employee_created(
-            tenant_id=TENANT_ID,
-            actor_id=WORKER_USER_ID,
-            occurred_at=now,
-            employee_id=EMPLOYEE_ID,
-            department_id=DEPARTMENT_ID,
-            position_id=POSITION_ID,
-            location_id=LOCATION_ID,
-            employment_type="full_time",
-            hired_at=HIRED_AT,
-        ),
-        overtime_requested(
-            tenant_id=TENANT_ID,
-            actor_id=WORKER_USER_ID,
-            occurred_at=now,
-            overtime_id=OVERTIME_ID,
-            employee_id=EMPLOYEE_ID,
-            work_date=WORK_DATE,
-            hours=OVERTIME_HOURS,
-        ),
-        overtime_approved(
-            tenant_id=TENANT_ID,
-            actor_id=MANAGER_USER_ID,
-            occurred_at=now,
-            overtime_id=OVERTIME_ID,
-            employee_id=EMPLOYEE_ID,
-            work_date=WORK_DATE,
-            hours=OVERTIME_HOURS,
-            approved_by=MANAGER_USER_ID,
-        ),
-        overtime_verified(
-            tenant_id=TENANT_ID,
-            actor_id=HR_USER_ID,
-            occurred_at=now,
-            overtime_id=OVERTIME_ID,
-            employee_id=EMPLOYEE_ID,
-            work_date=WORK_DATE,
-            hours=OVERTIME_HOURS,
-            verified_by=HR_USER_ID,
-        ),
-        attendance_checked_in(
-            tenant_id=TENANT_ID,
-            actor_id=WORKER_USER_ID,
-            occurred_at=now,
-            attendance_id=ATTENDANCE_ID,
-            employee_id=EMPLOYEE_ID,
-            workday=WORK_DATE,
-            work_mode="onsite",
-            late=False,
-            minutes_late=None,
-        ),
-        attendance_checked_out(
-            tenant_id=TENANT_ID,
-            actor_id=WORKER_USER_ID,
-            occurred_at=now,
-            attendance_id=ATTENDANCE_ID,
-            employee_id=EMPLOYEE_ID,
-            workday=WORK_DATE,
-            duration_minutes=450,
-            late=False,
-            minutes_late=None,
-        ),
-        leave_approved(
-            tenant_id=TENANT_ID,
-            actor_id=MANAGER_USER_ID,
-            occurred_at=now,
-            leave_request_id=LEAVE_REQUEST_ID,
-            employee_id=EMPLOYEE_ID,
-            leave_type_code="annual",
-            start_date=LEAVE_START,
-            end_date=LEAVE_START + timedelta(days=1),
-            days=2,
-            decided_by=MANAGER_USER_ID,
-        ),
-    ]
-
-
 def _truncate(client: Any) -> None:
     for table in SCHEMA_TABLES:
         client.command(f"TRUNCATE TABLE IF EXISTS {table}")
 
 
 def reset_projection() -> None:
-    """Clear the serving (+ CDC shadow) projection so this run proves itself.
+    """Clear the canonical CDC projection so this run proves itself.
 
     `clickhouse-test` survives across compose invocations, and a prior run's
     facts (including a month-partitioned leave row) can otherwise satisfy the
-    non-empty checks or double-count. The workers apply their DDL afterward.
+    non-empty checks or double-count. The sink applies the DDL afterward.
     """
     client = create_clickhouse_client()
     try:
@@ -606,24 +507,13 @@ def reset_projection() -> None:
     finally:
         client.close()
 
-    # The T7 parity step compares the fold's serving projection with the real
-    # Debezium shadow, so both must start empty. The writer creates the shadow
-    # database and applies the same DDL when it does not exist yet.
-    writer = ClickhouseCdcWriter.connect(get_settings().cdc_projection_database)
-    try:
-        writer.apply_schema()
-        _truncate(writer._client)
-    finally:
-        writer.close()
-
 
 async def reset_oltp_rows() -> UUID:
-    """Write the OLTP rows real Debezium captures for the fold fixtures.
+    """Write the OLTP rows real Debezium captures for the reports fixture.
 
-    Every captured column mirrors the published envelopes (same ids, dates,
-    hours and approved leave), so the two projections are derivable from the
-    same facts. Direct rows keep the write path unchanged: the API's outbox
-    stream stays untouched (the fold fixture still publishes its envelopes).
+    The captured columns carry the same ids, dates, hours and approved leave
+    the spec asserts. Direct rows keep the API write path unchanged and avoid
+    synthetic outbox events for data no endpoint created.
     """
     async with get_session_factory()() as session:
         # Delete children first: the synthetic employee may exist from a prior
@@ -733,8 +623,8 @@ async def wait_for_leave_type_capture(leave_type_id: UUID) -> None:
 
     The sink warms its reference dictionary from the topic at startup; if the
     connector has not produced the row yet, a leave fact could land on the
-    bounded `unknown` fallback and break fold parity. This bounded wait makes
-    the fixture's ordering explicit instead of relying on a sleep.
+    bounded `unknown` fallback. This bounded wait makes the fixture's ordering
+    explicit instead of relying on a sleep.
     """
     settings = get_settings()
     consumer = AIOKafkaConsumer(
@@ -773,38 +663,17 @@ async def wait_for_leave_type_capture(leave_type_id: UUID) -> None:
         await consumer.stop()
 
 
-async def publish() -> None:
-    settings = get_settings()
-    producer = AIOKafkaProducer(
-        bootstrap_servers=settings.kafka_bootstrap_servers
-    )
-    await producer.start()
-    try:
-        for event in fixtures():
-            # Key by employee_id like the relay does: the worker folds these
-            # in per-partition order, so employee.created lands before the
-            # facts that need its dimension stamp.
-            await producer.send_and_wait(
-                settings.kafka_events_topic,
-                key=str(EMPLOYEE_ID).encode("utf-8"),
-                value=json.dumps(event).encode("utf-8"),
-            )
-    finally:
-        await producer.stop()
-
-
 async def run_fixture() -> None:
     try:
         annual_id = await reset_oltp_rows()
         await wait_for_leave_type_capture(annual_id)
-        await publish()
     finally:
         await dispose_engine()
 
 
 def main() -> None:
-    # Truncation is synchronous (one HTTP round trip per table); the rows,
-    # capture wait and fold envelopes share one event loop.
+    # Truncation is synchronous (one HTTP round trip per table); the row
+    # writes and the capture wait share one event loop.
     reset_projection()
     asyncio.run(run_fixture())
 
@@ -812,7 +681,7 @@ def main() -> None:
 main()
 PY
   ); then
-    echo "full-hop: could not publish the reports projection fixtures" >&2
+    echo "full-hop: could not write the reports projection fixtures" >&2
     exit 1
   fi
 }
@@ -855,20 +724,10 @@ REALTIME_PID=$!
 ) >"$PAYROLL_LOG" 2>&1 &
 PAYROLL_PID=$!
 
-# The reports worker folds the fixtures published above into clickhouse-test:
-# it consumes from `earliest` within the retained history with its stable
-# group, and its readiness line is the first completed fetch round.
-(
-  cd "$API_DIR"
-  exec env KAFKA_BOOTSTRAP_SERVERS="$BOOTSTRAP" CLICKHOUSE_URL="$CLICKHOUSE_URL" \
-    PYTHONPATH="../..:." "$PYTHON" -m workers.reports.main
-) >"$REPORTS_LOG" 2>&1 &
-REPORTS_PID=$!
-
 # The CDC sink consumes the real Debezium topics `cdc-test-up` registered on
-# kafka-test and lands them in the shadow database; the reset above wrote both
-# the envelope and OLTP forms of the fixture. Its readiness line is the first
-# completed fetch round after the leave-type warm-up.
+# kafka-test and lands them in the canonical test database; the reset above
+# wrote the fixture rows. Its readiness line is the first completed fetch round
+# after the leave-type warm-up.
 (
   cd "$API_DIR"
   exec env KAFKA_BOOTSTRAP_SERVERS="$BOOTSTRAP" CLICKHOUSE_URL="$CLICKHOUSE_URL" \
@@ -882,24 +741,7 @@ CDC_SINK_PID=$!
 wait_for_line relay "$RELAY_PID" "$RELAY_LOG" relay_started
 wait_for_line realtime "$REALTIME_PID" "$REALTIME_LOG" realtime_consumer_started
 wait_for_line payroll "$PAYROLL_PID" "$PAYROLL_LOG" payroll_worker_started
-wait_for_line reports "$REPORTS_PID" "$REPORTS_LOG" reports_started
 wait_for_line cdcsink "$CDC_SINK_PID" "$CDC_SINK_LOG" cdc_sink_started
 
 cd "$ROOT_DIR"
 npx playwright test
-
-# T7 parity on the real hop: the serving (fold) projection and the CDC shadow
-# are compared through the same repository for the fixture employee's report
-# window. A bounded poll absorbs pipeline lag; exact aggregate equality is the
-# gate, and the assertions prove both sides are non-empty (AC 2 + AC 1).
-if ! (
-  cd "$API_DIR" || exit 1
-  PYTHONPATH="../..:." "$PYTHON" scripts/compare_reports_parity.py \
-    --from 2026-01-01 \
-    --to 2026-07-31 \
-    --employee-id 00000000-0000-4000-8000-00000000e2e1 \
-    --timeout 90
-); then
-  echo "full-hop: the serving and CDC projections disagree (T7 parity)" >&2
-  exit 1
-fi

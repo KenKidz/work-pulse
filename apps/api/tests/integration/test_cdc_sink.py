@@ -2,11 +2,11 @@
 
 Every part except the assertion helpers is real: a dedicated `kafka-test` topic
 carries Debezium-shaped envelopes, the actual `CdcSinkConsumer` runs with a
-throwaway group, and `ClickhouseCdcWriter` lands the rows in the D2 shadow
-database (`workpulse_test_cdc`) of the throwaway ClickHouse. Each test uses its
-own topic and fixed ids, so the shared broker and the shadow projection cannot
-leak between tests; the fixture drops/recreates the shadow tables around every
-test.
+throwaway group, and `ClickhouseCdcWriter` lands the rows in the canonical test
+database (`workpulse_test`, selected by the DSN) of the throwaway ClickHouse.
+Each test uses its own topic and fixed ids, so the shared broker and projection
+cannot leak between tests; the fixture drops/recreates the projection tables
+around every test.
 
 Covered: the five projection tables land exact rows (AC 1 shape); a redelivered
 change with the same commit timestamp converges (AC 7); delete/truncate ops
@@ -67,9 +67,9 @@ COMMIT_MS = int(COMMIT_TS.timestamp() * 1000)
 
 @pytest.fixture
 def writer() -> Iterator[ClickhouseCdcWriter]:
-    target = get_settings().cdc_projection_database
-    assert target == "workpulse_test_cdc"
-    sink = ClickhouseCdcWriter.connect(target)
+    # Cutover (T9): the sink writes the canonical test database by default
+    # (an empty `cdc_projection_database` means the `CLICKHOUSE_URL` database).
+    sink = ClickhouseCdcWriter.connect(get_settings().cdc_projection_database)
     _drop_tables(sink._client)
     sink.apply_schema()
     try:

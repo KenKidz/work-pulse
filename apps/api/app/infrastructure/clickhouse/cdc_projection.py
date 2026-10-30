@@ -1,8 +1,7 @@
 """ClickHouse landing adapter for the CDC projection sink (T4, ADR 0024).
 
-Synchronous by design like the fold writer: the sink serializes changes and
-`clickhouse-connect` speaks HTTP. Two differences from
-`ClickhouseProjectionWriter` are load-bearing:
+Synchronous by design: the sink serializes changes and `clickhouse-connect`
+speaks HTTP. Two properties are load-bearing:
 
 - Every row's `updated_at` is the **source commit timestamp** from the
   Debezium envelope (`Change.commit_ts`), never ingest wall clock (rule 7), so
@@ -11,11 +10,12 @@ Synchronous by design like the fold writer: the sink serializes changes and
   query time from captured `dim_assignment` intervals (D3), and the sink never
   runs a re-stamp pass.
 
-The sink targets the D2 shadow database during the parallel run (`connect`
-creates it and applies `database/clickhouse/schema.sql`) and the canonical
-database after cutover. Readiness writes use wall clock on purpose: the
-`projection_state` fence is not a projected fact, and its `ReplacingMergeTree`
-version must stay newer than a fence written by `ops/cdc/register.sh`.
+After the T9 cutover the sink targets the canonical database (empty
+`cdc_projection_database` = the `CLICKHOUSE_URL` database); the shadow
+database was a parity-only target and is gone. Readiness writes use wall clock
+on purpose: the `projection_state` fence is not a projected fact, and its
+`ReplacingMergeTree` version must stay newer than a fence written by
+`ops/cdc/register.sh`.
 """
 
 from __future__ import annotations
@@ -90,7 +90,7 @@ _LEAVE_COLUMNS = (
 
 
 class ClickhouseCdcWriter:
-    """CDC sink output port over one ClickHouse database (shadow or canonical)."""
+    """CDC sink output port over one ClickHouse database (canonical by default)."""
 
     def __init__(
         self,
@@ -112,7 +112,7 @@ class ClickhouseCdcWriter:
 
         A named target database is created first from a base connection, then a
         database-scoped client is opened so `schema.sql`'s unqualified DDL lands
-        in the shadow set (D2).
+        in that database.
         """
         target = (database or "").strip()
         if not target:

@@ -15,12 +15,12 @@
   logs) · ADR 0006 (Phase 6 OpenTelemetry SDK + instrumentations; structlog
   trace/log correlation) · ADR 0012 (`workers/relay`) · ADR 0013
   (`workers/realtime`) · ADR 0015 (`workers/notifications`) · ADR 0019
-  (`workers/reports`)
+  (`workers/cdc_sink`, which replaced the retired reports fold)
 
 ## Problem
 
 WorkPulse now runs a modular FastAPI monolith alongside five asynchronous
-workers (`relay`, `realtime`, `notifications`, `payroll`, `reports`) across
+workers (`relay`, `realtime`, `notifications`, `payroll`, `cdc_sink`) across
 PostgreSQL, Redis, Kafka, ClickHouse and MinIO — yet visibility into runtime
 behavior stops at per-process `structlog` lines with an HTTP-only `request_id`.
 When a check-in or report query slows down, or when a worker stalls against a
@@ -43,7 +43,7 @@ rate dashboards via `OpenTelemetry ──► Prometheus ──► Grafana`.
    or missing `traceparent` headers never fail the request — the tracer starts a
    fresh root span instead.
 3. **Every worker iteration/message is traced and measured.** Each background
-   worker (`relay`, `realtime`, `notifications`, `payroll`, `reports`) wraps its
+   worker (`relay`, `realtime`, `notifications`, `payroll`, `cdc_sink`) wraps its
    unit of work (batch poll or consumed event/job) in an OpenTelemetry root span
    with `trace_id`/`span_id` bound into `structlog` for the duration of that
    unit, and increments bounded worker counters/histograms (processed, failed,
@@ -93,7 +93,7 @@ rate dashboards via `OpenTelemetry ──► Prometheus ──► Grafana`.
 - `GET /metrics` endpoint on `apps/api` (`include_in_schema=False`) serving
   Prometheus text exposition format (`text/plain; version=0.0.4`).
 - Worker telemetry instrumentation across `workers/relay`, `workers/realtime`,
-  `workers/notifications`, `workers/payroll`, and `workers/reports` (per-batch /
+  `workers/notifications`, `workers/payroll`, and `workers/cdc_sink` (per-batch /
   per-message spans, structured log correlation, and Prometheus metrics
   exposition when configured).
 - Provisioned local observability stack in `docker-compose.yml` (`prometheus`
@@ -130,7 +130,7 @@ rate dashboards via `OpenTelemetry ──► Prometheus ──► Grafana`.
 | API domain | — (domains stay OTel-free per rule 4) |
 | API router | `apps/api/app/main.py` (`GET /metrics`, `include_in_schema=False`) |
 | Events | — (no event schema changes) |
-| Workers | `workers/relay/` · `workers/realtime/` · `workers/notifications/` · `workers/payroll/` · `workers/reports/` |
+| Workers | `workers/relay/` · `workers/realtime/` · `workers/notifications/` · `workers/payroll/` · `workers/cdc_sink/` (the Phase-4 reports fold was retired at the CDC cutover) |
 | Web feature / routes | — (none; Grafana serves dashboards on `127.0.0.1:3001`) |
 | Observability config | `ops/observability/prometheus/prometheus.yml` · `ops/observability/grafana/provisioning/` · `ops/observability/grafana/dashboards/workpulse-overview.json` |
 | API tests | `apps/api/tests/unit/test_telemetry.py` · `apps/api/tests/integration/test_observability.py` · `apps/api/tests/contract/test_openapi_drift.py` |
@@ -170,7 +170,7 @@ rate dashboards via `OpenTelemetry ──► Prometheus ──► Grafana`.
 | `workpulse_http_requests_total` | Counter | `method`, `route`, `status_code` | Total completed HTTP requests (`route` is the matched FastAPI route template, e.g. `/api/v1/employees/{employee_id}`, or `UNMATCHED`) |
 | `workpulse_http_request_duration_seconds` | Histogram | `method`, `route`, `status_code` | HTTP request latency in seconds (buckets suitable for p50/p95/p99 around the 300ms target) |
 | `workpulse_http_requests_in_flight` | UpDownCounter / Gauge | `method` | Currently executing HTTP requests |
-| `workpulse_worker_events_total` | Counter | `worker`, `event_type`, `status` | Worker units processed (`status`: `succeeded` \| `failed` \| `skipped`; `worker`: `relay` \| `realtime` \| `notifications` \| `payroll` \| `reports`) |
+| `workpulse_worker_events_total` | Counter | `worker`, `event_type`, `status` | Worker units processed (`status`: `succeeded` \| `failed` \| `skipped`; `worker`: `relay` \| `realtime` \| `notifications` \| `payroll` \| `cdc_sink`) |
 | `workpulse_worker_unit_duration_seconds` | Histogram | `worker`, `status` | Duration of one worker batch/message/job in seconds |
 
 ## Events
@@ -230,7 +230,7 @@ None added or changed.
       FastAPI app, when `test_openapi_drift.py` and `make gen-api` run, then
       `contracts/openapi/openapi.json` and `packages/api-client` have zero diff.
 - [x] Workers (tracing + metrics + failure recording): given a worker unit in
-      `relay`, `realtime`, `notifications`, `payroll`, and `reports`, when a
+      `relay`, `realtime`, `notifications`, `payroll`, and `cdc_sink`, when a
       batch/event succeeds or fails, then a worker span is recorded with
       `trace_id`/`span_id` bound in `structlog`, and `workpulse_worker_events_total`
       + `workpulse_worker_unit_duration_seconds` increment with `status="succeeded"`
@@ -245,9 +245,9 @@ None added or changed.
 
 1. **Worker metrics exposition — direct Prometheus scrape:** `apps/api` serves
    `GET /metrics` on `:8000`, and each of the 5 background workers (`relay`,
-   `realtime`, `notifications`, `payroll`, `reports`) exposes a loopback-only
+   `realtime`, `notifications`, `payroll`, `cdc_sink`) exposes a loopback-only
    Prometheus HTTP metric endpoint on a dedicated configurable port
-   (`:9101`–`:9105` in dev; `0`/disabled by default in tests so parallel runs
+   (`:9101`–`:9104` and `:9106` in dev; `0`/disabled by default in tests so parallel runs
    never collide). Prometheus scrapes the API and workers directly with no
    intermediate `otel-collector` container.
 2. **Trace backend & propagation — in-process OTel + OTLP opt-in:** Docker
@@ -273,7 +273,7 @@ None added or changed.
 Repo research (read-only) confirmed the spec's assumptions: workers share
 `apps/api/pyproject.toml` (single uv env, `pythonpath` reaches `../..`), all
 five workers use `app.shared.logging` and expose a per-unit seam (relay
-per-row in `_publish_batch`; realtime/notifications/reports per-message in
+per-row in `_publish_batch`; realtime/notifications/cdc_sink per-message in
 `_handle`; payroll per-run in `_drain`), `X-Request-Id` lives only in
 `RequestContextMiddleware` (`app/shared/logging.py:53–83`), `main.py` owns
 middleware order + `/healthz`, `tests/contract/test_openapi_drift.py` already
@@ -308,7 +308,7 @@ cover.
 - `apps/api/app/config.py`: add an `--- Phase 6: Observability ---` block —
   `otel_exporter_otlp_endpoint: str | None = None`,
   `otel_service_name` default `workpulse`, per-worker `*_metrics_port` knobs
-  (`relay_metrics_port: int = 9101` … `reports_metrics_port: int = 9105`;
+  (`relay_metrics_port: int = 9101` … `cdc_sink_metrics_port: int = 9106`;
   `0` = disabled).
 - `.env.example`: document the new keys in a matching section.
 - Verify: `cd apps/api && uv sync` resolves; `make check-api` green (nothing
@@ -371,7 +371,7 @@ cover.
   `packages/api-client`; `make check-e2e` regression stays green.
 
 **T4 — Worker instrumentation (relay → realtime → notifications → payroll →
-reports).**
+cdc_sink).**
 - Small per-unit helper in `app/shared/telemetry.py` (e.g.
   `worker_unit(worker, event_type)`) wrapping: root span per batch/message/job,
   `trace_id`/`span_id` structlog binding for the unit's duration, timing +
@@ -386,7 +386,7 @@ reports).**
     `NotificationUnit` handling.
   - `workers/payroll/runner.py` — per-run span in `_drain` around
     `unit.calculate`.
-  - `workers/reports/consumer.py` — per-message span in `_handle`.
+  - `workers/cdc_sink/consumer.py` — per-message span in `_handle` (the Phase-4 reports fold was retired at the CDC cutover).
   - Each `workers/*/main.py` `_run()` optionally starts a loopback-only
     `prometheus_client` HTTP listener on its configured `*_metrics_port`
     (skip when `0`/unset — tests and parallel runs never bind).

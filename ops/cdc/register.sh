@@ -12,12 +12,12 @@
 #   CDC_CONNECTOR_NAME       logical connector name (default workpulse-cdc)
 #   CDC_SLOT_NAME            replication slot + publication name (default workpulse_cdc)
 #   CDC_CLICKHOUSE_SERVICE   compose service (default clickhouse; clickhouse-test)
-#   CDC_PROJECTION_DATABASE  target database (default workpulse; cdc-up uses
-#                            workpulse_cdc, cdc-test-up workpulse_test_cdc)
+#   CDC_PROJECTION_DATABASE  target database (default workpulse; cdc-test-up
+#                            uses workpulse_test)
 #   CDC_CLICKHOUSE_USER      ClickHouse user (default workpulse)
 #   CDC_CLICKHOUSE_PASSWORD  ClickHouse password (default workpulse)
 #
-# `cdc-test-up` passes the test values; production cutover uses the defaults.
+# `cdc-test-up` passes the test values; dev and production use the defaults.
 
 set -euo pipefail
 
@@ -98,7 +98,7 @@ else
   # Readiness fence: only a new connector group can land in a half-built
   # projection. The reports gate reads projection_state FINAL, so seed ready=0
   # before the connector exists. `schema.sql` is the single DDL source; it is
-  # idempotent and gives the shadow database its full projection schema.
+  # idempotent and gives the target database its full projection schema.
   if docker compose --project-directory "$ROOT_DIR" ps --status running --services 2>/dev/null \
     | grep -qx "$CLICKHOUSE_SERVICE"; then
     docker compose --project-directory "$ROOT_DIR" exec -T "$CLICKHOUSE_SERVICE" \

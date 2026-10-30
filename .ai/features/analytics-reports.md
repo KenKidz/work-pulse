@@ -4,7 +4,7 @@
 - **Phase:** 4
 - **Size:** L
 - **Surfaces:** api+web+events+workers
-- **Links:** `.ai/domain.md` (Analytics & Reports context — pure consumer; event catalog) · `.ai/architecture.md` (Phase 4: ClickHouse = analytical projection; Phase-4 success metric) · `.ai/product.md` (goal 4 "analytics without a data project"; problem: "analytics is a monthly export") · `.ai/security.md` ("View company-wide reports" matrix row; analytics-row PII rule) · ADR 0006 (phase-gated `clickhouse-connect`) · ADR 0012 (outbox transport: consumer obligations, `event_id` dedupe, kept outbox as replay record) · ADR 0013 (additive v1 payload-extension pattern) · ADR 0017 (decimal/rounding discipline) · ADR 0018 (`included_in_payroll` flip emits no event) · `employees.md` · `attendance.md` · `leave.md` · `overtime.md` (event sources) · `payroll.md` (Decisions 6 deferral, answered here) · `notifications.md`/`realtime-consumer.md` (consumer conventions)
+- **Links:** `.ai/features/change-data-capture.md` + **ADR 0024** (Phase-5 amendment: the CDC pipeline now owns the projection; the fold and `workers/reports/` are retired) · `.ai/domain.md` (Analytics & Reports context — projection of the database log; event catalog) · `.ai/architecture.md` (Phase 4: ClickHouse = analytical projection; Phase-4 success metric) · `.ai/product.md` (goal 4 "analytics without a data project"; problem: "analytics is a monthly export") · `.ai/security.md` ("View company-wide reports" matrix row; analytics-row PII rule) · ADR 0006 (phase-gated `clickhouse-connect`) · ADR 0012 (outbox transport: consumer obligations, `event_id` dedupe, kept outbox as replay record) · ADR 0013 (additive v1 payload-extension pattern) · ADR 0017 (decimal/rounding discipline) · ADR 0018 (`included_in_payroll` flip emits no event) · `employees.md` · `attendance.md` · `leave.md` · `overtime.md` (event sources) · `payroll.md` (Decisions 6 deferral, answered here) · `notifications.md`/`realtime-consumer.md` (consumer conventions)
 
 ## Problem
 
@@ -15,37 +15,38 @@ aggregates must not be run against the OLTP tables that serve check-ins and
 approvals. Phase 4's whole reason for ClickHouse is that aggregation belongs in
 an analytical projection fed by the event stream — "one fact, one event"
 (`.ai/product.md` goal 2) already promises that analytics is a projection. This
-feature delivers both halves of the Analytics & Reports context: an
-event-driven projection into ClickHouse (`workers/reports/`) and a role-scoped
-Reports surface (API + web) that answers the workforce questions — overtime
-first — in well under a second.
+feature delivers both halves of the Analytics & Reports context: a projection
+into ClickHouse — event-driven in Phase 4 (`workers/reports/`), replaced by the
+Phase-5 CDC pipeline (`PostgreSQL → Debezium → Kafka → workers/cdc_sink`,
+ADR 0024) — and a role-scoped Reports surface (API + web) that answers the
+workforce questions — overtime first — in well under a second.
 
 ## Business rules
 
-1. **Analytics & Reports is a pure consumer** (`.ai/domain.md`): every
-   ClickHouse row is a projection of the `workpulse.events` stream. A rebuild
-   (drop projection state, replay the stream) reproduces the aggregates without
-   ever reading OLTP tables. **No OLTP backfill** (PO Decision 7): reports
-   answer over whatever the stream covers; range filters simply return what
-   exists.
+1. **Analytics & Reports is a projection of the database log** (`.ai/domain.md`,
+   amended by Phase 5 / ADR 0024): every ClickHouse row is fed by Debezium
+   capture of the six source tables, not by application fold code. A rebuild
+   (fence, truncate, connector snapshot + WAL replay) reproduces the aggregates
+   without the report path reading OLTP tables at query time. **No OLTP
+   backfill** (PO Decision 7): reports answer over whatever the captured history
+   covers; range filters simply return what exists.
    - Display labels (department/position/location/leave-type names) are the one
      carve-out, and they follow the notifications enrichment pattern exactly
      (`.ai/domain.md`, ADR 0015): a **read-only reference lookup port** at
      query time, never a projection input, never another context's tables
      touched by the worker.
-2. **Replay-safe projection** (ADR 0012 decision 5): the consumer deduplicates
-   on `event_id`, so at-least-once redelivery never double-counts. Unknown
-   fields are ignored; unknown or irrelevant `event_type`s (`notification.*`,
-   `payslip.*`, …) are skipped with the offset advanced. A malformed message
-   is logged (ids only, no payload) and skipped — a consumer never poisons its
-   stream.
-3. **Dimension state is folded from the employee stream.** Each fact is
-   attributed to the employee's department/position/location **as of the fact
-   date** — employment intervals folded from `employee.created`,
-   `employee.transferred`, `employee.terminated` (plus the two additive
-   payload extensions under Events). Pre-extension messages lacking the new
-   fields degrade honestly: missing tenure → `unknown` seniority band; missing
-   `to_position_id`/`to_location_id` → the previous value is kept.
+2. **Replay-safe projection** (ADR 0024 decision 3): at-least-once delivery is
+   made harmless by `ReplacingMergeTree(updated_at)` where `updated_at` is the
+   source commit timestamp — a redelivered change replaces, never duplicates.
+   The sink drops and counts delete/truncate operations instead of removing
+   rows (ADR 0007). Unknown fields are ignored; non-captured tables are absent
+   from the connector, so they never reach the projection.
+3. **Dimension attribution is as-of the fact date.** The CDC sink leaves fact
+   stamps null; the report SQL resolves the `dim_assignment` interval in effect
+   on each fact's business date, with the earliest-interval fallback for a
+   pre-history fact and `unknown` dimensions — never a dropped fact — when the
+   employee has no intervals. A backdated transfer corrects attribution on the
+   next query; no re-stamp pass exists.
 4. **Seniority bands** derive from first employment start (`hired_at`), tenure
    measured at the row's bucket end (for `interval=total`, at `to`):
    `< 1 year` (`lt_1y`), `1–<3 years` (`1_3y`), `3–<5 years` (`3_5y`),
@@ -107,12 +108,12 @@ first — in well under a second.
     service. Report rows contain **no employee identifiers at all**: rows are
     aggregates per group/bucket.
 13. **Time is a parameter** (`.ai/conventions.md`): reports take explicit
-    `from`/`to`; no wall-clock reads in the query path. Projection writes stamp
-    the consumer's clock only as bookkeeping.
+    `from`/`to`; no wall-clock reads in the query path. Projection rows are
+    versioned by the source commit timestamp, never ingest clock (ADR 0024).
 14. **One name**: the context is implemented as `reports` end to end —
-    `domains/reports/`, `api/v1/reports.py`, `workers/reports/`,
-    `features/reports/`, `app/(dashboard)/reports/`. The worker is the
-    analytics projector; the store is "the analytics store" in prose.
+    `domains/reports/`, `api/v1/reports.py`, `workers/cdc_sink/`,
+    `features/reports/`, `app/(dashboard)/reports/`. The sink is the analytics
+    projector; the store is "the analytics store" in prose.
 
 ## Scope
 
@@ -121,34 +122,30 @@ first — in well under a second.
   added to `apps/api` (ADR 0006's pre-agreed Phase-4 gate — the dependency
   justification architecture rule 10 requires; same wiring pattern as
   `aiokafka`, ADR 0012 decision 10).
-- `workers/reports/`: the projection worker — consume `workpulse.events`
-  (stable group `workpulse-reports`, `auto_offset_reset="earliest"` within the
-  configured retention window: first start builds the retained history,
-  restarts resume committed offsets), fold
-  employee dimension state + the four fact families, write to ClickHouse,
-  commit offsets manually after the write (at-least-once in, idempotent on
-  `event_id` out). Single instance in v1 (relay precedent).
+- `workers/cdc_sink/` (Phase 5, ADR 0024): the projection sink — consume the
+  six `workpulse.cdc.<table>` Debezium topics (stable group, `earliest`) and
+  land captured row state in ClickHouse, commit offsets manually after the
+  write. The Phase-4 `workers/reports/` fold is retired.
 - A documented, fenced rebuild path: gate report reads through
-  `projection_state`, stop the worker, reset the group to `earliest`, truncate
-  the projection tables and replay; the topic retains the 24-month report span,
-  and ADR 0012 decision 8's kept `event_outbox` rows are the re-publish source
-  if the topic has expired past retention (ops note, not code).
+  `projection_state`, truncate the projection tables, reset the connector
+  offsets and replay the snapshot + WAL; the runbook lives in
+  `ops/cdc/README.md`.
 - Two additive v1 event payload extensions (ADR 0013 pattern — optional via
   `required`-list membership, no version bump) with producer updates:
   `employee-created.v1.json` gains `hired_at`;
   `employee-transferred.v1.json` gains `to_position_id`, `to_location_id`.
-- `apps/api/app/domains/reports/` (read side + fold rules) and
+- `apps/api/app/domains/reports/` (read side + attribution helpers) and
   `apps/api/app/api/v1/reports.py` — the four report endpoints below.
 - Web `features/reports/` + `app/(dashboard)/reports/`: a "Reports" nav entry
   and workspace with four report tabs (Overtime · Attendance · Leave ·
   Headcount), a shared filter bar, and charts + underlying tables per report
   (one charting dependency: **Recharts**, approved PO Decision 9; visuals use
   the existing `--chart-1..5` tokens and the `workpulse-ui` rulebook).
-- Tests: unit (folds, policies, band/rate math), integration (ClickHouse
-  repository + routers + real-broker worker proofs + rebuild proof + latency
-  benchmark), contract (OpenAPI shapes + the two extended payload schemas,
-  including a pre-extension payload still validating), web tests, and
-  `tests/e2e/reports.spec.ts` (ClickHouse + worker started by `make
+- Tests: unit (policies, band/rate math), integration (ClickHouse repository +
+  routers + CDC sink/read proofs + latency benchmark), contract (OpenAPI shapes
+  + the two extended payload schemas, including a pre-extension payload still
+  validating + the CDC change-envelope contracts), web tests, and
+  `tests/e2e/reports.spec.ts` (ClickHouse + the CDC pipeline started by `make
   check-e2e`'s hop, like the relay/consumer workers).
 
 ## Out of scope
@@ -183,8 +180,8 @@ first — in well under a second.
 | API domain | `apps/api/app/domains/reports/` (schemas · service · repository · policies · exceptions; **no** `models.py`/`events.py` — the domain owns no OLTP rows and emits no events) |
 | API router | `apps/api/app/api/v1/reports.py` |
 | Events | consumed only — `contracts/events/{employees,attendance,leave,overtime}/`; additive extensions to `employee-created.v1.json` (`hired_at`) and `employee-transferred.v1.json` (`to_position_id`, `to_location_id`) |
-| Workers | `workers/reports/` (consume → fold → ClickHouse; `main.py` + `consumer.py` + `mapping.py`, mirroring `workers/notifications/`) |
-| Infra | `docker-compose.yml` (`clickhouse` + `clickhouse-test`) · `database/clickhouse/` (idempotent DDL) · `apps/api/app/infrastructure/clickhouse/` (client, projection writer, reports repository) · `apps/api/app/shared/` (reference lookup port for labels) |
+| Workers | `workers/cdc_sink/` (Debezium topics → ClickHouse; Phase 5 / ADR 0024). The Phase-4 `workers/reports/` fold is retired. |
+| Infra | `docker-compose.yml` (`clickhouse` + `clickhouse-test`; `kafka-connect` pair for CDC) · `database/clickhouse/` (idempotent DDL) · `apps/api/app/infrastructure/clickhouse/` (client, CDC landing writer, reports repository) · `ops/cdc/` (connector + runbook) · `apps/api/app/shared/` (reference lookup port for labels) |
 | Web feature | `apps/web/features/reports/` (components · hooks · api.ts · types.ts · utils.ts) |
 | Web routes | `apps/web/app/(dashboard)/reports/` |
 | API tests | `apps/api/tests/unit` · `tests/integration` · `tests/contract` |
@@ -310,8 +307,9 @@ rule 3 describes.
 
 - The same envelope delivered twice (at-least-once crash window, ADR 0012) →
   aggregates unchanged; the `event_id` dedupe absorbs it.
-- Rebuild after ClickHouse data loss → truncate + replay from `earliest`
-  reproduces byte-identical aggregates (fold is a pure function of the stream).
+- Rebuild after ClickHouse data loss → fenced truncate + connector snapshot and
+  WAL replay reproduces the aggregates (ADR 0024 decision 4); the retired
+  event-topic replay is no longer the reports rebuild path.
 - An `hr_verified` row un-verified later (`overtime.rejected`,
   `rejected_from=hr_verified`) → its hours drop out of every affected bucket.
 - A row that reaches payroll's `included_in_payroll` flip → hours stay counted
@@ -319,7 +317,8 @@ rule 3 describes.
 - Facts for an employee created by a pre-extension `employee.created` →
   `unknown` seniority band, still counted under department/location/position.
 - A mid-month transfer → that employee's facts split at `effective_from`;
-  headcount moves group at the same date.
+  headcount moves group at the same date. A backdated transfer re-attributes
+  already-projected facts through the captured intervals on the next query.
 - A leave request spanning two months → all its days land in the
   `start_date` bucket, never split.
 - A record checked in but never checked out → counts in `checkin_count` (and
@@ -337,8 +336,8 @@ rule 3 describes.
 - ClickHouse down → `503 reports_unavailable`; the web reports surface shows
   its error state; OLTP writes are unaffected (the write path never depends on
   the analytics store).
-- A malformed or foreign message on the topic → ids-only log, skip, advance —
-  the worker never stalls.
+- A delete/truncate change on a captured table → dropped and counted; no
+  projection row is ever removed (ADR 0007/0024 decision 6).
 - Person-level data (names, emails, salaries, leave reasons) anywhere in
   projection rows, logs or report responses is a PII bug.
 
@@ -352,12 +351,12 @@ rule 3 describes.
 - [x] API (denied role): an Employee-role call to any report endpoint → `403`; a Manager's rows cover only self + direct reports (fixtures span two managers' teams).
 - [x] API (tenant isolation): tenant B querying the same ranges sees no tenant-A facts (empty rows), including with tenant-A dimension filters — 404/empty, never 403-shaped leakage.
 - [x] API (PII): a response/log/row sweep finds no names, emails, salaries, leave reasons or employee ids — only group keys, labels, dates, counts and hours.
-- [x] Worker: redelivering the whole stream (duplicate `event_id`s) leaves aggregates byte-identical; an `hr_verified → rejected` un-verification removes its hours; unknown and malformed messages are skipped without stalling; offsets commit only after the ClickHouse write.
-- [x] Worker (rebuild): truncating the projection and replaying from `earliest` reproduces the exact aggregates (pure-consumer proof, `.ai/domain.md`).
+- [x] Pipeline (amended by CDC, ADR 0024): redelivering a captured change with the same commit timestamp leaves aggregates unchanged; an `hr_verified → rejected` state is captured from the row; `included_in_payroll` projects as `hr_verified`; delete/truncate operations remove nothing and are counted; offsets commit only after the ClickHouse write.
+- [x] Pipeline (rebuild, amended by CDC, ADR 0024): a fenced truncate plus connector snapshot + WAL replay reproduces the exact aggregates; `ready = 0` serves `503`, never empty numbers.
 - [x] Contracts: `hired_at`/`to_position_id`/`to_location_id` validate in the extended v1 schemas, the producers fill them, and a pre-extension payload still validates (additive proof, ADR 0013).
 - [x] Web: the Reports workspace renders each report with loading, empty and error states; filter changes re-query with new TanStack Query keys (no ad-hoc fetch); charts + tables show the same rows; the surface follows `workpulse-ui` (incl. `--chart-1..5`) and the control-language rules.
 - [x] Web (denied): an Employee user never sees the Reports nav and a direct visit is denied (API 403 rendered as the error state).
-- [x] E2E: with ClickHouse + the reports worker in the hop, an HR login opens /reports and sees non-empty overtime rows for seeded verified overtime; an Employee login cannot reach the surface.
+- [x] E2E: with ClickHouse + the CDC pipeline in the hop, an HR login opens /reports and sees non-empty overtime rows for seeded verified overtime; an Employee login cannot reach the surface.
 
 ## Decisions (PO, 2026-10-22)
 

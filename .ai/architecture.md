@@ -111,7 +111,9 @@ state and Kafka as the durable backbone so the separation stays honest.
 ### Later infrastructure
 
 - **CDC (Phase 5):** `PostgreSQL ──► Debezium ──► Kafka ──► ClickHouse` —
-  replaces hand-written analytics projections.
+  replaces hand-written analytics projections. **Shipped (ADR 0024):** the
+  Analytics & Reports projection is now fed by `workers/cdc_sink`; the
+  `workers/reports` fold is retired.
 - **Observability (Phase 6):** `OpenTelemetry ──► Prometheus ──► Grafana` — in-process tracing/metrics, direct scrape of the API and workers, and a provisioned local stack (ADR 0023).
 
 ## Phase roadmap

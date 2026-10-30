@@ -380,10 +380,12 @@ def test_makefile_exposes_the_cdc_lifecycle_targets() -> None:
     for target in targets:
         assert target in phony, target
 
-    # `cdc-up` runs the parallel pipeline against the D2 dev shadow, never the
-    # fold-served canonical database; the test target uses the test shadow.
-    assert "CDC_PROJECTION_DATABASE=workpulse_cdc" in makefile
-    assert "CDC_PROJECTION_DATABASE=workpulse_test_cdc" in makefile
+    # After the T9 cutover both targets register against the canonical
+    # projection their sink reads: dev `workpulse`, test `workpulse_test`.
+    assert "CDC_PROJECTION_DATABASE=workpulse" in makefile
+    assert "CDC_PROJECTION_DATABASE=workpulse_test " in makefile
+    assert re.search(r"CDC_PROJECTION_DATABASE=workpulse_cdc\b", makefile) is None
+    assert "workpulse_test_cdc" not in makefile
 
 
 def test_register_script_seeds_readiness_before_creating_the_connector() -> None:

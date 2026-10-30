@@ -1,10 +1,10 @@
-"""Idempotent ClickHouse DDL for the Analytics & Reports projection (ADR 0019).
+"""Idempotent ClickHouse DDL for the Analytics & Reports projection (ADR 0019/0024).
 
 The SQL lives in `database/clickhouse/schema.sql` so ops can read and run the
-exact same statements outside the app. The worker applies it strictly at startup
-(it cannot project without tables); the API applies it best-effort so ClickHouse
-being down never blocks boot — report reads then answer `503
-reports_unavailable` (ADR 0019 decision 11).
+exact same statements outside the app. The CDC sink applies it strictly at
+startup (it cannot project without tables); the API applies it best-effort so
+ClickHouse being down never blocks boot — report reads then answer `503
+reports_unavailable` (ADR 0019 decision 11, ADR 0024).
 """
 
 from pathlib import Path

@@ -1,17 +1,17 @@
-"""Projection and report DTOs for Analytics & Reports (T4, ADR 0019).
+"""Projection row and report DTOs for Analytics & Reports (T4/T5, ADR 0019/0024).
 
 These are internal value types, not the HTTP contract (T5 owns the pinned
-request/response models). The fold rows mirror the ADR 0019 ClickHouse tables
-one-to-one; `updated_at` is deliberately absent because it is the writer's
-bookkeeping version, never a fold input or a report fact.
+request/response models). The row types mirror the ADR 0019 ClickHouse tables
+one-to-one; `updated_at` is deliberately absent because it is the CDC writer's
+bookkeeping version (the source commit timestamp), never a report fact.
 
 Two invariants live here:
 
 - Rows carry identifiers, dates, counts and hours only — no names, emails,
   salaries or leave reasons (`.ai/security.md`). Display labels are resolved at
   query time through a read-only port (ADR 0019 decision 8).
-- Seniority bands are a closed vocabulary (`SENIORITY_BANDS`), so the fold and
-  the read service cannot drift on band codes.
+- Seniority bands are a closed vocabulary (`SENIORITY_BANDS`), so the SQL
+  expression and the read-side Python twin cannot drift on band codes.
 """
 
 import calendar
@@ -32,10 +32,10 @@ from pydantic import (
     model_validator,
 )
 
-#: Overtime states the projection can observe from the event stream.
-#: `included_in_payroll` is deliberately absent: payroll's flip emits no event
-#: (ADR 0018 decision 6), so a paid claim stays `hr_verified` and is counted
-#: exactly once.
+#: Overtime states the projection can observe. `included_in_payroll` is
+#: deliberately absent: payroll's flip emits no domain event (ADR 0018
+#: decision 6), and the CDC sink maps the OLTP state back to `hr_verified`
+#: (ADR 0024 D6), so a paid claim is counted exactly once.
 OVERTIME_STATUSES = (
     "requested",
     "manager_approved",
@@ -43,18 +43,6 @@ OVERTIME_STATUSES = (
     "rejected",
     "withdrawn",
 )
-
-#: Which overtime states may transition where. Terminal side exits are
-#: reachable only from the open pre-verification states; a rejection may also
-#: un-verify an `hr_verified` claim (ADR 0018 / spec rule 5).
-OVERTIME_TRANSITIONS: dict[str, frozenset[str]] = {
-    "manager_approved": frozenset({"requested"}),
-    # Forward-jumps are tolerated (a gap in retained history must not hide
-    # verified hours); nothing moves a terminal row back to an open state.
-    "hr_verified": frozenset({"requested", "manager_approved"}),
-    "rejected": frozenset({"requested", "manager_approved", "hr_verified"}),
-    "withdrawn": frozenset({"requested", "manager_approved"}),
-}
 
 #: Seniority band codes, ordered youngest tenure first.
 SENIORITY_BANDS = ("lt_1y", "1_3y", "3_5y", "5y_plus")
@@ -103,45 +91,6 @@ class AssignmentRow:
     department_id: UUID | None = None
     position_id: UUID | None = None
     location_id: UUID | None = None
-
-
-@dataclass(frozen=True, slots=True)
-class DimensionState:
-    """The employee's folded dimension state, as loaded for one fold.
-
-    `employee` is `None` when the stream did not (or no longer) includes the
-    employee's `employee.created`; facts still project with `unknown`
-    dimensions rather than disappearing (honest degradation, spec rule 3).
-    """
-
-    employee: EmployeeRow | None = None
-    assignments: tuple[AssignmentRow, ...] = ()
-
-
-@dataclass(frozen=True, slots=True)
-class DimensionFold:
-    """The rows one employee event contributes, plus an optional re-stamp.
-
-    `assignments` holds only the intervals the event changed (a closed interval
-    and/or the opened one); the writer upserts them as complete rows.
-    `restamp_from` is set by a transfer: every fact dated on or after
-    `effective_from` re-resolves its dimension stamps (backdated-transfer
-    correction, ADR 0019 decision 5). The writer executes that bounded pass.
-    """
-
-    employee: EmployeeRow | None = None
-    assignments: tuple[AssignmentRow, ...] = ()
-    restamp_from: date | None = None
-
-
-@dataclass(frozen=True, slots=True)
-class DimensionStamp:
-    """The dimension triple and tenure anchor resolved for one fact date."""
-
-    department_id: UUID | None
-    position_id: UUID | None
-    location_id: UUID | None
-    hired_at: date | None
 
 
 @dataclass(frozen=True, slots=True)

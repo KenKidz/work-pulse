@@ -31,7 +31,6 @@ scrape_configs:
           - host.docker.internal:9102
           - host.docker.internal:9103
           - host.docker.internal:9104
-          - host.docker.internal:9105
           - host.docker.internal:9106
         labels:
           component: worker

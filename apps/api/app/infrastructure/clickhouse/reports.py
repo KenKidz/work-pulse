@@ -12,19 +12,20 @@ dedupe surfaces as doubled aggregates in tests rather than silent drift
 Attribution is query-time as-of (CDC decision D3): facts carry no live
 dimension stamps, so every fact row resolves its assignment interval — and its
 tenure anchor from `dim_employee` — at read time, exactly as
-`folds.resolve_assignment` does (latest interval starting on or before the fact
-date, earliest-interval fallback, `unknown` when the employee has no
+`attribution.resolve_ordered_assignment` does (latest interval starting on or before
+the fact date, earliest-interval fallback, `unknown` when the employee has no
 intervals). A late/backdated `dim_assignment` row therefore corrects
 attribution on the next query with no re-stamp pass, and a fact with no
 dimension history is never dropped.
 
 Seniority is resolved per fact date in SQL (tenure measured at the bucket end,
-clipped to `to`) with the same anniversary thresholds as the fold's
-`seniority_band`; a pre-extension fact (null `hired_at`) groups as `unknown`.
+clipped to `to`) with the same anniversary thresholds as
+`attribution.seniority_band`; a pre-extension fact (null `hired_at`) groups as
+`unknown`.
 
-Headcount is folded in Python from the two dimension tables: it needs a
+Headcount is resolved in Python from the two dimension tables: it needs a
 covering-assignment lookup per bucket that is clearer (and easier to keep
-identical to the fold) than a multi-way ClickHouse join. The volume is
+identical to the as-of join) than a multi-way ClickHouse join. The volume is
 employees, not events; every fact-table query stays in the store.
 
 Any client failure (unreachable store, timeout, broken query) becomes
@@ -40,8 +41,11 @@ from uuid import UUID
 
 from clickhouse_connect.driver.client import Client
 
+from app.domains.reports.attribution import (
+    resolve_ordered_assignment,
+    seniority_band,
+)
 from app.domains.reports.exceptions import ReportsUnavailableError
-from app.domains.reports.folds import resolve_ordered_assignment, seniority_band
 from app.domains.reports.schemas import (
     UNKNOWN_GROUP_KEY,
     AssignmentRow,
@@ -148,7 +152,7 @@ class ClickhouseReportsRepository:
         transfer can put one employee in two groups inside one bucket — their
         facts split at `effective_from`, and so does the denominator.
 
-        The fold is a ClickHouse aggregate over a generated bucket spine, not a
+        The denominator is a ClickHouse aggregate over a generated bucket spine, not a
         Python scan of the tenant: the flagship query must stay inside the
         Phase-4 budget as the workforce grows, and only the groups that already
         have verified overtime are consumed by the caller.
@@ -306,7 +310,7 @@ ORDER BY {ordinals}
     def headcount_aggregates(
         self, query: ReportQuery
     ) -> Sequence[HeadcountAggregateRow]:
-        """Headcount/joiners/leavers from the folded dimension state.
+        """Headcount/joiners/leavers resolved from the dimension tables.
 
         - active at the bucket's as-of date: hired on or before it and not
           terminated before it;
@@ -452,7 +456,7 @@ ORDER BY {ordinals}
         (`effective_from = 1970-01-01`) per employee carrying the earliest
         interval's dimensions, so a fact predating the first known interval
         still resolves to that interval — the same fallback as
-        `folds.resolve_assignment`; an employee with no intervals matches
+        `attribution.resolve_ordered_assignment`; an employee with no intervals matches
         nothing and groups as `unknown` rather than disappearing.
         """
         parameters: dict[str, Any] = {
@@ -597,7 +601,7 @@ def _group_expression(dimension: str, date_column: str, interval: str) -> str:
 
 
 #: Tenure thresholds shared by every SQL seniority band (the Python twin lives
-#: in `folds.seniority_band`; `test_reports_api.py` pins parity at boundaries).
+#: in `attribution.seniority_band`; `test_reports_api.py` pins parity at boundaries).
 _SENIORITY_THRESHOLDS = ((5, "5y_plus"), (3, "3_5y"), (1, "1_3y"))
 
 
@@ -622,7 +626,7 @@ def _denominator_group_expression(dimension: str) -> str:
 
 
 def _seniority_expression(hired_column: str, date_column: str, interval: str) -> str:
-    """SQL twin of `folds.seniority_band` at the row's bucket end."""
+    """SQL twin of `attribution.seniority_band` at the row's bucket end."""
     if interval == "total":
         tenure_at = "{end:Date}"
     elif interval == "day":

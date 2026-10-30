@@ -41,7 +41,6 @@ WORKER_METRICS_PORTS = {
     "realtime": 9102,
     "notifications": 9103,
     "payroll": 9104,
-    "reports": 9105,
     "cdc_sink": 9106,
 }
 

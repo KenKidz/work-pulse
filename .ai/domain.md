@@ -16,7 +16,7 @@
 | **Leave** | requests, approvals, balances, calendar | LeaveRequest, LeaveBalance, LeavePolicy | 3 |
 | **Notifications** | message delivery across channels | Notification, Delivery | 3 |
 | **Payroll** | deterministic salary simulation | Salary, Timesheet, PayrollRun, Payslip | 3–4 |
-| **Analytics & Reports** | OLAP projections and workforce reports | analytical tables/views (no OLTP aggregates) | 4 |
+| **Analytics & Reports** | OLAP projections and workforce reports | analytical tables/views (no OLTP aggregates) | 4–5 |
 | **Recruitment** | jobs → candidates → interviews → hiring | Job, Candidate, Interview | 4+ |
 | **Performance** | goals, reviews, feedback, skills | Goal, Review, Skill | 4+ |
 
@@ -43,13 +43,17 @@ Rules:
 - Contexts integrate through **services** (Phase 1–2) and **events** (Phase 3+).
   Never through another context's tables.
 - **Analytics & Reports** and **Notifications** are pure consumers: they must be
-  rebuildable from the event stream without touching OLTP. For **Notifications**
-  that means the `Notification`/`Delivery` rows (`.ai/features/notifications.md`)
-  — recipient and content enrichment is a read-only reference lookup through
-  ports (events carry no PII, `.ai/security.md`), never a projection input and
-  never another context's tables directly. The one deliberate carve-out is the
-  user-owned `notifications.read_at` overlay (ADR 0016): the inbox HTTP path may
-  write it, the worker never does, and a rebuild may drop it.
+  rebuildable without touching OLTP at query time. **Analytics & Reports** moved
+  in Phase 5 from folding `workpulse.events` to a database-log projection
+  (`PostgreSQL → Debezium → Kafka → ClickHouse`, ADR 0024): the sink owns the
+  projection, a rebuild is connector snapshot + WAL replay, and the report path
+  reads only ClickHouse. For **Notifications** that means the
+  `Notification`/`Delivery` rows (`.ai/features/notifications.md`) — recipient
+  and content enrichment is a read-only reference lookup through ports (events
+  carry no PII, `.ai/security.md`), never a projection input and never another
+  context's tables directly. The one deliberate carve-out is the user-owned
+  `notifications.read_at` overlay (ADR 0016): the inbox HTTP path may write it,
+  the worker never does, and a rebuild may drop it.
 
 ## Ubiquitous language
 

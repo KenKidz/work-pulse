@@ -1,12 +1,14 @@
--- WorkPulse — Analytics & Reports projection (Phase 4, ADR 0019).
+-- WorkPulse — Analytics & Reports projection (Phase 4–5, ADR 0019/0024).
 --
--- Current-state rows per entity, not an event log: the durable stream lives in
--- `event_outbox`/Kafka. `updated_at` is the ReplacingMergeTree version and is
--- bookkeeping only — report math never reads it. Reads must use `FINAL` (or an
--- equivalent argMax fold); a query that forgets it doubles aggregates.
+-- Current-state rows per entity, not an event log: the durable source is the
+-- PostgreSQL log captured by Debezium (Phase 5, ADR 0024); `workpulse.events`
+-- remains the domain-event backbone for its other consumers. `updated_at` is
+-- the ReplacingMergeTree version (the source commit timestamp) and report math
+-- never reads it. Reads must use `FINAL` (or an equivalent argMax fold); a query
+-- that forgets it doubles aggregates.
 --
--- Applied idempotently by `app.infrastructure.clickhouse.schema` (the reports
--- worker fails loudly, the API is best-effort — ADR 0019 decision 11). Schema
+-- Applied idempotently by `app.infrastructure.clickhouse.schema` (the CDC sink
+-- fails loudly, the API is best-effort — ADR 0019 decision 11 / ADR 0024). Schema
 -- changes are additive `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` statements
 -- appended here; destructive changes need a rebuild plus a new ADR.
 

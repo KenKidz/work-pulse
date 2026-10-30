@@ -1,6 +1,6 @@
 """ClickHouse infrastructure: the Phase-4 analytical store (ADR 0019).
 
-Wired at the edges (the reports worker and the reports repository). Domains
+Wired at the edges (the CDC sink writer and the reports repository). Domains
 never import this package directly — they depend on repository protocols.
 """
 

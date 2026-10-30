@@ -24,7 +24,6 @@ from opentelemetry.trace import StatusCode
 
 import app.shared.telemetry as telemetry_module
 from app.domains.attendance.events import attendance_checked_in
-from app.domains.employees.events import employee_created
 from app.domains.leave.events import leave_requested
 from app.domains.notifications.models import RenderedMessage
 from app.domains.notifications.schemas import (
@@ -32,7 +31,6 @@ from app.domains.notifications.schemas import (
     Recipient,
     SubjectFacts,
 )
-from app.domains.reports.schemas import DimensionState
 from app.shared.logging import add_trace_context, get_logger
 from app.shared.telemetry import (
     event_type_label,
@@ -43,7 +41,6 @@ from tests.unit.telemetry_harness import TelemetryHarness as Harness
 from workers.notifications.consumer import NotificationsConsumer, NotificationUnit
 from workers.payroll.runner import PAYROLL_RUN_UNIT, PayrollRunWorker
 from workers.realtime.consumer import RealtimeConsumer
-from workers.reports.consumer import ReportsConsumer
 
 TENANT = UUID("00000000-0000-4000-8000-00000000000a")
 ACTOR = UUID("00000000-0000-4000-8000-000000000031")
@@ -52,9 +49,6 @@ MANAGER = UUID("00000000-0000-4000-8000-000000000003")
 MANAGER_USER = UUID("00000000-0000-4000-8000-000000000041")
 LEAVE_REQUEST = UUID("00000000-0000-4000-8000-0000000000e1")
 ATTENDANCE = UUID("00000000-0000-4000-8000-0000000000a1")
-DEPARTMENT = UUID("00000000-0000-4000-8000-0000000000d1")
-POSITION = UUID("00000000-0000-4000-8000-0000000000f1")
-LOCATION = UUID("00000000-0000-4000-8000-0000000000c1")
 NOW = datetime(2026, 10, 29, 9, 0, tzinfo=UTC)
 WORKDAY = date(2026, 10, 29)
 
@@ -132,25 +126,6 @@ def _requested() -> bytes:
     ).encode("utf-8")
 
 
-def _created() -> bytes:
-    return json.dumps(
-        employee_created(
-            tenant_id=TENANT,
-            actor_id=ACTOR,
-            occurred_at=NOW,
-            employee_id=EMPLOYEE,
-            department_id=DEPARTMENT,
-            position_id=POSITION,
-            location_id=LOCATION,
-            employment_type="full_time",
-            hired_at=date(2025, 1, 6),
-        )
-    ).encode("utf-8")
-
-
-# --- the shared unit helper ----------------------------------------------------
-
-
 async def test_worker_unit_records_a_success_span_and_correlates_logs(
     harness: Harness,
 ) -> None:
@@ -188,13 +163,13 @@ async def test_worker_unit_records_failure_without_the_exception_message(
 
 
 async def test_worker_unit_records_a_deliberate_skip(harness: Harness) -> None:
-    async with worker_unit("reports", "employee.created") as unit:
+    async with worker_unit("cdc_sink", "employee.created") as unit:
         unit.mark_skipped()
 
     span = harness.finished()[0]
     assert span.attributes["workpulse.status"] == "skipped"
     assert span.status.status_code is StatusCode.UNSET
-    _assert_metric(harness, "reports", "employee.created", "skipped")
+    _assert_metric(harness, "cdc_sink", "employee.created", "skipped")
 
 
 def test_event_type_label_is_bounded_and_pii_safe() -> None:
@@ -480,94 +455,3 @@ async def test_payroll_records_success_and_a_failed_run(harness: Harness) -> Non
     assert failed_span.status.status_code is StatusCode.ERROR
     _assert_span_correlation(failed_span, failing_logs, "payroll_run_failed")
     _assert_metric(harness, "payroll", PAYROLL_RUN_UNIT, "failed")
-
-
-# --- reports -------------------------------------------------------------------
-
-
-class _ReportsSource:
-    def __init__(self) -> None:
-        self.commits = 0
-
-    async def getmany(self, *, timeout_ms: int) -> Mapping[Any, Sequence[Any]]:
-        return {}
-
-    async def commit(self) -> None:
-        self.commits += 1
-
-
-class _ProjectionWriter:
-    def __init__(self, error: BaseException | None = None) -> None:
-        self.error = error
-        self.folds: list[Any] = []
-
-    def load_dimensions(self, tenant_id: UUID, employee_id: UUID) -> DimensionState:
-        if self.error is not None:
-            raise self.error
-        return DimensionState()
-
-    def apply_dimension_fold(self, fold: Any) -> None:
-        self.folds.append(fold)
-
-
-def _reports(
-    source: _ReportsSource,
-    writer: _ProjectionWriter,
-) -> ReportsConsumer:
-    return ReportsConsumer(
-        source,
-        cast(Any, writer),
-        poll_seconds=0.001,
-        backoff_base=0.01,
-        backoff_max=0.02,
-    )
-
-
-async def test_reports_records_success_and_a_failed_projection(
-    harness: Harness,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    source = _ReportsSource()
-    writer = _ProjectionWriter()
-    consumer = _reports(source, writer)
-
-    with _capture_logs():
-        await consumer._handle(_created())
-
-    span = harness.finished()[0]
-    assert span.name == "reports employee.created"
-    assert span.attributes["workpulse.status"] == "succeeded"
-    assert writer.folds and source.commits == 1
-    _assert_metric(harness, "reports", "employee.created", "succeeded")
-
-    failing = _reports(source, _ProjectionWriter(error=RuntimeError("clickhouse down")))
-    pauses: list[float] = []
-
-    async def fake_pause(seconds: float) -> None:
-        pauses.append(seconds)
-        failing.stop()
-
-    monkeypatch.setattr(failing, "_pause", fake_pause)
-
-    with _capture_logs() as logs:
-        await failing._handle(_created())
-
-    failed_span = harness.finished()[-1]
-    assert failed_span.attributes["workpulse.status"] == "failed"
-    assert failed_span.attributes["error.type"] == "projection_failed"
-    _assert_span_correlation(failed_span, logs, "consumer_projection_failed")
-    assert pauses == [0.01]
-    assert source.commits == 1  # no commit past the failed projection
-    _assert_metric(harness, "reports", "employee.created", "failed")
-
-
-async def test_reports_marks_malformed_messages_as_skipped(harness: Harness) -> None:
-    source = _ReportsSource()
-    consumer = _reports(source, _ProjectionWriter())
-
-    await consumer._handle(b"not-json")
-
-    span = harness.finished()[0]
-    assert span.attributes["workpulse.status"] == "skipped"
-    assert source.commits == 1
-    _assert_metric(harness, "reports", "unknown", "skipped")
