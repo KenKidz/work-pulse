@@ -581,6 +581,17 @@ delete op removes nothing and increments the counter (AC 6); `ready` gate
   invisibility on CDC-fed reads (AC 4); assert `ready = 0` on the shadow →
   `ReportsUnavailableError` 503 (AC 5, twin of the existing gate test).
 *Verify:* `make check-api` green.
+*Implementation (2026-10-30):* landed as `tests/integration/test_cdc_parity.py`
+  + `tests/integration/cdc_parity_helpers.py`. The harness runs the production
+  consumers over an in-memory one-page source (no broker — T4/T7 own the
+  transport): relay-ordered outbox payloads for the fold path, D8 row-state
+  snapshot envelopes for the CDC path. It asserts exact canonical-vs-shadow
+  aggregate equality for all four reports (monthly + total), pins the
+  mid-period/backdated-transfer attribution on both paths, proves tenant-B
+  isolation on CDC-fed reads, and covers both the repository fence and the API
+  `503` over a fenced shadow. The scenario also asserts the OLTP end states
+  (`included_in_payroll` ×2, `rejected`, `hr_verified`) so the D6 mapping and
+  the payroll flip are actually exercised.
 
 **T7 — Real Debezium in the e2e hop + recorded fixtures (AC 1, 10, 11).**
 - `Makefile` `check-e2e` prerequisites add `cdc-test-up`.
