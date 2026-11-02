@@ -6,6 +6,8 @@
 
 import { ApiError } from "@workpulse/api-client/mutator/custom-fetch";
 
+import { sharedApiErrorMessage, type SharedApiErrorTranslator } from "@/lib/api-errors";
+
 export type PayrollErrorKey =
   | "periodNotClosed"
   | "periodOpen"
@@ -37,6 +39,8 @@ export type PayrollErrorTranslator = (key: PayrollErrorKey) => string;
 
 /** A stable, user-facing sentence for a payroll failure (never a raw code). */
 export function payrollErrorMessage(error: unknown, t: PayrollErrorTranslator): string {
+  const shared = sharedApiErrorMessage(error, t as unknown as SharedApiErrorTranslator);
+  if (shared !== null) return shared;
   if (error instanceof ApiError) {
     switch (error.code) {
       case "payroll_period_not_closed":

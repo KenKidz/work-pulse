@@ -38,6 +38,8 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import { formatRecruitmentTimestamp } from "../dates";
 import { recruitmentErrorMessage } from "../labels";
 import { useInterviewComplete } from "../hooks/use-recruitment";
@@ -64,7 +66,7 @@ export function InterviewFeedbackDialog({
   const t = useTranslations("recruitment.feedback");
   const common = useTranslations("recruitment.actions");
   const validation = useTranslations("recruitment.validation");
-  const errors = useTranslations("recruitment.errors");
+  const errors = useApiErrorTranslator("recruitment.errors");
   const ratings = useTranslations("recruitment.ratings");
   const locale = useLocale();
   const completeInterview = useInterviewComplete();

@@ -26,6 +26,8 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import { EmptyState } from "@/components/empty-state";
 import { Spinner } from "@/components/ui/spinner";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import { isReportErrorRetryable, reportErrorMessage } from "../labels";
 import type { ReportKind } from "../types";
 import { formatRange, normalizeReport } from "../utils";
@@ -57,7 +59,7 @@ function LoadingPanel() {
 
 function ErrorPanel({ state }: { state: ReportState }) {
   const t = useTranslations("reports.report");
-  const errors = useTranslations("reports.errors");
+  const errors = useApiErrorTranslator("reports.errors");
   const retryable = isReportErrorRetryable(state.error);
   return (
     <Card className="rounded-md border-border shadow-none">
@@ -112,10 +114,7 @@ export function ReportPanel({ state }: { state: ReportState }) {
         ? null
         : normalizeReport(kind, report, {
             t: (key, values) =>
-              (t as (key: string, values?: Record<string, string | number>) => string)(
-                key,
-                values,
-              ),
+              (t as (key: string, values?: Record<string, string | number>) => string)(key, values),
             locale,
             hourShort: units("hourShort"),
             minuteShort: units("minuteShort"),

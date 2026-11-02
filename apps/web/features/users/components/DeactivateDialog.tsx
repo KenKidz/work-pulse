@@ -20,6 +20,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import { useUserDeactivate, userFieldErrors } from "../hooks/use-users";
 import type { User } from "../types";
 
@@ -33,7 +35,7 @@ type DeactivateDialogProps = {
 export function DeactivateDialog({ open, onOpenChange, user }: DeactivateDialogProps) {
   const t = useTranslations("users");
   const common = useTranslations("common.actions");
-  const errors = useTranslations("users.errors");
+  const errors = useApiErrorTranslator("users.errors");
   const [rootError, setRootError] = useState<string | null>(null);
   const deactivate = useUserDeactivate();
 

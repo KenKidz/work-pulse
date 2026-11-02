@@ -42,6 +42,8 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import {
   reviewFieldErrors,
   usePerformanceAccess,
@@ -73,7 +75,7 @@ export function ReviewFormDialog({ open, onOpenChange, review }: ReviewFormDialo
   const t = useTranslations("performance.reviews.form");
   const common = useTranslations("performance.actions");
   const validation = useTranslations("performance.validation");
-  const errors = useTranslations("performance.errors");
+  const errors = useApiErrorTranslator("performance.errors");
   const fallbacks = useTranslations("performance.fallbacks");
   const ratings = useTranslations("performance.reviews.ratings");
   const { user, canViewTeam } = usePerformanceAccess();

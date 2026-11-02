@@ -59,6 +59,7 @@ Roadmap: `.ai/architecture.md`.
 | `make gen-api` | regenerate OpenAPI + typed `@workpulse/api-client` |
 | `make check` | all gates — run before claiming done |
 | `make check-e2e` | Playwright e2e gate (migrate + seed + dev servers) — part of `make check` |
+| `make check-load` | k6 load gate (60s at 25 check-ins/s, p95 < 300ms, 0 errors) — part of `make check`; requires the `k6` binary on PATH |
 
 ## Repo map
 

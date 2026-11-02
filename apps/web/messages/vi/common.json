@@ -26,6 +26,10 @@
     "archive": "Lưu trữ",
     "restore": "Khôi phục"
   },
+  "errors": {
+    "rateLimited": "Bạn thao tác quá thường xuyên. Vui lòng đợi một lát rồi thử lại.",
+    "dependencyUnavailable": "Dịch vụ tạm thời không khả dụng. Vui lòng thử lại sau."
+  },
   "states": {
     "loading": "Đang tải…",
     "saving": "Đang lưu…",

@@ -41,6 +41,8 @@ import { toast } from "sonner";
 
 import { useAuth } from "@/features/auth/components/AuthGate";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import {
   invalidateAllEmployeeSkills,
   invalidateEmployeeSkills,
@@ -201,7 +203,7 @@ export function goalFieldErrors(
 
 export function useGoalCreate() {
   const t = useTranslations("performance.toasts");
-  const errors = useTranslations("performance.errors");
+  const errors = useApiErrorTranslator("performance.errors");
   const queryClient = useQueryClient();
   return useCreateGoal({
     mutation: {
@@ -216,7 +218,7 @@ export function useGoalCreate() {
 
 export function useGoalUpdate() {
   const t = useTranslations("performance.toasts");
-  const errors = useTranslations("performance.errors");
+  const errors = useApiErrorTranslator("performance.errors");
   const queryClient = useQueryClient();
   return useUpdateGoal({
     mutation: {
@@ -232,7 +234,7 @@ export function useGoalUpdate() {
 /** `draft → active`; a stale row surfaces `goal_not_draft` as a toast. */
 export function useGoalActivate() {
   const t = useTranslations("performance.toasts");
-  const errors = useTranslations("performance.errors");
+  const errors = useApiErrorTranslator("performance.errors");
   const queryClient = useQueryClient();
   return useActivateGoal({
     mutation: {
@@ -247,7 +249,7 @@ export function useGoalActivate() {
 
 export function useGoalComplete() {
   const t = useTranslations("performance.toasts");
-  const errors = useTranslations("performance.errors");
+  const errors = useApiErrorTranslator("performance.errors");
   const queryClient = useQueryClient();
   return useCompleteGoal({
     mutation: {
@@ -262,7 +264,7 @@ export function useGoalComplete() {
 
 export function useGoalCancel() {
   const t = useTranslations("performance.toasts");
-  const errors = useTranslations("performance.errors");
+  const errors = useApiErrorTranslator("performance.errors");
   const queryClient = useQueryClient();
   return useCancelGoal({
     mutation: {
@@ -306,7 +308,7 @@ export function reviewFieldErrors(
 
 export function useReviewCreate() {
   const t = useTranslations("performance.toasts");
-  const errors = useTranslations("performance.errors");
+  const errors = useApiErrorTranslator("performance.errors");
   const queryClient = useQueryClient();
   return useCreateReview({
     mutation: {
@@ -321,7 +323,7 @@ export function useReviewCreate() {
 
 export function useReviewUpdate() {
   const t = useTranslations("performance.toasts");
-  const errors = useTranslations("performance.errors");
+  const errors = useApiErrorTranslator("performance.errors");
   const queryClient = useQueryClient();
   return useUpdateReview({
     mutation: {
@@ -336,7 +338,7 @@ export function useReviewUpdate() {
 
 export function useReviewComplete() {
   const t = useTranslations("performance.toasts");
-  const errors = useTranslations("performance.errors");
+  const errors = useApiErrorTranslator("performance.errors");
   const queryClient = useQueryClient();
   return useCompleteReview({
     mutation: {
@@ -351,7 +353,7 @@ export function useReviewComplete() {
 
 export function useReviewCancel() {
   const t = useTranslations("performance.toasts");
-  const errors = useTranslations("performance.errors");
+  const errors = useApiErrorTranslator("performance.errors");
   const queryClient = useQueryClient();
   return useCancelReview({
     mutation: {
@@ -367,7 +369,7 @@ export function useReviewCancel() {
 /** File the nominated provider's one comment; both review lists refresh. */
 export function useReviewFeedbackSubmit() {
   const t = useTranslations("performance.toasts");
-  const errors = useTranslations("performance.errors");
+  const errors = useApiErrorTranslator("performance.errors");
   const queryClient = useQueryClient();
   return useSubmitReviewFeedback({
     mutation: {
@@ -399,7 +401,7 @@ export function skillFieldErrors(
 
 export function useSkillCreate() {
   const t = useTranslations("performance.toasts");
-  const errors = useTranslations("performance.errors");
+  const errors = useApiErrorTranslator("performance.errors");
   const queryClient = useQueryClient();
   return useCreateSkill({
     mutation: {
@@ -414,7 +416,7 @@ export function useSkillCreate() {
 
 export function useSkillUpdate() {
   const t = useTranslations("performance.toasts");
-  const errors = useTranslations("performance.errors");
+  const errors = useApiErrorTranslator("performance.errors");
   const queryClient = useQueryClient();
   return useUpdateSkill({
     mutation: {
@@ -432,7 +434,7 @@ export function useSkillUpdate() {
 
 export function useSkillArchive() {
   const t = useTranslations("performance.toasts");
-  const errors = useTranslations("performance.errors");
+  const errors = useApiErrorTranslator("performance.errors");
   const queryClient = useQueryClient();
   return useArchiveSkill({
     mutation: {
@@ -447,7 +449,7 @@ export function useSkillArchive() {
 
 export function useSkillRestore() {
   const t = useTranslations("performance.toasts");
-  const errors = useTranslations("performance.errors");
+  const errors = useApiErrorTranslator("performance.errors");
   const queryClient = useQueryClient();
   return useRestoreSkill({
     mutation: {
@@ -489,7 +491,7 @@ export function employeeSkillFieldErrors(
 
 export function useEmployeeSkillCreate(employeeId: string) {
   const t = useTranslations("performance.toasts");
-  const errors = useTranslations("performance.errors");
+  const errors = useApiErrorTranslator("performance.errors");
   const queryClient = useQueryClient();
   return useRecordEmployeeSkill({
     mutation: {
@@ -504,7 +506,7 @@ export function useEmployeeSkillCreate(employeeId: string) {
 
 export function useEmployeeSkillUpdate(employeeId: string) {
   const t = useTranslations("performance.toasts");
-  const errors = useTranslations("performance.errors");
+  const errors = useApiErrorTranslator("performance.errors");
   const queryClient = useQueryClient();
   return useUpdateEmployeeSkill({
     mutation: {
@@ -519,7 +521,7 @@ export function useEmployeeSkillUpdate(employeeId: string) {
 
 export function useEmployeeSkillRemove(employeeId: string) {
   const t = useTranslations("performance.toasts");
-  const errors = useTranslations("performance.errors");
+  const errors = useApiErrorTranslator("performance.errors");
   const queryClient = useQueryClient();
   return useRemoveEmployeeSkill({
     mutation: {

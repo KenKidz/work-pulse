@@ -1,6 +1,6 @@
 # Feature: Reliability (load testing, rate limiting, circuit breakers)
 
-- **Status:** approved
+- **Status:** done
 - **Phase:** 7
 - **Size:** M
 - **Surfaces:** api+web+events+workers (event contracts unchanged — the
@@ -214,54 +214,54 @@ None added or changed.
 
 ## Acceptance criteria
 
-- [ ] API (auth tier throttle): given 31 `POST /auth/login` attempts from one
+- [x] API (auth tier throttle): given 31 `POST /auth/login` attempts from one
       IP within 60s at default settings, when the 31st arrives, then it returns
       `429 {"error":{"code":"rate_limited"}}` with `Retry-After`, and the
       request never reaches the auth service.
-- [ ] API (mutation tier + budget independence): given one user exceeds 120
+- [x] API (mutation tier + budget independence): given one user exceeds 120
       mutations/60s while a second user stays under, when the first user
       mutates again, then `429 rate_limited`; the first user's `GET` reads
       still return 200 and the second user's mutations still return 2xx
       (per-user budgets, not shared).
-- [ ] API (failure — Redis unreachable): given Redis is down, when a request
+- [x] API (failure — Redis unreachable): given Redis is down, when a request
       passes the middleware, then it proceeds (fail-open, 2xx) and the warning
       log contains no PII.
-- [ ] API (breaker — fail fast): given the MinIO dependency has failed past the
+- [x] API (breaker — fail fast): given the MinIO dependency has failed past the
       threshold and the breaker is open, when a document route calls storage,
       then it returns `503 {"error":{"code":"dependency_unavailable"}}` without
       waiting on MinIO (bounded fast failure, no orphan rows).
-- [ ] API (breaker — recovery): given the breaker is open, when the dependency
+- [x] API (breaker — recovery): given the breaker is open, when the dependency
       recovers and the cooldown elapses, then the single half-open trial
       succeeds, the breaker closes, and subsequent requests return 2xx.
-- [ ] API (access semantics unchanged): given throttled and unthrottled
+- [x] API (access semantics unchanged): given throttled and unthrottled
       requests, when a cross-tenant read and a denied-role mutation are sent
       under budget, then they still return `404` and `403` respectively —
       the middleware changes no authorization behavior.
-- [ ] Workers (relay breaker): given Kafka is down, when the relay attempts to
+- [x] Workers (relay breaker): given Kafka is down, when the relay attempts to
       publish, then the breaker opens after the threshold and further attempts
       fail fast without blocking; outbox rows remain unpublished while API
       writes keep succeeding; after Kafka recovers and the cooldown elapses,
       the backlog publishes in per-employee order.
-- [ ] Workers (notifications breaker — failure): given the email provider is
+- [x] Workers (notifications breaker — failure): given the email provider is
       down, when the notifications consumer processes a delivery, then the
       unit fails fast (no hang), bounded retries end in a terminal
       `failed`/`skipped` state, and the consumer loop keeps processing
       subsequent messages.
-- [ ] Web (429 copy): given a mutation returns `429 rate_limited`, when the UI
+- [x] Web (429 copy): given a mutation returns `429 rate_limited`, when the UI
       handles the error, then the pinned rate-limited copy renders (toast/error
       state) in the active locale with en + vi catalog parity — never raw
       server text.
-- [ ] Web (503 copy): given a document request returns
+- [x] Web (503 copy): given a document request returns
       `503 dependency_unavailable`, then the pinned unavailable copy renders in
       the surface's error state.
-- [ ] Contract (no drift): given the middleware and error codes, when
+- [x] Contract (no drift): given the middleware and error codes, when
       `make gen-api` runs, then `contracts/openapi/openapi.json` and
       `packages/api-client` have zero diff.
-- [ ] Load (`make check-load`, wired into `make check`): given the local stack
+- [x] Load (`make check-load`, wired into `make check`): given the local stack
       with load fixtures, when the k6 smoke runs 60s at a sustained 25
       check-ins/s plus board reads, then p95 API latency < 300ms with 0 errors
       (no 5xx, no 429/503), and breaching the thresholds fails the command.
-- [ ] Integration (limiter determinism): given an injected clock and an
+- [x] Integration (limiter determinism): given an injected clock and an
       explicit small budget (e.g. 3 req / 60s), when 4 requests arrive in one
       window, then exactly one returns `429` with a correct `Retry-After`, and
       the window resets on the clock — no wall-clock sleeps in tests.
@@ -317,9 +317,11 @@ drifting (rule 12).
 Research gaps this plan resolves explicitly (implementation defaults, per
 `## Decisions` closing note):
 
-- **Client IP extraction is net-new.** The middleware reads
-  `X-Forwarded-For` (first hop) with `request.client.host` fallback; used for
-  the auth-tier key and the mutation-tier fallback key only.
+- **Client IP extraction is net-new.** The middleware uses the socket peer by
+  default; `X-Forwarded-For`'s first hop is honored only when the immediate
+  peer is listed in `RATE_LIMIT_TRUSTED_PROXIES` (a proxy that overwrites the
+  header). The key is used for the auth tier and the mutation-tier fallback
+  only.
 - **Middleware cannot `Depends`-inject identity.** The mutation-tier key
   resolves the session cookie through the same auth service seam
   (`dependencies.get_current_user` / `AuthService.me`) for the *user id only*;

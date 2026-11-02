@@ -36,12 +36,10 @@ import {
 
 import { useAuth } from "@/features/auth/components/AuthGate";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import { formatRecruitmentTimestamp } from "../dates";
-import {
-  interviewStatusVariant,
-  isForbiddenError,
-  organizationLabel,
-} from "../labels";
+import { interviewStatusVariant, isForbiddenError, organizationLabel } from "../labels";
 import {
   useActiveEmployees,
   useInterviews,
@@ -67,7 +65,7 @@ export function InterviewsPanel() {
   const statusLabels = useTranslations("recruitment.status.interview");
   const fallbacks = useTranslations("recruitment.fallbacks");
   const locale = useLocale();
-  const errors = useTranslations("recruitment.errors");
+  const errors = useApiErrorTranslator("recruitment.errors");
   const { user } = useAuth();
   const [params, setParams] = useState<ListInterviewsParams>({
     page: 1,
@@ -83,17 +81,13 @@ export function InterviewsPanel() {
   const jobDirectory = useRecruitmentJobDirectory();
   const interviewers = useActiveEmployees();
 
-  const interviews =
-    interviewsQuery.data?.status === 200 ? interviewsQuery.data.data.items : [];
+  const interviews = interviewsQuery.data?.status === 200 ? interviewsQuery.data.data.items : [];
   const page = interviewsQuery.data?.status === 200 ? interviewsQuery.data.data.page : null;
   const filtersActive = params.status !== undefined || params.job_id !== undefined;
   const pageOutOfRange = page !== null && page.page > Math.max(page.total_pages, 1);
 
   const interviewerNames = new Map(
-    interviewers.map((employee) => [
-      employee.id,
-      `${employee.first_name} ${employee.last_name}`,
-    ]),
+    interviewers.map((employee) => [employee.id, `${employee.first_name} ${employee.last_name}`]),
   );
 
   function change(next: Partial<ListInterviewsParams>) {
@@ -150,9 +144,7 @@ export function InterviewsPanel() {
 
         <Select
           value={params.job_id ?? ANY}
-          onValueChange={(value) =>
-            change({ job_id: value === ANY ? undefined : value, page: 1 })
-          }
+          onValueChange={(value) => change({ job_id: value === ANY ? undefined : value, page: 1 })}
         >
           <SelectTrigger aria-label={t("filters.jobAria")} className="w-full sm:w-56">
             <SelectValue placeholder={t("filters.allJobs")} />
@@ -184,11 +176,7 @@ export function InterviewsPanel() {
             <Alert variant="destructive">
               <CircleAlert aria-hidden="true" />
               <AlertDescription>
-                <p>
-                  {isForbiddenError(interviewsQuery.error)
-                    ? errors("denied")
-                    : t("loadError")}
-                </p>
+                <p>{isForbiddenError(interviewsQuery.error) ? errors("denied") : t("loadError")}</p>
                 {isForbiddenError(interviewsQuery.error) ? null : (
                   <Button
                     variant="outline"
@@ -215,13 +203,8 @@ export function InterviewsPanel() {
           </div>
         ) : (
           <>
-            <p className="px-4 py-2 text-xs text-muted-foreground sm:hidden">
-              {t("swipe")}
-            </p>
-            <Table
-              aria-label={t("label")}
-              containerLabel={t("containerLabel")}
-            >
+            <p className="px-4 py-2 text-xs text-muted-foreground sm:hidden">{t("swipe")}</p>
+            <Table aria-label={t("label")} containerLabel={t("containerLabel")}>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="pl-3">{t("columns.candidate")}</TableHead>
@@ -247,11 +230,7 @@ export function InterviewsPanel() {
                     <TableRow key={interview.id} data-testid="interview-row">
                       <TableCell className="pl-3 font-medium">{name}</TableCell>
                       <TableCell>
-                        {organizationLabel(
-                          jobDirectory.jobNames,
-                          interview.job_id,
-                          "Job",
-                        )}
+                        {organizationLabel(jobDirectory.jobNames, interview.job_id, "Job")}
                       </TableCell>
                       <TableCell>
                         {organizationLabel(

@@ -30,6 +30,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import {
   positionFieldErrors,
   usePositionCreate,
@@ -48,7 +50,7 @@ type PositionFormDialogProps = {
 
 export function PositionFormDialog({ open, onOpenChange, position }: PositionFormDialogProps) {
   const t = useTranslations();
-  const errors = useTranslations("organizations.errors");
+  const errors = useApiErrorTranslator("organizations.errors");
   const isEdit = position !== null;
   const [rootError, setRootError] = useState<string | null>(null);
   const createPosition = usePositionCreate();
@@ -56,7 +58,9 @@ export function PositionFormDialog({ open, onOpenChange, position }: PositionFor
   const mutation = isEdit ? updatePosition : createPosition;
 
   const form = useForm<PositionFormValues>({
-    resolver: zodResolver(positionFormSchema((key) => t(`organizations.positions.validation.${key}`))),
+    resolver: zodResolver(
+      positionFormSchema((key) => t(`organizations.positions.validation.${key}`)),
+    ),
     defaultValues: {
       title: position?.title ?? "",
       description: position?.description ?? null,
@@ -93,7 +97,11 @@ export function PositionFormDialog({ open, onOpenChange, position }: PositionFor
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{isEdit ? t("organizations.positions.editTitle") : t("organizations.positions.createTitle")}</DialogTitle>
+          <DialogTitle>
+            {isEdit
+              ? t("organizations.positions.editTitle")
+              : t("organizations.positions.createTitle")}
+          </DialogTitle>
           <DialogDescription>{t("organizations.positions.description")}</DialogDescription>
         </DialogHeader>
 
@@ -106,7 +114,11 @@ export function PositionFormDialog({ open, onOpenChange, position }: PositionFor
                 <FormItem>
                   <FormLabel>{t("organizations.positions.title")}</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder={t("organizations.positions.titlePlaceholder")} autoComplete="off" />
+                    <Input
+                      {...field}
+                      placeholder={t("organizations.positions.titlePlaceholder")}
+                      autoComplete="off"
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -143,7 +155,9 @@ export function PositionFormDialog({ open, onOpenChange, position }: PositionFor
                 {t("common.actions.cancel")}
               </Button>
               <Button type="submit" disabled={mutation.isPending}>
-                {isEdit ? t("organizations.actions.saveChanges") : t("organizations.actions.createPosition")}
+                {isEdit
+                  ? t("organizations.actions.saveChanges")
+                  : t("organizations.actions.createPosition")}
               </Button>
             </DialogFooter>
           </form>

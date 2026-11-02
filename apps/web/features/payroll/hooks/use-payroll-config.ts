@@ -11,6 +11,8 @@ import { useGetPayrollConfig, useUpdatePayrollConfig } from "@workpulse/api-clie
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import { invalidatePayrollConfig } from "../api";
 import { payrollErrorMessage } from "../errors";
 
@@ -20,7 +22,7 @@ export function usePayrollConfig(enabled = true) {
 
 export function usePayrollConfigUpdate() {
   const t = useTranslations("payroll.toasts");
-  const errors = useTranslations("payroll.errors");
+  const errors = useApiErrorTranslator("payroll.errors");
   const queryClient = useQueryClient();
   return useUpdatePayrollConfig({
     mutation: {

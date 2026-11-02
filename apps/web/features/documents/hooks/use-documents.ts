@@ -23,6 +23,8 @@ import {
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import { invalidateDocuments } from "../api";
 import { documentsErrorMessage } from "../labels";
 import type { ListDocumentsParams } from "../types";
@@ -45,7 +47,7 @@ export function useDocumentUploadIntent() {
 /** Step 3: confirm the staged object, then toast and refresh the list. */
 export function useDocumentCreate(employeeId: string) {
   const t = useTranslations("documents.toasts");
-  const errors = useTranslations("documents.errors");
+  const errors = useApiErrorTranslator("documents.errors");
   const queryClient = useQueryClient();
   return useCreateDocument({
     mutation: {
@@ -60,7 +62,7 @@ export function useDocumentCreate(employeeId: string) {
 
 export function useDocumentUpdate(employeeId: string) {
   const t = useTranslations("documents.toasts");
-  const errors = useTranslations("documents.errors");
+  const errors = useApiErrorTranslator("documents.errors");
   const queryClient = useQueryClient();
   return useUpdateDocument({
     mutation: {
@@ -75,7 +77,7 @@ export function useDocumentUpdate(employeeId: string) {
 
 export function useDocumentDelete(employeeId: string) {
   const t = useTranslations("documents.toasts");
-  const errors = useTranslations("documents.errors");
+  const errors = useApiErrorTranslator("documents.errors");
   const queryClient = useQueryClient();
   return useDeleteDocument({
     mutation: {
@@ -94,7 +96,7 @@ export function useDocumentDelete(employeeId: string) {
  * stale URL left on screen.
  */
 export function useDocumentDownload(employeeId: string) {
-  const errors = useTranslations("documents.errors");
+  const errors = useApiErrorTranslator("documents.errors");
 
   return useCallback(
     async (documentId: string): Promise<void> => {

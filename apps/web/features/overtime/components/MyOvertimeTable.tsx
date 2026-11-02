@@ -36,6 +36,8 @@ import {
 } from "@/components/ui/table";
 import { useAuth } from "@/features/auth/components/AuthGate";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import { formatDate, formatHours } from "../dates";
 import {
   overtimeWithdrawError,
@@ -130,7 +132,7 @@ export function MyOvertimeTable() {
   const t = useTranslations("overtime");
   const locale = useLocale();
   const common = useTranslations("common.actions");
-  const errors = useTranslations("overtime.errors");
+  const errors = useApiErrorTranslator("overtime.errors");
   const { user } = useAuth();
   const employeeId = user.employee_id ?? null;
   const [page, setPage] = useState(1);
@@ -177,10 +179,7 @@ export function MyOvertimeTable() {
         </h2>
         <Card className="gap-0 rounded-md border-border py-0 shadow-none">
           <div className="p-4">
-            <EmptyState
-              icon={Inbox}
-              message={t("myRequests.noEmployee")}
-            />
+            <EmptyState icon={Inbox} message={t("myRequests.noEmployee")} />
           </div>
         </Card>
       </section>
@@ -277,7 +276,9 @@ export function MyOvertimeTable() {
                   <TableHead>{t("myRequests.columns.status")}</TableHead>
                   <TableHead>{t("myRequests.columns.reason")}</TableHead>
                   <TableHead>{t("myRequests.columns.submitted")}</TableHead>
-                  <TableHead className="pr-3 text-right">{t("myRequests.columns.actions")}</TableHead>
+                  <TableHead className="pr-3 text-right">
+                    {t("myRequests.columns.actions")}
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

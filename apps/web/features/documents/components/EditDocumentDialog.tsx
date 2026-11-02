@@ -23,6 +23,8 @@ import {
 } from "@/components/ui/dialog";
 import { Form } from "@/components/ui/form";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import { useDocumentUpdate } from "../hooks/use-documents";
 import { documentsErrorMessage } from "../labels";
 import { documentMetadataSchema, type DocumentMetadataValues } from "../schema";
@@ -44,7 +46,7 @@ export function EditDocumentDialog({
 }: EditDocumentDialogProps) {
   const t = useTranslations("documents.edit");
   const validation = useTranslations("documents.validation");
-  const errors = useTranslations("documents.errors");
+  const errors = useApiErrorTranslator("documents.errors");
   const common = useTranslations("common.actions");
   const updateDocument = useDocumentUpdate(employeeId);
   const [rootError, setRootError] = useState<string | null>(null);

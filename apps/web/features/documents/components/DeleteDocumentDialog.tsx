@@ -20,6 +20,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import { useDocumentDelete } from "../hooks/use-documents";
 import { documentsErrorMessage } from "../labels";
 import type { Document } from "../types";
@@ -38,7 +40,7 @@ export function DeleteDocumentDialog({
   document,
 }: DeleteDocumentDialogProps) {
   const t = useTranslations("documents.delete");
-  const errors = useTranslations("documents.errors");
+  const errors = useApiErrorTranslator("documents.errors");
   const common = useTranslations("common.actions");
   const removeDocument = useDocumentDelete(employeeId);
   const [error, setError] = useState<string | null>(null);

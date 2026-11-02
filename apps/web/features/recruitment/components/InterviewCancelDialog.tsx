@@ -32,6 +32,8 @@ import {
 } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import { formatRecruitmentTimestamp } from "../dates";
 import { recruitmentErrorMessage } from "../labels";
 import { useInterviewCancel } from "../hooks/use-recruitment";
@@ -54,7 +56,7 @@ export function InterviewCancelDialog({
   const t = useTranslations("recruitment.cancel");
   const common = useTranslations("recruitment.actions");
   const validation = useTranslations("recruitment.validation");
-  const errors = useTranslations("recruitment.errors");
+  const errors = useApiErrorTranslator("recruitment.errors");
   const cancelInterview = useInterviewCancel();
   const [error, setError] = useState<string | null>(null);
 

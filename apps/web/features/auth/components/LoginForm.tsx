@@ -27,6 +27,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+
+import { useApiErrorTranslator } from "@/lib/api-errors";
 import { z } from "zod";
 
 import { authErrorMessage, useCurrentUser, useLogin } from "../hooks/use-auth";
@@ -34,7 +36,7 @@ import { authErrorMessage, useCurrentUser, useLogin } from "../hooks/use-auth";
 export function LoginForm() {
   const t = useTranslations("auth.login");
   const validation = useTranslations("auth.validation");
-  const errors = useTranslations("auth.errors");
+  const errors = useApiErrorTranslator("auth.errors");
   const router = useRouter();
   const login = useLogin();
   const currentUser = useCurrentUser();
@@ -42,10 +44,7 @@ export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
 
   const loginFormSchema = z.object({
-    email: z
-      .string()
-      .min(1, validation("emailRequired"))
-      .email(validation("emailInvalid")),
+    email: z.string().min(1, validation("emailRequired")).email(validation("emailInvalid")),
     password: z.string().min(1, validation("passwordRequired")),
   });
 
@@ -137,7 +136,7 @@ export function LoginForm() {
           </Alert>
         ) : null}
 
-        <Button type="submit" className="w-full min-h-11" disabled={login.isPending}>
+        <Button type="submit" className="min-h-11 w-full" disabled={login.isPending}>
           {login.isPending ? t("signingIn") : t("signIn")}
         </Button>
       </form>

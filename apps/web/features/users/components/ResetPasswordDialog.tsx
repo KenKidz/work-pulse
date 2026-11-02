@@ -30,6 +30,8 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import { useUserResetPassword, userFieldErrors } from "../hooks/use-users";
 import { resetPasswordSchema, type ResetPasswordValues } from "../schema";
 import type { User } from "../types";
@@ -44,7 +46,7 @@ type ResetPasswordDialogProps = {
 export function ResetPasswordDialog({ open, onOpenChange, user }: ResetPasswordDialogProps) {
   const t = useTranslations("users");
   const common = useTranslations("common.actions");
-  const errors = useTranslations("users.errors");
+  const errors = useApiErrorTranslator("users.errors");
   const [rootError, setRootError] = useState<string | null>(null);
   const reset = useUserResetPassword();
 

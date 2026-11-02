@@ -27,6 +27,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import { formatPayrollTimestamp } from "../format";
 import { payrollErrorMessage } from "../errors";
 import { usePayrollConfig, usePayrollConfigUpdate } from "../hooks/use-payroll-config";
@@ -39,7 +41,7 @@ export function PayrollConfigForm({ canEdit }: { canEdit: boolean }) {
   const t = useTranslations("payroll.config");
   const common = useTranslations("common.actions");
   const validation = useTranslations("payroll.validation");
-  const errors = useTranslations("payroll.errors");
+  const errors = useApiErrorTranslator("payroll.errors");
   const locale = useLocale();
   const configQuery = usePayrollConfig();
   const updateConfig = usePayrollConfigUpdate();
@@ -171,7 +173,9 @@ export function PayrollConfigForm({ canEdit }: { canEdit: boolean }) {
                   name="overtime_multiplier"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel hint={t("overtimeMultiplierHint")}>{t("overtimeMultiplier")}</FormLabel>
+                      <FormLabel hint={t("overtimeMultiplierHint")}>
+                        {t("overtimeMultiplier")}
+                      </FormLabel>
                       <FormControl>
                         <Input
                           {...field}

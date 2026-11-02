@@ -44,6 +44,8 @@ import { useDepartments } from "@/features/organizations/hooks/use-departments";
 import { usePositions } from "@/features/organizations/hooks/use-positions";
 import { useLocations } from "@/features/organizations/hooks/use-locations";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import {
   employeeFieldErrors,
   useEmployees,
@@ -71,7 +73,7 @@ type EmployeeFormDialogProps = {
 export function EmployeeFormDialog({ open, onOpenChange, employee }: EmployeeFormDialogProps) {
   const t = useTranslations("employees");
   const common = useTranslations("common.actions");
-  const errors = useTranslations("employees.errors");
+  const errors = useApiErrorTranslator("employees.errors");
   const isEdit = employee !== null;
   const [rootError, setRootError] = useState<string | null>(null);
   const createEmployee = useEmployeeCreate();
@@ -181,7 +183,11 @@ export function EmployeeFormDialog({ open, onOpenChange, employee }: EmployeeFor
                   <FormItem>
                     <FormLabel>{t("form.firstName")}</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder={t("form.firstNamePlaceholder")} autoComplete="off" />
+                      <Input
+                        {...field}
+                        placeholder={t("form.firstNamePlaceholder")}
+                        autoComplete="off"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -194,7 +200,11 @@ export function EmployeeFormDialog({ open, onOpenChange, employee }: EmployeeFor
                   <FormItem>
                     <FormLabel>{t("form.lastName")}</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder={t("form.lastNamePlaceholder")} autoComplete="off" />
+                      <Input
+                        {...field}
+                        placeholder={t("form.lastNamePlaceholder")}
+                        autoComplete="off"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

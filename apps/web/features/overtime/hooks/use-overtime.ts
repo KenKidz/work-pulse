@@ -31,6 +31,11 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { invalidateOvertimeRequests } from "../api";
+import {
+  sharedApiErrorMessage,
+  useApiErrorTranslator,
+  type SharedApiErrorTranslator,
+} from "@/lib/api-errors";
 import { isOvertimeDeciding, isOvertimePayrollBound } from "../labels";
 import type { ListOvertimeRequestsParams } from "../types";
 
@@ -120,10 +125,9 @@ type FieldErrorTranslator = (
 ) => string;
 
 /** Map a pinned submit error code to the field/dialog that renders it. */
-export function overtimeFieldErrors(
-  error: unknown,
-  t: FieldErrorTranslator,
-): OvertimeFieldErrors {
+export function overtimeFieldErrors(error: unknown, t: FieldErrorTranslator): OvertimeFieldErrors {
+  const shared = sharedApiErrorMessage(error, t as unknown as SharedApiErrorTranslator);
+  if (shared !== null) return { root: shared };
   if (error instanceof ApiError) {
     switch (error.code) {
       case "overtime_overlaps":
@@ -155,6 +159,8 @@ type DecisionErrorTranslator = (
 
 /** Decision failures render inside the approve/verify/reject dialog. */
 export function overtimeDecisionError(error: unknown, t: DecisionErrorTranslator): string {
+  const shared = sharedApiErrorMessage(error, t as unknown as SharedApiErrorTranslator);
+  if (shared !== null) return shared;
   if (error instanceof ApiError) {
     switch (error.code) {
       case "forbidden":
@@ -184,6 +190,8 @@ type WithdrawErrorTranslator = (
 
 /** Withdraw failures render above the request table. */
 export function overtimeWithdrawError(error: unknown, t: WithdrawErrorTranslator): string {
+  const shared = sharedApiErrorMessage(error, t as unknown as SharedApiErrorTranslator);
+  if (shared !== null) return shared;
   if (error instanceof ApiError) {
     switch (error.code) {
       case "forbidden":
@@ -204,12 +212,14 @@ export function overtimeWithdrawError(error: unknown, t: WithdrawErrorTranslator
 type ErrorTranslator = (key: "generic") => string;
 
 function errorMessage(error: unknown, t: ErrorTranslator): string {
+  const shared = sharedApiErrorMessage(error, t as unknown as SharedApiErrorTranslator);
+  if (shared !== null) return shared;
   return error instanceof ApiError ? error.message : t("generic");
 }
 
 export function useCreateOvertimeAction() {
   const t = useTranslations("overtime.toasts");
-  const errors = useTranslations("overtime.errors");
+  const errors = useApiErrorTranslator("overtime.errors");
   const queryClient = useQueryClient();
   return useCreateOvertimeRequest({
     mutation: {
@@ -224,7 +234,7 @@ export function useCreateOvertimeAction() {
 
 export function useApproveOvertimeAction() {
   const t = useTranslations("overtime.toasts");
-  const errors = useTranslations("overtime.errors");
+  const errors = useApiErrorTranslator("overtime.errors");
   const queryClient = useQueryClient();
   return useApproveOvertimeRequest({
     mutation: {
@@ -239,7 +249,7 @@ export function useApproveOvertimeAction() {
 
 export function useVerifyOvertimeAction() {
   const t = useTranslations("overtime.toasts");
-  const errors = useTranslations("overtime.errors");
+  const errors = useApiErrorTranslator("overtime.errors");
   const queryClient = useQueryClient();
   return useVerifyOvertimeRequest({
     mutation: {
@@ -254,7 +264,7 @@ export function useVerifyOvertimeAction() {
 
 export function useRejectOvertimeAction() {
   const t = useTranslations("overtime.toasts");
-  const errors = useTranslations("overtime.errors");
+  const errors = useApiErrorTranslator("overtime.errors");
   const queryClient = useQueryClient();
   return useRejectOvertimeRequest({
     mutation: {
@@ -269,7 +279,7 @@ export function useRejectOvertimeAction() {
 
 export function useWithdrawOvertimeAction() {
   const t = useTranslations("overtime.toasts");
-  const errors = useTranslations("overtime.errors");
+  const errors = useApiErrorTranslator("overtime.errors");
   const queryClient = useQueryClient();
   return useWithdrawOvertimeRequest({
     mutation: {

@@ -36,6 +36,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import {
   departmentFieldErrors,
   useDepartments,
@@ -61,7 +63,7 @@ export function DepartmentFormDialog({
   department,
 }: DepartmentFormDialogProps) {
   const t = useTranslations();
-  const errors = useTranslations("organizations.errors");
+  const errors = useApiErrorTranslator("organizations.errors");
   const isEdit = department !== null;
   const [rootError, setRootError] = useState<string | null>(null);
   const createDepartment = useDepartmentCreate();
@@ -76,7 +78,9 @@ export function DepartmentFormDialog({
   ).filter((option) => option.id !== department?.id);
 
   const form = useForm<DepartmentFormValues>({
-    resolver: zodResolver(departmentFormSchema((key) => t(`organizations.departments.validation.${key}`))),
+    resolver: zodResolver(
+      departmentFormSchema((key) => t(`organizations.departments.validation.${key}`)),
+    ),
     defaultValues: {
       name: department?.name ?? "",
       parent_department_id: department?.parent_department_id ?? null,
@@ -116,7 +120,11 @@ export function DepartmentFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{isEdit ? t("organizations.departments.editTitle") : t("organizations.departments.createTitle")}</DialogTitle>
+          <DialogTitle>
+            {isEdit
+              ? t("organizations.departments.editTitle")
+              : t("organizations.departments.createTitle")}
+          </DialogTitle>
           <DialogDescription>
             {isEdit
               ? t("organizations.departments.editDescription")
@@ -133,7 +141,11 @@ export function DepartmentFormDialog({
                 <FormItem>
                   <FormLabel>{t("organizations.departments.name")}</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder={t("organizations.departments.namePlaceholder")} autoComplete="off" />
+                    <Input
+                      {...field}
+                      placeholder={t("organizations.departments.namePlaceholder")}
+                      autoComplete="off"
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -152,11 +164,15 @@ export function DepartmentFormDialog({
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder={t("organizations.departments.parentPlaceholder")} />
+                        <SelectValue
+                          placeholder={t("organizations.departments.parentPlaceholder")}
+                        />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value={NO_PARENT}>{t("organizations.departments.noParent")}</SelectItem>
+                      <SelectItem value={NO_PARENT}>
+                        {t("organizations.departments.noParent")}
+                      </SelectItem>
                       {parentOptions.map((option) => (
                         <SelectItem key={option.id} value={option.id}>
                           {option.name}
@@ -180,7 +196,9 @@ export function DepartmentFormDialog({
                 {t("common.actions.cancel")}
               </Button>
               <Button type="submit" disabled={mutation.isPending}>
-                {isEdit ? t("organizations.actions.saveChanges") : t("organizations.actions.createDepartment")}
+                {isEdit
+                  ? t("organizations.actions.saveChanges")
+                  : t("organizations.actions.createDepartment")}
               </Button>
             </DialogFooter>
           </form>

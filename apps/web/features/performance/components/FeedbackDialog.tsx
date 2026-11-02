@@ -30,6 +30,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
+
+import { useApiErrorTranslator } from "@/lib/api-errors";
 import { ApiError } from "@workpulse/api-client/mutator/custom-fetch";
 
 import { performanceErrorMessage } from "../labels";
@@ -48,7 +50,7 @@ export function FeedbackDialog({ open, onOpenChange, review, employeeName }: Fee
   const t = useTranslations("performance.feedback.form");
   const common = useTranslations("performance.actions");
   const validation = useTranslations("performance.validation");
-  const errors = useTranslations("performance.errors");
+  const errors = useApiErrorTranslator("performance.errors");
   const submitFeedback = useReviewFeedbackSubmit();
   const [error, setError] = useState<string | null>(null);
 

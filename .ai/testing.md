@@ -6,11 +6,11 @@
 
 | Gate | Command | Covers |
 | --- | --- | --- |
-| all | `make check` | both gates below — run before claiming done |
+| all | `make check` | every gate below — run before claiming done |
 | API | `make check-api` | Ruff + Pyright + `uv run pytest` in `apps/api` (ADR 0006) |
 | Web | `make check-web` | `tsc --noEmit` + ESLint + Vitest in `apps/web` |
 | E2E | `make check-e2e` | Playwright against web + api + seeded dev db — part of `make check` since 2026-09-29 (decision 3) |
-| Load | Phase 7 | throughput/latency under realistic check-in load |
+| Load | `make check-load` | k6 smoke: 60s at 25 check-ins/s + board reads, p95 < 300ms, 0 errors — part of `make check` since 2026-11-02 (ADR 0025) |
 
 `make check` grows as phases land (contract validation, e2e, lint). A gate that
 is not wired into `make check` does not protect anything.
@@ -24,7 +24,7 @@ is not wired into `make check` does not protect anything.
 | Contract | `apps/api/tests/contract` | OpenAPI + `contracts/events/*` | API shape and event payloads match the published contracts |
 | Web | `apps/web/tests` | runner TBD (proposed: Vitest) | feature hooks/components, error states |
 | E2E | `tests/e2e` | web + api + db | one feature, one user-visible flow, both surfaces |
-| Performance | `tests/performance` | Phase 7 | latency/throughput budgets |
+| Performance | `tests/performance` | k6 + the dev stack (`make check-load`) | 60s at 25 check-ins/s + board reads: p95 < 300ms, zero errors |
 
 ## Mandatory rules
 

@@ -20,6 +20,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import { performanceErrorMessage } from "../labels";
 import { useEmployeeSkillRemove } from "../hooks/use-performance";
 import type { EmployeeSkill } from "../types";
@@ -41,7 +43,7 @@ export function EmployeeSkillRemoveDialog({
 }: EmployeeSkillRemoveDialogProps) {
   const t = useTranslations("performance.skills.employeeRemove");
   const common = useTranslations("performance.actions");
-  const errors = useTranslations("performance.errors");
+  const errors = useApiErrorTranslator("performance.errors");
   const removeRow = useEmployeeSkillRemove(employeeId);
   const [error, setError] = useState<string | null>(null);
 

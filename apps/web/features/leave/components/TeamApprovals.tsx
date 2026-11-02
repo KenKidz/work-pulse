@@ -47,6 +47,8 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/features/auth/components/AuthGate";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import { formatDate } from "../dates";
 import {
   isForbiddenError,
@@ -141,9 +143,7 @@ function TeamApprovalsInbox({ currentEmployeeId }: { currentEmployeeId: string |
                 {denied ? t("approvals.deniedTitle") : t("approvals.errorTitle")}
               </AlertTitle>
               <AlertDescription>
-                <p>
-                  {denied ? t("approvals.denied") : t("approvals.loadError")}
-                </p>
+                <p>{denied ? t("approvals.denied") : t("approvals.loadError")}</p>
                 {!denied ? (
                   <Button
                     variant="outline"
@@ -166,10 +166,7 @@ function TeamApprovalsInbox({ currentEmployeeId }: { currentEmployeeId: string |
             <p className="px-4 py-2 text-xs text-muted-foreground sm:hidden">
               {t("approvals.swipe")}
             </p>
-            <Table
-              aria-label={t("approvals.label")}
-              containerLabel={t("approvals.containerLabel")}
-            >
+            <Table aria-label={t("approvals.label")} containerLabel={t("approvals.containerLabel")}>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="pl-3">{t("approvals.columns.employee")}</TableHead>
@@ -177,7 +174,9 @@ function TeamApprovalsInbox({ currentEmployeeId }: { currentEmployeeId: string |
                   <TableHead>{t("approvals.columns.dates")}</TableHead>
                   <TableHead>{t("approvals.columns.days")}</TableHead>
                   <TableHead>{t("approvals.columns.reason")}</TableHead>
-                  <TableHead className="pr-3 text-right">{t("approvals.columns.actions")}</TableHead>
+                  <TableHead className="pr-3 text-right">
+                    {t("approvals.columns.actions")}
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -189,7 +188,8 @@ function TeamApprovalsInbox({ currentEmployeeId }: { currentEmployeeId: string |
                       <TableCell className="pl-3 font-medium">{name}</TableCell>
                       <TableCell>{t(`types.${request.leave_type_code}`)}</TableCell>
                       <TableCell className="text-sm tabular-nums">
-                        {formatDate(request.start_date, locale)} – {formatDate(request.end_date, locale)}
+                        {formatDate(request.start_date, locale)} –{" "}
+                        {formatDate(request.end_date, locale)}
                       </TableCell>
                       <TableCell className="tabular-nums">{request.days}</TableCell>
                       <TableCell className="text-muted-foreground">
@@ -262,7 +262,7 @@ function DecisionDialog({
   const common = useTranslations("common.actions");
   const validation = useTranslations("leave.validation");
   const locale = useLocale();
-  const errors = useTranslations("leave.errors");
+  const errors = useApiErrorTranslator("leave.errors");
   const approve = useApproveLeaveAction();
   const reject = useRejectLeaveAction();
   const mutation = target.mode === "approve" ? approve : reject;
@@ -299,7 +299,9 @@ function DecisionDialog({
     >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{approving ? t("approvals.approveTitle") : t("approvals.rejectTitle")}</DialogTitle>
+          <DialogTitle>
+            {approving ? t("approvals.approveTitle") : t("approvals.rejectTitle")}
+          </DialogTitle>
           <DialogDescription>
             {t("approvals.dialogDescription", {
               name: employeeName,

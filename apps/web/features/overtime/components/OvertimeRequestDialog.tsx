@@ -34,6 +34,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import { todayISO } from "../dates";
 import {
   overtimeFieldErrors,
@@ -57,7 +59,7 @@ export function OvertimeRequestDialog({ open, onOpenChange }: OvertimeRequestDia
   const t = useTranslations("overtime.request");
   const common = useTranslations("common.actions");
   const validation = useTranslations("overtime.validation");
-  const errors = useTranslations("overtime.errors");
+  const errors = useApiErrorTranslator("overtime.errors");
   const createRequest = useCreateOvertimeAction();
   const [rootError, setRootError] = useState<string | null>(null);
 

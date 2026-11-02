@@ -6,12 +6,13 @@
 
 import { ApiError } from "@workpulse/api-client/mutator/custom-fetch";
 
+import { sharedApiErrorMessage, type SharedApiErrorTranslator } from "@/lib/api-errors";
+
 export type ReportErrorKey = "unavailable" | "forbidden" | "invalid" | "generic";
 
-export function reportErrorMessage(
-  error: unknown,
-  t: (key: ReportErrorKey) => string,
-): string {
+export function reportErrorMessage(error: unknown, t: (key: ReportErrorKey) => string): string {
+  const shared = sharedApiErrorMessage(error, t as unknown as SharedApiErrorTranslator);
+  if (shared !== null) return shared;
   if (error instanceof ApiError) {
     if (error.code === "reports_unavailable") return t("unavailable");
     if (error.status === 403 || error.code === "forbidden") return t("forbidden");

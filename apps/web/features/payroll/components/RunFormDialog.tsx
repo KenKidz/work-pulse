@@ -33,6 +33,8 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import { lastClosedPeriod } from "../format";
 import { runFieldErrors, usePayrollRunCreate, type RunFieldName } from "../hooks/use-payroll-runs";
 import { runFormSchema, type RunFormValues } from "../schema";
@@ -46,7 +48,7 @@ export function RunFormDialog({ open, onOpenChange }: RunFormDialogProps) {
   const t = useTranslations("payroll.runForm");
   const common = useTranslations("common.actions");
   const validation = useTranslations("payroll.validation");
-  const errors = useTranslations("payroll.errors");
+  const errors = useApiErrorTranslator("payroll.errors");
   const router = useRouter();
   const createRun = usePayrollRunCreate();
   const [rootError, setRootError] = useState<string | null>(null);

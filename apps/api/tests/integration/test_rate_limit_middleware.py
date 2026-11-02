@@ -103,6 +103,9 @@ def _install_limiter(
     """Install an app-state limiter with explicit budgets and a fake clock."""
     settings = Settings(
         rate_limit_enabled=True,
+        # ASGITransport peers at loopback; the proxy trust makes the forwarded
+        # test IPs meaningful, matching a real proxy that overwrites the header.
+        rate_limit_trusted_proxies=["127.0.0.1"],
         rate_limit_auth_max_requests=auth[0],
         rate_limit_auth_window_seconds=auth[1],
         rate_limit_mutation_max_requests=mutation[0],

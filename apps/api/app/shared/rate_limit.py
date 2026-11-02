@@ -225,22 +225,27 @@ def _decode_decision(raw: Any) -> RateLimitDecision:
     )
 
 
-def client_ip(request: Request) -> str:
-    """The auth-tier key: first `X-Forwarded-For` hop, else the socket peer.
+def client_ip(request: Request, settings: Settings) -> str:
+    """The auth-tier key: the socket peer, or a trusted proxy's forwarded hop.
 
-    Local/dev traffic through a reverse proxy carries the caller in the first
-    forwarded hop; without the header the ASGI peer address is used. A missing
+    `X-Forwarded-For` is client-controlled, so it is honored only when the
+    immediate peer is listed in `RATE_LIMIT_TRUSTED_PROXIES` (the proxy that
+    overwrites the header). With the default empty list the socket peer is the
+    key, so spoofing the header cannot rotate around the auth budget. A missing
     peer (synthetic transports) collapses to `unknown` so a key always exists.
     The value is only a Redis key component — never logged, never a metric
     label.
     """
+    client = request.client
+    peer = client.host if client is not None else "unknown"
+    if peer not in settings.rate_limit_trusted_proxies:
+        return peer
     forwarded = request.headers.get("X-Forwarded-For")
     if forwarded:
         first = forwarded.split(",", 1)[0].strip()
         if first:
             return first
-    client = request.client
-    return client.host if client is not None else "unknown"
+    return peer
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
@@ -274,7 +279,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         key = (
-            client_ip(request)
+            client_ip(request, limiter.settings)
             if tier is RateLimitTier.AUTH
             else await self._mutation_key(request, limiter)
         )
@@ -331,7 +336,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 user_id = None
             if user_id is not None:
                 return str(user_id)
-        return client_ip(request)
+        return client_ip(request, limiter.settings)
 
 
 __all__ = [

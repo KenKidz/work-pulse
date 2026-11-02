@@ -43,6 +43,8 @@ import { useDepartments } from "@/features/organizations/hooks/use-departments";
 import { usePositions } from "@/features/organizations/hooks/use-positions";
 import { useLocations } from "@/features/organizations/hooks/use-locations";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import {
   employeeFieldErrors,
   useEmployees,
@@ -75,7 +77,7 @@ export function TransferDialog({
 }: TransferDialogProps) {
   const t = useTranslations("employees");
   const common = useTranslations("common.actions");
-  const errors = useTranslations("employees.errors");
+  const errors = useApiErrorTranslator("employees.errors");
   const [rootError, setRootError] = useState<string | null>(null);
   const transfer = useEmployeeTransfer();
 

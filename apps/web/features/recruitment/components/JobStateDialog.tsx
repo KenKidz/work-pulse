@@ -20,6 +20,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import { recruitmentErrorMessage } from "../labels";
 import { useJobClose, useJobOpen } from "../hooks/use-recruitment";
 import type { Job } from "../types";
@@ -36,7 +38,7 @@ type JobStateDialogProps = {
 export function JobStateDialog({ open, onOpenChange, job, action }: JobStateDialogProps) {
   const t = useTranslations("recruitment.jobState");
   const common = useTranslations("recruitment.actions");
-  const errors = useTranslations("recruitment.errors");
+  const errors = useApiErrorTranslator("recruitment.errors");
   const openJob = useJobOpen();
   const closeJob = useJobClose();
   const mutation = action === "open" ? openJob : closeJob;

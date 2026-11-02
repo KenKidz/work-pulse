@@ -32,6 +32,8 @@ import {
 } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import { recruitmentErrorMessage } from "../labels";
 import { useCandidateReject, useCandidateWithdraw } from "../hooks/use-recruitment";
 import { candidateDecisionSchema, type CandidateDecisionValues } from "../schema";
@@ -55,7 +57,7 @@ export function CandidateDecisionDialog({
   const t = useTranslations("recruitment.candidateDecision");
   const common = useTranslations("recruitment.actions");
   const validation = useTranslations("recruitment.validation");
-  const errors = useTranslations("recruitment.errors");
+  const errors = useApiErrorTranslator("recruitment.errors");
   const rejectCandidate = useCandidateReject();
   const withdrawCandidate = useCandidateWithdraw();
   const mutation = action === "reject" ? rejectCandidate : withdrawCandidate;
@@ -91,9 +93,7 @@ export function CandidateDecisionDialog({
         <DialogHeader>
           <DialogTitle>{isReject ? t("rejectTitle") : t("withdrawTitle")}</DialogTitle>
           <DialogDescription>
-            {isReject
-              ? t("rejectDescription", { name })
-              : t("withdrawDescription", { name })}
+            {isReject ? t("rejectDescription", { name }) : t("withdrawDescription", { name })}
           </DialogDescription>
         </DialogHeader>
 

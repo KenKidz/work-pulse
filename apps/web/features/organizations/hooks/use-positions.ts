@@ -17,6 +17,11 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { invalidatePositions } from "../api";
+import {
+  sharedApiErrorMessage,
+  useApiErrorTranslator,
+  type SharedApiErrorTranslator,
+} from "@/lib/api-errors";
 import type { ListPositionsParams } from "../types";
 import { errorMessage } from "./use-departments";
 
@@ -27,15 +32,15 @@ export function usePositions(params?: ListPositionsParams) {
 export type PositionFieldName = "title" | "description";
 export type PositionFieldErrors = Partial<Record<PositionFieldName | "root", string>>;
 
-type PositionErrorTranslator = (
-  key: "positionTitleTaken" | "forbidden" | "generic",
-) => string;
+type PositionErrorTranslator = (key: "positionTitleTaken" | "forbidden" | "generic") => string;
 
 /** Map a stable API error code to the field it belongs to. */
 export function positionFieldErrors(
   error: unknown,
   t: PositionErrorTranslator,
 ): PositionFieldErrors {
+  const shared = sharedApiErrorMessage(error, t as unknown as SharedApiErrorTranslator);
+  if (shared !== null) return { root: shared };
   if (error instanceof ApiError) {
     switch (error.code) {
       case "position_title_taken":
@@ -51,7 +56,7 @@ export function positionFieldErrors(
 
 export function usePositionCreate() {
   const t = useTranslations("organizations.toasts");
-  const errors = useTranslations("organizations.errors");
+  const errors = useApiErrorTranslator("organizations.errors");
   const queryClient = useQueryClient();
   return useCreatePosition({
     mutation: {
@@ -66,7 +71,7 @@ export function usePositionCreate() {
 
 export function usePositionUpdate() {
   const t = useTranslations("organizations.toasts");
-  const errors = useTranslations("organizations.errors");
+  const errors = useApiErrorTranslator("organizations.errors");
   const queryClient = useQueryClient();
   return useUpdatePosition({
     mutation: {
@@ -81,7 +86,7 @@ export function usePositionUpdate() {
 
 export function usePositionArchive() {
   const t = useTranslations("organizations.toasts");
-  const errors = useTranslations("organizations.errors");
+  const errors = useApiErrorTranslator("organizations.errors");
   const queryClient = useQueryClient();
   return useArchivePosition({
     mutation: {
@@ -96,7 +101,7 @@ export function usePositionArchive() {
 
 export function usePositionRestore() {
   const t = useTranslations("organizations.toasts");
-  const errors = useTranslations("organizations.errors");
+  const errors = useApiErrorTranslator("organizations.errors");
   const queryClient = useQueryClient();
   return useRestorePosition({
     mutation: {

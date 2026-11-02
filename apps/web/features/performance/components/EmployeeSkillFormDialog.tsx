@@ -39,6 +39,8 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import {
   employeeSkillFieldErrors,
   useEmployeeSkillCreate,
@@ -70,7 +72,7 @@ export function EmployeeSkillFormDialog({
   const t = useTranslations("performance.skills.employeeForm");
   const common = useTranslations("performance.actions");
   const validation = useTranslations("performance.validation");
-  const errors = useTranslations("performance.errors");
+  const errors = useApiErrorTranslator("performance.errors");
   const levels = useTranslations("performance.skills.levels");
   const isEdit = employeeSkill !== null;
   const [rootError, setRootError] = useState<string | null>(null);

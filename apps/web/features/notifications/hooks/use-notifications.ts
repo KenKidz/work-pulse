@@ -19,6 +19,11 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { invalidateNotifications } from "../api";
+import {
+  sharedApiErrorMessage,
+  useApiErrorTranslator,
+  type SharedApiErrorTranslator,
+} from "@/lib/api-errors";
 import type { ListNotificationsParams } from "../types";
 
 export function useNotifications(params?: ListNotificationsParams, enabled = true) {
@@ -33,14 +38,11 @@ export function useUnreadCount() {
   return useGetNotificationUnreadCount({ query: { refetchOnWindowFocus: true } });
 }
 
-type NotificationErrorTranslator = (
-  key: "notFound" | "unauthorized" | "generic",
-) => string;
+type NotificationErrorTranslator = (key: "notFound" | "unauthorized" | "generic") => string;
 
-export function notificationErrorMessage(
-  error: unknown,
-  t: NotificationErrorTranslator,
-): string {
+export function notificationErrorMessage(error: unknown, t: NotificationErrorTranslator): string {
+  const shared = sharedApiErrorMessage(error, t as unknown as SharedApiErrorTranslator);
+  if (shared !== null) return shared;
   if (error instanceof ApiError) {
     switch (error.code) {
       case "notification_not_found":
@@ -56,7 +58,7 @@ export function notificationErrorMessage(
 
 export function useMarkReadAction() {
   const t = useTranslations("notifications.toasts");
-  const errors = useTranslations("notifications.errors");
+  const errors = useApiErrorTranslator("notifications.errors");
   const queryClient = useQueryClient();
   return useMarkNotificationRead({
     mutation: {
@@ -71,7 +73,7 @@ export function useMarkReadAction() {
 
 export function useMarkAllReadAction() {
   const t = useTranslations("notifications.toasts");
-  const errors = useTranslations("notifications.errors");
+  const errors = useApiErrorTranslator("notifications.errors");
   const queryClient = useQueryClient();
   return useMarkAllNotificationsRead({
     mutation: {

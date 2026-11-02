@@ -27,6 +27,8 @@ import {
 } from "@/components/ui/table";
 import { useAuth } from "@/features/auth/components/AuthGate";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import { formatDate } from "../dates";
 import { leaveWithdrawError, useLeaveRequests, useWithdrawLeaveAction } from "../hooks/use-leave";
 import { leaveStatusVariant } from "../labels";
@@ -39,7 +41,7 @@ export function MyRequestsTable() {
   const t = useTranslations("leave");
   const locale = useLocale();
   const common = useTranslations("common.actions");
-  const errors = useTranslations("leave.errors");
+  const errors = useApiErrorTranslator("leave.errors");
   const { user } = useAuth();
   const employeeId = user.employee_id ?? null;
   const [page, setPage] = useState(1);
@@ -73,10 +75,7 @@ export function MyRequestsTable() {
         </h2>
         <Card className="gap-0 rounded-md border-border py-0 shadow-none">
           <div className="p-4">
-            <EmptyState
-              icon={Inbox}
-              message={t("myRequests.noEmployee")}
-            />
+            <EmptyState icon={Inbox} message={t("myRequests.noEmployee")} />
           </div>
         </Card>
       </section>
@@ -139,10 +138,7 @@ export function MyRequestsTable() {
           </div>
         ) : requests.length === 0 ? (
           <div className="p-4">
-            <EmptyState
-              icon={CalendarPlus}
-              message={t("myRequests.empty")}
-            />
+            <EmptyState icon={CalendarPlus} message={t("myRequests.empty")} />
           </div>
         ) : (
           <>
@@ -161,17 +157,18 @@ export function MyRequestsTable() {
                   <TableHead>{t("myRequests.columns.status")}</TableHead>
                   <TableHead>{t("myRequests.columns.reason")}</TableHead>
                   <TableHead>{t("myRequests.columns.requested")}</TableHead>
-                  <TableHead className="pr-3 text-right">{t("myRequests.columns.actions")}</TableHead>
+                  <TableHead className="pr-3 text-right">
+                    {t("myRequests.columns.actions")}
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {requests.map((request) => (
                   <TableRow key={request.id}>
-                    <TableCell className="pl-3">
-                      {t(`types.${request.leave_type_code}`)}
-                    </TableCell>
+                    <TableCell className="pl-3">{t(`types.${request.leave_type_code}`)}</TableCell>
                     <TableCell className="text-sm tabular-nums">
-                      {formatDate(request.start_date, locale)} – {formatDate(request.end_date, locale)}
+                      {formatDate(request.start_date, locale)} –{" "}
+                      {formatDate(request.end_date, locale)}
                     </TableCell>
                     <TableCell className="tabular-nums">{request.days}</TableCell>
                     <TableCell>

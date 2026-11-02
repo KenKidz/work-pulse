@@ -109,7 +109,12 @@ from app.shared.errors import UnauthenticatedError
 from app.shared.identity import Identity
 
 SettingsDep = Annotated[Settings, Depends(get_settings)]
-SessionDep = Annotated[AsyncSession, Depends(get_session)]
+# `scope="function"` commits/rolls back *before* the response is sent. FastAPI
+# defaults yield-dependencies to request scope, which sends the response
+# before teardown — a client that immediately reads its own write (the load
+# gate's check-in → check-out pair) could then race the commit and see a 404.
+# A 2xx means the transaction is durable.
+SessionDep = Annotated[AsyncSession, Depends(get_session, scope="function")]
 SessionFactoryDep = Annotated[
     async_sessionmaker[AsyncSession], Depends(get_session_factory)
 ]

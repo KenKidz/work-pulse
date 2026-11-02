@@ -31,6 +31,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import {
   locationFieldErrors,
   useLocationCreate,
@@ -49,7 +51,7 @@ type LocationFormDialogProps = {
 
 export function LocationFormDialog({ open, onOpenChange, location }: LocationFormDialogProps) {
   const t = useTranslations();
-  const errors = useTranslations("organizations.errors");
+  const errors = useApiErrorTranslator("organizations.errors");
   const isEdit = location !== null;
   const [rootError, setRootError] = useState<string | null>(null);
   const createLocation = useLocationCreate();
@@ -57,7 +59,9 @@ export function LocationFormDialog({ open, onOpenChange, location }: LocationFor
   const mutation = isEdit ? updateLocation : createLocation;
 
   const form = useForm<LocationFormValues>({
-    resolver: zodResolver(locationFormSchema((key) => t(`organizations.locations.validation.${key}`))),
+    resolver: zodResolver(
+      locationFormSchema((key) => t(`organizations.locations.validation.${key}`)),
+    ),
     defaultValues: {
       name: location?.name ?? "",
       address: location?.address ?? null,
@@ -96,7 +100,11 @@ export function LocationFormDialog({ open, onOpenChange, location }: LocationFor
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{isEdit ? t("organizations.locations.editTitle") : t("organizations.locations.createTitle")}</DialogTitle>
+          <DialogTitle>
+            {isEdit
+              ? t("organizations.locations.editTitle")
+              : t("organizations.locations.createTitle")}
+          </DialogTitle>
           <DialogDescription>{t("organizations.locations.description")}</DialogDescription>
         </DialogHeader>
 
@@ -109,7 +117,11 @@ export function LocationFormDialog({ open, onOpenChange, location }: LocationFor
                 <FormItem>
                   <FormLabel>{t("organizations.locations.name")}</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder={t("organizations.locations.namePlaceholder")} autoComplete="off" />
+                    <Input
+                      {...field}
+                      placeholder={t("organizations.locations.namePlaceholder")}
+                      autoComplete="off"
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -142,7 +154,11 @@ export function LocationFormDialog({ open, onOpenChange, location }: LocationFor
                 <FormItem>
                   <FormLabel>{t("organizations.locations.timezone")}</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder={t("organizations.locations.timezonePlaceholder")} autoComplete="off" />
+                    <Input
+                      {...field}
+                      placeholder={t("organizations.locations.timezonePlaceholder")}
+                      autoComplete="off"
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -160,7 +176,9 @@ export function LocationFormDialog({ open, onOpenChange, location }: LocationFor
                 {t("common.actions.cancel")}
               </Button>
               <Button type="submit" disabled={mutation.isPending}>
-                {isEdit ? t("organizations.actions.saveChanges") : t("organizations.actions.createLocation")}
+                {isEdit
+                  ? t("organizations.actions.saveChanges")
+                  : t("organizations.actions.createLocation")}
               </Button>
             </DialogFooter>
           </form>

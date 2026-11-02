@@ -42,6 +42,8 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import {
   goalFieldErrors,
   useGoalCreate,
@@ -64,7 +66,7 @@ export function GoalFormDialog({ open, onOpenChange, goal }: GoalFormDialogProps
   const t = useTranslations("performance.goalForm");
   const common = useTranslations("performance.actions");
   const validation = useTranslations("performance.validation");
-  const errors = useTranslations("performance.errors");
+  const errors = useApiErrorTranslator("performance.errors");
   const { user, canViewTeam } = usePerformanceAccess();
   const directory = usePerformanceDirectory();
   const isEdit = goal !== null;

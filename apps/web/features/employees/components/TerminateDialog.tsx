@@ -32,6 +32,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import { employeeFieldErrors, errorMessage, useEmployeeTerminate } from "../hooks/use-employees";
 import { terminationFormSchema, type TerminationFormValues } from "../schema";
 import { todayISO } from "./dates";
@@ -45,7 +47,7 @@ type TerminateDialogProps = {
 export function TerminateDialog({ open, onOpenChange, employeeId }: TerminateDialogProps) {
   const t = useTranslations("employees");
   const common = useTranslations("common.actions");
-  const errors = useTranslations("employees.errors");
+  const errors = useApiErrorTranslator("employees.errors");
   const [rootError, setRootError] = useState<string | null>(null);
   const terminate = useEmployeeTerminate();
 

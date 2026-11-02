@@ -21,6 +21,11 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { invalidateUserAggregates, invalidateUsers } from "../api";
+import {
+  sharedApiErrorMessage,
+  useApiErrorTranslator,
+  type SharedApiErrorTranslator,
+} from "@/lib/api-errors";
 import type { ListUsersParams } from "../types";
 
 export function useUsers(params?: ListUsersParams) {
@@ -30,6 +35,8 @@ export function useUsers(params?: ListUsersParams) {
 type ErrorTranslator = (key: "generic") => string;
 
 export function errorMessage(error: unknown, t: ErrorTranslator): string {
+  const shared = sharedApiErrorMessage(error, t as unknown as SharedApiErrorTranslator);
+  if (shared !== null) return shared;
   return error instanceof ApiError ? error.message : t("generic");
 }
 
@@ -50,6 +57,8 @@ type UserErrorTranslator = (
 
 /** Map a stable API error code to the field it belongs to (AC12). */
 export function userFieldErrors(error: unknown, t: UserErrorTranslator): UserFieldErrors {
+  const shared = sharedApiErrorMessage(error, t as unknown as SharedApiErrorTranslator);
+  if (shared !== null) return { root: shared };
   if (error instanceof ApiError) {
     switch (error.code) {
       case "user_email_taken":
@@ -73,7 +82,7 @@ export function userFieldErrors(error: unknown, t: UserErrorTranslator): UserFie
 
 export function useUserCreate() {
   const t = useTranslations("users.toasts");
-  const errors = useTranslations("users.errors");
+  const errors = useApiErrorTranslator("users.errors");
   const queryClient = useQueryClient();
   return useCreateUser({
     mutation: {
@@ -88,7 +97,7 @@ export function useUserCreate() {
 
 export function useUserUpdate() {
   const t = useTranslations("users.toasts");
-  const errors = useTranslations("users.errors");
+  const errors = useApiErrorTranslator("users.errors");
   const queryClient = useQueryClient();
   return useUpdateUser({
     mutation: {
@@ -103,7 +112,7 @@ export function useUserUpdate() {
 
 export function useUserActivate() {
   const t = useTranslations("users.toasts");
-  const errors = useTranslations("users.errors");
+  const errors = useApiErrorTranslator("users.errors");
   const queryClient = useQueryClient();
   return useActivateUser({
     mutation: {
@@ -118,7 +127,7 @@ export function useUserActivate() {
 
 export function useUserDeactivate() {
   const t = useTranslations("users.toasts");
-  const errors = useTranslations("users.errors");
+  const errors = useApiErrorTranslator("users.errors");
   const queryClient = useQueryClient();
   return useDeactivateUser({
     mutation: {
@@ -133,7 +142,7 @@ export function useUserDeactivate() {
 
 export function useUserResetPassword() {
   const t = useTranslations("users.toasts");
-  const errors = useTranslations("users.errors");
+  const errors = useApiErrorTranslator("users.errors");
   // A reset changes no `User` field — it revokes the target's sessions and
   // rehashes, so only a toast is needed (no invalidation).
   return useResetUserPassword({

@@ -40,6 +40,8 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import { employeeLabel } from "../format";
 import {
   bonusFieldErrors,
@@ -76,7 +78,7 @@ export function BonusDialog({
   const t = useTranslations("payroll.bonus");
   const root = useTranslations("payroll");
   const validation = useTranslations("payroll.validation");
-  const errors = useTranslations("payroll.errors");
+  const errors = useApiErrorTranslator("payroll.errors");
   const [rootError, setRootError] = useState<string | null>(null);
   const createBonus = useRunBonusCreate(runId);
 

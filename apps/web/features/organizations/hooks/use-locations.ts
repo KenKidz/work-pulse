@@ -17,6 +17,11 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { invalidateLocations } from "../api";
+import {
+  sharedApiErrorMessage,
+  useApiErrorTranslator,
+  type SharedApiErrorTranslator,
+} from "@/lib/api-errors";
 import type { ListLocationsParams } from "../types";
 import { errorMessage } from "./use-departments";
 
@@ -36,6 +41,8 @@ export function locationFieldErrors(
   error: unknown,
   t: LocationErrorTranslator,
 ): LocationFieldErrors {
+  const shared = sharedApiErrorMessage(error, t as unknown as SharedApiErrorTranslator);
+  if (shared !== null) return { root: shared };
   if (error instanceof ApiError) {
     switch (error.code) {
       case "location_name_taken":
@@ -53,7 +60,7 @@ export function locationFieldErrors(
 
 export function useLocationCreate() {
   const t = useTranslations("organizations.toasts");
-  const errors = useTranslations("organizations.errors");
+  const errors = useApiErrorTranslator("organizations.errors");
   const queryClient = useQueryClient();
   return useCreateLocation({
     mutation: {
@@ -68,7 +75,7 @@ export function useLocationCreate() {
 
 export function useLocationUpdate() {
   const t = useTranslations("organizations.toasts");
-  const errors = useTranslations("organizations.errors");
+  const errors = useApiErrorTranslator("organizations.errors");
   const queryClient = useQueryClient();
   return useUpdateLocation({
     mutation: {
@@ -83,7 +90,7 @@ export function useLocationUpdate() {
 
 export function useLocationArchive() {
   const t = useTranslations("organizations.toasts");
-  const errors = useTranslations("organizations.errors");
+  const errors = useApiErrorTranslator("organizations.errors");
   const queryClient = useQueryClient();
   return useArchiveLocation({
     mutation: {
@@ -98,7 +105,7 @@ export function useLocationArchive() {
 
 export function useLocationRestore() {
   const t = useTranslations("organizations.toasts");
-  const errors = useTranslations("organizations.errors");
+  const errors = useApiErrorTranslator("organizations.errors");
   const queryClient = useQueryClient();
   return useRestoreLocation({
     mutation: {

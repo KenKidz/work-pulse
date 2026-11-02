@@ -28,6 +28,11 @@ import {
   invalidateCurrentEmployee,
   invalidateShifts,
 } from "../api";
+import {
+  sharedApiErrorMessage,
+  useApiErrorTranslator,
+  type SharedApiErrorTranslator,
+} from "@/lib/api-errors";
 import type { GetAttendanceBoardParams, ListAttendanceRecordsParams } from "../types";
 
 export function useAttendanceBoard(params?: GetAttendanceBoardParams) {
@@ -49,6 +54,8 @@ export function useCurrentEmployee() {
 type ErrorTranslator = (key: "generic") => string;
 
 export function errorMessage(error: unknown, t: ErrorTranslator): string {
+  const shared = sharedApiErrorMessage(error, t as unknown as SharedApiErrorTranslator);
+  if (shared !== null) return shared;
   return error instanceof ApiError ? error.message : t("generic");
 }
 
@@ -81,6 +88,8 @@ export function attendanceFieldErrors(
   error: unknown,
   t: AttendanceErrorTranslator,
 ): AttendanceFieldErrors {
+  const shared = sharedApiErrorMessage(error, t as unknown as SharedApiErrorTranslator);
+  if (shared !== null) return { root: shared };
   if (error instanceof ApiError) {
     switch (error.code) {
       case "attendance_already_checked_in":
@@ -112,7 +121,7 @@ export function attendanceFieldErrors(
 
 export function useCheckInAction() {
   const t = useTranslations("attendance.toasts");
-  const errors = useTranslations("attendance.errors");
+  const errors = useApiErrorTranslator("attendance.errors");
   const queryClient = useQueryClient();
   return useCheckIn({
     mutation: {
@@ -128,7 +137,7 @@ export function useCheckInAction() {
 
 export function useCheckOutAction() {
   const t = useTranslations("attendance.toasts");
-  const errors = useTranslations("attendance.errors");
+  const errors = useApiErrorTranslator("attendance.errors");
   const queryClient = useQueryClient();
   return useCheckOut({
     mutation: {
@@ -144,7 +153,7 @@ export function useCheckOutAction() {
 
 export function useShiftCreate() {
   const t = useTranslations("attendance.toasts");
-  const errors = useTranslations("attendance.errors");
+  const errors = useApiErrorTranslator("attendance.errors");
   const queryClient = useQueryClient();
   return useCreateShift({
     mutation: {
@@ -159,7 +168,7 @@ export function useShiftCreate() {
 
 export function useShiftUpdate() {
   const t = useTranslations("attendance.toasts");
-  const errors = useTranslations("attendance.errors");
+  const errors = useApiErrorTranslator("attendance.errors");
   const queryClient = useQueryClient();
   return useUpdateShift({
     mutation: {

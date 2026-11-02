@@ -47,6 +47,8 @@ import { toast } from "sonner";
 
 import { useAuth } from "@/features/auth/components/AuthGate";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import {
   invalidateInterviews,
   invalidateJobs,
@@ -250,10 +252,7 @@ export function useRecruitmentCandidateDirectory() {
     ),
   });
 
-  const candidates = directoryItems<Candidate>([
-    first.data,
-    ...rest.map((query) => query.data),
-  ]);
+  const candidates = directoryItems<Candidate>([first.data, ...rest.map((query) => query.data)]);
 
   return {
     interviewingCandidates: candidates.filter((row) => row.status === "interviewing"),
@@ -282,7 +281,9 @@ export type JobFieldErrors = Partial<Record<JobFieldName, string>>;
 /** Map a pinned job error code to the field/dialog that renders it. */
 export function jobFieldErrors(
   error: unknown,
-  t: (key: Parameters<typeof recruitmentErrorMessage>[1] extends (key: infer K) => string ? K : never) => string,
+  t: (
+    key: Parameters<typeof recruitmentErrorMessage>[1] extends (key: infer K) => string ? K : never,
+  ) => string,
 ): JobFieldErrors {
   const message = recruitmentErrorMessage(error, t);
   if (error instanceof ApiError) {
@@ -302,7 +303,7 @@ export function jobFieldErrors(
 
 export function useJobCreate() {
   const t = useTranslations("recruitment.toasts");
-  const errors = useTranslations("recruitment.errors");
+  const errors = useApiErrorTranslator("recruitment.errors");
   const queryClient = useQueryClient();
   return useCreateJob({
     mutation: {
@@ -317,7 +318,7 @@ export function useJobCreate() {
 
 export function useJobUpdate() {
   const t = useTranslations("recruitment.toasts");
-  const errors = useTranslations("recruitment.errors");
+  const errors = useApiErrorTranslator("recruitment.errors");
   const queryClient = useQueryClient();
   return useUpdateJob({
     mutation: {
@@ -332,7 +333,7 @@ export function useJobUpdate() {
 
 export function useJobOpen() {
   const t = useTranslations("recruitment.toasts");
-  const errors = useTranslations("recruitment.errors");
+  const errors = useApiErrorTranslator("recruitment.errors");
   const queryClient = useQueryClient();
   return useOpenJob({
     mutation: {
@@ -347,7 +348,7 @@ export function useJobOpen() {
 
 export function useJobClose() {
   const t = useTranslations("recruitment.toasts");
-  const errors = useTranslations("recruitment.errors");
+  const errors = useApiErrorTranslator("recruitment.errors");
   const queryClient = useQueryClient();
   return useCloseJob({
     mutation: {
@@ -427,7 +428,7 @@ export function hireFieldErrors(
 
 export function useCandidateCreate() {
   const t = useTranslations("recruitment.toasts");
-  const errors = useTranslations("recruitment.errors");
+  const errors = useApiErrorTranslator("recruitment.errors");
   const queryClient = useQueryClient();
   return useCreateCandidate({
     mutation: {
@@ -442,7 +443,7 @@ export function useCandidateCreate() {
 
 export function useCandidateUpdate() {
   const t = useTranslations("recruitment.toasts");
-  const errors = useTranslations("recruitment.errors");
+  const errors = useApiErrorTranslator("recruitment.errors");
   const queryClient = useQueryClient();
   return useUpdateCandidate({
     mutation: {
@@ -457,7 +458,7 @@ export function useCandidateUpdate() {
 
 export function useCandidateAdvance() {
   const t = useTranslations("recruitment.toasts");
-  const errors = useTranslations("recruitment.errors");
+  const errors = useApiErrorTranslator("recruitment.errors");
   const queryClient = useQueryClient();
   return useAdvanceCandidate({
     mutation: {
@@ -472,7 +473,7 @@ export function useCandidateAdvance() {
 
 export function useCandidateReject() {
   const t = useTranslations("recruitment.toasts");
-  const errors = useTranslations("recruitment.errors");
+  const errors = useApiErrorTranslator("recruitment.errors");
   const queryClient = useQueryClient();
   return useRejectCandidate({
     mutation: {
@@ -487,7 +488,7 @@ export function useCandidateReject() {
 
 export function useCandidateWithdraw() {
   const t = useTranslations("recruitment.toasts");
-  const errors = useTranslations("recruitment.errors");
+  const errors = useApiErrorTranslator("recruitment.errors");
   const queryClient = useQueryClient();
   return useWithdrawCandidate({
     mutation: {
@@ -502,7 +503,7 @@ export function useCandidateWithdraw() {
 
 export function useCandidateHire() {
   const t = useTranslations("recruitment.toasts");
-  const errors = useTranslations("recruitment.errors");
+  const errors = useApiErrorTranslator("recruitment.errors");
   const queryClient = useQueryClient();
   return useHireCandidate({
     mutation: {
@@ -517,12 +518,7 @@ export function useCandidateHire() {
 }
 
 export type InterviewFieldName =
-  | "candidate_id"
-  | "interviewer_id"
-  | "scheduled_at"
-  | "notes"
-  | "rating"
-  | "root";
+  "candidate_id" | "interviewer_id" | "scheduled_at" | "notes" | "rating" | "root";
 
 export type InterviewFieldErrors = Partial<Record<InterviewFieldName, string>>;
 
@@ -549,7 +545,7 @@ export function interviewFieldErrors(
 
 export function useInterviewSchedule() {
   const t = useTranslations("recruitment.toasts");
-  const errors = useTranslations("recruitment.errors");
+  const errors = useApiErrorTranslator("recruitment.errors");
   const queryClient = useQueryClient();
   return useScheduleInterview({
     mutation: {
@@ -564,7 +560,7 @@ export function useInterviewSchedule() {
 
 export function useInterviewUpdate() {
   const t = useTranslations("recruitment.toasts");
-  const errors = useTranslations("recruitment.errors");
+  const errors = useApiErrorTranslator("recruitment.errors");
   const queryClient = useQueryClient();
   return useUpdateInterview({
     mutation: {
@@ -579,7 +575,7 @@ export function useInterviewUpdate() {
 
 export function useInterviewComplete() {
   const t = useTranslations("recruitment.toasts");
-  const errors = useTranslations("recruitment.errors");
+  const errors = useApiErrorTranslator("recruitment.errors");
   const queryClient = useQueryClient();
   return useCompleteInterview({
     mutation: {
@@ -596,7 +592,7 @@ export function useInterviewComplete() {
 
 export function useInterviewCancel() {
   const t = useTranslations("recruitment.toasts");
-  const errors = useTranslations("recruitment.errors");
+  const errors = useApiErrorTranslator("recruitment.errors");
   const queryClient = useQueryClient();
   return useCancelInterview({
     mutation: {

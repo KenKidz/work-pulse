@@ -21,6 +21,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import { performanceErrorMessage } from "../labels";
 import { useSkillArchive, useSkillRestore } from "../hooks/use-performance";
 import type { Skill } from "../types";
@@ -37,7 +39,7 @@ type SkillStateDialogProps = {
 export function SkillStateDialog({ open, onOpenChange, skill, action }: SkillStateDialogProps) {
   const t = useTranslations("performance.skills.state");
   const common = useTranslations("performance.actions");
-  const errors = useTranslations("performance.errors");
+  const errors = useApiErrorTranslator("performance.errors");
   const archive = useSkillArchive();
   const restore = useSkillRestore();
   const mutation = action === "archive" ? archive : restore;

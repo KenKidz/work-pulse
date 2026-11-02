@@ -173,6 +173,10 @@ class Settings(BaseSettings):
     # `RATE_LIMIT_ENABLED=false` bypasses the limiter entirely (local debugging
     # only); Redis errors fail open regardless.
     rate_limit_enabled: bool = True
+    # Reverse proxies allowed to supply `X-Forwarded-For`. Empty (the default)
+    # keys the auth tier on the socket peer and ignores the client-controlled
+    # header; list the immediate proxy hops (JSON list) when deployed behind one.
+    rate_limit_trusted_proxies: list[str] = []
     rate_limit_auth_max_requests: int = Field(default=30, ge=1)
     rate_limit_auth_window_seconds: float = Field(
         default=60.0, gt=0, allow_inf_nan=False

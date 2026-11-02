@@ -19,6 +19,11 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { invalidateDepartments } from "../api";
+import {
+  sharedApiErrorMessage,
+  useApiErrorTranslator,
+  type SharedApiErrorTranslator,
+} from "@/lib/api-errors";
 import type { ListDepartmentsParams } from "../types";
 
 export function useDepartments(params?: ListDepartmentsParams) {
@@ -28,6 +33,8 @@ export function useDepartments(params?: ListDepartmentsParams) {
 type ErrorTranslator = (key: "generic") => string;
 
 export function errorMessage(error: unknown, t: ErrorTranslator): string {
+  const shared = sharedApiErrorMessage(error, t as unknown as SharedApiErrorTranslator);
+  if (shared !== null) return shared;
   return error instanceof ApiError ? error.message : t("generic");
 }
 
@@ -35,12 +42,7 @@ export type DepartmentFieldName = "name" | "parent_department_id";
 export type DepartmentFieldErrors = Partial<Record<DepartmentFieldName | "root", string>>;
 
 type FieldErrorTranslator = (
-  key:
-    | "departmentNameTaken"
-    | "departmentCycle"
-    | "departmentNotFound"
-    | "forbidden"
-    | "generic",
+  key: "departmentNameTaken" | "departmentCycle" | "departmentNotFound" | "forbidden" | "generic",
 ) => string;
 
 /** Map a stable API error code to the field it belongs to (AC9). */
@@ -48,6 +50,8 @@ export function departmentFieldErrors(
   error: unknown,
   t: FieldErrorTranslator,
 ): DepartmentFieldErrors {
+  const shared = sharedApiErrorMessage(error, t as unknown as SharedApiErrorTranslator);
+  if (shared !== null) return { root: shared };
   if (error instanceof ApiError) {
     switch (error.code) {
       case "department_name_taken":
@@ -67,7 +71,7 @@ export function departmentFieldErrors(
 
 export function useDepartmentCreate() {
   const t = useTranslations("organizations.toasts");
-  const errors = useTranslations("organizations.errors");
+  const errors = useApiErrorTranslator("organizations.errors");
   const queryClient = useQueryClient();
   return useCreateDepartment({
     mutation: {
@@ -82,7 +86,7 @@ export function useDepartmentCreate() {
 
 export function useDepartmentUpdate() {
   const t = useTranslations("organizations.toasts");
-  const errors = useTranslations("organizations.errors");
+  const errors = useApiErrorTranslator("organizations.errors");
   const queryClient = useQueryClient();
   return useUpdateDepartment({
     mutation: {
@@ -97,7 +101,7 @@ export function useDepartmentUpdate() {
 
 export function useDepartmentArchive() {
   const t = useTranslations("organizations.toasts");
-  const errors = useTranslations("organizations.errors");
+  const errors = useApiErrorTranslator("organizations.errors");
   const queryClient = useQueryClient();
   return useArchiveDepartment({
     mutation: {
@@ -112,7 +116,7 @@ export function useDepartmentArchive() {
 
 export function useDepartmentRestore() {
   const t = useTranslations("organizations.toasts");
-  const errors = useTranslations("organizations.errors");
+  const errors = useApiErrorTranslator("organizations.errors");
   const queryClient = useQueryClient();
   return useRestoreDepartment({
     mutation: {

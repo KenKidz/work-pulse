@@ -33,6 +33,8 @@ import {
 } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import { formatDate, formatHours } from "../dates";
 import {
   overtimeDecisionError,
@@ -62,7 +64,7 @@ export function DecisionDialog({
   const t = useTranslations("overtime");
   const locale = useLocale();
   const common = useTranslations("common.actions");
-  const errors = useTranslations("overtime.errors");
+  const errors = useApiErrorTranslator("overtime.errors");
   const approve = useApproveOvertimeAction();
   const verify = useVerifyOvertimeAction();
   const reject = useRejectOvertimeAction();
@@ -110,13 +112,13 @@ export function DecisionDialog({
     >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{
-            target.mode === "approve"
+          <DialogTitle>
+            {target.mode === "approve"
               ? t("decision.approveTitle")
               : target.mode === "verify"
                 ? t("decision.verifyTitle")
-                : t("decision.rejectTitle")
-          }</DialogTitle>
+                : t("decision.rejectTitle")}
+          </DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 

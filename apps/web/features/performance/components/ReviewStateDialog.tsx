@@ -22,6 +22,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import { performanceErrorMessage } from "../labels";
 import { useReviewCancel, useReviewComplete } from "../hooks/use-performance";
 import type { Review } from "../types";
@@ -45,7 +47,7 @@ export function ReviewStateDialog({
 }: ReviewStateDialogProps) {
   const t = useTranslations("performance.reviews.state");
   const common = useTranslations("performance.actions");
-  const errors = useTranslations("performance.errors");
+  const errors = useApiErrorTranslator("performance.errors");
   const complete = useReviewComplete();
   const cancel = useReviewCancel();
   const mutation = action === "complete" ? complete : cancel;

@@ -6,7 +6,7 @@ does the work.
 
 ## Now
 
-- [ ] Phase 7: Reliability — plan approved (`.ai/features/reliability.md`, T1–T10); T1–T7 done (error contract with `Retry-After`/503 codes, circuit-breaker core + bounded metrics, MinIO breaker + bounded timeouts, relay Kafka breaker with fail-fast and ordered backlog replay, notification provider breakers, Redis sliding-window limiter core, and the shared auth/mutation middleware with per-user budgets, IP-keyed auth tier, fail-open Redis handling and HTTP integration proofs); next T8 (web 429/503 copy).
+- [x] Phase 7: Reliability built end-to-end (`.ai/features/reliability.md`, T1–T10, 2026-10-30 → 2026-11-02): Redis exact sliding-window limits with auth (IP, 30/60s) and mutation (session user, 120/60s) tiers enforced by one fail-open middleware with `429 rate_limited` + `Retry-After`; per-process circuit breakers (5 failures → open, 30s → exactly one half-open trial) around the relay's Kafka publish, the MinIO adapter (with bounded timeouts) and the Resend/Slack adapters, mapping to `503 dependency_unavailable` and the workers' existing retry/backoff policies; bounded breaker/limiter metrics under ADR 0023; the k6 load gate (`make check-load`, 60s at 25 check-ins/s + board reads, p95 < 300ms, zero errors) with 50 deterministic synthetic users giving ≥2× mutation headroom and cleanup of its outbox/attendance facts; pinned 429/503 web copy in en + vi through one shared error mapping; **ADR 0025** records the limiter/breaker/load model and the `scope="function"` session-commit fix. Gates green (2112 API / 451 web / 27 e2e; `make check-load` passed; `make gen-api` diff-free).
 
 ## Later
 

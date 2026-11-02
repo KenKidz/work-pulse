@@ -46,6 +46,8 @@ import { useTranslations } from "next-intl";
 
 import { useEmployees } from "@/features/employees/hooks/use-employees";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import {
   useUserCreate,
   useUserUpdate,
@@ -73,7 +75,7 @@ export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps
   const roles = useTranslations("auth.roles");
   const t = useTranslations("users");
   const common = useTranslations("common.actions");
-  const errors = useTranslations("users.errors");
+  const errors = useApiErrorTranslator("users.errors");
   const isEdit = user !== null;
   const [rootError, setRootError] = useState<string | null>(null);
   const createUser = useUserCreate();

@@ -24,6 +24,11 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { invalidateLeaveAggregates } from "../api";
+import {
+  sharedApiErrorMessage,
+  useApiErrorTranslator,
+  type SharedApiErrorTranslator,
+} from "@/lib/api-errors";
 import type { ListLeaveBalancesParams, ListLeaveRequestsParams } from "../types";
 
 export function useLeaveRequests(params?: ListLeaveRequestsParams, enabled = true) {
@@ -56,6 +61,8 @@ export function useLeaveDirectory({
 type ErrorTranslator = (key: "generic") => string;
 
 export function errorMessage(error: unknown, t: ErrorTranslator): string {
+  const shared = sharedApiErrorMessage(error, t as unknown as SharedApiErrorTranslator);
+  if (shared !== null) return shared;
   return error instanceof ApiError ? error.message : t("generic");
 }
 
@@ -82,6 +89,8 @@ type LeaveErrorTranslator = (
 
 /** Map a pinned submit error code to the field/dialog that renders it. */
 export function leaveFieldErrors(error: unknown, t: LeaveErrorTranslator): LeaveFieldErrors {
+  const shared = sharedApiErrorMessage(error, t as unknown as SharedApiErrorTranslator);
+  if (shared !== null) return { root: shared };
   if (error instanceof ApiError) {
     switch (error.code) {
       case "leave_overlaps":
@@ -106,16 +115,13 @@ export function leaveFieldErrors(error: unknown, t: LeaveErrorTranslator): Leave
 }
 
 type DecisionErrorTranslator = (
-  key:
-    | "selfDecision"
-    | "notPending"
-    | "balanceChanged"
-    | "requestNotFound"
-    | "generic",
+  key: "selfDecision" | "notPending" | "balanceChanged" | "requestNotFound" | "generic",
 ) => string;
 
 /** Decision failures render inside the approve/reject dialog. */
 export function leaveDecisionError(error: unknown, t: DecisionErrorTranslator): string {
+  const shared = sharedApiErrorMessage(error, t as unknown as SharedApiErrorTranslator);
+  if (shared !== null) return shared;
   if (error instanceof ApiError) {
     switch (error.code) {
       case "forbidden":
@@ -141,6 +147,8 @@ type WithdrawErrorTranslator = (
 
 /** Withdraw failures render above the request table. */
 export function leaveWithdrawError(error: unknown, t: WithdrawErrorTranslator): string {
+  const shared = sharedApiErrorMessage(error, t as unknown as SharedApiErrorTranslator);
+  if (shared !== null) return shared;
   if (error instanceof ApiError) {
     switch (error.code) {
       case "forbidden":
@@ -158,7 +166,7 @@ export function leaveWithdrawError(error: unknown, t: WithdrawErrorTranslator): 
 
 export function useCreateLeaveAction() {
   const t = useTranslations("leave.toasts");
-  const errors = useTranslations("leave.errors");
+  const errors = useApiErrorTranslator("leave.errors");
   const queryClient = useQueryClient();
   return useCreateLeaveRequest({
     mutation: {
@@ -173,7 +181,7 @@ export function useCreateLeaveAction() {
 
 export function useApproveLeaveAction() {
   const t = useTranslations("leave.toasts");
-  const errors = useTranslations("leave.errors");
+  const errors = useApiErrorTranslator("leave.errors");
   const queryClient = useQueryClient();
   return useApproveLeaveRequest({
     mutation: {
@@ -188,7 +196,7 @@ export function useApproveLeaveAction() {
 
 export function useRejectLeaveAction() {
   const t = useTranslations("leave.toasts");
-  const errors = useTranslations("leave.errors");
+  const errors = useApiErrorTranslator("leave.errors");
   const queryClient = useQueryClient();
   return useRejectLeaveRequest({
     mutation: {
@@ -203,7 +211,7 @@ export function useRejectLeaveAction() {
 
 export function useWithdrawLeaveAction() {
   const t = useTranslations("leave.toasts");
-  const errors = useTranslations("leave.errors");
+  const errors = useApiErrorTranslator("leave.errors");
   const queryClient = useQueryClient();
   return useWithdrawLeaveRequest({
     mutation: {

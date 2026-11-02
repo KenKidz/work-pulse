@@ -21,17 +21,14 @@ import {
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import { invalidatePayrollRun, invalidatePayrollRunSummary, payrollRunsQueryKey } from "../api";
 import { isRunInProgress } from "../labels";
 import { payrollErrorMessage } from "../errors";
 
 export { bonusFieldErrors, runFieldErrors } from "../errors";
-export type {
-  BonusFieldErrors,
-  BonusFieldName,
-  RunFieldErrors,
-  RunFieldName,
-} from "../errors";
+export type { BonusFieldErrors, BonusFieldName, RunFieldErrors, RunFieldName } from "../errors";
 import type {
   ListPayrollRunsParams,
   ListRunPayslipsParams,
@@ -78,7 +75,7 @@ export function useRunPayslips(id: string, params?: ListRunPayslipsParams, enabl
 
 export function usePayrollRunCreate() {
   const t = useTranslations("payroll.toasts");
-  const errors = useTranslations("payroll.errors");
+  const errors = useApiErrorTranslator("payroll.errors");
   const queryClient = useQueryClient();
   return useCreatePayrollRun({
     mutation: {
@@ -93,7 +90,7 @@ export function usePayrollRunCreate() {
 
 export function usePayrollRunRecalculate(runId: string) {
   const t = useTranslations("payroll.toasts");
-  const errors = useTranslations("payroll.errors");
+  const errors = useApiErrorTranslator("payroll.errors");
   const queryClient = useQueryClient();
   return useRecalculatePayrollRun({
     mutation: {
@@ -108,7 +105,7 @@ export function usePayrollRunRecalculate(runId: string) {
 
 export function usePayrollRunFinalize(runId: string) {
   const t = useTranslations("payroll.toasts");
-  const errors = useTranslations("payroll.errors");
+  const errors = useApiErrorTranslator("payroll.errors");
   const queryClient = useQueryClient();
   return useFinalizePayrollRun({
     mutation: {
@@ -128,7 +125,7 @@ export function usePayrollRunFinalize(runId: string) {
 
 export function useRunBonusCreate(runId: string) {
   const t = useTranslations("payroll.toasts");
-  const errors = useTranslations("payroll.errors");
+  const errors = useApiErrorTranslator("payroll.errors");
   const queryClient = useQueryClient();
   return useCreateRunBonus({
     mutation: {

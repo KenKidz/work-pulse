@@ -14,14 +14,13 @@ import {
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import { invalidatePayrollDeductions } from "../api";
 import { payrollErrorMessage } from "../errors";
 
 export { deductionFieldErrors } from "../errors";
-export type {
-  DeductionFieldErrors,
-  DeductionFieldName,
-} from "../errors";
+export type { DeductionFieldErrors, DeductionFieldName } from "../errors";
 
 export function usePayrollDeductions() {
   return useListPayrollDeductions();
@@ -29,7 +28,7 @@ export function usePayrollDeductions() {
 
 export function usePayrollDeductionCreate() {
   const t = useTranslations("payroll.toasts");
-  const errors = useTranslations("payroll.errors");
+  const errors = useApiErrorTranslator("payroll.errors");
   const queryClient = useQueryClient();
   return useCreatePayrollDeduction({
     mutation: {
@@ -44,7 +43,7 @@ export function usePayrollDeductionCreate() {
 
 export function usePayrollDeductionUpdate() {
   const t = useTranslations("payroll.toasts");
-  const errors = useTranslations("payroll.errors");
+  const errors = useApiErrorTranslator("payroll.errors");
   const queryClient = useQueryClient();
   return useUpdatePayrollDeduction({
     mutation: {

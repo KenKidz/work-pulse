@@ -41,6 +41,8 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import { earliestStartDate, inclusiveDays } from "../dates";
 import {
   leaveFieldErrors,
@@ -66,7 +68,7 @@ export function LeaveRequestDialog({ open, onOpenChange }: LeaveRequestDialogPro
   const t = useTranslations("leave.request");
   const common = useTranslations("common.actions");
   const validation = useTranslations("leave.validation");
-  const errors = useTranslations("leave.errors");
+  const errors = useApiErrorTranslator("leave.errors");
   const typesQuery = useLeaveTypes();
   const createRequest = useCreateLeaveAction();
   const [rootError, setRootError] = useState<string | null>(null);
@@ -133,9 +135,7 @@ export function LeaveRequestDialog({ open, onOpenChange }: LeaveRequestDialogPro
                     <FormControl>
                       <SelectTrigger disabled={typesQuery.isPending}>
                         <SelectValue
-                          placeholder={
-                            typesQuery.isPending ? t("loadingTypes") : t("selectType")
-                          }
+                          placeholder={typesQuery.isPending ? t("loadingTypes") : t("selectType")}
                         />
                       </SelectTrigger>
                     </FormControl>
@@ -153,9 +153,7 @@ export function LeaveRequestDialog({ open, onOpenChange }: LeaveRequestDialogPro
             />
 
             {selectedType && !selectedType.counts_against_balance ? (
-              <p className="-mt-2 text-xs text-muted-foreground">
-                {t("noBalance")}
-              </p>
+              <p className="-mt-2 text-xs text-muted-foreground">{t("noBalance")}</p>
             ) : null}
 
             {typesQuery.isError ? (
@@ -203,9 +201,7 @@ export function LeaveRequestDialog({ open, onOpenChange }: LeaveRequestDialogPro
             </div>
 
             {days !== null ? (
-              <p className="text-xs text-muted-foreground">
-                {t("inclusiveDays", { days })}
-              </p>
+              <p className="text-xs text-muted-foreground">{t("inclusiveDays", { days })}</p>
             ) : null}
 
             <FormField

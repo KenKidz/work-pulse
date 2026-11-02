@@ -45,6 +45,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import {
   attendanceFieldErrors,
   errorMessage,
@@ -118,13 +120,8 @@ export function ShiftsPanel() {
           <EmptyState icon={Clock} message={t("shifts.empty")} />
         ) : (
           <>
-            <p className="text-xs text-muted-foreground sm:hidden">
-              {t("shifts.swipe")}
-            </p>
-            <Table
-              aria-label={t("shifts.label")}
-              containerLabel={t("shifts.containerLabel")}
-            >
+            <p className="text-xs text-muted-foreground sm:hidden">{t("shifts.swipe")}</p>
+            <Table aria-label={t("shifts.label")} containerLabel={t("shifts.containerLabel")}>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
                   <TableHead>{t("shifts.columns.name")}</TableHead>
@@ -141,7 +138,9 @@ export function ShiftsPanel() {
                     <TableCell className="text-sm tabular-nums">
                       {shift.start_time}–{shift.end_time}
                     </TableCell>
-                    <TableCell className="tabular-nums">{t("shifts.graceMinutes", { minutes: shift.grace_minutes })}</TableCell>
+                    <TableCell className="tabular-nums">
+                      {t("shifts.graceMinutes", { minutes: shift.grace_minutes })}
+                    </TableCell>
                     <TableCell>
                       {shift.location_id ? (
                         <span className="text-sm text-muted-foreground">
@@ -190,7 +189,7 @@ type ShiftFormDialogProps = {
 export function ShiftFormDialog({ open, onOpenChange, shift }: ShiftFormDialogProps) {
   const t = useTranslations("attendance");
   const common = useTranslations("common.actions");
-  const errors = useTranslations("attendance.errors");
+  const errors = useApiErrorTranslator("attendance.errors");
   const isEdit = shift !== null;
   const [rootError, setRootError] = useState<string | null>(null);
   const createShift = useShiftCreate();
@@ -240,7 +239,9 @@ export function ShiftFormDialog({ open, onOpenChange, shift }: ShiftFormDialogPr
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{isEdit ? t("shifts.form.editTitle") : t("shifts.form.createTitle")}</DialogTitle>
+          <DialogTitle>
+            {isEdit ? t("shifts.form.editTitle") : t("shifts.form.createTitle")}
+          </DialogTitle>
           <DialogDescription>{t("shifts.form.description")}</DialogDescription>
         </DialogHeader>
 
@@ -253,7 +254,11 @@ export function ShiftFormDialog({ open, onOpenChange, shift }: ShiftFormDialogPr
                 <FormItem>
                   <FormLabel>{t("shifts.form.name")}</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder={t("shifts.form.namePlaceholder")} autoComplete="off" />
+                    <Input
+                      {...field}
+                      placeholder={t("shifts.form.namePlaceholder")}
+                      autoComplete="off"
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

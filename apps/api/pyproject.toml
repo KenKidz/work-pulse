@@ -16,7 +16,9 @@ dependencies = [
     # Phase 4, Analytics & Reports (ADR 0006's pre-agreed gate; justified by
     # `.ai/features/analytics-reports.md` / ADR 0019): ClickHouse HTTP client.
     "clickhouse-connect>=1.11.0",
-    "fastapi>=0.115.0",
+    # `Depends(..., scope="function")` commits the request session before the
+    # response (ADR 0025); 0.121.1 fixes it for parameterless dependencies.
+    "fastapi>=0.121.1",
     # Phase 6, observability (ADR 0006's pre-agreed gate; justified by
     # `.ai/features/observability.md` / ADR 0023): tracing, metric collection
     # and Prometheus exposition. Workers run in this same environment.

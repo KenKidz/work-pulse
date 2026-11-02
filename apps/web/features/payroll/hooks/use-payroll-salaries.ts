@@ -11,6 +11,8 @@ import { useCreateSalary, useListSalaries } from "@workpulse/api-client";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import { invalidatePayrollSalaries } from "../api";
 import { payrollErrorMessage } from "../errors";
 
@@ -24,7 +26,7 @@ export function usePayrollSalaries(params?: ListSalariesParams) {
 
 export function useSalaryCreate() {
   const t = useTranslations("payroll.toasts");
-  const errors = useTranslations("payroll.errors");
+  const errors = useApiErrorTranslator("payroll.errors");
   const queryClient = useQueryClient();
   return useCreateSalary({
     mutation: {

@@ -26,6 +26,10 @@
     "archive": "Archive",
     "restore": "Restore"
   },
+  "errors": {
+    "rateLimited": "You're doing that too often. Please wait a moment and try again.",
+    "dependencyUnavailable": "That service is temporarily unavailable. Please try again shortly."
+  },
   "states": {
     "loading": "Loading…",
     "saving": "Saving…",

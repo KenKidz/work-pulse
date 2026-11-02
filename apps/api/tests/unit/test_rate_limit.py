@@ -296,7 +296,7 @@ def test_settings_reject_an_invalid_window(window: float) -> None:
         Settings(rate_limit_mutation_window_seconds=window)
 
 
-def test_client_ip_uses_the_first_forwarded_hop_then_the_peer() -> None:
+def test_client_ip_trusts_forwarded_only_from_a_trusted_proxy() -> None:
     forwarded = Request(
         {
             "type": "http",
@@ -304,12 +304,19 @@ def test_client_ip_uses_the_first_forwarded_hop_then_the_peer() -> None:
             "client": ("203.0.113.9", 4242),
         }
     )
-    assert client_ip(forwarded) == "198.51.100.7"
+    trusted = Settings(rate_limit_trusted_proxies=["203.0.113.9"])
+    assert client_ip(forwarded, trusted) == "198.51.100.7"
+
+    # The default trusts no proxy: a client-supplied header cannot rotate the
+    # auth key away from the actual peer.
+    assert (
+        client_ip(forwarded, Settings(rate_limit_trusted_proxies=[])) == "203.0.113.9"
+    )
 
     peer = Request({"type": "http", "headers": [], "client": ("203.0.113.9", 4242)})
-    assert client_ip(peer) == "203.0.113.9"
+    assert client_ip(peer, trusted) == "203.0.113.9"
 
     # A synthetic transport may omit the peer; a key always exists.
-    assert client_ip(Request({"type": "http", "headers": [], "client": None})) == (
-        "unknown"
-    )
+    assert client_ip(
+        Request({"type": "http", "headers": [], "client": None}), Settings()
+    ) == ("unknown")

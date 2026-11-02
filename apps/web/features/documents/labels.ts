@@ -6,6 +6,8 @@
 
 import { ApiError } from "@workpulse/api-client/mutator/custom-fetch";
 
+import { sharedApiErrorMessage, type SharedApiErrorTranslator } from "@/lib/api-errors";
+
 export type DocumentsErrorKey =
   | "typeNotAllowed"
   | "tooLarge"
@@ -22,6 +24,8 @@ export function documentsErrorMessage(
   error: unknown,
   t: (key: DocumentsErrorKey) => string,
 ): string {
+  const shared = sharedApiErrorMessage(error, t as unknown as SharedApiErrorTranslator);
+  if (shared !== null) return shared;
   if (error instanceof ApiError) {
     switch (error.code) {
       case "document_type_not_allowed":

@@ -9,11 +9,9 @@ import type { ComponentProps } from "react";
 import type { Badge } from "@/components/ui/badge";
 import { ApiError } from "@workpulse/api-client/mutator/custom-fetch";
 
-import type {
-  CandidateStatus,
-  InterviewStatus,
-  JobStatus,
-} from "./types";
+import { sharedApiErrorMessage, type SharedApiErrorTranslator } from "@/lib/api-errors";
+
+import type { CandidateStatus, InterviewStatus, JobStatus } from "./types";
 
 type BadgeVariant = ComponentProps<typeof Badge>["variant"];
 
@@ -86,6 +84,8 @@ export function recruitmentErrorMessage(
   error: unknown,
   t: (key: RecruitmentErrorKey) => string,
 ): string {
+  const shared = sharedApiErrorMessage(error, t as unknown as SharedApiErrorTranslator);
+  if (shared !== null) return shared;
   if (error instanceof ApiError) {
     switch (error.code) {
       case "job_not_found":

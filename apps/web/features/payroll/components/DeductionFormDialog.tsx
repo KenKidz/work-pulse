@@ -39,6 +39,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import {
   deductionFieldErrors,
   usePayrollDeductionCreate,
@@ -60,7 +62,7 @@ export function DeductionFormDialog({ open, onOpenChange, deduction }: Deduction
   const t = useTranslations("payroll.deductionForm");
   const common = useTranslations("common.actions");
   const validation = useTranslations("payroll.validation");
-  const errors = useTranslations("payroll.errors");
+  const errors = useApiErrorTranslator("payroll.errors");
   const kinds = useTranslations("payroll.kinds");
   const deductions = useTranslations("payroll.deductions");
   const isEdit = deduction !== null;
@@ -141,9 +143,7 @@ export function DeductionFormDialog({ open, onOpenChange, deduction }: Deduction
                 name="code"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel
-                      hint={isEdit ? t("codeHintEdit") : t("codeHintCreate")}
-                    >
+                    <FormLabel hint={isEdit ? t("codeHintEdit") : t("codeHintCreate")}>
                       {t("code")}
                     </FormLabel>
                     <FormControl>
@@ -208,9 +208,7 @@ export function DeductionFormDialog({ open, onOpenChange, deduction }: Deduction
                   <FormItem>
                     <FormLabel
                       hint={
-                        kind === "percent_of_base"
-                          ? t("valuePercentHint")
-                          : t("valueFixedHint")
+                        kind === "percent_of_base" ? t("valuePercentHint") : t("valueFixedHint")
                       }
                     >
                       {t("value")}

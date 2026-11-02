@@ -9,6 +9,8 @@ import type { ComponentProps } from "react";
 import type { Badge } from "@/components/ui/badge";
 import { ApiError } from "@workpulse/api-client/mutator/custom-fetch";
 
+import { sharedApiErrorMessage, type SharedApiErrorTranslator } from "@/lib/api-errors";
+
 import type { GoalStatus, ReviewStatus } from "./types";
 
 type BadgeVariant = ComponentProps<typeof Badge>["variant"];
@@ -54,6 +56,8 @@ export function performanceErrorMessage(
   error: unknown,
   t: (key: PerformanceErrorKey) => string,
 ): string {
+  const shared = sharedApiErrorMessage(error, t as unknown as SharedApiErrorTranslator);
+  if (shared !== null) return shared;
   if (error instanceof ApiError) {
     switch (error.code) {
       case "goal_not_found":

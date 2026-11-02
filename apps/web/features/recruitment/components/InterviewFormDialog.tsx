@@ -41,6 +41,8 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import { localDateTimeToUtc, toLocalDateTimeInput } from "../dates";
 import {
   interviewFieldErrors,
@@ -74,7 +76,7 @@ export function InterviewFormDialog({
   const t = useTranslations("recruitment.interviewForm");
   const common = useTranslations("recruitment.actions");
   const validation = useTranslations("recruitment.validation");
-  const errors = useTranslations("recruitment.errors");
+  const errors = useApiErrorTranslator("recruitment.errors");
   const isEdit = interview !== null;
   const [rootError, setRootError] = useState<string | null>(null);
   const scheduleInterview = useInterviewSchedule();
@@ -184,9 +186,7 @@ export function InterviewFormDialog({
                     <FormLabel hint={t("candidateHint")}>{t("candidate")}</FormLabel>
                     {candidates.length === 0 ? (
                       <p className="text-sm text-muted-foreground">
-                        {candidatesPending
-                          ? t("loadingCandidates")
-                          : t("noCandidates")}
+                        {candidatesPending ? t("loadingCandidates") : t("noCandidates")}
                       </p>
                     ) : (
                       <>

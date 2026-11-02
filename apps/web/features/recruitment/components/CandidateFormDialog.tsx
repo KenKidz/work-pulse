@@ -40,6 +40,8 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import {
   candidateFieldErrors,
   useCandidateCreate,
@@ -76,7 +78,7 @@ export function CandidateFormDialog({
   const t = useTranslations("recruitment.candidateForm");
   const common = useTranslations("recruitment.actions");
   const validation = useTranslations("recruitment.validation");
-  const errors = useTranslations("recruitment.errors");
+  const errors = useApiErrorTranslator("recruitment.errors");
   const sources = useTranslations("recruitment.sources");
   const isEdit = candidate !== null;
   const [rootError, setRootError] = useState<string | null>(null);
@@ -177,9 +179,7 @@ export function CandidateFormDialog({
                     <FormLabel hint={t("jobHint")}>{t("job")}</FormLabel>
                     {openJobs.length === 0 ? (
                       <p className="text-sm text-muted-foreground">
-                        {jobsPending
-                          ? t("loadingOpenJobs")
-                          : t("noOpenJobs")}
+                        {jobsPending ? t("loadingOpenJobs") : t("noOpenJobs")}
                       </p>
                     ) : (
                       <>

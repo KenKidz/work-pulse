@@ -42,6 +42,8 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import {
   jobFieldErrors,
   useJobCreate,
@@ -68,7 +70,7 @@ export function JobFormDialog({ open, onOpenChange, job }: JobFormDialogProps) {
   const t = useTranslations("recruitment.jobForm");
   const common = useTranslations("recruitment.actions");
   const validation = useTranslations("recruitment.validation");
-  const errors = useTranslations("recruitment.errors");
+  const errors = useApiErrorTranslator("recruitment.errors");
   const isEdit = job !== null;
   const [rootError, setRootError] = useState<string | null>(null);
   const createJob = useJobCreate();

@@ -33,6 +33,8 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import { uploadStagedObject } from "../api";
 import { useDocumentCreate, useDocumentUploadIntent } from "../hooks/use-documents";
 import { documentsErrorMessage } from "../labels";
@@ -64,7 +66,7 @@ export function UploadDocumentDialog({
   employeeId,
 }: UploadDocumentDialogProps) {
   const t = useTranslations("documents.upload");
-  const errors = useTranslations("documents.errors");
+  const errors = useApiErrorTranslator("documents.errors");
   const validation = useTranslations("documents.validation");
   const common = useTranslations("common.actions");
   const intent = useDocumentUploadIntent();

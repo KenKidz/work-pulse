@@ -33,6 +33,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import { skillFieldErrors, useSkillCreate, useSkillUpdate } from "../hooks/use-performance";
 import { skillFormSchema, type SkillFormValues } from "../schema";
 import type { Skill } from "../types";
@@ -48,7 +50,7 @@ export function SkillFormDialog({ open, onOpenChange, skill }: SkillFormDialogPr
   const t = useTranslations("performance.skills.form");
   const common = useTranslations("performance.actions");
   const validation = useTranslations("performance.validation");
-  const errors = useTranslations("performance.errors");
+  const errors = useApiErrorTranslator("performance.errors");
   const isEdit = skill !== null;
   const [rootError, setRootError] = useState<string | null>(null);
   const createSkill = useSkillCreate();

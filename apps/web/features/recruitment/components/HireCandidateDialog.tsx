@@ -40,6 +40,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import { todayISO } from "../dates";
 import { recruitmentErrorMessage } from "../labels";
 import {
@@ -69,7 +71,7 @@ export function HireCandidateDialog({
   const t = useTranslations("recruitment.hire");
   const common = useTranslations("recruitment.actions");
   const validation = useTranslations("recruitment.validation");
-  const errors = useTranslations("recruitment.errors");
+  const errors = useApiErrorTranslator("recruitment.errors");
   const types = useTranslations("recruitment.types");
   const hireCandidate = useCandidateHire();
   const managers = useActiveEmployees();
@@ -217,9 +219,7 @@ export function HireCandidateDialog({
 
             <div className="space-y-2 border-t pt-4">
               <p className="text-sm font-medium">Contact details</p>
-              <p className="text-xs text-muted-foreground">
-                {t("overrideNote")}
-              </p>
+              <p className="text-xs text-muted-foreground">{t("overrideNote")}</p>
             </div>
 
             <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2">

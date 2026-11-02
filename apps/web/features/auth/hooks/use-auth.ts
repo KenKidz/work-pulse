@@ -19,8 +19,13 @@ import {
 } from "@workpulse/api-client";
 import { ApiError } from "@workpulse/api-client/mutator/custom-fetch";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
 import { toast } from "sonner";
+
+import {
+  sharedApiErrorMessage,
+  useApiErrorTranslator,
+  type SharedApiErrorTranslator,
+} from "@/lib/api-errors";
 
 /** The signed-in user — the session resolves exactly like every API call. */
 export function useCurrentUser() {
@@ -44,7 +49,7 @@ export function useLogin() {
 }
 
 export function useSignOut() {
-  const t = useTranslations("auth.errors");
+  const t = useApiErrorTranslator("auth.errors");
   const queryClient = useQueryClient();
   const router = useRouter();
   return useLogoutMutation({
@@ -68,6 +73,8 @@ type AuthErrorTranslator = (key: "invalidCredentials" | "generic") => string;
 
 /** A stable, user-facing message per auth failure (never the raw error). */
 export function authErrorMessage(error: unknown, t: AuthErrorTranslator): string {
+  const shared = sharedApiErrorMessage(error, t as unknown as SharedApiErrorTranslator);
+  if (shared !== null) return shared;
   if (error instanceof ApiError && error.code === "invalid_credentials") {
     return t("invalidCredentials");
   }

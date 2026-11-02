@@ -46,6 +46,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import {
   employeeLabel,
   formatHours,
@@ -85,7 +87,7 @@ export function RunDetail({ runId }: { runId: string }) {
   const common = useTranslations("common.actions");
   const root = useTranslations("payroll");
   const runStatus = useTranslations("payroll.status.run");
-  const errors = useTranslations("payroll.errors");
+  const errors = useApiErrorTranslator("payroll.errors");
   const locale = useLocale();
   const { canView, canOperate } = usePayrollAccess();
   const runQuery = usePayrollRun(runId, canView);
@@ -130,10 +132,7 @@ export function RunDetail({ runId }: { runId: string }) {
     return (
       <section className="space-y-6">
         <BackLink />
-        <PageHeader
-          title={t("title")}
-          description={t("description")}
-        />
+        <PageHeader title={t("title")} description={t("description")} />
         <div className="flex items-center justify-center gap-2 px-6 py-10 text-sm text-muted-foreground">
           <Spinner className="size-4" />
           <p>{t("loading")}</p>
@@ -147,15 +146,9 @@ export function RunDetail({ runId }: { runId: string }) {
     return (
       <section className="space-y-6">
         <BackLink />
-        <PageHeader
-          title={t("title")}
-          description={t("description")}
-        />
+        <PageHeader title={t("title")} description={t("description")} />
         {notFound ? (
-          <EmptyState
-            icon={ClipboardList}
-            message={t("notFound")}
-          />
+          <EmptyState icon={ClipboardList} message={t("notFound")} />
         ) : (
           <Alert variant="destructive">
             <CircleAlert aria-hidden="true" />
@@ -209,15 +202,10 @@ export function RunDetail({ runId }: { runId: string }) {
   return (
     <section className="space-y-6">
       <BackLink />
-      <PageHeader
-        title={formatPeriod(run.period, locale)}
-        description={t("description")}
-      />
+      <PageHeader title={formatPeriod(run.period, locale)} description={t("description")} />
 
       <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-        <Badge variant={payrollRunStatusVariant[run.status]}>
-          {runStatus(run.status)}
-        </Badge>
+        <Badge variant={payrollRunStatusVariant[run.status]}>{runStatus(run.status)}</Badge>
         <span>
           {t("created", {
             time: formatPayrollTimestamp(run.created_at, locale),
@@ -288,15 +276,11 @@ export function RunDetail({ runId }: { runId: string }) {
             </Button>
           ) : null}
           {!finalizable && !finalized ? (
-            <p className="text-xs text-muted-foreground">
-              {t("finalizeHint")}
-            </p>
+            <p className="text-xs text-muted-foreground">{t("finalizeHint")}</p>
           ) : null}
         </div>
       ) : (
-        <p className="text-xs text-muted-foreground">
-          {t("viewOnly")}
-        </p>
+        <p className="text-xs text-muted-foreground">{t("viewOnly")}</p>
       )}
 
       {run.status === "failed" ? (
@@ -312,9 +296,7 @@ export function RunDetail({ runId }: { runId: string }) {
       {skipped.length > 0 ? (
         <Alert>
           <Info aria-hidden="true" />
-          <AlertTitle>
-            {t("skippedTitle", { count: run.skipped_count })}
-          </AlertTitle>
+          <AlertTitle>{t("skippedTitle", { count: run.skipped_count })}</AlertTitle>
           <AlertDescription>
             <p>{t("skippedDescription")}</p>
             <ul className="mt-2 space-y-1">
@@ -352,9 +334,7 @@ export function RunDetail({ runId }: { runId: string }) {
             <div className="p-4">
               <EmptyState
                 icon={ClipboardList}
-                message={
-                  run.status === "failed" ? t("timesheetsFailed") : t("timesheetsPending")
-                }
+                message={run.status === "failed" ? t("timesheetsFailed") : t("timesheetsPending")}
               />
             </div>
           ) : timesheetsQuery.isPending ? (
@@ -388,17 +368,16 @@ export function RunDetail({ runId }: { runId: string }) {
               <p className="px-4 py-2 text-xs text-muted-foreground sm:hidden">
                 {t("timesheetsSwipe")}
               </p>
-              <Table
-                aria-label={t("timesheetsLabel")}
-                containerLabel={t("timesheetsContainer")}
-              >
+              <Table aria-label={t("timesheetsLabel")} containerLabel={t("timesheetsContainer")}>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
                     <TableHead className="pl-3">{t("timesheetColumns.employee")}</TableHead>
                     <TableHead className="text-right">{t("timesheetColumns.worked")}</TableHead>
                     <TableHead className="text-right">{t("timesheetColumns.overtime")}</TableHead>
                     <TableHead className="text-right">{t("timesheetColumns.leave")}</TableHead>
-                    <TableHead className="pr-3 text-right">{t("timesheetColumns.attendance")}</TableHead>
+                    <TableHead className="pr-3 text-right">
+                      {t("timesheetColumns.attendance")}
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -454,9 +433,7 @@ export function RunDetail({ runId }: { runId: string }) {
             <div className="p-4">
               <EmptyState
                 icon={ClipboardList}
-                message={
-                  run.status === "failed" ? t("payslipsFailed") : t("payslipsPending")
-                }
+                message={run.status === "failed" ? t("payslipsFailed") : t("payslipsPending")}
               />
             </div>
           ) : payslipsQuery.isPending ? (
@@ -490,10 +467,7 @@ export function RunDetail({ runId }: { runId: string }) {
               <p className="px-4 py-2 text-xs text-muted-foreground sm:hidden">
                 {t("payslipsSwipe")}
               </p>
-              <Table
-                aria-label={t("payslipsLabel")}
-                containerLabel={t("payslipsContainer")}
-              >
+              <Table aria-label={t("payslipsLabel")} containerLabel={t("payslipsContainer")}>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
                     <TableHead className="pl-3">{t("timesheetColumns.employee")}</TableHead>
@@ -655,9 +629,7 @@ function PayslipRows({
       <TableRow>
         <TableCell className="pl-3 font-medium">{employee}</TableCell>
         <TableCell>
-          <Badge variant={payslipStatusVariant[payslip.status]}>
-            {statusT(payslip.status)}
-          </Badge>
+          <Badge variant={payslipStatusVariant[payslip.status]}>{statusT(payslip.status)}</Badge>
         </TableCell>
         <TableCell className="text-right font-mono tabular-nums">
           {currency === null ? "—" : formatMoney(payslip.base, currency, locale)}

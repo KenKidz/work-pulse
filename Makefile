@@ -3,7 +3,7 @@
 API_DIR := apps/api
 WEB_DIR := apps/web
 
-.PHONY: help install dev db-up db-down db-test-up redis-up redis-test-up kafka-up kafka-test-up clickhouse-up clickhouse-down clickhouse-test-up minio-up minio-test-up observability-up observability-down cdc-up cdc-down cdc-test-up cdc-test-down db-migrate db-seed dev-api dev-web dev-relay dev-realtime dev-notifications dev-payroll dev-cdc-sink check check-api check-web check-e2e gen-api format-web
+.PHONY: help install dev db-up db-down db-test-up redis-up redis-test-up kafka-up kafka-test-up clickhouse-up clickhouse-down clickhouse-test-up minio-up minio-test-up observability-up observability-down cdc-up cdc-down cdc-test-up cdc-test-down db-migrate db-seed dev-api dev-web dev-relay dev-realtime dev-notifications dev-payroll dev-cdc-sink check check-api check-web check-e2e check-load gen-api format-web
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -107,7 +107,7 @@ dev-payroll: ## Run the payroll calculation worker (queued runs → calculated, 
 dev-cdc-sink: ## Run the CDC projection sink (Debezium topics → ClickHouse, ADR 0024)
 	cd $(API_DIR) && PYTHONPATH="../..:." uv run python -m workers.cdc_sink.main
 
-check: check-api check-web check-e2e ## Run every gate — run before claiming done
+check: check-api check-web check-e2e check-load ## Run every gate — run before claiming done
 
 check-api: db-test-up redis-test-up kafka-test-up clickhouse-test-up minio-test-up ## API gate: ruff + pyright + pytest (ADR 0006)
 	cd $(API_DIR) && uv run ruff check . ../../workers
@@ -120,6 +120,9 @@ check-web: ## Web gate: typecheck + ESLint + Vitest
 
 check-e2e: db-up redis-up kafka-test-up clickhouse-test-up minio-up db-migrate db-seed cdc-test-up ## E2E gate: Playwright across the full event hop (kafka-test + ClickHouse + Connect + relay + realtime + payroll + CDC)
 	bash tests/e2e/full-hop.sh
+
+check-load: db-up redis-up db-migrate db-seed ## Load gate: k6 smoke at 25 check-ins/s, p95 < 300ms, 0 errors (ADR 0025)
+	bash tests/performance/run.sh
 
 gen-api: ## Regenerate OpenAPI contract + typed API client
 	cd $(API_DIR) && uv run python scripts/export_openapi.py

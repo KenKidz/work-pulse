@@ -22,6 +22,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import { performanceErrorMessage } from "../labels";
 import { useGoalActivate, useGoalCancel, useGoalComplete } from "../hooks/use-performance";
 import type { Goal } from "../types";
@@ -38,7 +40,7 @@ type GoalStateDialogProps = {
 export function GoalStateDialog({ open, onOpenChange, goal, action }: GoalStateDialogProps) {
   const t = useTranslations("performance.goalState");
   const common = useTranslations("performance.actions");
-  const errors = useTranslations("performance.errors");
+  const errors = useApiErrorTranslator("performance.errors");
   const activate = useGoalActivate();
   const complete = useGoalComplete();
   const cancel = useGoalCancel();

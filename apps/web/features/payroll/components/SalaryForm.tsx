@@ -44,6 +44,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import {
   employeeLabel,
   formatMoney,
@@ -76,7 +78,7 @@ export function SalaryForm({ canEdit }: { canEdit: boolean }) {
   const root = useTranslations("payroll");
   const common = useTranslations("common.actions");
   const validation = useTranslations("payroll.validation");
-  const errors = useTranslations("payroll.errors");
+  const errors = useApiErrorTranslator("payroll.errors");
   const locale = useLocale();
   const [page, setPage] = useState(1);
   const [rootError, setRootError] = useState<string | null>(null);
@@ -141,11 +143,7 @@ export function SalaryForm({ canEdit }: { canEdit: boolean }) {
                   name="employee_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel
-                        hint={
-                          directory.canRead ? t("employeeHint") : t("employeeIdHint")
-                        }
-                      >
+                      <FormLabel hint={directory.canRead ? t("employeeHint") : t("employeeIdHint")}>
                         {directory.canRead ? t("employee") : t("employeeId")}
                       </FormLabel>
                       {directory.canRead ? (
@@ -266,20 +264,12 @@ export function SalaryForm({ canEdit }: { canEdit: boolean }) {
           </div>
         ) : salaries.length === 0 ? (
           <div className="p-4">
-            <EmptyState
-              icon={Coins}
-              message={t("empty")}
-            />
+            <EmptyState icon={Coins} message={t("empty")} />
           </div>
         ) : (
           <>
-            <p className="px-4 py-2 text-xs text-muted-foreground sm:hidden">
-              {t("swipe")}
-            </p>
-            <Table
-              aria-label={t("label")}
-              containerLabel={t("containerLabel")}
-            >
+            <p className="px-4 py-2 text-xs text-muted-foreground sm:hidden">{t("swipe")}</p>
+            <Table aria-label={t("label")} containerLabel={t("containerLabel")}>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="pl-3">{t("columns.employee")}</TableHead>
@@ -312,7 +302,11 @@ export function SalaryForm({ canEdit }: { canEdit: boolean }) {
               </TableBody>
             </Table>
             {pageInfo === null ? null : (
-              <TablePagination page={pageInfo} label={t("paginationLabel")} onPageChange={setPage} />
+              <TablePagination
+                page={pageInfo}
+                label={t("paginationLabel")}
+                onPageChange={setPage}
+              />
             )}
           </>
         )}

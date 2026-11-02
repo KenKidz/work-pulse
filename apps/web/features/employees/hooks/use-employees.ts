@@ -19,6 +19,12 @@ import { ApiError } from "@workpulse/api-client/mutator/custom-fetch";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
+import {
+  sharedApiErrorMessage,
+  useApiErrorTranslator,
+  type SharedApiErrorTranslator,
+} from "@/lib/api-errors";
+
 import { invalidateEmployeeAggregates, invalidateEmployees } from "../api";
 import type { ListEmployeesParams } from "../types";
 
@@ -33,6 +39,8 @@ export function useEmployee(id: string) {
 type ErrorTranslator = (key: "generic") => string;
 
 export function errorMessage(error: unknown, t: ErrorTranslator): string {
+  const shared = sharedApiErrorMessage(error, t as unknown as SharedApiErrorTranslator);
+  if (shared !== null) return shared;
   return error instanceof ApiError ? error.message : t("generic");
 }
 
@@ -72,7 +80,12 @@ type EmployeeErrorTranslator = (
 ) => string;
 
 /** Map a stable API error code to the field it belongs to (AC12). */
-export function employeeFieldErrors(error: unknown, t: EmployeeErrorTranslator): EmployeeFieldErrors {
+export function employeeFieldErrors(
+  error: unknown,
+  t: EmployeeErrorTranslator,
+): EmployeeFieldErrors {
+  const shared = sharedApiErrorMessage(error, t as unknown as SharedApiErrorTranslator);
+  if (shared !== null) return { root: shared };
   if (error instanceof ApiError) {
     switch (error.code) {
       case "employee_email_taken":
@@ -108,16 +121,14 @@ export function employeeFieldErrors(error: unknown, t: EmployeeErrorTranslator):
 
 export function useEmployeeCreate() {
   const t = useTranslations("employees.toasts");
-  const errors = useTranslations("employees.errors");
+  const errors = useApiErrorTranslator("employees.errors");
   const queryClient = useQueryClient();
   return useCreateEmployee({
     mutation: {
       onSuccess: async (_data, variables) => {
         await invalidateEmployees(queryClient);
         const code = variables.data.employee_code;
-        toast.success(
-          code ? t("createdWithCode", { code }) : t("created"),
-        );
+        toast.success(code ? t("createdWithCode", { code }) : t("created"));
       },
       onError: (error) => toast.error(errorMessage(error, errors)),
     },
@@ -126,7 +137,7 @@ export function useEmployeeCreate() {
 
 export function useEmployeeUpdate() {
   const t = useTranslations("employees.toasts");
-  const errors = useTranslations("employees.errors");
+  const errors = useApiErrorTranslator("employees.errors");
   const queryClient = useQueryClient();
   return useUpdateEmployee({
     mutation: {
@@ -142,7 +153,7 @@ export function useEmployeeUpdate() {
 
 export function useEmployeeTransfer() {
   const t = useTranslations("employees.toasts");
-  const errors = useTranslations("employees.errors");
+  const errors = useApiErrorTranslator("employees.errors");
   const queryClient = useQueryClient();
   return useTransferEmployee({
     mutation: {
@@ -157,7 +168,7 @@ export function useEmployeeTransfer() {
 
 export function useEmployeeTerminate() {
   const t = useTranslations("employees.toasts");
-  const errors = useTranslations("employees.errors");
+  const errors = useApiErrorTranslator("employees.errors");
   const queryClient = useQueryClient();
   return useTerminateEmployee({
     mutation: {

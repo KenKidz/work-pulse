@@ -40,6 +40,8 @@ import { useLocale, useTranslations } from "next-intl";
 
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import { formatRecruitmentTimestamp } from "../dates";
 import {
   candidateStatusVariant,
@@ -157,7 +159,7 @@ export function CandidatesPanel() {
   const sources = useTranslations("recruitment.sources");
   const fallbacks = useTranslations("recruitment.fallbacks");
   const locale = useLocale();
-  const errors = useTranslations("recruitment.errors");
+  const errors = useApiErrorTranslator("recruitment.errors");
   const [params, setParams] = useState<ListCandidatesParams>({
     page: 1,
     page_size: CANDIDATES_PAGE_SIZE,
@@ -238,11 +240,7 @@ export function CandidatesPanel() {
             <Alert variant="destructive">
               <CircleAlert aria-hidden="true" />
               <AlertDescription>
-                <p>
-                  {isForbiddenError(candidatesQuery.error)
-                    ? errors("denied")
-                    : t("loadError")}
-                </p>
+                <p>{isForbiddenError(candidatesQuery.error) ? errors("denied") : t("loadError")}</p>
                 {isForbiddenError(candidatesQuery.error) ? null : (
                   <Button
                     variant="outline"
@@ -269,13 +267,8 @@ export function CandidatesPanel() {
           </div>
         ) : (
           <>
-            <p className="px-4 py-2 text-xs text-muted-foreground sm:hidden">
-              {t("swipe")}
-            </p>
-            <Table
-              aria-label={t("label")}
-              containerLabel={t("containerLabel")}
-            >
+            <p className="px-4 py-2 text-xs text-muted-foreground sm:hidden">{t("swipe")}</p>
+            <Table aria-label={t("label")} containerLabel={t("containerLabel")}>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="pl-3">{t("columns.name")}</TableHead>
@@ -426,10 +419,10 @@ export function CandidatesPanel() {
             editing === null
               ? undefined
               : organizationLabel(
-                directory.jobNames,
-                editing.job_id,
-                fallbacks("job", { id: editing.job_id.slice(-4) }),
-              )
+                  directory.jobNames,
+                  editing.job_id,
+                  fallbacks("job", { id: editing.job_id.slice(-4) }),
+                )
           }
         />
       ) : null}

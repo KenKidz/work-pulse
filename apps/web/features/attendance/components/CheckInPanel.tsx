@@ -29,6 +29,8 @@ import {
 } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 
+import { useApiErrorTranslator } from "@/lib/api-errors";
+
 import type { AttendanceRecord } from "../types";
 import {
   attendanceFieldErrors,
@@ -49,7 +51,7 @@ export function CheckInPanel({ openRecord }: CheckInPanelProps) {
   const locale = useLocale();
   const workModes = useTranslations("attendance.workModes");
   const validation = useTranslations("attendance.validation");
-  const errors = useTranslations("attendance.errors");
+  const errors = useApiErrorTranslator("attendance.errors");
   const [rootError, setRootError] = useState<string | null>(null);
   const checkIn = useCheckInAction();
   const checkOut = useCheckOutAction();
@@ -105,8 +107,7 @@ export function CheckInPanel({ openRecord }: CheckInPanelProps) {
               <div>
                 <p role="status" className="font-medium">
                   {t("checkedIn", {
-                    mode:
-                      openRecord.work_mode === "remote" ? t("remotely") : t("onSite"),
+                    mode: openRecord.work_mode === "remote" ? t("remotely") : t("onSite"),
                     late: openRecord.late ? t("lateSuffix") : "",
                   })}
                 </p>
