@@ -34,7 +34,10 @@
 - Ids are UUIDv7 (`uuid-utils`) in PostgreSQL `uuid` columns; timestamps are
   timezone-aware UTC (`timestamptz`).
 - Migrations (Alembic) are append-only: never edit a committed revision;
-  autogenerate → review → meaningful revision message.
+  autogenerate → review → meaningful revision message. New revisions must be
+  **backward-compatible with the previously deployed image** (expand-only;
+  breaking changes follow an expand → contract window across releases) —
+  image rollback never rolls back schema.
 - Logging is structlog with `request_id` and `tenant_id` bound; never PII.
 - A domain never imports another domain's internals directly; go through its
   service or a shared interface.

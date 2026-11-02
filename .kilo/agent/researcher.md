@@ -2,6 +2,7 @@
 description: Read-only repo research — locate code, trace flows, verify facts for the main thread
 mode: subagent
 color: "#2563EB"
+model: opencode-go/glm-5.3-flash
 permission:
   edit: deny
   bash: ask
