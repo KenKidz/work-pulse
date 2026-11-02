@@ -32,6 +32,7 @@ from app.shared.telemetry import (
     HTTP_IN_FLIGHT_LABELS,
     HTTP_REQUEST_LABELS,
     METRICS_PATH,
+    RATE_LIMIT_LABELS,
     WORKER_EVENT_LABELS,
     WORKER_UNIT_LABELS,
     TelemetryMiddleware,
@@ -224,6 +225,7 @@ async def test_metrics_and_spans_expose_no_tenant_pii_or_identifiers(
         | set(HTTP_IN_FLIGHT_LABELS)
         | set(WORKER_EVENT_LABELS)
         | set(WORKER_UNIT_LABELS)
+        | set(RATE_LIMIT_LABELS)
         | set(CIRCUIT_BREAKER_STATE_LABELS)
         | set(CIRCUIT_BREAKER_DEPENDENCY_LABELS)
     )

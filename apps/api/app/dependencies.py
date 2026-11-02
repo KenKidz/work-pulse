@@ -501,6 +501,22 @@ async def get_current_user(
     return await service.me(token, datetime.now(UTC))
 
 
+async def resolve_session_user_id(token: str | None, settings: Settings) -> UUID | None:
+    """Resolve a session cookie to its user id for non-dependency callers.
+
+    The rate-limit middleware runs outside FastAPI's dependency resolution and
+    cannot `Depends` on the auth service, so it resolves the same cookie through
+    the same `AuthService.me` seam for the **user id only**. A missing or
+    unusable session raises `UnauthenticatedError` (the caller decides whether
+    to fall back); authorization remains the route `IdentityDep`'s decision.
+    """
+    if token is None:
+        return None
+    async with get_session_factory()() as session:
+        user = await get_current_user(get_auth_service(session, settings), token)
+        return user.id
+
+
 CurrentUserDep = Annotated[User, Depends(get_current_user)]
 
 

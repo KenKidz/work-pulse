@@ -18,9 +18,10 @@ import structlog
 from pydantic import ValidationError
 from redis.asyncio import Redis
 from redis.exceptions import RedisError
+from starlette.requests import Request
 
 from app.config import Settings
-from app.shared.rate_limit import RateLimiter, RateLimitTier
+from app.shared.rate_limit import RateLimiter, RateLimitTier, client_ip
 from app.shared.telemetry import RATE_LIMIT_TIERS
 from tests.unit.telemetry_harness import TelemetryHarness
 
@@ -258,6 +259,7 @@ async def test_invalid_tier_or_key_is_a_programming_error() -> None:
 
 def test_from_settings_reads_the_rate_limit_block() -> None:
     settings = Settings(
+        rate_limit_enabled=True,
         rate_limit_auth_max_requests=1,
         rate_limit_auth_window_seconds=10.0,
         rate_limit_mutation_max_requests=2,
@@ -292,3 +294,22 @@ def test_settings_reject_an_invalid_window(window: float) -> None:
         Settings(rate_limit_auth_window_seconds=window)
     with pytest.raises(ValidationError):
         Settings(rate_limit_mutation_window_seconds=window)
+
+
+def test_client_ip_uses_the_first_forwarded_hop_then_the_peer() -> None:
+    forwarded = Request(
+        {
+            "type": "http",
+            "headers": [(b"x-forwarded-for", b"198.51.100.7, 10.0.0.2")],
+            "client": ("203.0.113.9", 4242),
+        }
+    )
+    assert client_ip(forwarded) == "198.51.100.7"
+
+    peer = Request({"type": "http", "headers": [], "client": ("203.0.113.9", 4242)})
+    assert client_ip(peer) == "203.0.113.9"
+
+    # A synthetic transport may omit the peer; a key always exists.
+    assert client_ip(Request({"type": "http", "headers": [], "client": None})) == (
+        "unknown"
+    )

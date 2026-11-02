@@ -68,3 +68,11 @@ os.environ["STORAGE_BUCKET"] = os.environ.get("STORAGE_TEST_BUCKET", "documents-
 # must stay disabled so parallel runs never collide (ADR 0023).
 for _worker in ("relay", "realtime", "notifications", "payroll", "cdc_sink"):
     os.environ[f"{_worker.upper()}_METRICS_PORT"] = "0"
+
+# The rate limiter is enabled by default in the app (ADR 0025). The integration
+# suite shares one synthetic client IP and issues far more mutations per minute
+# than a production budget, so the app-default limiter is off here; the
+# dedicated reliability suite installs an enabled limiter through
+# `app.state.rate_limiter` and proves enforcement, window math and fail-open
+# against the real test Redis (`tests/integration/test_rate_limit_middleware.py`).
+os.environ["RATE_LIMIT_ENABLED"] = "false"

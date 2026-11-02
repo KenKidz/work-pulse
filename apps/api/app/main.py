@@ -16,6 +16,7 @@ from app.infrastructure.clickhouse.client import dispose_clickhouse
 from app.infrastructure.clickhouse.schema import ensure_clickhouse_schema_best_effort
 from app.shared.errors import register_error_handlers
 from app.shared.logging import RequestContextMiddleware, configure_logging
+from app.shared.rate_limit import RateLimiter, RateLimitMiddleware
 from app.shared.telemetry import (
     METRICS_PATH,
     TelemetryMiddleware,
@@ -67,10 +68,18 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    # The limiter is app state (not a constructor constant) so tests can
+    # install one with an injected clock and explicit budgets (ADR 0025).
+    application.state.rate_limiter = RateLimiter.from_settings(settings)
+
     # Starlette wraps in reverse registration order: the last middleware added
     # is outermost. CORS stays outermost; telemetry wraps the request-id
     # logging middleware so the `request` log line runs inside the server span
-    # and carries `trace_id`/`span_id` (ADR 0023).
+    # and carries `trace_id`/`span_id` (ADR 0023). The rate limiter is
+    # innermost so its 429 short-circuits are still observed by telemetry
+    # (`workpulse_http_requests`) and the request log, while running before any
+    # router/service work (Phase 7, ADR 0025).
+    application.add_middleware(RateLimitMiddleware)
     application.add_middleware(RequestContextMiddleware)
     application.add_middleware(TelemetryMiddleware)
     application.add_middleware(

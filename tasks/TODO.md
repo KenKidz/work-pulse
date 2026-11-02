@@ -6,7 +6,7 @@ does the work.
 
 ## Now
 
-- [ ] Phase 7: Reliability — plan approved (`.ai/features/reliability.md`, T1–T10); T1–T4 done (error contract with `Retry-After`/503 codes, circuit-breaker core + bounded metrics, MinIO breaker + bounded timeouts, relay Kafka breaker with fail-fast and ordered backlog replay); next T5 (notification provider breakers).
+- [ ] Phase 7: Reliability — plan approved (`.ai/features/reliability.md`, T1–T10); T1–T7 done (error contract with `Retry-After`/503 codes, circuit-breaker core + bounded metrics, MinIO breaker + bounded timeouts, relay Kafka breaker with fail-fast and ordered backlog replay, notification provider breakers, Redis sliding-window limiter core, and the shared auth/mutation middleware with per-user budgets, IP-keyed auth tier, fail-open Redis handling and HTTP integration proofs); next T8 (web 429/503 copy).
 
 ## Later
 
