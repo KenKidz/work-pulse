@@ -16,6 +16,7 @@ from aiokafka import AIOKafkaConsumer
 
 from app.config import get_settings
 from app.infrastructure.redis import RedisPresencePublisher, dispose_redis, get_redis
+from app.shared.boot import validate_boot_configuration
 from app.shared.logging import configure_logging, get_logger
 from app.shared.telemetry import (
     configure_telemetry,
@@ -84,6 +85,7 @@ async def _run() -> None:
 
 
 def main() -> None:
+    validate_boot_configuration()
     asyncio.run(_run())
 
 

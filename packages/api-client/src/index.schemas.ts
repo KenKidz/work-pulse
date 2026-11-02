@@ -1756,6 +1756,8 @@ export interface UserListPage {
 
 export type HealthzHealthzGet200 = { [key: string]: string };
 
+export type ReadyzReadyzGet200 = { [key: string]: string };
+
 export type ListUsersParams = {
   q?: string | null;
   role?: Role | null;

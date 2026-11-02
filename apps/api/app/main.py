@@ -3,19 +3,27 @@
 Run locally:  uv run uvicorn app.main:app --reload
 """
 
+import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from anyio import to_thread
 from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 
 from app.api.v1 import api_router
 from app.config import get_settings
 from app.infrastructure.clickhouse.client import dispose_clickhouse
 from app.infrastructure.clickhouse.schema import ensure_clickhouse_schema_best_effort
-from app.shared.errors import register_error_handlers
-from app.shared.logging import RequestContextMiddleware, configure_logging
+from app.infrastructure.postgres.engine import get_engine
+from app.shared.boot import validate_boot_configuration
+from app.shared.errors import DependencyUnavailableError, register_error_handlers
+from app.shared.logging import (
+    RequestContextMiddleware,
+    configure_logging,
+    get_logger,
+)
 from app.shared.rate_limit import RateLimiter, RateLimitMiddleware
 from app.shared.telemetry import (
     METRICS_PATH,
@@ -26,6 +34,33 @@ from app.shared.telemetry import (
 
 settings = get_settings()
 configure_logging(settings.environment)
+
+_log = get_logger("main")
+
+
+async def _probe_database() -> None:
+    """Open a pooled connection and run the readiness query."""
+    async with get_engine().connect() as connection:
+        await connection.execute(text("SELECT 1"))
+
+
+async def check_database_ready(*, timeout_seconds: float | None = None) -> None:
+    """Assert PostgreSQL answers within the readiness bound.
+
+    Success returns `None`; any failure — connection refused, query error or
+    the timeout — raises the house 503 `DependencyUnavailableError`. Failures
+    are logged by exception type only: driver text can carry DSNs and server
+    details (`.ai/security.md`), and the response names no dependency beyond
+    the stable `dependency_unavailable` code.
+    """
+    bound = (
+        settings.readyz_timeout_seconds if timeout_seconds is None else timeout_seconds
+    )
+    try:
+        await asyncio.wait_for(_probe_database(), timeout=bound)
+    except Exception as exc:
+        _log.warning("readiness_probe_failed", error=type(exc).__name__)
+        raise DependencyUnavailableError() from None
 
 
 @asynccontextmanager
@@ -59,6 +94,7 @@ def create_app() -> FastAPI:
     lifespan) so in-process clients — tests, ASGI transports — that skip
     lifespan startup still get spans, metrics and log correlation.
     """
+    validate_boot_configuration()
     configure_telemetry(settings)
 
     application = FastAPI(
@@ -96,6 +132,12 @@ def create_app() -> FastAPI:
     def healthz() -> dict[str, str]:
         """Liveness probe. Must not depend on external services."""
         return {"status": "ok", "version": settings.version}
+
+    @application.get("/readyz", tags=["meta"])
+    async def readyz() -> dict[str, str]:
+        """Readiness probe: PostgreSQL reachable within `READYZ_TIMEOUT_SECONDS`."""
+        await check_database_ready()
+        return {"status": "ready"}
 
     @application.get(METRICS_PATH, include_in_schema=False)
     def metrics() -> Response:

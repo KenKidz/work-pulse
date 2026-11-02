@@ -69,7 +69,7 @@ _AUTH_PASSWORD_PATH = f"{_API_PREFIX}/auth/password"
 
 #: Paths that stay reachable under pressure: operators must be able to see the
 #: system while a tier is throttling.
-_EXEMPT_PATHS = frozenset({"/healthz", METRICS_PATH})
+_EXEMPT_PATHS = frozenset({"/healthz", "/readyz", METRICS_PATH})
 
 #: Mutating methods covered by the mutation tier (reads are never throttled).
 _MUTATION_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})

@@ -15,6 +15,11 @@ class Settings(BaseSettings):
     version: str = "0.1.0"
     environment: str = "development"
 
+    # Deployment readiness probe (Phase 8): `GET /readyz` bounds its
+    # PostgreSQL `SELECT 1` with this timeout so a slow database cannot hang
+    # the kubelet probe. Default 2s; floor guards a non-positive setting.
+    readyz_timeout_seconds: float = Field(default=2.0, gt=0, allow_inf_nan=False)
+
     # Override from the environment with a JSON list, e.g.
     # CORS_ORIGINS='["https://app.workpulse.dev"]'
     cors_origins: list[str] = ["http://localhost:3000"]

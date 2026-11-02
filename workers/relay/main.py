@@ -16,6 +16,7 @@ from datetime import UTC, datetime
 from app.config import get_settings
 from app.infrastructure.postgres.engine import dispose_engine, get_session_factory
 from app.infrastructure.postgres.outbox import PostgresOutboxRepository
+from app.shared.boot import validate_boot_configuration
 from app.shared.circuit_breaker import CircuitBreaker
 from app.shared.logging import configure_logging, get_logger
 from app.shared.telemetry import (
@@ -80,6 +81,7 @@ async def _run() -> None:
 
 
 def main() -> None:
+    validate_boot_configuration()
     asyncio.run(_run())
 
 
