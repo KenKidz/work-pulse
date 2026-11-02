@@ -3,7 +3,13 @@
 API_DIR := apps/api
 WEB_DIR := apps/web
 
-.PHONY: help install dev db-up db-down db-test-up redis-up redis-test-up kafka-up kafka-test-up clickhouse-up clickhouse-down clickhouse-test-up minio-up minio-test-up observability-up observability-down cdc-up cdc-down cdc-test-up cdc-test-down db-migrate db-seed dev-api dev-web dev-relay dev-realtime dev-notifications dev-payroll dev-cdc-sink check check-api check-web check-e2e check-load gen-api format-web
+# Deployment images are tagged with the commit SHA (ADR 0026); `latest` is a
+# local convenience tag only.
+IMAGE_TAG ?= sha-$(shell git rev-parse --short HEAD)
+API_IMAGE ?= workpulse-api:$(IMAGE_TAG)
+WEB_IMAGE ?= workpulse-web:$(IMAGE_TAG)
+
+.PHONY: help install dev db-up db-down db-test-up redis-up redis-test-up kafka-up kafka-test-up clickhouse-up clickhouse-down clickhouse-test-up minio-up minio-test-up observability-up observability-down cdc-up cdc-down cdc-test-up cdc-test-down db-migrate db-seed dev-api dev-web dev-relay dev-realtime dev-notifications dev-payroll dev-cdc-sink check check-api check-web check-e2e check-load images gen-api format-web
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -123,6 +129,10 @@ check-e2e: db-up redis-up kafka-test-up clickhouse-test-up minio-up db-migrate d
 
 check-load: db-up redis-up db-migrate db-seed ## Load gate: k6 smoke at 25 check-ins/s, p95 < 300ms, 0 errors (ADR 0025)
 	bash tests/performance/run.sh
+
+images: ## Build the API and web container images tagged sha-<commit> (deployment)
+	docker build -f apps/api/Dockerfile -t $(API_IMAGE) -t workpulse-api:latest .
+	docker build -f apps/web/Dockerfile -t $(WEB_IMAGE) -t workpulse-web:latest .
 
 gen-api: ## Regenerate OpenAPI contract + typed API client
 	cd $(API_DIR) && uv run python scripts/export_openapi.py

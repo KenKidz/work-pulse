@@ -1,0 +1,37 @@
+# Build context is the repository root; keep the Python image's context to
+# what it needs (apps/api + workers). BuildKit reads this Dockerfile-specific
+# ignore file because the build uses `-f apps/api/Dockerfile`.
+.git
+.github
+.ai
+.kilo
+.codegraph
+.playwright-mcp
+.venv
+**/.venv
+**/__pycache__
+**/*.py[cod]
+**/.pytest_cache
+**/.ruff_cache
+**/.mypy_cache
+**/.pyright
+**/*.tsbuildinfo
+
+# Never ship local configuration or secrets.
+**/.env
+**/.env.*
+
+apps/api/tests
+apps/web
+packages
+database/postgres
+contracts
+ops
+tests
+tasks
+docs
+playwright.config.ts
+playwright-report
+test-results
+docker-compose.yml
+README.md

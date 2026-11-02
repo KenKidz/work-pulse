@@ -441,8 +441,10 @@ the same task; the deployment-only targets never join the `make check` battery
   workers are command overrides (`python -m workers.<name>.main`). No secrets,
   no `.env` files.
 - `apps/web/Dockerfile` + `apps/web/Dockerfile.dockerignore`: pinned
-  `node:20-alpine` build stage + slim runtime; pnpm install + `next build`
-  (standalone); `NEXT_PUBLIC_API_URL` build arg (default
+  `node:22-alpine` build stage + slim runtime (Node 22, not 20: the repo's
+  `packageManager: pnpm@11.13.1` requires Node ≥22.13 — pnpm 11 fails on Node
+  20 with `ERR_UNKNOWN_BUILTIN_MODULE: node:sqlite`); pnpm install + `next
+  build` (standalone); `NEXT_PUBLIC_API_URL` build arg (default
   `http://localhost:8000`); non-root; serves :3000.
 - `Makefile`: new `images` target — builds both, tags `sha-<git rev-parse
   --short HEAD>` (+ local `latest` convenience tags). Existing targets

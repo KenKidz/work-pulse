@@ -1,0 +1,35 @@
+# Build context is the repository root; keep the web image's context to the
+# pnpm workspace inputs. BuildKit reads this Dockerfile-specific ignore file
+# because the build uses `-f apps/web/Dockerfile`.
+.git
+.github
+.ai
+.kilo
+.codegraph
+.playwright-mcp
+.venv
+**/.venv
+**/node_modules
+**/.next
+**/dist
+**/coverage
+**/*.tsbuildinfo
+**/__pycache__
+
+# Never ship local configuration or secrets.
+**/.env
+**/.env.*
+
+apps/api
+workers
+database
+ops
+tests
+tasks
+docs
+contracts
+docker-compose.yml
+playwright.config.ts
+playwright-report
+test-results
+README.md
