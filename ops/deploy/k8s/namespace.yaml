@@ -1,0 +1,11 @@
+# WorkPulse deployment namespace (deployment T5).
+#
+# Apply order: namespace -> workpulse-config Secret (out-of-band) ->
+# configmap.yaml -> infra/ -> migration-job.yaml -> apps/.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: workpulse
+  labels:
+    app.kubernetes.io/name: workpulse
+    app.kubernetes.io/part-of: workpulse

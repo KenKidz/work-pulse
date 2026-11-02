@@ -1,0 +1,64 @@
+# Notifications consumer worker (Phase 3, ADR 0015).
+#
+# Same Python image as the API, command override only (`latest` is a local
+# convenience; the deploy tooling patches in sha-<commit>). No HTTP surface:
+# worker metrics listeners are disabled in-cluster (ADR 0023), so Ready means
+# the container is running and the deploy smoke's full-workload wait catches a
+# crash-loop. One replica: breaker state is per process (ADR 0025). Empty
+# provider keys are valid: those channels deliver as `skipped(not_configured)`.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notifications
+  namespace: workpulse
+  labels:
+    app.kubernetes.io/name: notifications
+    app.kubernetes.io/component: worker
+    app.kubernetes.io/part-of: workpulse
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: notifications
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: notifications
+        app.kubernetes.io/component: worker
+        app.kubernetes.io/part-of: workpulse
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: notifications
+          image: workpulse-api:latest
+          imagePullPolicy: IfNotPresent
+          command:
+            - python
+            - -m
+            - workers.notifications.main
+          envFrom:
+            - configMapRef:
+                name: workpulse-env
+            - secretRef:
+                name: workpulse-config
+                optional: true
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 300m
+              memory: 384Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL

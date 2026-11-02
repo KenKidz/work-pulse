@@ -1,0 +1,120 @@
+# PostgreSQL 16 -- source of truth (ADR 0006).
+#
+# Single-node, dev-grade proof topology. The command mirrors docker-compose.yml:
+# logical WAL for the Debezium connector and a bounded slot retention so a
+# stopped connector cannot fill the volume (ADR 0024). Credentials come from
+# the out-of-band workpulse-config Secret; the user/database are fixed to
+# `workpulse` because the connector and seed tooling target them by name.
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: workpulse
+  labels:
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/part-of: workpulse
+spec:
+  # Headless: clients resolve `postgres` to the single pod. Public DNS exists
+  # during boot so the migration Job and Connector never race readiness.
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector:
+    app.kubernetes.io/name: postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: workpulse
+  labels:
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/part-of: workpulse
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: postgres
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: postgres
+        app.kubernetes.io/part-of: workpulse
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16
+          imagePullPolicy: IfNotPresent
+          args:
+            - postgres
+            - -c
+            - wal_level=logical
+            - -c
+            - max_slot_wal_keep_size=1GB
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: workpulse
+            - name: POSTGRES_DB
+              value: workpulse
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: workpulse-config
+                  key: POSTGRES_PASSWORD
+            # Keep data in a subdirectory so the mounted volume root can hold
+            # other entries (the image's documented PVC layout).
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 6
+          startupProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+            periodSeconds: 2
+            timeoutSeconds: 3
+            failureThreshold: 60
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 5Gi

@@ -1,0 +1,129 @@
+# Debezium Kafka Connect (distributed mode) -- CDC capture readiness (ADR 0024).
+#
+# Connector, offset and status state live in the compacted Kafka topics below,
+# so there is no data volume. `kafka-connect:8083` is both the CDC sink's
+# health-poll target (CDC_CONNECT_URL) and the REST base used by
+# ops/cdc/register.sh; T6 registers the Postgres connector after infra is Ready.
+#
+# Single worker: the advertised REST host is pinned to the Service DNS so a
+# restarted pod (new IP) cannot strand the connector's rebalance metadata.
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-connect
+  namespace: workpulse
+  labels:
+    app.kubernetes.io/name: kafka-connect
+    app.kubernetes.io/part-of: workpulse
+spec:
+  selector:
+    app.kubernetes.io/name: kafka-connect
+  ports:
+    - name: http
+      port: 8083
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka-connect
+  namespace: workpulse
+  labels:
+    app.kubernetes.io/name: kafka-connect
+    app.kubernetes.io/part-of: workpulse
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: kafka-connect
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: kafka-connect
+        app.kubernetes.io/part-of: workpulse
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+      containers:
+        - name: kafka-connect
+          image: quay.io/debezium/connect:3.2.4.Final
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8083
+          env:
+            - name: BOOTSTRAP_SERVERS
+              value: "kafka:9092"
+            - name: GROUP_ID
+              value: "workpulse-cdc-connect"
+            - name: CONFIG_STORAGE_TOPIC
+              value: "workpulse.cdc.connect.configs"
+            - name: OFFSET_STORAGE_TOPIC
+              value: "workpulse.cdc.connect.offsets"
+            - name: STATUS_STORAGE_TOPIC
+              value: "workpulse.cdc.connect.status"
+            # Single-node broker: Connect's default replication factor of 3
+            # would fail topic creation.
+            - name: CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR
+              value: "1"
+            - name: CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR
+              value: "1"
+            - name: CONNECT_STATUS_STORAGE_REPLICATION_FACTOR
+              value: "1"
+            - name: CONNECT_KEY_CONVERTER
+              value: "org.apache.kafka.connect.json.JsonConverter"
+            - name: CONNECT_VALUE_CONVERTER
+              value: "org.apache.kafka.connect.json.JsonConverter"
+            - name: CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE
+              value: "false"
+            - name: CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE
+              value: "false"
+            # The Debezium entrypoint maps HEAP_OPTS -> KAFKA_HEAP_OPTS.
+            - name: HEAP_OPTS
+              value: "-Xms256m -Xmx768m"
+            # Stable advertised REST identity across pod restarts.
+            - name: ADVERTISED_HOST_NAME
+              value: "kafka-connect"
+          readinessProbe:
+            exec:
+              command:
+                - bash
+                - -c
+                - "</dev/tcp/localhost/8083"
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            exec:
+              command:
+                - bash
+                - -c
+                - "</dev/tcp/localhost/8083"
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 6
+          startupProbe:
+            exec:
+              command:
+                - bash
+                - -c
+                - "</dev/tcp/localhost/8083"
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 60
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1536Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL

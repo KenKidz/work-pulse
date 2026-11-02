@@ -1,0 +1,104 @@
+# WorkPulse API -- the single deployable FastAPI process (ADR 0002).
+#
+# One replica is a hard constraint: circuit-breaker state is in-memory per
+# process (ADR 0025). `Recreate` guarantees a rollout never overlaps two API
+# processes. The deploy tooling overrides the image tag with `sha-<commit>`;
+# `latest` keeps a manual kind run working after `make images`.
+#
+# Probes: /readyz is PostgreSQL-backed readiness; /healthz is dependency-free
+# liveness (deployment business rule 7).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: workpulse
+  labels:
+    app.kubernetes.io/name: api
+    app.kubernetes.io/component: api
+    app.kubernetes.io/part-of: workpulse
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: api
+        app.kubernetes.io/component: api
+        app.kubernetes.io/part-of: workpulse
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: api
+          image: workpulse-api:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: workpulse-env
+            # Optional so an absent Secret/key reaches the strict boot check,
+            # which exits 1 naming the missing key (never its value). A present
+            # but wrong value boots and fails the first dependent call.
+            - secretRef:
+                name: workpulse-config
+                optional: true
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 2
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 2
+            timeoutSeconds: 3
+            failureThreshold: 60
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: workpulse-api
+  namespace: workpulse
+  labels:
+    app.kubernetes.io/name: api
+    app.kubernetes.io/component: api
+    app.kubernetes.io/part-of: workpulse
+spec:
+  selector:
+    app.kubernetes.io/name: api
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http

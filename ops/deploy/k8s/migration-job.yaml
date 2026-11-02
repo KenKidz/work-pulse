@@ -1,0 +1,68 @@
+# One-shot Alembic migration gate (deployment business rule 4).
+#
+# The deploy tooling applies this Job only after infrastructure is Ready and
+# waits for completion BEFORE applying any app workload; the ordering is the
+# gate, not /readyz. On a fresh cluster nothing starts until migrations
+# succeed; on an upgrade a failing migration leaves the previous Deployment
+# serving. Migrations stay append-only and backward-compatible, so rollback is
+# image rollback only -- never a schema downgrade.
+#
+# One-shot: delete the Job before re-applying an upgrade (a completed Job is
+# immutable). The deploy tooling substitutes the sha-<commit> image tag before
+# applying, then waits for completion. backoffLimit 0 fails fast so the deploy
+# tooling can name the exit state; no TTL is set so a failed Job remains
+# inspectable.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: workpulse-migrate
+  namespace: workpulse
+  labels:
+    app.kubernetes.io/name: workpulse-migrate
+    app.kubernetes.io/component: migration
+    app.kubernetes.io/part-of: workpulse
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 600
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: workpulse-migrate
+        app.kubernetes.io/component: migration
+        app.kubernetes.io/part-of: workpulse
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: migrate
+          image: workpulse-api:latest
+          imagePullPolicy: IfNotPresent
+          command:
+            - alembic
+            - upgrade
+            - head
+          env:
+            # Only the key this Job needs; the app workloads perform the full
+            # strict-boot check and name any other missing key.
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: workpulse-config
+                  key: DATABASE_URL
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL

@@ -1,0 +1,86 @@
+# Redis 7 -- realtime fan-out + rate limiting (ADR 0013 / ADR 0025).
+#
+# Single-node, no auth, cluster-internal (the compose dev service is loopback
+# only for the same reason: an unauthenticated Redis must never be exposed).
+# The default RDB snapshot lives on the persistent volume; a proof restart is
+# allowed to lose in-flight presence fan-out, never source-of-truth data.
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: workpulse
+  labels:
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/part-of: workpulse
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector:
+    app.kubernetes.io/name: redis
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: redis
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis
+  namespace: workpulse
+  labels:
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/part-of: workpulse
+spec:
+  serviceName: redis
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: redis
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: redis
+        app.kubernetes.io/part-of: workpulse
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: redis
+              containerPort: 6379
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          readinessProbe:
+            exec:
+              command:
+                - redis-cli
+                - ping
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            exec:
+              command:
+                - redis-cli
+                - ping
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 6
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi

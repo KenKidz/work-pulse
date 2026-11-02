@@ -1,0 +1,97 @@
+# WorkPulse web -- Next.js standalone server (deployment business rule 1).
+#
+# `latest` is a local convenience; the deploy tooling patches in sha-<commit>.
+#
+# The browser-facing API URL is inlined at image build time:
+#   docker build --build-arg NEXT_PUBLIC_API_URL=http://localhost:8000 ...
+# The default matches the kind smoke's API port-forward, so a host browser can
+# use the web through its own port-forward. Rebuild the image to change it.
+#
+# Probes: the login route is public and renders without an API round-trip, so
+# it is both readiness and liveness. One replica, Recreate (ADR 0025).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: workpulse
+  labels:
+    app.kubernetes.io/name: web
+    app.kubernetes.io/component: web
+    app.kubernetes.io/part-of: workpulse
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: web
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: web
+        app.kubernetes.io/component: web
+        app.kubernetes.io/part-of: workpulse
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: web
+          image: workpulse-web:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3000
+          readinessProbe:
+            httpGet:
+              path: /login
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /login
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          startupProbe:
+            httpGet:
+              path: /login
+              port: http
+            periodSeconds: 2
+            timeoutSeconds: 3
+            failureThreshold: 30
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: workpulse-web
+  namespace: workpulse
+  labels:
+    app.kubernetes.io/name: web
+    app.kubernetes.io/component: web
+    app.kubernetes.io/part-of: workpulse
+spec:
+  selector:
+    app.kubernetes.io/name: web
+  ports:
+    - name: http
+      port: 3000
+      targetPort: http

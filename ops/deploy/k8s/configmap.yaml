@@ -1,0 +1,32 @@
+# Non-secret cluster settings shared by every Python app process (API and the
+# five workers). The web image needs none of these.
+#
+# Secret values live in the out-of-band `workpulse-config` Secret (see
+# secret.example.yaml). API/worker Deployments consume both: ConfigMap first,
+# then the Secret, so a Secret key overrides a same-named ConfigMap key.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: workpulse-env
+  namespace: workpulse
+  labels:
+    app.kubernetes.io/name: workpulse
+    app.kubernetes.io/part-of: workpulse
+data:
+  ENVIRONMENT: "production"
+  # Strict boot validation is deployment-only: an absent required key exits 1
+  # with `missing configuration: <KEY>` (deployment T2), never a value.
+  WORKPULSE_STRICT_CONFIG: "1"
+  # The CDC sink's health poller reads the in-cluster Connect REST API.
+  CDC_CONNECT_URL: "http://kafka-connect:8083"
+  # ADR 0023: worker metrics listeners bind loopback; in-cluster observability
+  # is out of scope, so disable them. Workers have no HTTP readiness surface;
+  # Ready means the container is running (the deploy smoke catches crash-loops).
+  RELAY_METRICS_PORT: "0"
+  REALTIME_METRICS_PORT: "0"
+  NOTIFICATIONS_METRICS_PORT: "0"
+  PAYROLL_METRICS_PORT: "0"
+  CDC_SINK_METRICS_PORT: "0"
+  # The kind proof is HTTP-only (ingress/TLS are out of scope). A real
+  # deployment behind TLS sets this true.
+  SESSION_COOKIE_SECURE: "false"
