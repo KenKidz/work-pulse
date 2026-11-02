@@ -16,6 +16,7 @@ from datetime import UTC, datetime
 from app.config import get_settings
 from app.infrastructure.postgres.engine import dispose_engine, get_session_factory
 from app.infrastructure.postgres.outbox import PostgresOutboxRepository
+from app.shared.circuit_breaker import CircuitBreaker
 from app.shared.logging import configure_logging, get_logger
 from app.shared.telemetry import (
     configure_telemetry,
@@ -42,6 +43,7 @@ async def _run() -> None:
         bootstrap_servers=settings.kafka_bootstrap_servers,
         topic=settings.kafka_events_topic,
         partitions=settings.kafka_events_topic_partitions,
+        breaker=CircuitBreaker.from_settings("kafka", settings),
     )
     relay = OutboxRelay(
         get_session_factory(),

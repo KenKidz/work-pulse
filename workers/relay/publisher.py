@@ -18,6 +18,15 @@ re-stamped), no headers in v1. It returns only after the broker acks
 (`send_and_wait`) — at-least-once rests on that. Recoverable broker failures
 propagate to the relay, which bookkeeps them per row (`attempts`,
 `last_error`) and retries.
+
+Every publish runs through the `kafka` circuit breaker (Phase 7, ADR 0025):
+the connect/provision step is inside the guarded operation too, so an open
+breaker raises `CircuitOpenError` before any broker I/O instead of paying the
+connection timeout on every attempt. Startup warmup is deliberately outside
+the breaker — a broker that is down at boot is tolerated, not counted against
+dependency health. The relay already handles any publish exception by
+bookkeeping the row and backing off, so the breaker only bounds the failure;
+it never changes the loop's policies.
 """
 
 import json
@@ -27,6 +36,7 @@ from aiokafka import AIOKafkaProducer
 from aiokafka.admin import AIOKafkaAdminClient, NewTopic
 from aiokafka.errors import KafkaError, TopicAlreadyExistsError
 
+from app.shared.circuit_breaker import CircuitBreaker
 from app.shared.logging import get_logger
 from app.shared.outbox import kafka_message_key
 
@@ -51,6 +61,7 @@ class KafkaEnvelopePublisher:
         partitions: int = 1,
         retention_ms: int = REPORT_RETENTION_MS,
         request_timeout_ms: int = 40_000,
+        breaker: CircuitBreaker | None = None,
     ) -> None:
         self._bootstrap_servers = bootstrap_servers
         self._topic = topic
@@ -58,6 +69,7 @@ class KafkaEnvelopePublisher:
         self._retention_ms = retention_ms
         self._request_timeout_ms = request_timeout_ms
         self._producer: AIOKafkaProducer | None = None
+        self._breaker = breaker or CircuitBreaker.from_settings("kafka")
 
     async def start(self) -> None:
         """Ensure the topic + start the producer; broker-down is tolerated.
@@ -77,7 +89,16 @@ class KafkaEnvelopePublisher:
             )
 
     async def publish(self, envelope: dict[str, Any]) -> None:
-        """Publish one stored envelope; returns after the broker acks."""
+        """Publish one stored envelope; returns after the broker acks.
+
+        The whole outbound unit — lazy connect plus the ack wait — runs through
+        the `kafka` breaker, so an open breaker fails fast before touching the
+        broker. `CircuitOpenError` propagates like any other publish failure:
+        the relay bookkeeps the row, stops the batch and retries after backoff.
+        """
+        await self._breaker.call(lambda: self._publish(envelope))
+
+    async def _publish(self, envelope: dict[str, Any]) -> None:
         producer = await self._connect()
         await producer.send_and_wait(
             self._topic,

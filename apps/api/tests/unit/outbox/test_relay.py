@@ -11,8 +11,11 @@ the next run; database outages back the loop off instead of killing it; and
 every mark is asserted to commit — the persistence at-least-once depends on.
 The `KafkaEnvelopePublisher`'s startup tolerance (a broker that is down at
 boot keeps the relay running; publish retries the connection) is pinned
-against a monkeypatched aiokafka, and the `_safe_error` redaction (raw,
-JSON-escaped and whitespace-collapsed echoes) is also exercised directly.
+against a monkeypatched aiokafka, the `_safe_error` redaction (raw,
+JSON-escaped and whitespace-collapsed echoes) is also exercised directly, and
+the `kafka` breaker (Phase 7, ADR 0025) is proven on the publisher and through
+the real relay loop: threshold trip, fail-fast with no broker I/O, cooldown
+recovery, and the ordered backlog replay once the broker returns.
 """
 
 import json
@@ -29,6 +32,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uuid_utils.compat import uuid7
 
 from app.infrastructure.postgres.models_outbox import EventOutboxRow
+from app.shared.circuit_breaker import (
+    BreakerState,
+    CircuitBreaker,
+    CircuitOpenError,
+)
 from workers.relay import publisher as publisher_module
 from workers.relay.publisher import KafkaEnvelopePublisher
 from workers.relay.relay import EnvelopePublisher, OutboxRelay, _safe_error
@@ -401,6 +409,7 @@ class _FakeBroker:
         self.available = False
         self.created_topics: list[str] = []
         self.producer_starts = 0
+        self.send_attempts = 0
         self.sent: list[tuple[str, bytes | None, bytes]] = []
 
 
@@ -434,6 +443,7 @@ def _install_fake_broker(monkeypatch: pytest.MonkeyPatch, broker: _FakeBroker) -
             key: bytes | None = None,
             value: bytes | None = None,
         ) -> None:
+            broker.send_attempts += 1
             if not broker.available:
                 raise KafkaConnectionError("broker connection lost")
             broker.sent.append((topic, key, value or b""))
@@ -509,3 +519,203 @@ async def test_publisher_keys_run_level_events_by_run_id(
             json.dumps(envelope).encode("utf-8"),
         )
     ]
+
+
+# --- kafka circuit breaker (T4, ADR 0025) ------------------------------------
+
+
+class _FakeClock:
+    """Monotonic clock driven explicitly by tests — no wall-clock sleeps."""
+
+    def __init__(self, now: float = 100.0) -> None:
+        self.now = now
+
+    def __call__(self) -> float:
+        return self.now
+
+    def advance(self, seconds: float) -> None:
+        self.now += seconds
+
+
+def _kafka_breaker(
+    clock: _FakeClock, *, threshold: int = 3, cooldown: float = 30.0
+) -> CircuitBreaker:
+    return CircuitBreaker(
+        "kafka",
+        failure_threshold=threshold,
+        cooldown_seconds=cooldown,
+        clock=clock,
+    )
+
+
+def _breaker_publisher(
+    broker: _FakeBroker,
+    monkeypatch: pytest.MonkeyPatch,
+    breaker: CircuitBreaker,
+) -> KafkaEnvelopePublisher:
+    _install_fake_broker(monkeypatch, broker)
+    return KafkaEnvelopePublisher(
+        bootstrap_servers="127.0.0.1:1",
+        topic="workpulse.events",
+        breaker=breaker,
+    )
+
+
+async def test_publisher_breaker_opens_and_fails_fast_without_broker_io(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A mid-flight outage trips the breaker; the next publish does no I/O."""
+    broker = _FakeBroker()
+    broker.available = True
+    clock = _FakeClock()
+    breaker = _kafka_breaker(clock, threshold=3)
+    publisher = _breaker_publisher(broker, monkeypatch, breaker)
+    envelope = _envelope(0)
+
+    await publisher.publish(envelope)  # warm producer
+    assert (broker.producer_starts, len(broker.sent)) == (1, 1)
+
+    broker.available = False
+    for attempt in range(3):
+        with pytest.raises(KafkaConnectionError):
+            await publisher.publish(envelope)
+        expected = BreakerState.OPEN if attempt == 2 else BreakerState.CLOSED
+        assert breaker.state is expected
+    assert breaker.state is BreakerState.OPEN
+
+    # The broker "recovers", but the cooldown is still running: fail fast,
+    # without reconnecting or attempting another send.
+    broker.available = True
+    attempts = broker.send_attempts
+    with pytest.raises(CircuitOpenError):
+        await publisher.publish(envelope)
+
+    assert broker.send_attempts == attempts
+    assert broker.producer_starts == 1
+    assert breaker.state is BreakerState.OPEN
+
+
+async def test_publisher_breaker_recovers_after_the_cooldown(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Cooldown → one half-open trial → success closes; traffic flows again."""
+    broker = _FakeBroker()  # down from the start
+    clock = _FakeClock()
+    breaker = _kafka_breaker(clock, threshold=1)
+    publisher = _breaker_publisher(broker, monkeypatch, breaker)
+    envelope = _envelope(0)
+
+    with pytest.raises(KafkaConnectionError):
+        await publisher.publish(envelope)
+    assert breaker.state is BreakerState.OPEN
+
+    broker.available = True
+    clock.advance(29.9)
+    with pytest.raises(CircuitOpenError):
+        await publisher.publish(envelope)
+    assert broker.producer_starts == 0  # no broker I/O while open
+
+    clock.advance(0.1)
+    await publisher.publish(envelope)  # the single half-open trial succeeds
+    assert breaker.state is BreakerState.CLOSED
+
+    await publisher.publish(envelope)  # closed: ordinary traffic flows
+    assert broker.producer_starts == 1
+    assert len(broker.sent) == 2
+
+
+async def test_publisher_failed_trial_reopens_until_the_broker_returns(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A failed half-open trial re-opens the breaker with a fresh cooldown."""
+    broker = _FakeBroker()
+    clock = _FakeClock()
+    breaker = _kafka_breaker(clock, threshold=1)
+    publisher = _breaker_publisher(broker, monkeypatch, breaker)
+    envelope = _envelope(0)
+
+    with pytest.raises(KafkaConnectionError):
+        await publisher.publish(envelope)
+
+    clock.advance(30.0)
+    with pytest.raises(KafkaConnectionError):
+        await publisher.publish(envelope)  # trial fails: still down
+    assert breaker.state is BreakerState.OPEN
+
+    with pytest.raises(CircuitOpenError):
+        await publisher.publish(envelope)  # a fresh cooldown is required
+
+    broker.available = True
+    clock.advance(30.0)
+    await publisher.publish(envelope)
+    assert breaker.state is BreakerState.CLOSED
+
+
+async def test_relay_backlog_stays_unpublished_while_open_then_recovers_in_order(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The real relay: fail fast while open, ordered backlog replay on recovery.
+
+    A broker outage trips the breaker after `threshold` row attempts; later
+    polls fail fast (rows stay unpublished, the loop keeps backing off and
+    bookkeeping). After the broker returns and the cooldown elapses, the single
+    trial publishes the backlog head and the rest of the batch follows in row
+    order — no payload is dropped, no `event_id` is duplicated, and the API
+    write path never depended on the bus (already proven by the relay's
+    integration suite).
+    """
+    rows = [_row(f"evt_{n}", _envelope(n)) for n in range(3)]
+    repo = FakeOutboxRepository(rows)
+    broker = _FakeBroker()  # down from the start
+    clock = _FakeClock()
+    breaker = _kafka_breaker(clock, threshold=2)
+    publisher = _breaker_publisher(broker, monkeypatch, breaker)
+    session = FakeSession()
+
+    # Two connection failures trip the breaker; the third poll fails fast.
+    relay = _relay(repo, publisher, session=session, backoff_base=0.5)
+    pauses = _record_pauses(monkeypatch, relay, stop_after=3)
+    await relay.run()
+
+    assert pauses == [0.5, 1.0, 2.0]
+    assert breaker.state is BreakerState.OPEN
+    assert repo.published == []
+    assert [row_id for row_id, _ in repo.failed] == [rows[0].id] * 3
+    assert repo.rows == rows  # nothing dropped
+    assert broker.producer_starts == 0
+    assert broker.send_attempts == 0
+    assert session.commits == 3  # every failed mark committed (`attempts`)
+
+    # Broker back, cooldown still running: still no broker I/O.
+    broker.available = True
+    still_open = _relay(repo, publisher, session=session, backoff_base=0.5)
+    open_pauses = _record_pauses(monkeypatch, still_open, stop_after=1)
+    await still_open.run()
+
+    assert open_pauses == [0.5]
+    assert broker.producer_starts == 0
+    assert broker.send_attempts == 0
+    assert repo.published == []
+
+    # Cooldown elapsed: the half-open trial publishes the head, then the rest
+    # of the batch follows in row order (strict per-employee ordering).
+    clock.advance(30.0)
+    recovered = _relay(repo, publisher, session=session, batch_size=3, backoff_base=0.5)
+    recovered_pauses = _record_pauses(monkeypatch, recovered, stop_after=1)
+    await recovered.run()
+
+    assert recovered_pauses == [0.001]  # backlog drained: wait for new rows
+    assert breaker.state is BreakerState.CLOSED
+    assert [row_id for row_id, _ in repo.published] == [row.id for row in rows]
+    assert repo.rows == []
+
+    expected_keys = [row.payload["data"]["employee_id"].encode("utf-8") for row in rows]
+    assert [key for _, key, _ in broker.sent] == expected_keys
+    sent_event_ids = [json.loads(value)["event_id"] for _, _, value in broker.sent]
+    assert sent_event_ids == [row.payload["event_id"] for row in rows]
+    # The duplicate `event_id` window is unchanged: this replay emitted each
+    # row exactly once (the at-least-once window is only the crash case).
+    assert len(set(sent_event_ids)) == len(rows)
+    assert broker.created_topics == ["workpulse.events"]
+    assert broker.producer_starts == 1
+    assert broker.send_attempts == 3
