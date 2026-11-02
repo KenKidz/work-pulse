@@ -27,6 +27,7 @@ from app.infrastructure.postgres.recipient_directory import PostgresRecipientDir
 from app.infrastructure.postgres.repositories.notifications import (
     PostgresNotificationRepository,
 )
+from app.shared.circuit_breaker import CircuitBreaker
 from app.shared.logging import configure_logging, get_logger
 from app.shared.telemetry import (
     configure_telemetry,
@@ -46,14 +47,18 @@ async def _run() -> None:
     session_factory = get_session_factory()
     # Provider identities are built once: both SDKs are stateless wrappers and
     # an unset credential is a per-delivery `skipped(not_configured)`, never a
-    # startup failure (ADR 0015 decision 5).
+    # startup failure (ADR 0015 decision 5). One breaker per provider is also
+    # process-wide, so a dead provider is learned once and every later delivery
+    # fails fast into its bounded-retry policy (Phase 7, ADR 0025).
     email_sender = ResendEmailSender(
         api_key=settings.resend_api_key,
         from_address=settings.resend_from_address,
+        breaker=CircuitBreaker.from_settings("resend", settings),
     )
     slack_sender = SlackWebSender(
         bot_token=settings.slack_bot_token,
         channel_id=settings.slack_channel_id,
+        breaker=CircuitBreaker.from_settings("slack", settings),
     )
 
     @asynccontextmanager

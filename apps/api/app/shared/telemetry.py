@@ -74,6 +74,10 @@ CDC_TOPIC_LABELS = ("topic",)
 CIRCUIT_BREAKER_STATE_LABELS = ("dependency", "state")
 CIRCUIT_BREAKER_DEPENDENCY_LABELS = ("dependency",)
 CIRCUIT_BREAKER_STATES = ("closed", "half_open", "open")
+#: Rate limiting (Phase 7, ADR 0025). `tier` is a closed vocabulary; the
+#: limiter key (client IP / session user id) is never a label.
+RATE_LIMIT_LABELS = ("tier",)
+RATE_LIMIT_TIERS = ("auth", "mutation")
 
 #: Identifiers that must never become Prometheus labels: they are either PII
 #: or unbounded (tenant-scoped) values. They remain usable in logs and span
@@ -129,6 +133,8 @@ _CDC_CONSUMER_LAG = "workpulse_cdc_consumer_lag"
 _CIRCUIT_BREAKER_STATE = "workpulse_circuit_breaker_state"
 _CIRCUIT_BREAKER_REJECTED = "workpulse_circuit_breaker_rejected"
 _CIRCUIT_BREAKER_TRANSITIONS = "workpulse_circuit_breaker_transitions"
+_RATE_LIMIT_THROTTLED = "workpulse_rate_limit_throttled"
+_RATE_LIMIT_FAIL_OPEN = "workpulse_rate_limit_fail_open"
 
 
 def trace_ids() -> tuple[str | None, str | None]:
@@ -214,6 +220,8 @@ class Telemetry:
     circuit_breaker_state: Any
     circuit_breaker_rejected: Counter
     circuit_breaker_transitions: Counter
+    rate_limit_throttled: Counter
+    rate_limit_fail_open: Counter
     otlp_export_enabled: bool
 
     def record_http_request(
@@ -310,6 +318,14 @@ class Telemetry:
         self.circuit_breaker_transitions.add(
             1, {"dependency": dependency, "state": state}
         )
+
+    def record_rate_limit_throttled(self, tier: str) -> None:
+        """Count one request rejected by an exhausted rate-limit tier."""
+        self.rate_limit_throttled.add(1, {"tier": tier})
+
+    def record_rate_limit_fail_open(self, tier: str) -> None:
+        """Count one limiter bypass because Redis was unreachable/slow."""
+        self.rate_limit_fail_open.add(1, {"tier": tier})
 
     def metrics_text(self) -> bytes:
         """Prometheus text exposition (`text/plain; version=0.0.4`)."""
@@ -454,6 +470,16 @@ def create_telemetry(
         unit="1",
         description="Circuit breaker state transitions.",
     )
+    rate_limit_throttled = meter.create_counter(
+        _RATE_LIMIT_THROTTLED,
+        unit="1",
+        description="Requests rejected by an exhausted rate-limit tier.",
+    )
+    rate_limit_fail_open = meter.create_counter(
+        _RATE_LIMIT_FAIL_OPEN,
+        unit="1",
+        description="Rate-limit checks bypassed because Redis was unavailable.",
+    )
 
     return Telemetry(
         tracer_provider=tracer_provider,
@@ -473,6 +499,8 @@ def create_telemetry(
         circuit_breaker_state=circuit_breaker_state,
         circuit_breaker_rejected=circuit_breaker_rejected,
         circuit_breaker_transitions=circuit_breaker_transitions,
+        rate_limit_throttled=rate_limit_throttled,
+        rate_limit_fail_open=rate_limit_fail_open,
         otlp_export_enabled=otlp_export_enabled,
     )
 
@@ -583,6 +611,20 @@ def record_circuit_breaker_transition(dependency: str, state: str) -> None:
     telemetry = get_telemetry()
     if telemetry is not None:
         telemetry.record_circuit_breaker_transition(dependency, state)
+
+
+def record_rate_limit_throttled(tier: str) -> None:
+    """Count one throttled request (inert without telemetry)."""
+    telemetry = get_telemetry()
+    if telemetry is not None:
+        telemetry.record_rate_limit_throttled(tier)
+
+
+def record_rate_limit_fail_open(tier: str) -> None:
+    """Count one fail-open limiter check (inert without telemetry)."""
+    telemetry = get_telemetry()
+    if telemetry is not None:
+        telemetry.record_rate_limit_fail_open(tier)
 
 
 @dataclass(slots=True)

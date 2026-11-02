@@ -10,6 +10,11 @@ Missing bot token or channel id raises `NotConfiguredError` before any SDK
 work; provider failures are translated to a payload-free
 `NotificationProviderError`. Tests inject a fake SDK client, so Slack is never
 called (`.ai/testing.md`).
+
+Every outbound post runs through the `slack` circuit breaker (Phase 7, ADR
+0025): once the breaker is open, `send` raises `CircuitOpenError` before any SDK
+or thread-pool work, so the service's bounded-retry policy fails fast instead
+of waiting on a dead provider.
 """
 
 from functools import partial
@@ -22,6 +27,7 @@ from app.domains.notifications.exceptions import NotConfiguredError
 from app.domains.notifications.models import RenderedMessage
 from app.domains.notifications.schemas import Recipient
 from app.infrastructure.notifications.errors import provider_error
+from app.shared.circuit_breaker import CircuitBreaker, CircuitOpenError
 
 
 class SlackClient(Protocol):
@@ -51,16 +57,20 @@ class SlackWebSender:
         bot_token: str | None,
         channel_id: str | None,
         client: SlackClient | None = None,
+        breaker: CircuitBreaker | None = None,
     ) -> None:
         self._bot_token = bot_token.strip() if bot_token else None
         self._channel_id = channel_id.strip() if channel_id else None
         self._client = client
+        self._breaker = breaker or CircuitBreaker.from_settings("slack")
 
     async def send(self, *, recipient: Recipient, message: RenderedMessage) -> None:
         token = self._bot_token
         channel = self._channel_id
         if not token or not channel:
             # Terminal skip, never retried: the other channel still proceeds.
+            # Checked before the breaker: missing configuration is not
+            # dependency health.
             raise NotConfiguredError()
         client = self._client if self._client is not None else _SlackSdkClient(token)
 
@@ -69,9 +79,15 @@ class SlackWebSender:
         # subject line and the body.
         text = f"{message.subject}\n\n{message.body}"
         try:
-            await anyio.to_thread.run_sync(
-                partial(client.chat_postMessage, channel=channel, text=text)
+            await self._breaker.call(
+                lambda: anyio.to_thread.run_sync(
+                    partial(client.chat_postMessage, channel=channel, text=text)
+                )
             )
+        except CircuitOpenError:
+            # Fail fast into the service's bounded-retry policy; the error
+            # carries no provider payload and must not be re-wrapped.
+            raise
         except Exception as exc:
             raise provider_error(
                 exc,

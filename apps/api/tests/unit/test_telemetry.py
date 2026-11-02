@@ -22,6 +22,7 @@ from app.shared.telemetry import (
     FORBIDDEN_METRIC_LABELS,
     HTTP_IN_FLIGHT_LABELS,
     HTTP_REQUEST_LABELS,
+    RATE_LIMIT_LABELS,
     UNMATCHED_ROUTE,
     WORKER_EVENT_LABELS,
     WORKER_UNIT_LABELS,
@@ -41,6 +42,7 @@ _ALL_ALLOWED_LABELS = (
     | set(WORKER_UNIT_LABELS)
     | set(CIRCUIT_BREAKER_STATE_LABELS)
     | set(CIRCUIT_BREAKER_DEPENDENCY_LABELS)
+    | set(RATE_LIMIT_LABELS)
 )
 
 
@@ -232,6 +234,21 @@ def test_circuit_breaker_metrics_use_bounded_labels(telemetry: Telemetry) -> Non
 
     labels = _labels_in(text)
     assert labels == set(CIRCUIT_BREAKER_STATE_LABELS)
+    assert labels.isdisjoint(FORBIDDEN_METRIC_LABELS)
+
+
+def test_rate_limit_metrics_use_bounded_labels(telemetry: Telemetry) -> None:
+    """T6: throttle and fail-open counts carry the closed `tier` vocabulary."""
+    telemetry.record_rate_limit_throttled("auth")
+    telemetry.record_rate_limit_fail_open("mutation")
+
+    text = telemetry.metrics_text().decode()
+
+    assert 'workpulse_rate_limit_throttled_total{tier="auth"} 1.0' in text
+    assert 'workpulse_rate_limit_fail_open_total{tier="mutation"} 1.0' in text
+
+    labels = _labels_in(text)
+    assert labels == set(RATE_LIMIT_LABELS)
     assert labels.isdisjoint(FORBIDDEN_METRIC_LABELS)
 
 

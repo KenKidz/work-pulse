@@ -164,6 +164,24 @@ class Settings(BaseSettings):
         default=30.0, ge=0, allow_inf_nan=False
     )
 
+    # Redis sliding-window rate limiting (Phase 7, ADR 0025). Two tiers:
+    # `auth` covers `POST /auth/login` and `PUT /auth/password` keyed by client
+    # IP (brute-force protection); `mutation` covers every authenticated
+    # mutating route keyed by session user id. Reads are unthrottled. Budgets
+    # are sized so the e2e suite and the k6 smoke keep ≥ 2× headroom (spec rule
+    # 5); tripping a gate is a fixture/budget fix, never a disabled limiter.
+    # `RATE_LIMIT_ENABLED=false` bypasses the limiter entirely (local debugging
+    # only); Redis errors fail open regardless.
+    rate_limit_enabled: bool = True
+    rate_limit_auth_max_requests: int = Field(default=30, ge=1)
+    rate_limit_auth_window_seconds: float = Field(
+        default=60.0, gt=0, allow_inf_nan=False
+    )
+    rate_limit_mutation_max_requests: int = Field(default=120, ge=1)
+    rate_limit_mutation_window_seconds: float = Field(
+        default=60.0, gt=0, allow_inf_nan=False
+    )
+
     # --- Identity: sessions (pinned in `.ai/features/identity-access.md`) ---
     # Absolute session lifetime; the `wp_session` cookie itself is a session
     # cookie (no Max-Age) — the server-side TTL is the authority.
