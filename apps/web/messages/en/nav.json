@@ -15,6 +15,21 @@
   "users": "Users",
   "menu": "Menu",
   "menuDescription": "Go to a WorkPulse surface.",
+  "groups": {
+    "overview": "Overview",
+    "workforce": "Workforce",
+    "payroll": "Payroll",
+    "hiring": "Hiring",
+    "insight": "Insight",
+    "administration": "Administration"
+  },
+  "command": {
+    "title": "Command palette",
+    "description": "Search for a page to open.",
+    "placeholder": "Search pages…",
+    "empty": "No matching page.",
+    "actions": "Actions"
+  },
   "destinations": {
     "employees": {
       "label": "Employees",

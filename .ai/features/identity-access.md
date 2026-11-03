@@ -630,7 +630,7 @@ source; reset-dialog failures render the pinned `userFieldErrors` mapping.
   `ResetPasswordDialog`.
 - `apps/web/app/(dashboard)/settings/users/page.tsx` (+ settings layout if
   needed); nav entry in `components/destinations.ts`, hidden for non-admins in
-  `main-nav.tsx` via `useCurrentUser`; direct visits by non-admins redirect to
+  `features/shell/AppSidebar.tsx` via `useCurrentUser`; direct visits by non-admins redirect to
   `/dashboard` (AC12 "unreachable").
 - Web tests `apps/web/tests/auth/*` (login form: happy path, AC13 bad
   credentials error state, redirect when already authed) and

@@ -4,7 +4,7 @@
  * Client gate for the authenticated area (`app/(dashboard)`). Resolves the
  * session once via `useCurrentUser`: pending → quiet full-height spinner,
  * 401 → redirect to `/login`, resolved → render children with the user in
- * context. Nav filtering (`MainNav`/`MobileNav`) reads the role from here so
+ * context. Shell navigation (`features/shell/`) reads the role from here so
  * admin-only destinations stay hidden for everyone else. Client leaf.
  */
 

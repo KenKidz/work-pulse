@@ -15,6 +15,21 @@
   "users": "Người dùng",
   "menu": "Menu",
   "menuDescription": "Đi tới một màn hình WorkPulse.",
+  "groups": {
+    "overview": "Tổng quan",
+    "workforce": "Đội ngũ",
+    "payroll": "Lương",
+    "hiring": "Tuyển dụng",
+    "insight": "Phân tích",
+    "administration": "Quản trị"
+  },
+  "command": {
+    "title": "Bảng lệnh",
+    "description": "Tìm một trang để mở.",
+    "placeholder": "Tìm trang…",
+    "empty": "Không có trang phù hợp.",
+    "actions": "Thao tác"
+  },
   "destinations": {
     "employees": {
       "label": "Nhân viên",

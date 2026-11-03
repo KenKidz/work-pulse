@@ -98,8 +98,10 @@ From `apps/web/app/globals.css`:
 
 Verified shell facts — reuse them, do not invent parallel ones:
 
-- **Shell:** `app/(dashboard)/layout.tsx` → `min-h-dvh` flex column, sticky
-  header `h-16` at `z-40`, content `mx-auto w-full max-w-7xl px-4 sm:px-6 py-7
+- **Shell:** `app/(dashboard)/layout.tsx` → `AuthGate` → `SidebarProvider`
+  + `features/shell/AppSidebar` (grouped, collapsible sidebar; cookie-persisted
+  icon rail; mobile focus-trapped sheet) → `SidebarInset` with a sticky header
+  `h-16` at `z-40` and content `mx-auto w-full max-w-7xl px-4 sm:px-6 py-7
   sm:py-9`. Auth shell centres `max-w-sm` on `min-h-dvh`.
 - **Viewport stability:** always `min-h-dvh`, never `h-screen` (iOS Safari
   address bar causes layout jump).
@@ -110,7 +112,7 @@ Verified shell facts — reuse them, do not invent parallel ones:
   handles it" assumptions. The page itself never scrolls horizontally; only a
   table's own container may.
 - **Scroll insets:** content must never hide behind the sticky `h-16` header or
-  the mobile nav. Add bottom/top insets where a list runs under fixed chrome.
+  the mobile sheet. Add bottom/top insets where a list runs under fixed chrome.
 - **Spacing tiers already in use:** header `h-16`, main `py-7 sm:py-9`, page
   header `gap-2`, table head `h-10`, cell `p-2`. Extend this ladder; do not add
   one-off values.
@@ -211,8 +213,8 @@ Authoritative list with exemplars: `.ai/conventions.md` → `Presentation rules`
 - **Filters** stack below `sm` (`w-full sm:w-…`) and are debounced ~300ms
   (`hooks/use-debounced-value.ts`); discrete controls apply immediately.
 - **Prefer existing abstractions:** `PageHeader`, `EmptyState`, `Badge`, `Alert`,
-  `Spinner`, `main-nav` / `mobile-nav` + `destinations.ts`. No component built
-  "for later".
+  `Spinner`, `features/shell/AppSidebar` + `destinations.ts` (`NAV_GROUPS` /
+  `visibleNavGroups`). No component built "for later".
 - **Dependency verification is mandatory:** before importing anything, check
   `apps/web/package.json`. pnpm's strict `node_modules` means every imported
   package must be declared there — no relying on hoisted transitive deps. A new

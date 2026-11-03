@@ -51,8 +51,8 @@
   },
   "aria": {
     "main": "Chính",
-    "openNavigation": "Mở menu điều hướng",
-    "close": "Đóng",
+    "toggleNavigation": "Bật/tắt điều hướng",
+    "skipToContent": "Bỏ qua tới nội dung chính",
     "accountMenu": "Menu tài khoản của {email}"
   },
   "date": {

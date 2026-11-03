@@ -474,7 +474,8 @@ check` stays green after every task.
   only in e2e (`command-center.spec.ts:92-94`) — the spec's benchmark AC
   therefore lands as one bounded integration test (R1).
 - **F10 — Web.** Nav: `components/destinations.ts` `NAV_ITEMS` `roles?`
-  filtered in `main-nav.tsx:19-21` (the admin-only Settings precedent).
+  filtered by `visibleNavGroups` in `components/destinations.ts` (the
+  admin-only Settings precedent).
   Feature exemplar `features/overtime/` (`api.ts` keys + invalidate,
   `hooks/` thin wrappers mapping `ApiError.code` → message, components).
   orval: `orval.config.ts` → `packages/api-client/src/index.ts`, react-query

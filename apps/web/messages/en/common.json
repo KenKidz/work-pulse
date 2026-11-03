@@ -51,8 +51,8 @@
   },
   "aria": {
     "main": "Main",
-    "openNavigation": "Open navigation menu",
-    "close": "Close",
+    "toggleNavigation": "Toggle navigation",
+    "skipToContent": "Skip to main content",
     "accountMenu": "Account menu for {email}"
   },
   "date": {

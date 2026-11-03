@@ -38,3 +38,6 @@ Thumbs.db
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+
+# Local reference template clone (app-shell spec decision 6)
+shadcn-admin/

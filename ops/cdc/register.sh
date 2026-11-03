@@ -135,13 +135,18 @@ else
         --database "$PROJECTION_DATABASE" \
         --multiquery \
         < "$SCHEMA_FILE"
+      # clickhouse-client's INSERT path keeps its data stream open until stdin
+      # reaches EOF. `exec -T` wires stdin to the caller's terminal, which never
+      # sends EOF, so this call blocks forever when run interactively (the server
+      # gives up first with Code: 209 "Timeout exceeded while receiving data from
+      # client"). Redirecting stdin from /dev/null makes the call deterministic.
       docker compose --project-directory "$ROOT_DIR" exec -T "$CLICKHOUSE_SERVICE" \
         clickhouse-client \
         --user "$CLICKHOUSE_USER" \
         --password "$CLICKHOUSE_PASSWORD" \
         --query "INSERT INTO ${PROJECTION_DATABASE}.projection_state
 (key, ready, updated_at)
-VALUES ('reports', 0, now64(6))"
+VALUES ('reports', 0, now64(6))" </dev/null
       echo "cdc: seeded projection_state ready=0 in ${PROJECTION_DATABASE}"
     else
       echo "cdc: ${CLICKHOUSE_SERVICE} is not running — skipping the readiness seed." >&2

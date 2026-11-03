@@ -19,6 +19,26 @@ if (!("ResizeObserver" in globalThis)) {
   (globalThis as Record<string, unknown>).ResizeObserver = ResizeObserverStub;
 }
 
+// jsdom does not implement matchMedia — the shell's `useIsMobile` subscribes
+// to it. Default to desktop; mobile tests mock `@/hooks/use-mobile` directly.
+if (!("matchMedia" in window)) {
+  Object.defineProperty(window, "matchMedia", {
+    writable: true,
+    configurable: true,
+    value: (query: string): MediaQueryList =>
+      ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined,
+        addListener: () => undefined,
+        removeListener: () => undefined,
+        dispatchEvent: () => false,
+      }) as unknown as MediaQueryList,
+  });
+}
+
 for (const method of [
   "hasPointerCapture",
   "setPointerCapture",

@@ -147,3 +147,55 @@ export const NAV_ITEMS: NavItem[] = [
     roles: MANAGE_USER_ROLES,
   },
 ];
+
+/** The translation key (inside the `nav.groups` namespace) for a nav group. */
+export type NavGroupKey =
+  "overview" | "workforce" | "payroll" | "hiring" | "insight" | "administration";
+
+export type NavGroup = {
+  key: NavGroupKey;
+  items: NavItem[];
+};
+
+/**
+ * Group definitions by destination key — the sidebar renders these sections in
+ * order and derives their items from `NAV_ITEMS` so a destination cannot
+ * appear twice or drift from its href/role gate.
+ */
+const NAV_GROUP_DEFINITIONS: { key: NavGroupKey; itemKeys: NavKey[] }[] = [
+  { key: "overview", itemKeys: ["dashboard"] },
+  {
+    key: "workforce",
+    itemKeys: ["employees", "attendance", "leave", "overtime", "performance"],
+  },
+  { key: "payroll", itemKeys: ["payroll", "myPayslips"] },
+  { key: "hiring", itemKeys: ["recruitment"] },
+  { key: "insight", itemKeys: ["reports", "commandCenter"] },
+  {
+    key: "administration",
+    itemKeys: ["users", "organization", "myDocuments"],
+  },
+];
+
+export const NAV_GROUPS: NavGroup[] = NAV_GROUP_DEFINITIONS.map(({ key, itemKeys }) => ({
+  key,
+  items: itemKeys.flatMap((itemKey) => {
+    const item = NAV_ITEMS.find((candidate) => candidate.key === itemKey);
+    return item ? [item] : [];
+  }),
+}));
+
+/**
+ * The nav groups a role can see: destinations without `roles` stay visible to
+ * everyone, role-restricted ones need the role, and a group left empty is
+ * dropped. The sidebar, the mobile sheet and the command palette all call this
+ * so the three surfaces cannot disagree.
+ */
+export function visibleNavGroups(role: Role | null): NavGroup[] {
+  return NAV_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter(
+      (item) => !item.roles || (role !== null && item.roles.includes(role)),
+    ),
+  })).filter((group) => group.items.length > 0);
+}

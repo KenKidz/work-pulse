@@ -153,8 +153,8 @@
 - **Touch targets use the `11` unit (44px) — the one allowed metric
   override:** `min-h-11` on wide controls (row actions `min-h-11 sm:min-h-7`,
   see Row actions), `size="icon"` + `size-11` on icon buttons (exemplar:
-  `mobile-nav.tsx:38,52`). Never a fixed `h-…`/`size-…` fighting the `size`
-  prop, and never a `rounded-*` override.
+  `features/shell/nav-group.tsx`, `components/ui/sidebar.tsx`). Never a fixed
+  `h-…`/`size-…` fighting the `size` prop, and never a `rounded-*` override.
 - **Scrollbars:** the global thin treatment in `apps/web/app/globals.css`
   (8px band, 4px `--input` pill thumb, transparent track) is the only one —
   never per-surface `::-webkit-scrollbar` or `scrollbar-*` overrides.
