@@ -123,12 +123,27 @@ wait_for_line() {
 # false green). Refuse before starting our own workers; the check sees only
 # pre-existing processes.
 assert_no_other_workers() {
-  local pids
+  local pids filtered pid
   if ! command -v pgrep >/dev/null 2>&1; then
     echo "full-hop: 'pgrep' is required to check for concurrent workers." >&2
     exit 1
   fi
   pids="$(pgrep -f 'workers\.(relay|realtime|payroll|cdc_sink)\.main' || true)"
+  # A kind node can share the host PID namespace on Linux, making the deployed
+  # stack's workers (`make deploy-check`) visible here. They read the cluster
+  # database, not this gate's dev database, so ignore processes in a Kubernetes
+  # cgroup. On platforms without /proc every pid is kept (the guard is intact).
+  if [[ -n "$pids" && -d /proc ]]; then
+    filtered=""
+    while IFS= read -r pid; do
+      [[ -n "$pid" ]] || continue
+      if grep -qs 'kubepods' "/proc/$pid/cgroup" 2>/dev/null; then
+        continue
+      fi
+      filtered+="$pid "
+    done <<<"$pids"
+    pids="${filtered% }"
+  fi
   if [[ -n "$pids" ]]; then
     echo "full-hop: another relay/realtime/payroll/cdc-sink worker is already running:" >&2
     echo "full-hop:   $(echo "$pids" | tr '\n' ' ')" >&2

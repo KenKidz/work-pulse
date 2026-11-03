@@ -18,6 +18,8 @@ __pycache__/
 .env
 .env.*
 !.env.example
+# Generated out-of-band kind deploy credentials (deployment T6)
+ops/deploy/values.env
 
 # Logs
 *.log

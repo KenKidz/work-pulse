@@ -1,0 +1,59 @@
+# Scenario-only migration Job (deployment T6 failure scenarios).
+#
+# Identical shape to `migration-job.yaml` but deliberately exits 1. Its purpose
+# is to prove the rollout-ordering gate: the deploy tooling must stop before
+# applying any app workload, so a fresh cluster has nothing Ready and an
+# upgrade keeps the previous Deployment serving. It is NOT a bad revision and
+# does not exercise Alembic.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: workpulse-migrate
+  namespace: workpulse
+  labels:
+    app.kubernetes.io/name: workpulse-migrate
+    app.kubernetes.io/component: migration
+    app.kubernetes.io/part-of: workpulse
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 600
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: workpulse-migrate
+        app.kubernetes.io/component: migration
+        app.kubernetes.io/part-of: workpulse
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: migrate
+          image: workpulse-api:latest
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - "echo 'deploy scenario: the migration Job was deliberately failed' >&2; exit 1"
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: workpulse-config
+                  key: DATABASE_URL
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL

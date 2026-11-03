@@ -16,6 +16,11 @@
 #                            uses workpulse_test)
 #   CDC_CLICKHOUSE_USER      ClickHouse user (default workpulse)
 #   CDC_CLICKHOUSE_PASSWORD  ClickHouse password (default workpulse)
+#   CDC_POSTGRES_PASSWORD    PostgreSQL password for the connector (default:
+#                            the value in connector.json; the in-cluster deploy
+#                            passes the Secret's POSTGRES_PASSWORD)
+#   CDC_FENCE_ENABLED        "0" skips the compose ClickHouse readiness fence;
+#                            the deployed CDC sink owns its own D5 fence
 #
 # `cdc-test-up` passes the test values; dev and production use the defaults.
 
@@ -29,6 +34,11 @@ CLICKHOUSE_SERVICE="${CDC_CLICKHOUSE_SERVICE:-clickhouse}"
 PROJECTION_DATABASE="${CDC_PROJECTION_DATABASE:-workpulse}"
 CLICKHOUSE_USER="${CDC_CLICKHOUSE_USER:-workpulse}"
 CLICKHOUSE_PASSWORD="${CDC_CLICKHOUSE_PASSWORD:-workpulse}"
+# Empty keeps the tracked connector.json value (compose/dev and tests). The
+# in-cluster deploy passes the generated POSTGRES_PASSWORD so the connector
+# never reuses the dev credential.
+CONNECTOR_PASSWORD="${CDC_POSTGRES_PASSWORD:-}"
+FENCE_ENABLED="${CDC_FENCE_ENABLED:-1}"
 CONNECTOR_FILE="$ROOT_DIR/ops/cdc/connector.json"
 SCHEMA_FILE="$ROOT_DIR/database/clickhouse/schema.sql"
 
@@ -59,17 +69,24 @@ fi
 # The file is the Connect create payload (name + config). Read the config as
 # JSON and set the slot/publication structurally: the test Connect instance
 # reads the same dev PostgreSQL and must not share the dev replication slot.
-config_json="$("$PYTHON" - "$CONNECTOR_FILE" "$SLOT_NAME" <<'PY'
+# The password travels in the child's environment, never in argv: process
+# arguments are visible to other local users through /proc and `ps`.
+config_json="$(CDC_CONNECTOR_PASSWORD="$CONNECTOR_PASSWORD" \
+  "$PYTHON" - "$CONNECTOR_FILE" "$SLOT_NAME" <<'PY'
 import json
+import os
 import sys
 from pathlib import Path
 
 path, slot = sys.argv[1], sys.argv[2]
+password = os.environ.get("CDC_CONNECTOR_PASSWORD", "")
 try:
     payload = json.loads(Path(path).read_text())
     config = payload["config"]
     config["slot.name"] = slot
     config["publication.name"] = slot
+    if password:
+        config["database.password"] = password
 except (OSError, KeyError, TypeError, json.JSONDecodeError) as exc:
     print(f"cdc: cannot read the connector config from {path}: {exc}", file=sys.stderr)
     raise SystemExit(1)
@@ -99,31 +116,39 @@ else
   # projection. The reports gate reads projection_state FINAL, so seed ready=0
   # before the connector exists. `schema.sql` is the single DDL source; it is
   # idempotent and gives the target database its full projection schema.
-  if docker compose --project-directory "$ROOT_DIR" ps --status running --services 2>/dev/null \
-    | grep -qx "$CLICKHOUSE_SERVICE"; then
-    docker compose --project-directory "$ROOT_DIR" exec -T "$CLICKHOUSE_SERVICE" \
-      clickhouse-client \
-      --user "$CLICKHOUSE_USER" \
-      --password "$CLICKHOUSE_PASSWORD" \
-      --query "CREATE DATABASE IF NOT EXISTS ${PROJECTION_DATABASE}"
-    docker compose --project-directory "$ROOT_DIR" exec -T "$CLICKHOUSE_SERVICE" \
-      clickhouse-client \
-      --user "$CLICKHOUSE_USER" \
-      --password "$CLICKHOUSE_PASSWORD" \
-      --database "$PROJECTION_DATABASE" \
-      --multiquery \
-      < "$SCHEMA_FILE"
-    docker compose --project-directory "$ROOT_DIR" exec -T "$CLICKHOUSE_SERVICE" \
-      clickhouse-client \
-      --user "$CLICKHOUSE_USER" \
-      --password "$CLICKHOUSE_PASSWORD" \
-      --query "INSERT INTO ${PROJECTION_DATABASE}.projection_state
+  #
+  # In the kind deployment there is no compose service to exec into and the
+  # CDC sink's own D5 fence (a fresh consumer group writes ready=0 before its
+  # first fetch) owns this; `deploy.sh` passes CDC_FENCE_ENABLED=0.
+  if [[ "$FENCE_ENABLED" == "1" ]]; then
+    if docker compose --project-directory "$ROOT_DIR" ps --status running --services 2>/dev/null \
+      | grep -qx "$CLICKHOUSE_SERVICE"; then
+      docker compose --project-directory "$ROOT_DIR" exec -T "$CLICKHOUSE_SERVICE" \
+        clickhouse-client \
+        --user "$CLICKHOUSE_USER" \
+        --password "$CLICKHOUSE_PASSWORD" \
+        --query "CREATE DATABASE IF NOT EXISTS ${PROJECTION_DATABASE}"
+      docker compose --project-directory "$ROOT_DIR" exec -T "$CLICKHOUSE_SERVICE" \
+        clickhouse-client \
+        --user "$CLICKHOUSE_USER" \
+        --password "$CLICKHOUSE_PASSWORD" \
+        --database "$PROJECTION_DATABASE" \
+        --multiquery \
+        < "$SCHEMA_FILE"
+      docker compose --project-directory "$ROOT_DIR" exec -T "$CLICKHOUSE_SERVICE" \
+        clickhouse-client \
+        --user "$CLICKHOUSE_USER" \
+        --password "$CLICKHOUSE_PASSWORD" \
+        --query "INSERT INTO ${PROJECTION_DATABASE}.projection_state
 (key, ready, updated_at)
 VALUES ('reports', 0, now64(6))"
-    echo "cdc: seeded projection_state ready=0 in ${PROJECTION_DATABASE}"
+      echo "cdc: seeded projection_state ready=0 in ${PROJECTION_DATABASE}"
+    else
+      echo "cdc: ${CLICKHOUSE_SERVICE} is not running — skipping the readiness seed." >&2
+      echo "cdc: start it with 'make clickhouse-up' (or clickhouse-test-up) first." >&2
+    fi
   else
-    echo "cdc: ${CLICKHOUSE_SERVICE} is not running — skipping the readiness seed." >&2
-    echo "cdc: start it with 'make clickhouse-up' (or clickhouse-test-up) first." >&2
+    echo "cdc: readiness fence disabled (CDC_FENCE_ENABLED=0); the deployed sink owns it." >&2
   fi
 
   payload="$(printf '{"name":"%s","config":%s}' "$CONNECTOR_NAME" "$config_json")"

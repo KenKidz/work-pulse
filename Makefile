@@ -8,8 +8,13 @@ WEB_DIR := apps/web
 IMAGE_TAG ?= sha-$(shell git rev-parse --short HEAD)
 API_IMAGE ?= workpulse-api:$(IMAGE_TAG)
 WEB_IMAGE ?= workpulse-web:$(IMAGE_TAG)
+CLUSTER_NAME ?= workpulse
 
-.PHONY: help install dev db-up db-down db-test-up redis-up redis-test-up kafka-up kafka-test-up clickhouse-up clickhouse-down clickhouse-test-up minio-up minio-test-up observability-up observability-down cdc-up cdc-down cdc-test-up cdc-test-down db-migrate db-seed dev-api dev-web dev-relay dev-realtime dev-notifications dev-payroll dev-cdc-sink check check-api check-web check-e2e check-load images gen-api format-web
+# The deploy scripts read these from the environment; keep the Makefile the
+# single source for the image tags and cluster name.
+export IMAGE_TAG API_IMAGE WEB_IMAGE CLUSTER_NAME
+
+.PHONY: help install dev db-up db-down db-test-up redis-up redis-test-up kafka-up kafka-test-up clickhouse-up clickhouse-down clickhouse-test-up minio-up minio-test-up observability-up observability-down cdc-up cdc-down cdc-test-up cdc-test-down db-migrate db-seed dev-api dev-web dev-relay dev-realtime dev-notifications dev-payroll dev-cdc-sink check check-api check-web check-e2e check-load images deploy-check deploy-check-scenarios deploy-down gen-api format-web
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -133,6 +138,15 @@ check-load: db-up redis-up db-migrate db-seed ## Load gate: k6 smoke at 25 check
 images: ## Build the API and web container images tagged sha-<commit> (deployment)
 	docker build -f apps/api/Dockerfile -t $(API_IMAGE) -t workpulse-api:latest .
 	docker build -f apps/web/Dockerfile -t $(WEB_IMAGE) -t workpulse-web:latest .
+
+deploy-check: ## Deploy the full stack to kind and smoke it (run make images first)
+	bash ops/deploy/deploy.sh
+
+deploy-check-scenarios: ## Run the deploy failure scenarios (recreates the kind cluster)
+	bash ops/deploy/scenarios.sh
+
+deploy-down: ## Delete the kind deploy cluster (all deploy resources are reclaimed)
+	kind delete cluster --name $(CLUSTER_NAME)
 
 gen-api: ## Regenerate OpenAPI contract + typed API client
 	cd $(API_DIR) && uv run python scripts/export_openapi.py
