@@ -6,14 +6,20 @@
 
 | Gate | Command | Covers |
 | --- | --- | --- |
-| all | `make check` | every gate below — run before claiming done |
+| all | `make check` | every gate below except Deploy (that one has its own footprint, see its row) — run before claiming done |
 | API | `make check-api` | Ruff + Pyright + `uv run pytest` in `apps/api` (ADR 0006) |
 | Web | `make check-web` | `tsc --noEmit` + ESLint + Vitest in `apps/web` |
 | E2E | `make check-e2e` | Playwright against web + api + seeded dev db — part of `make check` since 2026-09-29 (decision 3) |
 | Load | `make check-load` | k6 smoke: 60s at 25 check-ins/s + board reads, p95 < 300ms, 0 errors — part of `make check` since 2026-11-02 (ADR 0025) |
+| Deploy | `make deploy-check` | kind proof: both images loaded, infra Ready, migration Job gates the app rollout, every workload Ready, single-replica assertion, login → check-in → board smoke — **not** part of `make check` (needs Docker + `kind`/`kubectl`, ~4 CPU / 8 GB RAM) |
 
-`make check` grows as phases land (contract validation, e2e, lint). A gate that
-is not wired into `make check` does not protect anything.
+`make check` grows as phases land (contract validation, e2e, lint). Since
+2026-11-03 the four functional gates above also run in GitHub Actions on every
+PR and `main` push (`.github/workflows/ci.yml`, ADR 0026); only a fully green
+`main` run publishes images. A gate that is in neither `make check` nor CI
+protects nothing. `make deploy-check` is the deployment proof and stays a
+manual, release-time command because of its cluster footprint; its runbook is
+`ops/deploy/README.md`.
 
 ## Test levels
 

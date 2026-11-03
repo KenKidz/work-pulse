@@ -34,11 +34,13 @@ Installed so far:
 - Observability: in-process OpenTelemetry tracing/metrics + Prometheus + Grafana
   (ADR 0023) — `apps/api/app/shared/telemetry.py`, `ops/observability/`
 
-Requires Python 3.12+, Node >= 20, pnpm, Docker, and uv.
+Requires Python 3.12+, Node >= 20, pnpm, Docker, and uv. The deployment proof
+additionally needs `kind`, `kubectl`, `curl` and `jq` (~4 CPU / 8 GB RAM free).
 
-Later phases — **do not add these without a spec + ADR**: Redis + WebSocket (2),
-Kafka + outbox + workers (3), ClickHouse + payroll (4),
-CDC (5), load/reliability (7), Kubernetes + CI/CD (8).
+All eight roadmap phases are shipped. Redis + WebSocket (2), Kafka + outbox +
+workers (3), ClickHouse + payroll (4), CDC (5), observability (6),
+load/reliability (7) and Kubernetes + CI/CD (8) were each added against a spec
+and an ADR — do not extend or replace them without the same.
 Roadmap: `.ai/architecture.md`.
 
 ## Quickstart
@@ -60,6 +62,8 @@ Roadmap: `.ai/architecture.md`.
 | `make check` | all gates — run before claiming done |
 | `make check-e2e` | Playwright e2e gate (migrate + seed + dev servers) — part of `make check` |
 | `make check-load` | k6 load gate (60s at 25 check-ins/s, p95 < 300ms, 0 errors) — part of `make check`; requires the `k6` binary on PATH |
+| `make images` | build both container images tagged `sha-<short>` (deployment; ADR 0026) |
+| `make deploy-check` | kind proof: deploy the full stack, migration gate + smoke (run `make images` first; `make deploy-down` reclaims the cluster) |
 
 ## Repo map
 
@@ -76,6 +80,8 @@ packages/api-client/  orval-generated typed client (`make gen-api`)
 contracts/            versioned event schemas + generated OpenAPI
 database/             postgres/ (seeds, scripts) · clickhouse/ (projection DDL)
 ops/observability/    Prometheus config · Grafana provisioning + dashboards
+ops/deploy/           Docker/k8s deployment manifests, kind proof + runbook (ADR 0026)
+.github/workflows/    CI: four gates on PR/main, GHCR image push on green main
 scripts/              dev orchestration (`make dev`)
 tests/e2e/            cross-surface tests
 tasks/                TODO.md (backlog) · doc.md (original brief)

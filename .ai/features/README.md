@@ -13,7 +13,7 @@ to the code. If reality diverges, update the spec in the same change and say why
 | `draft` | written, no code yet. Once its `## Decisions` are resolved it is ready for `/plan`, which sets `approved` |
 | `approved` | decisions answered, plan exists; ready to implement |
 | `implementing` | in progress; plan tasks are being ticked |
-| `done` | acceptance criteria verified with `make check` |
+| `done` | acceptance criteria verified with the feature's gates (`make check`; deployment uses `make deploy-check`) |
 | `dropped` | abandoned; write why at the top |
 
 ## Conventions
@@ -54,7 +54,7 @@ domain map in `.ai/domain.md` is their placeholder.
 | Change Data Capture (Debezium projection pipeline) | 5 | L | done | `change-data-capture.md` |
 | Observability (OTel, Prometheus, Grafana) | 6 | M | done | `observability.md` |
 | Reliability (load tests, rate limiting, breakers) | 7 | M | done | `reliability.md` |
-| Deployment (images, Kubernetes, CI/CD) | 8 | M | draft | `deployment.md` |
+| Deployment (images, Kubernetes, CI/CD) | 8 | M | done | `deployment.md` |
 
 Build order inside Phase 1: **Organizations → Employees → Attendance** (each
 depends on the previous one's reference data).

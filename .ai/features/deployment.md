@@ -1,6 +1,6 @@
 # Feature: Deployment (Docker images, Kubernetes, CI/CD)
 
-- **Status:** approved
+- **Status:** done
 - **Phase:** 8
 - **Size:** M
 - **Surfaces:** api+web+events+workers (the template ladder's only value
@@ -215,51 +215,51 @@ changes no event payload.
 
 ## Acceptance criteria
 
-- [ ] **Images:** given a clean checkout, when `make images` runs, then both
+- [x] **Images:** given a clean checkout, when `make images` runs, then both
   images build and are tagged `sha-<commit>`; the api container answers
   `GET /healthz` 200 and the web container serves the login route over HTTP.
-- [ ] **Images (failure):** given the api container starts with a required
+- [x] **Images (failure):** given the api container starts with a required
   setting absent (e.g. `DATABASE_URL`), when it boots, then it exits non-zero
   naming the missing key in plain text — no stack trace, no secret values —
   and serves no traffic.
-- [ ] **Deploy:** given a fresh kind cluster, when `make deploy-check` runs,
+- [x] **Deploy:** given a fresh kind cluster, when `make deploy-check` runs,
   then both images load, the migration Job completes **before** the app
   workloads are applied, every workload (api, web, 5 workers, postgres, redis,
   kafka, clickhouse, minio, kafka-connect) reaches Ready, and the smoke logs in
   through the deployed stack and performs one check-in visible on the board.
-- [ ] **Deploy (single replica):** when `make deploy-check` runs, then every
+- [x] **Deploy (single replica):** when `make deploy-check` runs, then every
   app workload (api, web, relay, realtime, notifications, payroll, cdc-sink)
   runs exactly one replica — the ADR 0025 single-process constraint — asserted
   from the cluster state, not just the manifests.
-- [ ] **Deploy (failure — migration, fresh):** given a fresh kind cluster
+- [x] **Deploy (failure — migration, fresh):** given a fresh kind cluster
   whose migration Job fails, when `make deploy-check` runs, then the app
   workloads are never applied (nothing becomes Ready) and the smoke fails
   naming the Job and its exit state.
-- [ ] **Deploy (failure — migration, upgrade):** given the stack deployed at
+- [x] **Deploy (failure — migration, upgrade):** given the stack deployed at
   SHA n−1, when an upgrade to SHA n attempts a failing migration, then the new
   app workloads are never applied and the n−1 smoke still answers (previous
   deployment keeps serving).
-- [ ] **Deploy (failure — missing secret):** given no Secret is applied, when
+- [x] **Deploy (failure — missing secret):** given no Secret is applied, when
   the smoke runs, then readiness never passes and the failure names the
   missing configuration key (never its value).
-- [ ] **Deploy (failure — wrong secret):** given a Secret with a
+- [x] **Deploy (failure — wrong secret):** given a Secret with a
   wrong-but-present value (e.g. a bad `DATABASE_URL`), when the smoke runs,
   then the surfaced failure names the key only — never the value, never raw
   driver/DSN error text.
-- [ ] **API:** given PostgreSQL is reachable, when `GET /readyz` is called, then
+- [x] **API:** given PostgreSQL is reachable, when `GET /readyz` is called, then
   it answers `200 {"status":"ready"}` with no auth and no data returned.
-- [ ] **API (failure):** given PostgreSQL is unreachable or hung, when
+- [x] **API (failure):** given PostgreSQL is unreachable or hung, when
   `GET /readyz` is called, then it answers `503` in the house error shape with
   code `dependency_unavailable` within `READYZ_TIMEOUT_SECONDS` (default 2s),
   while `GET /healthz` still answers 200 (liveness stays dependency-free).
-- [ ] **CI:** given a push to a PR branch and a merge to `main`, when the
+- [x] **CI:** given a push to a PR branch and a merge to `main`, when the
   workflow runs, then `check-api`, `check-web`, `check-e2e` and `check-load`
   all run in the pipeline, and only a fully green `main` run builds and pushes
   both images to GHCR tagged `sha-<commit>`.
-- [ ] **CI (failure):** given any gate fails, when the workflow runs, then the
+- [x] **CI (failure):** given any gate fails, when the workflow runs, then the
   pipeline fails and no image is pushed — a red gate blocks the pipeline
   exactly as it blocks "done".
-- [ ] **Secrets hygiene:** given the repository and both built images, when
+- [x] **Secrets hygiene:** given the repository and both built images, when
   inspected, then no deployed-environment secret values appear in git-tracked
   files, image layers or manifests (the tracked dev-only credentials are never
   reused in a deployed Secret), the workflows reference secrets only via

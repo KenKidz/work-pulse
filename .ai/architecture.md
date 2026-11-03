@@ -129,7 +129,7 @@ state and Kafka as the durable backbone so the separation stays honest.
 | 5 | CDC / Debezium | projections move from application code to the database |
 | 6 | OpenTelemetry, Prometheus, Grafana | we need to see failures and latency across services |
 | 7 | load testing, rate limiting, circuit breakers | reliability becomes a requirement, not a hope |
-| 8 | Docker images, Kubernetes, CI/CD | deployment and operations become real problems |
+| 8 | Docker images, Kubernetes, CI/CD — **shipped (ADR 0026)** | deployment and operations become real problems |
 
 Rule: a technology is added when WorkPulse has a requirement for it — with a spec
 and an ADR — not because it looks good on a CV.
@@ -152,6 +152,8 @@ and an ADR — not because it looks good on a CV.
 | Versioned contracts (OpenAPI, events) | `contracts/` |
 | Database assets (seeds, scripts, migrations) | `database/` |
 | Local observability stack (Prometheus, Grafana) | `ops/observability/` |
+| Deployment manifests, kind proof + runbook | `ops/deploy/` |
+| CI pipeline | `.github/workflows/` |
 | Cross-surface tests | `tests/` |
 | Verification entry point | `make check` |
 
