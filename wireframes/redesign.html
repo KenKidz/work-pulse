@@ -1,0 +1,1656 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>WorkPulse — redesign wireframes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Fira+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --radius: 0.375rem;
+    --background: #f4f7fb;
+    --foreground: #172b4d;
+    --card: #ffffff;
+    --card-foreground: #172b4d;
+    --popover: #ffffff;
+    --popover-foreground: #172b4d;
+    --primary: #2563eb;
+    --primary-foreground: #ffffff;
+    --secondary: #e8eef8;
+    --secondary-foreground: #243b60;
+    --muted: #e9eff8;
+    --muted-foreground: #52627a;
+    --accent: #dce8fb;
+    --accent-foreground: #172b4d;
+    --destructive: #b42318;
+    --destructive-foreground: #ffffff;
+    --success: #157a53;
+    --success-foreground: #ffffff;
+    --warning: #945200;
+    --warning-foreground: #ffffff;
+    --info: #1d4ed8;
+    --info-foreground: #ffffff;
+    --border: #d9e2ef;
+    --input: #8796ac;
+    --ring: #2563eb;
+    --sidebar: #edf2f9;
+    --sidebar-foreground: #172b4d;
+    --sidebar-accent: #dce8fb;
+    --sidebar-border: #d9e2ef;
+    --canvas: #e7edf6;
+    --shadow-pop: 0 10px 30px rgba(23, 43, 77, 0.12);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    font-family: "Fira Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+    background: var(--canvas);
+    color: var(--foreground);
+    -webkit-font-smoothing: antialiased;
+  }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  svg {
+    display: block; fill: none; stroke: currentColor; stroke-width: 2;
+    stroke-linecap: round; stroke-linejoin: round;
+  }
+  .mono { font-family: "Fira Code", ui-monospace, SFMono-Regular, monospace; }
+  .tabular { font-variant-numeric: tabular-nums; }
+
+  /* ---------- wireframe toolbar ---------- */
+  .toolbar {
+    position: sticky; top: 0; z-index: 100;
+    background: #fff; border-bottom: 1px solid var(--border);
+    padding: 10px 16px;
+  }
+  .toolbar-inner {
+    max-width: 1560px; margin: 0 auto;
+    display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px;
+  }
+  .brand { display: flex; align-items: center; gap: 8px; margin-right: 8px; }
+  .brand-mark {
+    width: 24px; height: 24px; border-radius: 6px; background: var(--primary);
+    color: #fff; display: grid; place-items: center;
+  }
+  .brand-mark svg { width: 14px; height: 14px; }
+  .brand-name { font-size: 13px; font-weight: 600; letter-spacing: -0.01em; }
+  .brand-sub { font-size: 12px; color: var(--muted-foreground); }
+  .control { display: flex; align-items: center; gap: 6px; }
+  .control-label { font-size: 12px; font-weight: 500; color: var(--muted-foreground); }
+  select.tool-select {
+    height: 32px; border: 1px solid var(--border); background: #fff;
+    border-radius: 6px; padding: 0 8px; font-size: 12px; color: var(--foreground);
+  }
+  .seg {
+    display: inline-flex; align-items: center; gap: 2px; padding: 2px;
+    background: var(--muted); border-radius: 6px;
+  }
+  .seg button {
+    min-width: 32px; height: 32px; padding: 0 9px; border: 0; border-radius: 4px;
+    background: transparent; color: var(--muted-foreground); font-size: 12px; font-weight: 600;
+  }
+  .seg button[aria-pressed="true"] { background: #fff; color: var(--foreground); box-shadow: 0 1px 2px rgba(23,43,77,.08); }
+  .toggle {
+    display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 9px;
+    border: 1px solid var(--border); border-radius: 6px; background: #fff; font-size: 12px;
+    color: var(--muted-foreground);
+  }
+  .toggle[aria-pressed="true"] { border-color: var(--primary); color: var(--primary); background: #edf4ff; }
+  .toolbar .spacer { flex: 1 1 auto; }
+  .toolbar-note { font-size: 12px; color: var(--muted-foreground); }
+
+  /* ---------- stage ---------- */
+  .stage-wrap { padding: 18px 0 0; overflow-x: auto; }
+  .stage {
+    width: 1440px; min-height: 1000px; margin: 0 auto;
+    background: var(--background); border: 1px solid var(--border);
+    box-shadow: 0 1px 2px rgba(23,43,77,.04);
+    display: flex; align-items: stretch;
+    position: relative;
+  }
+  .stage.mobile { width: 375px; min-height: 812px; }
+  .stage.grayscale { filter: grayscale(1); }
+  .stage.compact .desc,
+  .stage.compact .hint,
+  .stage.compact .repeat { display: none !important; }
+  .stage.no-repeat .repeat { display: none !important; }
+
+  /* ---------- sidebar ---------- */
+  .sidebar {
+    width: 240px; flex: 0 0 240px; background: var(--sidebar);
+    border-right: 1px solid var(--sidebar-border);
+    display: flex; flex-direction: column;
+  }
+  .sidebar-brand {
+    height: 64px; flex: 0 0 64px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 9px; padding: 0 16px;
+  }
+  .sidebar-brand .brand-mark { width: 22px; height: 22px; border-radius: 6px; }
+  .sidebar-brand .name { font-size: 14px; font-weight: 600; letter-spacing: -0.01em; }
+  .sidebar-nav { padding: 12px 8px; display: flex; flex-direction: column; gap: 14px; }
+  .nav-group-label {
+    font-size: 12px; font-weight: 500; color: var(--muted-foreground);
+    padding: 0 8px 5px;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 9px; height: 34px; padding: 0 8px;
+    border-radius: 5px; color: var(--sidebar-foreground); text-decoration: none;
+    font-size: 13px; line-height: 1;
+  }
+  .nav-item + .nav-item { margin-top: 4px; }
+  .nav-item svg { width: 16px; height: 16px; color: var(--muted-foreground); }
+  .nav-item.active { background: var(--sidebar-accent); font-weight: 600; }
+  .nav-item.active svg { color: var(--primary); }
+  .nav-item .count {
+    margin-left: auto; font-size: 12px; font-weight: 600; color: var(--primary);
+    background: #fff; border: 1px solid var(--border); border-radius: 999px; padding: 2px 6px;
+  }
+  .sidebar-foot { margin-top: auto; padding: 12px; }
+
+  /* ---------- header + main ---------- */
+  .main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+  .app-header {
+    height: 64px; flex: 0 0 64px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px; padding: 0 22px;
+    background: var(--background);
+  }
+  .icon-btn {
+    width: 34px; height: 34px; display: grid; place-items: center;
+    border: 0; border-radius: 5px; background: transparent; color: var(--muted-foreground);
+  }
+  .icon-btn:hover { background: var(--muted); color: var(--foreground); }
+  .icon-btn svg { width: 17px; height: 17px; }
+  .header-search {
+    margin-left: auto; display: flex; align-items: center; gap: 8px;
+    height: 34px; width: 220px; border: 1px solid var(--border); border-radius: 5px;
+    padding: 0 10px; color: var(--muted-foreground); background: transparent;
+    font-size: 12px;
+  }
+  .header-search svg { width: 14px; height: 14px; flex: 0 0 auto; }
+  .header-search kbd {
+    margin-left: auto; font-family: inherit; font-size: 12px; border: 1px solid var(--border);
+    border-radius: 3px; padding: 1px 4px; color: var(--muted-foreground);
+  }
+  .header-actions { display: flex; align-items: center; gap: 2px; }
+  .avatar {
+    width: 28px; height: 28px; border-radius: 999px; background: var(--secondary);
+    color: var(--secondary-foreground); display: inline-grid; place-items: center;
+    font-size: 12px; font-weight: 600; letter-spacing: .02em; flex: 0 0 auto;
+  }
+  .avatar.sm { width: 30px; height: 30px; font-size: 12px; }
+  .avatar.lg { width: 36px; height: 36px; font-size: 12px; }
+  .mobile-brand { display: none; align-items: center; gap: 7px; font-size: 14px; font-weight: 600; }
+  .mobile-brand svg { width: 17px; height: 17px; color: var(--primary); }
+
+  .content {
+    width: 100%; max-width: 1280px; margin: 0 auto;
+    padding: 26px 32px 48px; display: flex; flex-direction: column; gap: 20px;
+  }
+  .page-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+  .page-title { margin: 0; font-size: 30px; line-height: 36px; letter-spacing: -0.025em; font-weight: 600; }
+  .page-desc { margin: 6px 0 0; font-size: 13px; line-height: 19px; color: var(--muted-foreground); max-width: 660px; }
+  .page-actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; padding-top: 2px; }
+  .live-inline { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--success); font-weight: 500; }
+  .pulse { width: 7px; height: 7px; border-radius: 999px; background: var(--success); position: relative; }
+  .pulse::after {
+    content: ""; position: absolute; inset: 0; border-radius: 999px;
+    background: var(--success); opacity: .35; transform: scale(2.1);
+  }
+
+  /* ---------- controls ---------- */
+  .btn {
+    height: 34px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    border: 1px solid transparent; border-radius: 5px; padding: 0 13px;
+    font-size: 12px; font-weight: 500; white-space: nowrap; text-decoration: none;
+  }
+  .btn svg { width: 14px; height: 14px; }
+  .btn-primary { background: var(--primary); color: var(--primary-foreground); }
+  .btn-outline { background: #fff; border-color: var(--border); color: var(--foreground); }
+  .btn-ghost { background: transparent; color: var(--muted-foreground); }
+  .btn-ghost:hover { background: var(--muted); color: var(--foreground); }
+  .btn-sm { height: 28px; padding: 0 9px; font-size: 12px; }
+  .btn-sm svg { width: 12px; height: 12px; }
+  .btn-block { width: 100%; }
+  .link {
+    color: var(--primary); text-decoration: none; font-size: 12px; font-weight: 500;
+    display: inline-flex; align-items: center; gap: 4px; min-height: 32px;
+  }
+  .link svg { width: 12px; height: 12px; }
+  .input {
+    height: 34px; width: 100%; border: 1px solid var(--input); border-radius: 5px;
+    background: #fff; padding: 0 10px; font-size: 12px; color: var(--foreground);
+    outline: none;
+  }
+  .input::placeholder { color: var(--muted-foreground); }
+  .input:focus { border-color: var(--ring); box-shadow: 0 0 0 3px rgba(37,99,235,.16); }
+  .input-icon { position: relative; }
+  .input-icon svg { position: absolute; left: 9px; top: 50%; width: 14px; height: 14px; transform: translateY(-50%); color: var(--muted-foreground); }
+  .input-icon .input { padding-left: 30px; }
+  .select {
+    height: 34px; border: 1px solid var(--input); border-radius: 5px; background: #fff;
+    padding: 0 28px 0 10px; font-size: 12px; color: var(--foreground); appearance: none;
+    background-image: linear-gradient(45deg, transparent 50%, var(--muted-foreground) 50%), linear-gradient(135deg, var(--muted-foreground) 50%, transparent 50%);
+    background-position: calc(100% - 13px) 14px, calc(100% - 9px) 14px;
+    background-size: 4px 4px, 4px 4px; background-repeat: no-repeat;
+  }
+  .seg-control { display: inline-flex; gap: 2px; padding: 3px; background: var(--muted); border-radius: 6px; }
+  .seg-control button {
+    height: 28px; padding: 0 11px; border: 0; border-radius: 4px; background: transparent;
+    font-size: 12px; font-weight: 500; color: var(--muted-foreground);
+  }
+  .seg-control button[aria-pressed="true"] { background: #fff; color: var(--foreground); box-shadow: 0 1px 2px rgba(23,43,77,.08); }
+
+  /* ---------- cards + blocks ---------- */
+  .block { position: relative; }
+  .bnum {
+    position: absolute; top: -9px; left: 12px; z-index: 3;
+    background: #fff; border: 1px solid var(--border); border-radius: 999px;
+    padding: 2px 6px; font-family: "Fira Code", monospace; font-size: 9px; line-height: 12px;
+    font-weight: 500; color: var(--muted-foreground);
+  }
+  .hide-numbers .bnum { display: none; }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 6px;
+    overflow: hidden;
+  }
+  .card-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 14px 16px 10px;
+  }
+  .card-title { margin: 0; font-size: 14px; line-height: 18px; font-weight: 600; letter-spacing: -0.01em; }
+  .card-desc { margin: 3px 0 0; font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
+  .card-body { padding: 0 16px 16px; }
+  .card-foot {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    border-top: 1px solid var(--border); padding: 9px 16px; font-size: 12px; color: var(--muted-foreground);
+  }
+  .divider { height: 1px; background: var(--border); }
+
+  /* ---------- KPI strip ---------- */
+  .kpi-strip { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .kpi { padding: 14px 16px 13px; border-left: 1px solid var(--border); min-width: 0; }
+  .kpi:first-child { border-left: 0; }
+  .kpi-label { font-size: 12px; line-height: 14px; font-weight: 500; color: var(--muted-foreground); }
+  .kpi-value { margin-top: 5px; font-size: 29px; line-height: 30px; font-weight: 600; letter-spacing: -0.04em; }
+  .kpi-value.warn { color: var(--warning); }
+  .kpi-value.bad { color: var(--destructive); }
+  .kpi-value.muted { color: var(--muted-foreground); }
+  .kpi-hint { margin-top: 4px; font-size: 12px; line-height: 13px; color: var(--muted-foreground); }
+  .strip-note {
+    border-top: 1px solid var(--border); padding: 8px 16px;
+    font-size: 12px; line-height: 15px; color: var(--muted-foreground);
+  }
+
+  /* ---------- approvals ---------- */
+  .queue-tabs { display: flex; align-items: center; gap: 2px; border-bottom: 1px solid var(--border); padding: 0 12px; }
+  .queue-tab {
+    height: 36px; padding: 0 10px; border: 0; background: transparent; font-size: 12px;
+    font-weight: 500; color: var(--muted-foreground); border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  .queue-tab[aria-pressed="true"] { color: var(--foreground); border-bottom-color: var(--primary); font-weight: 600; }
+  .queue-tab .n { margin-left: 5px; font-size: 12px; color: var(--muted-foreground); }
+  .approval-row {
+    display: flex; align-items: center; gap: 11px; padding: 11px 16px;
+    border-bottom: 1px solid var(--border); min-width: 0;
+  }
+  .approval-row:last-child { border-bottom: 0; }
+  .approval-main { min-width: 0; flex: 1 1 auto; }
+  .approval-top { display: flex; align-items: center; gap: 7px; min-width: 0; }
+  .approval-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .approval-meta { margin-top: 2px; font-size: 12px; color: var(--muted-foreground); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .approval-actions { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+
+  /* ---------- badges ---------- */
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 7px;
+    border-radius: 4px; font-size: 12px; line-height: 1; font-weight: 600; white-space: nowrap;
+    border: 1px solid transparent;
+  }
+  .badge svg { width: 10px; height: 10px; }
+  .badge-success { background: rgba(21,122,83,.10); color: var(--success); }
+  .badge-warning { background: rgba(148,82,0,.13); color: var(--warning); }
+  .badge-danger { background: rgba(180,35,24,.10); color: var(--destructive); }
+  .badge-muted { background: var(--muted); color: var(--muted-foreground); }
+  .badge-info { background: rgba(29,78,216,.10); color: var(--info); }
+  .badge-outline { border-color: var(--border); color: var(--muted-foreground); background: #fff; }
+
+  /* ---------- my day ---------- */
+  .myday-status { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 500; color: var(--success); }
+  .myday-time { display: flex; align-items: baseline; gap: 8px; margin-top: 9px; }
+  .myday-time strong { font-size: 28px; line-height: 28px; font-weight: 600; letter-spacing: -0.03em; }
+  .myday-time span { font-size: 12px; color: var(--muted-foreground); }
+  .balance-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .balance { border: 1px solid var(--border); border-radius: 5px; padding: 9px 10px; }
+  .balance-label { font-size: 12px; color: var(--muted-foreground); }
+  .balance-value { margin-top: 3px; font-size: 14px; font-weight: 600; }
+  .balance-value span { font-size: 12px; font-weight: 400; color: var(--muted-foreground); }
+  .mini-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; }
+  .mini-row .muted { color: var(--muted-foreground); }
+
+  /* ---------- activity ---------- */
+  .activity { display: flex; flex-direction: column; }
+  .activity-row { display: flex; gap: 10px; padding: 8px 16px; border-bottom: 1px solid var(--border); }
+  .activity-row:last-child { border-bottom: 0; }
+  .activity-time { flex: 0 0 42px; font-family: "Fira Code", monospace; font-size: 12px; line-height: 15px; color: var(--muted-foreground); padding-top: 1px; }
+  .activity-dot { flex: 0 0 7px; width: 7px; height: 7px; border-radius: 999px; background: var(--primary); margin-top: 4px; }
+  .activity-dot.success { background: var(--success); }
+  .activity-dot.warn { background: var(--warning); }
+  .activity-dot.muted { background: var(--input); }
+  .activity-copy { min-width: 0; font-size: 12px; line-height: 16px; }
+  .activity-copy strong { font-weight: 600; }
+  .activity-copy .meta { display: block; font-size: 12px; color: var(--muted-foreground); margin-top: 1px; }
+
+  /* ---------- presence ---------- */
+  .presence-list { display: flex; flex-direction: column; }
+  .presence-row { display: flex; align-items: center; gap: 9px; padding: 8px 16px; border-bottom: 1px solid var(--border); }
+  .presence-row:last-child { border-bottom: 0; }
+  .presence-name { min-width: 0; flex: 1 1 auto; }
+  .presence-name strong { display: block; font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .presence-name span { display: block; font-size: 12px; color: var(--muted-foreground); }
+  .presence-since { font-family: "Fira Code", monospace; font-size: 12px; color: var(--muted-foreground); }
+
+  /* ---------- tables ---------- */
+  .table-scroll { width: 100%; overflow-x: auto; }
+  .table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .table th {
+    height: 36px; padding: 0 10px; text-align: left; font-size: 12px; font-weight: 500;
+    color: var(--muted-foreground); border-bottom: 1px solid var(--border); white-space: nowrap;
+    background: var(--card); position: sticky; top: 0; z-index: 1;
+  }
+  .table td { height: 44px; padding: 6px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  .table tr:last-child td { border-bottom: 0; }
+  .table tbody tr:hover { background: rgba(233,239,248,.5); }
+  .cell-person { display: flex; align-items: center; gap: 8px; }
+  .cell-person .who { min-width: 0; }
+  .cell-person .who strong { display: block; font-size: 12px; font-weight: 600; }
+  .cell-person .who span { display: block; font-size: 12px; color: var(--muted-foreground); font-family: "Fira Code", monospace; }
+  .muted { color: var(--muted-foreground); }
+  .table-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-top: 1px solid var(--border); padding: 9px 12px; font-size: 12px; color: var(--muted-foreground); }
+  .pager { display: flex; align-items: center; gap: 6px; }
+  .pager .btn { height: 27px; }
+  .table-hint { display: none; font-size: 12px; color: var(--muted-foreground); padding: 0 2px 6px; }
+
+  /* ---------- form / check-in ---------- */
+  .field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+  .field-label { font-size: 12px; font-weight: 500; color: var(--muted-foreground); }
+  .checkin-form { display: grid; grid-template-columns: 190px minmax(0,1fr) auto; gap: 10px; align-items: end; }
+  .checkin-form .textarea {
+    height: 62px; width: 100%; border: 1px solid var(--input); border-radius: 5px; background: #fff;
+    padding: 8px 10px; font-size: 12px; resize: none;
+  }
+  .open-record {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    border: 1px solid rgba(21,122,83,.3); background: rgba(21,122,83,.05);
+    border-radius: 5px; padding: 10px 12px;
+  }
+  .open-record .left { display: flex; align-items: center; gap: 9px; }
+  .open-icon { width: 30px; height: 30px; border-radius: 5px; background: rgba(21,122,83,.1); color: var(--success); display: grid; place-items: center; }
+  .open-icon svg { width: 14px; height: 14px; }
+  .open-record strong { display: block; font-size: 12px; font-weight: 600; }
+  .open-record span { display: block; font-size: 12px; color: var(--muted-foreground); }
+
+  /* ---------- filters ---------- */
+  .filter-bar { display: grid; grid-template-columns: minmax(190px, 1.4fr) repeat(5, minmax(120px, .8fr)) auto; gap: 8px; align-items: center; }
+  .filter-bar.compact-bar { grid-template-columns: minmax(190px, 1.4fr) repeat(3, minmax(120px, .8fr)) auto; }
+  .filter-actions { display: flex; align-items: center; gap: 6px; }
+
+  /* ---------- empty / error / loading ---------- */
+  .empty {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px;
+    border: 1px dashed var(--border); border-radius: 6px; padding: 28px 16px; text-align: center;
+  }
+  .empty svg { width: 20px; height: 20px; color: var(--muted-foreground); }
+  .empty p { margin: 0; font-size: 12px; line-height: 16px; color: var(--muted-foreground); max-width: 320px; }
+  .empty .btn { margin-top: 3px; }
+  .alert {
+    display: flex; gap: 9px; border: 1px solid rgba(180,35,24,.28);
+    background: rgba(180,35,24,.05); border-radius: 5px; padding: 11px 12px;
+  }
+  .alert svg { width: 16px; height: 16px; color: var(--destructive); flex: 0 0 auto; margin-top: 1px; }
+  .alert strong { display: block; font-size: 12px; color: var(--destructive); }
+  .alert p { margin: 2px 0 7px; font-size: 12px; line-height: 15px; color: var(--muted-foreground); }
+  .skeleton { height: 10px; border-radius: 3px; background: var(--muted); }
+  .skeleton-row { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--border); }
+  .skeleton-avatar { width: 30px; height: 30px; border-radius: 999px; background: var(--muted); flex: 0 0 auto; }
+  .skeleton-lines { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+  .skeleton-lines .skeleton:first-child { width: 38%; }
+  .skeleton-lines .skeleton:last-child { width: 62%; }
+  .skeleton-table { padding: 0 12px; }
+  .skeleton-table .skeleton-row { padding: 14px 4px; }
+  .skeleton-table .skeleton { height: 9px; }
+
+  /* ---------- auth ---------- */
+  .auth-stage { width: 1440px; min-height: 1000px; margin: 0 auto; background: var(--background); border: 1px solid var(--border); position: relative; display: flex; align-items: center; justify-content: center; }
+  .auth-stage.mobile { width: 375px; min-height: 812px; }
+  .auth-chrome { position: absolute; top: 18px; right: 20px; display: flex; align-items: center; gap: 4px; border: 1px solid var(--border); background: #fff; border-radius: 7px; padding: 3px; }
+  .auth-card { width: 380px; background: #fff; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .auth-trace { height: 26px; color: rgba(37,99,235,.7); border-bottom: 0; }
+  .auth-body { padding: 20px 28px 26px; }
+  .auth-brand { display: flex; align-items: center; gap: 9px; }
+  .auth-brand .brand-mark { width: 28px; height: 28px; border-radius: 7px; }
+  .auth-brand .name { font-size: 13px; font-weight: 600; }
+  .auth-title { margin: 18px 0 0; font-size: 24px; line-height: 30px; font-weight: 600; letter-spacing: -0.03em; }
+  .auth-sub { margin: 5px 0 18px; font-size: 12px; line-height: 17px; color: var(--muted-foreground); }
+  .auth-field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+  .auth-field label { font-size: 12px; font-weight: 500; }
+  .auth-field .input { height: 38px; }
+  .auth-note { margin: 14px 0 0; font-size: 12px; line-height: 15px; color: var(--muted-foreground); text-align: center; }
+  .auth-foot { position: absolute; bottom: 20px; left: 0; right: 0; text-align: center; font-size: 12px; color: var(--muted-foreground); }
+  .auth-card .btn-primary { height: 38px; }
+
+  /* ---------- reason panel ---------- */
+  .reason-wrap { max-width: 1440px; margin: 18px auto 40px; padding: 0 16px; }
+  .reason {
+    background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px;
+    display: grid; grid-template-columns: 180px 1fr 1fr 1fr; gap: 18px;
+  }
+  .reason h2 { margin: 0; font-size: 13px; font-weight: 600; }
+  .reason .chosen { margin-top: 4px; font-size: 12px; color: var(--muted-foreground); }
+  .reason .pick { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 8px; border-radius: 999px; background: #edf4ff; color: var(--primary); font-size: 12px; font-weight: 600; margin-top: 8px; }
+  .reason-col h3 { margin: 0 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted-foreground); font-weight: 600; }
+  .reason-col p { margin: 0; font-size: 12px; line-height: 17px; color: var(--foreground); text-wrap: pretty; }
+
+  /* ---------- mobile (stage class, for the 375 toggle) ---------- */
+  .stage.mobile .sidebar { display: none; }
+  .stage.mobile .mobile-brand { display: flex; }
+  .stage.mobile .app-header { padding: 0 12px; gap: 4px; }
+  .stage.mobile .header-search { margin-left: auto; width: 34px; padding: 0; justify-content: center; }
+  .stage.mobile .header-search span,
+  .stage.mobile .header-search kbd { display: none; }
+  .stage.mobile .header-actions .locale-btn { display: none; }
+  .stage.mobile .content { padding: 18px 16px 36px; gap: 14px; }
+  .stage.mobile .page-head { flex-direction: column; gap: 10px; }
+  .stage.mobile .page-title { font-size: 26px; line-height: 30px; }
+  .stage.mobile .page-actions { width: 100%; }
+  .stage.mobile .page-actions .btn { flex: 1; }
+  .stage.mobile .kpi-strip { grid-template-columns: 1fr 1fr; }
+  .stage.mobile .kpi { border-left: 0; border-top: 1px solid var(--border); }
+  .stage.mobile .kpi:nth-child(-n+2) { border-top: 0; }
+  .stage.mobile .kpi:nth-child(even) { border-left: 1px solid var(--border); }
+  .stage.mobile .kpi:last-child { grid-column: span 2; }
+  .stage.mobile .kpi-value { font-size: 26px; }
+  .stage.mobile .grid-split,
+  .stage.mobile .grid-half { grid-template-columns: 1fr !important; }
+  .stage.mobile .approval-row { align-items: flex-start; }
+  .stage.mobile .approval-meta { white-space: normal; }
+  .stage.mobile .approval-actions { flex-direction: column; align-items: stretch; }
+  .stage.mobile .approval-actions .btn { width: 100%; min-height: 44px; }
+  .stage.mobile .checkin-form { grid-template-columns: 1fr; }
+  .stage.mobile .filter-bar,
+  .stage.mobile .filter-bar.compact-bar { grid-template-columns: 1fr; }
+  .stage.mobile .table-hint { display: block; }
+  .stage.mobile .table th,
+  .stage.mobile .table td { padding-left: 8px; padding-right: 8px; }
+  .stage.mobile .table { min-width: 720px; }
+  .stage.mobile .people-grid { grid-template-columns: 1fr !important; }
+  .auth-stage.mobile .auth-card { width: calc(100% - 32px); max-width: 380px; }
+  .auth-stage.mobile .auth-chrome { top: 12px; right: 12px; }
+  .auth-stage.mobile .auth-foot { position: static; margin-top: 18px; }
+  .auth-stage.mobile { flex-direction: column; padding: 42px 0 20px; }
+
+  /* ---------- mobile ---------- */
+  @media (max-width: 760px) {
+    .toolbar-inner { align-items: flex-start; }
+    .brand-sub { display: none; }
+    .stage, .auth-stage { box-shadow: none; }
+    .reason { grid-template-columns: 1fr; gap: 12px; }
+  }
+  @media (max-width: 760px) {
+    .stage { width: 375px; }
+    .sidebar { display: none; }
+    .mobile-brand { display: flex; }
+    .app-header { padding: 0 12px; gap: 4px; }
+    .header-search { margin-left: auto; width: 34px; padding: 0; justify-content: center; }
+    .header-search span, .header-search kbd { display: none; }
+    .header-actions .locale-btn { display: none; }
+    .content { padding: 18px 16px 36px; gap: 14px; }
+    .page-head { flex-direction: column; gap: 10px; }
+    .page-title { font-size: 26px; line-height: 30px; }
+    .page-actions { width: 100%; }
+    .page-actions .btn { flex: 1; }
+    .kpi-strip { grid-template-columns: 1fr 1fr; }
+    .kpi { border-left: 0; border-top: 1px solid var(--border); }
+    .kpi:nth-child(-n+2) { border-top: 0; }
+    .kpi:nth-child(even) { border-left: 1px solid var(--border); }
+    .kpi:last-child { grid-column: span 2; }
+    .kpi-value { font-size: 26px; }
+    .grid-split { grid-template-columns: 1fr !important; }
+    .approval-row { align-items: flex-start; }
+    .approval-meta { white-space: normal; }
+    .approval-actions { flex-direction: column; align-items: stretch; }
+    .approval-actions .btn { width: 100%; min-height: 44px; }
+    .checkin-form { grid-template-columns: 1fr; }
+    .filter-bar, .filter-bar.compact-bar { grid-template-columns: 1fr; }
+    .table-hint { display: block; }
+    .table th, .table td { padding-left: 8px; padding-right: 8px; }
+    .table { min-width: 720px; }
+    .auth-card { width: calc(100vw - 32px); max-width: 380px; }
+    .auth-chrome { top: 12px; right: 12px; }
+    .auth-foot { position: static; margin-top: 18px; }
+    .auth-stage { flex-direction: column; padding: 42px 0 20px; }
+    .reason-wrap { padding: 0 12px; }
+  }
+
+  /* shared grid */
+  .grid-split { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(300px, 1fr); gap: 18px; align-items: start; }
+  .grid-half { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
+  .people-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+</style>
+</head>
+<body>
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+  <symbol id="i-activity" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></symbol>
+  <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></symbol>
+  <symbol id="i-timer" viewBox="0 0 24 24"><line x1="10" y1="2" x2="14" y2="2"/><line x1="12" y1="14" x2="15" y2="11"/><circle cx="12" cy="14" r="7"/></symbol>
+  <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></symbol>
+  <symbol id="i-wallet" viewBox="0 0 24 24"><path d="M20 12V7H5a2 2 0 0 1 0-4h13v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></symbol>
+  <symbol id="i-receipt" viewBox="0 0 24 24"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M8 8h8M8 12h8M8 16h5"/></symbol>
+  <symbol id="i-briefcase" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><line x1="6" y1="20" x2="6" y2="15"/><line x1="12" y1="20" x2="12" y2="9"/><line x1="18" y1="20" x2="18" y2="4"/></symbol>
+  <symbol id="i-monitor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></symbol>
+  <symbol id="i-building" viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01M16 6h.01M12 6h.01M12 10h.01M12 14h.01M16 10h.01M16 14h.01M8 10h.01M8 14h.01"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.2" y2="16.2"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></symbol>
+  <symbol id="i-login" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></symbol>
+  <symbol id="i-inbox" viewBox="0 0 24 24"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></symbol>
+</svg>
+
+<div class="toolbar">
+  <div class="toolbar-inner">
+    <div class="brand">
+      <span class="brand-mark"><svg><use href="#i-activity"/></svg></span>
+      <span>
+        <span class="brand-name">WorkPulse</span>
+        <span class="brand-sub"> · redesign wireframes</span>
+      </span>
+    </div>
+
+    <div class="control">
+      <span class="control-label">Screen</span>
+      <select id="screen" class="tool-select">
+        <option value="dashboard">Dashboard — manager</option>
+        <option value="employee">Dashboard — employee</option>
+        <option value="attendance">Attendance</option>
+        <option value="employees">Employees</option>
+        <option value="command">Command center</option>
+        <option value="login">Sign in</option>
+      </select>
+    </div>
+
+    <div class="control">
+      <span class="control-label">Option</span>
+      <div class="seg" id="options"></div>
+    </div>
+
+    <div class="control">
+      <span class="control-label">Width</span>
+      <div class="seg" id="width">
+        <button type="button" data-width="desktop" aria-pressed="true">1440</button>
+        <button type="button" data-width="mobile" aria-pressed="false">375</button>
+      </div>
+    </div>
+
+    <button type="button" class="toggle" id="compact" aria-pressed="false">Gọn chữ</button>
+    <button type="button" class="toggle" id="no-repeat" aria-pressed="false">Bỏ lặp</button>
+    <button type="button" class="toggle" id="numbers" aria-pressed="true">Numbers</button>
+    <button type="button" class="toggle" id="grayscale" aria-pressed="false">Grayscale</button>
+
+    <div class="control">
+      <span class="control-label">State</span>
+      <select id="data-state" class="tool-select">
+        <option value="data">Data</option>
+        <option value="loading">Loading</option>
+        <option value="empty">Empty</option>
+        <option value="error">Error</option>
+      </select>
+    </div>
+
+    <span class="spacer"></span>
+  </div>
+</div>
+
+<div class="stage-wrap" id="stage-wrap"></div>
+
+<div class="reason-wrap">
+  <section class="reason" id="reason" aria-live="polite"></section>
+</div>
+
+<script>
+const state = {
+  screen: "dashboard",
+  option: "A",
+  width: "desktop",
+  compact: false,
+  noRepeat: false,
+  numbers: true,
+  grayscale: false,
+  dataState: "data",
+};
+
+const OPTIONS = {
+  dashboard: [
+    { id: "A", label: "A" },
+    { id: "B", label: "B" },
+    { id: "C", label: "C" },
+  ],
+  employee: [{ id: "A", label: "A" }],
+  attendance: [
+    { id: "A", label: "A" },
+    { id: "B", label: "B" },
+  ],
+  employees: [
+    { id: "A", label: "A" },
+    { id: "B", label: "B" },
+  ],
+  command: [{ id: "A", label: "A" }],
+  login: [{ id: "A", label: "A" }],
+};
+
+const REASONS = {
+  dashboard: {
+    A: {
+      strengths: "Exceptions and actions sit above the fold; live activity makes the event backbone visible; self-service stays present without competing with approvals.",
+      weaknesses: "Two dense columns; the approvals list must stay capped at four or five rows, or it pushes activity down the page.",
+      fits: "Managers, HR and admins who both monitor the day and clear decisions.",
+    },
+    B: {
+      strengths: "Keeps the live wall central and reads well on a large screen; the presence table is the hero.",
+      weaknesses: "Duplicates Command center; approvals fall below the fold, so the dashboard is weaker as a working surface.",
+      fits: "Teams that treat the dashboard as a second wall display rather than an action surface.",
+    },
+    C: {
+      strengths: "One queue, one place to clear work; the strongest option for an HR inbox day.",
+      weaknesses: "Hides workforce context and live presence; it reads like a task inbox, not an overview.",
+      fits: "HR and admins whose day is mostly approving requests.",
+    },
+  },
+  employee: {
+    A: {
+      strengths: "The first action (check in or out) is the largest element; balances and payslip are close without competing.",
+      weaknesses: "The employee view loses the team's operational context, which is correct but makes the page sparse for power users.",
+      fits: "Employees and workers on a phone before or after a shift.",
+    },
+  },
+  attendance: {
+    A: {
+      strengths: "The employee's action and the recent activity sit together; counts and records follow in reading order.",
+      weaknesses: "The activity rail is short on a quiet day; the empty state must stay compact.",
+      fits: "Everyone who checks in, plus managers verifying the day.",
+    },
+    B: {
+      strengths: "Puts the auditable records first, which suits an HR audit session.",
+      weaknesses: "The primary action falls below the records table; an employee opening the page has to scroll to check in.",
+      fits: "HR-only audit sessions, not the default surface.",
+    },
+  },
+  employees: {
+    A: {
+      strengths: "Identity first, then contact and org context; every filter has a matching visible column.",
+      weaknesses: "Seven columns need horizontal scrolling below 1100px; email is the first candidate to hide on mobile.",
+      fits: "Managers and HR scanning the directory on a desktop.",
+    },
+    B: {
+      strengths: "Warm, browsable directory; one card per person with the org context in a compact stack.",
+      weaknesses: "Three cards per row means slower scanning and more scrolling for 100+ people.",
+      fits: "Small teams or a people directory on a tablet.",
+    },
+  },
+  command: {
+    A: {
+      strengths: "One live strip, one counts strip, one presence table, one activity rail — the wall reads in one pass from a distance.",
+      weaknesses: "Counts overlap by design; the footnote must stay visible or the numbers look inconsistent.",
+      fits: "A wall display or a manager's second monitor.",
+    },
+  },
+  login: {
+    A: {
+      strengths: "The card is the only object; the chrome is grouped and quiet, and the pulse trace stays the single signature moment.",
+      weaknesses: "A centred card on a large screen leaves a lot of paper; acceptable for an internal tool.",
+      fits: "The product's front door.",
+    },
+  },
+};
+
+const PEOPLE = {
+  amara: { initials: "AO", name: "Amara Okafor", code: "EMP-0042", dept: "People Ops", role: "HR Manager", loc: "Ho Chi Minh Office" },
+  daniel: { initials: "DP", name: "Daniel Park", code: "EMP-0031", dept: "Engineering", role: "Backend Engineer", loc: "Remote" },
+  sofia: { initials: "SR", name: "Sofia Reyes", code: "EMP-0018", dept: "Sales", role: "Account Executive", loc: "Ho Chi Minh Office" },
+  marcus: { initials: "MC", name: "Marcus Chen", code: "EMP-0027", dept: "Finance", role: "Payroll Specialist", loc: "Ho Chi Minh Office" },
+  mai: { initials: "LM", name: "Le Thi Mai", code: "EMP-0056", dept: "Engineering", role: "Frontend Engineer", loc: "Remote" },
+  noah: { initials: "NW", name: "Noah Williams", code: "EMP-0063", dept: "Operations", role: "Facilities Lead", loc: "Da Nang Office" },
+  priya: { initials: "PN", name: "Priya Nair", code: "EMP-0009", dept: "People Ops", role: "Recruiter", loc: "Ho Chi Minh Office" },
+  elena: { initials: "EP", name: "Elena Petrova", code: "EMP-0071", dept: "Engineering", role: "QA Engineer", loc: "Remote" },
+};
+
+function avatar(p, size) {
+  return '<span class="avatar ' + (size || "sm") + '">' + p.initials + "</span>";
+}
+
+function badge(kind, label, icon) {
+  return '<span class="badge badge-' + kind + '">' + (icon ? '<svg><use href="#' + icon + '"/></svg>' : "") + label + "</span>";
+}
+
+function ico(name, cls) {
+  return '<svg class="' + (cls || "") + '" aria-hidden="true"><use href="#' + name + '"/></svg>';
+}
+
+function bnum(n) {
+  return '<span class="bnum">' + n + "</span>";
+}
+
+function sidebar(active) {
+  const groups = [
+    { label: "Overview", items: [{ id: "dashboard", label: "Dashboard", icon: "i-grid" }] },
+    {
+      label: "Workforce",
+      items: [
+        { id: "employees", label: "Employees", icon: "i-users" },
+        { id: "attendance", label: "Attendance", icon: "i-clock" },
+        { id: "leave", label: "Leave", icon: "i-calendar" },
+        { id: "overtime", label: "Overtime", icon: "i-timer" },
+        { id: "performance", label: "Performance", icon: "i-target" },
+      ],
+    },
+    {
+      label: "Payroll",
+      items: [
+        { id: "payroll", label: "Payroll", icon: "i-wallet" },
+        { id: "payslips", label: "My payslips", icon: "i-receipt" },
+      ],
+    },
+    { label: "Hiring", items: [{ id: "recruitment", label: "Recruitment", icon: "i-briefcase" }] },
+    {
+      label: "Insight",
+      items: [
+        { id: "reports", label: "Reports", icon: "i-chart" },
+        { id: "command", label: "Command center", icon: "i-monitor" },
+      ],
+    },
+    {
+      label: "Administration",
+      items: [
+        { id: "users", label: "Users", icon: "i-users" },
+        { id: "organization", label: "Organization", icon: "i-building" },
+        { id: "documents", label: "My documents", icon: "i-file" },
+      ],
+    },
+  ];
+
+  return (
+    '<aside class="sidebar">' +
+      '<div class="sidebar-brand"><span class="brand-mark">' + ico("i-activity") + '</span><span class="name">WorkPulse</span></div>' +
+      '<nav class="sidebar-nav">' +
+        groups.map(function (g) {
+          return (
+            '<div>' +
+              '<div class="nav-group-label">' + g.label + "</div>" +
+              g.items.map(function (item) {
+                const on = item.id === active;
+                return (
+                  '<a class="nav-item' + (on ? " active" : "") + '" href="#" onclick="return false">' +
+                    ico(item.icon) + "<span>" + item.label + "</span>" +
+                    (item.count ? '<span class="count">' + item.count + "</span>" : "") +
+                  "</a>"
+                );
+              }).join("") +
+            "</div>"
+          );
+        }).join("") +
+      "</nav>" +
+    "</aside>"
+  );
+}
+
+function header(opts) {
+  const search = opts && opts.search === false ? "" : (
+    '<div class="header-search">' + ico("i-search") + '<span>Search</span><kbd>⌘K</kbd></div>'
+  );
+  return (
+    '<header class="app-header">' +
+      '<button class="icon-btn" type="button" aria-label="Toggle navigation">' + ico("i-menu") + "</button>" +
+      '<div class="mobile-brand">' + ico("i-activity") + "<span>WorkPulse</span></div>" +
+      search +
+      '<div class="header-actions">' +
+        '<button class="icon-btn locale-btn" type="button" aria-label="Language">' + ico("i-globe") + "</button>" +
+        '<button class="icon-btn" type="button" aria-label="Notifications">' + ico("i-bell") + "</button>" +
+        '<button class="icon-btn" type="button" aria-label="Toggle theme">' + ico("i-sun") + "</button>" +
+        '<button class="icon-btn" type="button" aria-label="Account"><span class="avatar">MM</span></button>' +
+      "</div>" +
+    "</header>"
+  );
+}
+
+function pageHead(title, desc, actions) {
+  return (
+    '<div class="page-head">' +
+      "<div>" +
+        '<h1 class="page-title">' + title + "</h1>" +
+        '<p class="page-desc">' + desc + "</p>" +
+      "</div>" +
+      (actions ? '<div class="page-actions">' + actions + "</div>" : "") +
+    "</div>"
+  );
+}
+
+function kpiStrip() {
+  const cells = [
+    { label: "On site", value: "34" },
+    { label: "Remote", value: "12" },
+    { label: "Late", value: "5", cls: "warn", hint: "Past shift start + grace" },
+    { label: "Absent", value: "8", cls: "bad", hint: "No check-in" },
+    { label: "On leave", value: "3", cls: "muted" },
+  ];
+  return (
+    '<section class="card block">' + bnum(2) +
+      '<div class="kpi-strip">' +
+        cells.map(function (c, i) {
+          return (
+            '<div class="kpi">' +
+              '<div class="kpi-label">' + c.label + "</div>" +
+              '<div class="kpi-value tabular ' + (c.cls || "") + '">' + c.value + "</div>" +
+              (c.hint ? '<div class="kpi-hint">' + c.hint + "</div>" : "") +
+            "</div>"
+          );
+        }).join("") +
+      "</div>" +
+      '<div class="strip-note">Late overlaps with on site or remote. Absent excludes approved leave. These counts do not add up to a total.</div>' +
+    "</section>"
+  );
+}
+
+function approvalRow(person, detail, type, age) {
+  return (
+    '<div class="approval-row">' +
+      avatar(person, "sm") +
+      '<div class="approval-main">' +
+        '<div class="approval-top"><span class="approval-name">' + person.name + "</span>" + badge("info", type) + "</div>" +
+        '<div class="approval-meta">' + detail + '<span class="repeat"> · ' + age + "</span></div>" +
+      "</div>" +
+      '<div class="approval-actions">' +
+        '<button class="btn btn-outline btn-sm" type="button">Review</button>' +
+        '<button class="btn btn-primary btn-sm" type="button">Approve</button>' +
+      "</div>" +
+    "</div>"
+  );
+}
+
+function approvalsCard() {
+  let body;
+  if (state.dataState === "loading") {
+    body = skeletonApprovals();
+  } else if (state.dataState === "empty") {
+    body = '<div class="card-body" style="padding-top:4px">' + emptyState("No pending approvals in your scope. You are clear for now.", "i-check") + "</div>";
+  } else if (state.dataState === "error") {
+    body = '<div class="card-body" style="padding-top:4px">' + errorState("Approvals could not be loaded. Check your connection and try again.") + "</div>";
+  } else {
+    body =
+      approvalRow(PEOPLE.sofia, "Annual leave · 12–14 Nov · 3 days", "Leave", "2h ago") +
+      approvalRow(PEOPLE.marcus, "Overtime · 3.5h · 3 Nov · payroll cutoff 6 Nov", "Overtime", "4h ago") +
+      approvalRow(PEOPLE.mai, "Unpaid leave · 20–22 Nov · 3 days", "Leave", "Yesterday") +
+      approvalRow(PEOPLE.noah, "Overtime · 2h · 2 Nov", "Overtime", "Yesterday");
+  }
+  return (
+    '<section class="card block">' + bnum(3) +
+      '<div class="card-head">' +
+        '<div><h2 class="card-title">Needs attention</h2><p class="card-desc">Requests waiting on you, oldest first.</p></div>' +
+        '<a class="link" href="#" onclick="return false">View all ' + ico("i-arrow") + "</a>" +
+      "</div>" +
+      '<div class="queue-tabs">' +
+        '<button class="queue-tab" type="button" aria-pressed="true">Leave <span class="n">4</span></button>' +
+        '<button class="queue-tab" type="button" aria-pressed="false">Overtime <span class="n">2</span></button>' +
+      "</div>" +
+      body +
+      '<div class="card-foot"><span>Decisions notify the requester immediately.</span></div>' +
+    "</section>"
+  );
+}
+
+function myDayCard() {
+  return (
+    '<section class="card block">' + bnum(4) +
+      '<div class="card-head"><div><h2 class="card-title">My day</h2><p class="card-desc">Tuesday, 4 November · shift 09:00–17:30</p></div></div>' +
+      '<div class="card-body" style="display:flex;flex-direction:column;gap:12px">' +
+        '<div class="open-record">' +
+          '<div class="left">' +
+            '<span class="open-icon">' + ico("i-check") + "</span>" +
+            '<div><strong>Checked in at 08:57</strong><span>On site · 9 min early</span></div>' +
+          "</div>" +
+        "</div>" +
+        '<div class="myday-time"><strong class="tabular">4h 32m</strong><span>worked today</span></div>' +
+        '<div class="divider"></div>' +
+        '<div>' +
+          '<div class="mini-row" style="margin-bottom:7px"><span class="muted">Leave balances</span><a class="link" href="#" onclick="return false">All balances ' + ico("i-chevron") + "</a></div>" +
+          '<div class="balance-grid">' +
+            '<div class="balance"><div class="balance-label">Annual</div><div class="balance-value">12 <span>/ 20 days</span></div></div>' +
+            '<div class="balance"><div class="balance-label">Sick</div><div class="balance-value">5 <span>/ 10 days</span></div></div>' +
+          "</div>" +
+        "</div>" +
+        '<div class="divider"></div>' +
+        '<div class="mini-row"><div><div style="font-size:12px;font-weight:600">October 2026 payslip</div><div class="muted" style="font-size:12px">Issued 3 Nov · net $4,800.00</div></div><a class="link" href="#" onclick="return false">View ' + ico("i-chevron") + "</a></div>" +
+      "</div>" +
+    "</section>"
+  );
+}
+
+function activityCard(count) {
+  const rows = [
+    { t: "09:22", who: "Sofia Reyes", what: "checked in late", meta: "On site · 22m past shift start", dot: "warn" },
+    { t: "09:11", who: "Le Thi Mai", what: "checked in", meta: "Remote", dot: "success" },
+    { t: "09:04", who: "Daniel Park", what: "checked in", meta: "Remote", dot: "success" },
+    { t: "08:57", who: "Amara Okafor", what: "checked in", meta: "On site", dot: "success" },
+    { t: "08:45", who: "Marcus Chen", what: "checked in", meta: "On site", dot: "success" },
+    { t: "08:12", who: "Noah Williams", what: "marked absent", meta: "Shift started 08:00", dot: "muted" },
+  ].slice(0, count || 6);
+  let body;
+  if (state.dataState === "loading") body = skeletonActivity(5);
+  else if (state.dataState === "empty") body = '<div style="padding:14px 16px">' + emptyState("No attendance events yet today. The feed fills as people check in.", "i-activity") + "</div>";
+  else if (state.dataState === "error") body = '<div style="padding:14px 16px">' + errorState("The activity feed is unavailable. The board still shows the last snapshot.") + "</div>";
+  else {
+    body = '<div class="activity">' + rows.map(function (r) {
+      return (
+        '<div class="activity-row">' +
+          '<span class="activity-time">' + r.t + "</span>" +
+          '<span class="activity-dot ' + r.dot + '"></span>' +
+          '<span class="activity-copy"><strong>' + r.who + "</strong> " + r.what + '<span class="meta">' + r.meta + "</span></span>" +
+        "</div>"
+      );
+    }).join("") + "</div>";
+  }
+  return (
+    '<section class="card block">' + bnum(5) +
+      '<div class="card-head"><div><h2 class="card-title">Live activity</h2><p class="card-desc">Check-ins and check-outs, newest first.</p></div><span class="live-inline"><span class="pulse"></span>Live</span></div>' +
+      body +
+      '<div class="card-foot"><span>Updated just now</span><a class="link" href="#" onclick="return false">Command center ' + ico("i-arrow") + "</a></div>" +
+    "</section>"
+  );
+}
+
+function presenceCard(count) {
+  const rows = [
+    { p: PEOPLE.amara, status: ["success", "On site", "i-check"], since: "08:57" },
+    { p: PEOPLE.daniel, status: ["info", "Remote", ""], since: "09:04" },
+    { p: PEOPLE.sofia, status: ["warning", "Late", ""], since: "09:22" },
+    { p: PEOPLE.marcus, status: ["success", "On site", "i-check"], since: "08:45" },
+    { p: PEOPLE.mai, status: ["info", "Remote", ""], since: "09:11" },
+    { p: PEOPLE.noah, status: ["danger", "Absent", ""], since: "—" },
+  ].slice(0, count || 6);
+  let body;
+  if (state.dataState === "loading") body = skeletonPresence(5);
+  else if (state.dataState === "empty") body = '<div style="padding:14px 16px">' + emptyState("No one is in scope yet today.", "i-users") + "</div>";
+  else if (state.dataState === "error") body = '<div style="padding:14px 16px">' + errorState("Presence could not be loaded.") + "</div>";
+  else {
+    body = '<div class="presence-list">' + rows.map(function (r) {
+      return (
+        '<div class="presence-row">' + avatar(r.p) +
+          '<div class="presence-name"><strong>' + r.p.name + "</strong><span>" + r.p.code + " · " + r.p.role + "</span></div>" +
+          badge(r.status[0], r.status[1], r.status[2]) +
+          '<span class="presence-since">' + r.since + "</span>" +
+        "</div>"
+      );
+    }).join("") + "</div>";
+  }
+  return (
+    '<section class="card block">' + bnum(6) +
+      '<div class="card-head"><div><h2 class="card-title">Who is working now</h2><p class="card-desc">Everyone in your scope, live.</p></div>' +
+      '<a class="link" href="#" onclick="return false">Open board ' + ico("i-chevron") + "</a></div>" +
+      body +
+      '<div class="card-foot"><span>6 of 62 people shown</span></div>' +
+    "</section>"
+  );
+}
+
+function dashboardA() {
+  return (
+    '<main class="main">' + header() +
+      '<div class="content">' +
+        pageHead(
+          "Dashboard",
+          '<span class="live-inline"><span class="pulse"></span>Live</span> · Tuesday, 4 November · 62 people in scope',
+          '<button class="btn btn-outline" type="button">' + ico("i-calendar") + "Request leave</button>" +
+          '<button class="btn btn-primary" type="button">' + ico("i-login") + "Check out</button>"
+        ) +
+        kpiStrip() +
+        '<div class="grid-split">' + approvalsCard() + myDayCard() + "</div>" +
+        '<div class="grid-split">' + activityCard(6) + presenceCard(6) + "</div>" +
+      "</div>" +
+    "</main>"
+  );
+}
+
+function dashboardB() {
+  return (
+    '<main class="main">' + header() +
+      '<div class="content">' +
+        pageHead(
+          "Dashboard",
+          '<span class="live-inline"><span class="pulse"></span>Live</span> · Tuesday, 4 November · 62 people in scope',
+          '<button class="btn btn-outline" type="button">' + ico("i-calendar") + "Request leave</button>" +
+          '<button class="btn btn-primary" type="button">' + ico("i-login") + "Check out</button>"
+        ) +
+        kpiStrip() +
+        '<div class="grid-split">' + presenceCard(9) + activityCard(9) + "</div>" +
+        '<div class="grid-split">' + approvalsCard() + myDayCard() + "</div>" +
+      "</div>" +
+    "</main>"
+  );
+}
+
+function dashboardC() {
+  return (
+    '<main class="main">' + header() +
+      '<div class="content">' +
+        pageHead(
+          "Dashboard",
+          "Tuesday, 4 November · your decision queue",
+          '<button class="btn btn-outline" type="button">' + ico("i-calendar") + "Request leave</button>"
+        ) +
+        '<div class="grid-split">' +
+          '<section class="card block">' + bnum(2) +
+            '<div class="card-head"><div><h2 class="card-title">Decision queue</h2><p class="card-desc">Oldest first. Approving notifies the requester.</p></div><span class="badge badge-info">9 open</span></div>' +
+            '<div class="queue-tabs">' +
+              '<button class="queue-tab" type="button" aria-pressed="true">All <span class="n">9</span></button>' +
+              '<button class="queue-tab" type="button" aria-pressed="false">Leave <span class="n">6</span></button>' +
+              '<button class="queue-tab" type="button" aria-pressed="false">Overtime <span class="n">3</span></button>' +
+            "</div>" +
+            (state.dataState === "loading" ? skeletonApprovals() :
+             state.dataState === "empty" ? '<div class="card-body" style="padding-top:4px">' + emptyState("Nothing waiting. The queue is clear.", "i-check") + "</div>" :
+             state.dataState === "error" ? '<div class="card-body" style="padding-top:4px">' + errorState("The queue could not be loaded. Try again.") + "</div>" :
+             approvalRow(PEOPLE.sofia, "Annual leave · 12–14 Nov · 3 days", "Leave", "2h ago") +
+             approvalRow(PEOPLE.marcus, "Overtime · 3.5h · 3 Nov", "Overtime", "4h ago") +
+             approvalRow(PEOPLE.mai, "Unpaid leave · 20–22 Nov · 3 days", "Leave", "Yesterday") +
+             approvalRow(PEOPLE.noah, "Overtime · 2h · 2 Nov", "Overtime", "Yesterday") +
+             approvalRow(PEOPLE.priya, "Annual leave · 1 Dec · 1 day", "Leave", "2 days ago")) +
+            '<div class="card-foot"><span>Showing 5 of 9</span><a class="link" href="#" onclick="return false">View all ' + ico("i-arrow") + "</a></div>" +
+          "</section>" +
+          '<div style="display:flex;flex-direction:column;gap:18px">' +
+            '<section class="card block">' + bnum(3) +
+              '<div class="card-head"><div><h2 class="card-title">Today at a glance</h2><p class="card-desc">Live across your scope.</p></div></div>' +
+              '<div class="card-body" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">' +
+                '<div><div class="kpi-label">On site</div><div class="kpi-value tabular">34</div></div>' +
+                '<div><div class="kpi-label">Remote</div><div class="kpi-value tabular">12</div></div>' +
+                '<div><div class="kpi-label">Late</div><div class="kpi-value tabular warn">5</div></div>' +
+                '<div><div class="kpi-label">Absent</div><div class="kpi-value tabular bad">8</div></div>' +
+              "</div>" +
+            "</section>" +
+            myDayCard() +
+          "</div>" +
+        "</div>" +
+      "</div>" +
+    "</main>"
+  );
+}
+
+function employeeDashboard() {
+  return (
+    '<main class="main">' + header() +
+      '<div class="content">' +
+        pageHead(
+          "Dashboard",
+          "Tuesday, 4 November · your day at a glance",
+          '<button class="btn btn-outline" type="button">' + ico("i-calendar") + "Request leave</button>"
+        ) +
+        '<div class="grid-split">' +
+          '<section class="card block">' + bnum(2) +
+            '<div class="card-head"><div><h2 class="card-title">My day</h2><p class="card-desc">Shift 09:00–17:30 · grace 10 min · Ho Chi Minh Office</p></div>' + badge("muted", "Not checked in") + "</div>" +
+            '<div class="card-body" style="display:flex;flex-direction:column;gap:12px">' +
+              '<div class="checkin-form" style="grid-template-columns:180px minmax(0,1fr) auto">' +
+                '<div class="field"><span class="field-label">Work mode</span><div class="seg-control"><button type="button" aria-pressed="true">On site</button><button type="button" aria-pressed="false">Remote</button></div></div>' +
+                '<div class="field"><span class="field-label">Note (optional)</span><input class="input" placeholder="Anything your manager should know" /></div>' +
+                '<button class="btn btn-primary" type="button">Check in</button>' +
+              "</div>" +
+              '<div class="strip-note" style="border:0;padding:0;margin:0">Check-in time is recorded by the server when you press the button.</div>' +
+            "</div>" +
+          "</section>" +
+          '<section class="card block">' + bnum(3) +
+            '<div class="card-head"><div><h2 class="card-title">Leave balances</h2><p class="card-desc">As of 4 November.</p></div></div>' +
+            '<div class="card-body">' +
+              '<div class="balance-grid" style="gap:12px">' +
+                '<div class="balance"><div class="balance-label">Annual</div><div class="balance-value">12 <span>/ 20 days</span></div></div>' +
+                '<div class="balance"><div class="balance-label">Sick</div><div class="balance-value">5 <span>/ 10 days</span></div></div>' +
+              "</div>" +
+              '<div style="margin-top:12px"><a class="link" href="#" onclick="return false">Request leave ' + ico("i-arrow") + "</a></div>" +
+            "</div>" +
+          "</section>" +
+        "</div>" +
+        '<div class="grid-split">' +
+          '<section class="card block">' + bnum(4) +
+            '<div class="card-head"><div><h2 class="card-title">My requests</h2><p class="card-desc">Leave and overtime, newest first.</p></div><a class="link" href="#" onclick="return false">View all ' + ico("i-arrow") + "</a></div>" +
+            (state.dataState === "loading" ? skeletonActivity(4) :
+             state.dataState === "empty" ? '<div class="card-body" style="padding-top:4px">' + emptyState("No requests yet. Start with a leave request or an overtime claim.", "i-inbox") + "</div>" :
+             state.dataState === "error" ? '<div class="card-body" style="padding-top:4px">' + errorState("Your requests could not be loaded.") + "</div>" :
+             '<div class="activity">' +
+               '<div class="activity-row"><span class="activity-time">12 Nov</span><span class="activity-dot success"></span><span class="activity-copy"><strong>Annual leave</strong> · 12–14 Nov · 3 days' + badge("warning", "Pending manager") + '<span class="meta">Requested 2h ago</span></span></div>' +
+               '<div class="activity-row"><span class="activity-time">3 Nov</span><span class="activity-dot success"></span><span class="activity-copy"><strong>Overtime</strong> · 3.5h' + badge("success", "HR verified") + '<span class="meta">In payroll for November</span></span></div>' +
+               '<div class="activity-row"><span class="activity-time">28 Oct</span><span class="activity-dot muted"></span><span class="activity-copy"><strong>Sick leave</strong> · 29 Oct · 1 day' + badge("muted", "Withdrawn") + '<span class="meta">Withdrawn by you</span></span></div>' +
+             "</div>") +
+          "</section>" +
+          '<div style="display:flex;flex-direction:column;gap:18px">' +
+            '<section class="card block">' + bnum(5) +
+              '<div class="card-head"><div><h2 class="card-title">Latest payslip</h2></div><a class="link" href="#" onclick="return false">All payslips ' + ico("i-arrow") + "</a></div>" +
+              '<div class="card-body"><div class="mini-row"><div><div style="font-size:13px;font-weight:600">October 2026</div><div class="muted" style="font-size:12px">Issued 3 Nov 2026</div></div><div class="tabular" style="font-size:16px;font-weight:600">$4,800.00</div></div></div>' +
+            "</section>" +
+            '<section class="card block">' + bnum(6) +
+              '<div class="card-head"><div><h2 class="card-title">Notifications</h2></div><span class="badge badge-info">3 unread</span></div>' +
+              '<div class="activity">' +
+                '<div class="activity-row"><span class="activity-dot"></span><span class="activity-copy">Your annual leave was approved<span class="meta">2h ago</span></span></div>' +
+                '<div class="activity-row"><span class="activity-dot"></span><span class="activity-copy">October payslip is ready<span class="meta">Yesterday</span></span></div>' +
+                '<div class="activity-row"><span class="activity-dot"></span><span class="activity-copy">A document expires in 14 days<span class="meta">2 days ago</span></span></div>' +
+              "</div>" +
+            "</section>" +
+          "</div>" +
+        "</div>" +
+      "</div>" +
+    "</main>"
+  );
+}
+
+function summaryStrip(n) {
+  n = n || 3;
+  const cells = [
+    { label: "On site", value: "34" },
+    { label: "Remote", value: "12" },
+    { label: "Late", value: "5", cls: "warn" },
+    { label: "Absent", value: "8", cls: "bad" },
+    { label: "On leave", value: "3", cls: "muted" },
+  ];
+  return (
+    '<section class="card block">' + bnum(n) +
+      '<div class="kpi-strip">' + cells.map(function (c) {
+        return '<div class="kpi"><div class="kpi-label">' + c.label + '</div><div class="kpi-value tabular ' + (c.cls || "") + '">' + c.value + "</div></div>";
+      }).join("") + "</div>" +
+      '<div class="strip-note">Counts overlap. Absent excludes approved leave and rest days.</div>' +
+    "</section>"
+  );
+}
+
+function checkinCard(n) {
+  n = n || 2;
+  return (
+    '<section class="card block">' + bnum(n) +
+      '<div class="card-head"><div><h2 class="card-title">Your attendance</h2><p class="card-desc">Check-in time is recorded automatically by the server.</p></div></div>' +
+      '<div class="card-body">' +
+        (state.dataState === "error"
+          ? errorState("You are already checked in. Refresh the page to see the open record.")
+          : '<div class="checkin-form">' +
+              '<div class="field"><span class="field-label">Work mode</span><div class="seg-control"><button type="button" aria-pressed="true">On site</button><button type="button" aria-pressed="false">Remote</button></div></div>' +
+              '<div class="field"><span class="field-label">Note (optional)</span><input class="input" placeholder="Anything your manager should know" /></div>' +
+              '<button class="btn btn-primary" type="button">Check in</button>' +
+            "</div>") +
+        '<p class="strip-note" style="border:0;padding:9px 0 0;margin:0">Late is measured against the shift assigned to your location, plus its grace period.</p>' +
+      "</div>" +
+    "</section>"
+  );
+}
+
+function recordsCard(n) {
+  n = n || 4;
+  const rows = [
+    [PEOPLE.amara, "On site", "08:57", "—", ["success", "On time"], "4h 32m"],
+    [PEOPLE.daniel, "Remote", "09:04", "—", ["success", "On time"], "4h 25m"],
+    [PEOPLE.sofia, "On site", "09:22", "—", ["warning", "Late 22m"], "4h 07m"],
+    [PEOPLE.marcus, "On site", "08:45", "—", ["success", "On time"], "4h 44m"],
+    [PEOPLE.mai, "Remote", "09:11", "—", ["success", "On time"], "4h 18m"],
+    [PEOPLE.noah, "—", "—", "—", ["danger", "Absent"], "—"],
+    [PEOPLE.priya, "—", "—", "—", ["muted", "On leave"], "—"],
+  ];
+  let body;
+  if (state.dataState === "loading") body = skeletonTable(7);
+  else if (state.dataState === "empty") body = '<div style="padding:16px">' + emptyState("No attendance records for this day. Check another date or clear the filters.", "i-calendar") + "</div>";
+  else if (state.dataState === "error") body = '<div style="padding:16px">' + errorState("Attendance records could not be loaded. Try again.") + "</div>";
+  else {
+    body = '<div class="table-scroll"><p class="table-hint" style="padding:8px 12px 0">Swipe sideways to see every field.</p><table class="table">' +
+      "<thead><tr><th>Employee</th><th>Mode</th><th>Checked in</th><th>Checked out</th><th>Status</th><th>Duration</th><th></th></tr></thead><tbody>" +
+      rows.map(function (r) {
+        return "<tr><td><div class=\"cell-person\">" + avatar(r[0]) +
+          '<div class="who"><strong>' + r[0].name + "</strong><span>" + r[0].code + "</span></div></div></td>" +
+          "<td>" + r[1] + "</td><td class=\"tabular\">" + r[2] + "</td><td class=\"tabular\">" + r[3] + "</td>" +
+          (r[4][1] === "On time"
+            ? '<td><span class="muted" style="font-size:12px">On time</span></td>'
+            : "<td>" + badge(r[4][0], r[4][1]) + "</td>") +
+          "<td class=\"tabular\">" + r[5] + "</td>" +
+          '<td><button class="btn btn-ghost btn-sm" type="button" aria-label="Open record">' + ico("i-chevron") + "</button></td></tr>";
+      }).join("") + "</tbody></table></div>" +
+      '<div class="table-foot"><span>Page 1 of 1 · 7 records</span><div class="pager"><button class="btn btn-outline btn-sm" type="button" disabled>Previous</button><button class="btn btn-outline btn-sm" type="button" disabled>Next</button></div></div>';
+  }
+  return (
+    '<section class="card block">' + bnum(n) +
+      '<div class="card-head"><div><h2 class="card-title">Attendance records</h2><p class="card-desc">The auditable record for the selected range. Newest first.</p></div></div>' +
+      '<div class="card-body" style="padding-bottom:10px">' +
+        '<div class="filter-bar" style="grid-template-columns:repeat(2,minmax(0,1fr)) minmax(120px,.8fr) minmax(160px,1.1fr) auto">' +
+          '<input class="input" type="date" value="2026-11-01" aria-label="From date" />' +
+          '<input class="input" type="date" value="2026-11-04" aria-label="To date" />' +
+          '<select class="select"><option>Any lateness</option><option>Late only</option><option>On time</option></select>' +
+          '<input class="input" placeholder="Employee code" />' +
+          '<button class="btn btn-ghost btn-sm" type="button">Clear</button>' +
+        "</div>" +
+      "</div>" +
+      body +
+    "</section>"
+  );
+}
+
+function activityRail(n) {
+  n = n || 5;
+  return (
+    '<section class="card block">' + bnum(n) +
+      '<div class="card-head"><div><h2 class="card-title">Recent activity</h2><p class="card-desc">Check-ins and check-outs, newest first.</p></div></div>' +
+      '<div class="activity">' +
+        '<div class="activity-row"><span class="activity-time">09:22</span><span class="activity-dot warn"></span><span class="activity-copy"><strong>Sofia Reyes</strong> checked in late<span class="meta">On site · 22m past shift start</span></span></div>' +
+        '<div class="activity-row"><span class="activity-time">09:11</span><span class="activity-dot success"></span><span class="activity-copy"><strong>Le Thi Mai</strong> checked in<span class="meta">Remote</span></span></div>' +
+        '<div class="activity-row"><span class="activity-time">09:04</span><span class="activity-dot success"></span><span class="activity-copy"><strong>Daniel Park</strong> checked in<span class="meta">Remote</span></span></div>' +
+        '<div class="activity-row"><span class="activity-time">08:57</span><span class="activity-dot success"></span><span class="activity-copy"><strong>Amara Okafor</strong> checked in<span class="meta">On site</span></span></div>' +
+        '<div class="activity-row"><span class="activity-time">08:45</span><span class="activity-dot success"></span><span class="activity-copy"><strong>Marcus Chen</strong> checked in<span class="meta">On site</span></span></div>' +
+      "</div>" +
+      '<div class="card-foot"><span>6 events today</span><a class="link" href="#" onclick="return false">Command center ' + ico("i-arrow") + "</a></div>" +
+    "</section>"
+  );
+}
+
+function attendanceA() {
+  return (
+    '<main class="main">' + header() +
+      '<div class="content">' +
+        pageHead(
+          "Attendance",
+          "Record your check-in and review attendance for the selected day.",
+          '<div class="control" style="gap:6px"><input class="input" type="date" value="2026-11-04" style="width:145px" /><button class="btn btn-outline" type="button">Today</button></div>'
+        ) +
+        '<div class="grid-split">' +
+          '<div style="display:flex;flex-direction:column;gap:18px">' + checkinCard(2) + summaryStrip(3) + "</div>" +
+          activityRail(4) +
+        "</div>" +
+        recordsCard(5) +
+        shiftsCard(6) +
+      "</div>" +
+    "</main>"
+  );
+}
+
+function attendanceB() {
+  return (
+    '<main class="main">' + header() +
+      '<div class="content">' +
+        pageHead(
+          "Attendance",
+          "Record your check-in and review attendance for the selected day.",
+          '<div class="control" style="gap:6px"><input class="input" type="date" value="2026-11-04" style="width:145px" /><button class="btn btn-outline" type="button">Today</button></div>'
+        ) +
+        summaryStrip(2) +
+        recordsCard(3) +
+        '<div class="grid-split">' + checkinCard(4) + activityRail(5) + "</div>" +
+        shiftsCard(6) +
+      "</div>" +
+    "</main>"
+  );
+}
+
+function shiftsCard(n) {
+  n = n || 6;
+  return (
+    '<section class="card block">' + bnum(n) +
+      '<div class="card-head"><div><h2 class="card-title">Shifts</h2><p class="card-desc">Use one default shift for every location, or set a different shift for a specific location.</p></div><button class="btn btn-outline btn-sm" type="button">' + ico("i-plus") + "New shift</button></div>" +
+      '<div class="table-scroll"><table class="table"><thead><tr><th>Name</th><th>Hours</th><th>Grace period</th><th>Applies to</th><th></th></tr></thead><tbody>' +
+        "<tr><td><strong>Ho Chi Minh Office</strong></td><td class=\"tabular\">08:30–17:30</td><td class=\"tabular\">10 min</td><td>Ho Chi Minh Office</td><td><button class=\"btn btn-ghost btn-sm\" type=\"button\">Edit</button></td></tr>" +
+        "<tr><td><strong>Default</strong></td><td class=\"tabular\">09:00–18:00</td><td class=\"tabular\">10 min</td><td>" + badge("muted", "Default for all locations") + "</td><td><button class=\"btn btn-ghost btn-sm\" type=\"button\">Edit</button></td></tr>" +
+      "</tbody></table></div>" +
+    "</section>"
+  );
+}
+
+function employeesTable() {
+  const rows = [PEOPLE.amara, PEOPLE.daniel, PEOPLE.sofia, PEOPLE.marcus, PEOPLE.mai, PEOPLE.noah, PEOPLE.priya, PEOPLE.elena];
+  let body;
+  if (state.dataState === "loading") body = skeletonTable(8);
+  else if (state.dataState === "empty") body = '<div style="padding:16px">' + emptyState("No employees match these filters. Clear one filter or search by name, email or code.", "i-users") + '<div style="text-align:center;margin-top:6px"><button class="btn btn-outline btn-sm" type="button">Clear filters</button></div></div>';
+  else if (state.dataState === "error") body = '<div style="padding:16px">' + errorState("The employee directory could not be loaded. Try again.") + "</div>";
+  else {
+    const managers = ["Morgan Manager", "Morgan Manager", "Morgan Manager", "Amara Okafor", "Morgan Manager", "Amara Okafor", "Amara Okafor", "Morgan Manager"];
+    body = '<div class="table-scroll"><p class="table-hint" style="padding:8px 12px 0">Swipe sideways to see every column.</p><table class="table">' +
+      "<thead><tr><th>Employee</th><th>Email</th><th>Role</th><th>Location</th><th>Manager</th><th>Type</th><th>Status</th><th></th></tr></thead><tbody>" +
+      rows.map(function (p, i) {
+        const status = i === 6 ? ["warning", "On leave"] : i === 7 ? ["muted", "Inactive"] : null;
+        const type = i === 5 ? "Part-time" : i === 7 ? "Contract" : "Full-time";
+        const email = p.name.toLowerCase().replace(" ", ".") + "@workpulse.test";
+        return '<tr><td><div class="cell-person">' + avatar(p) +
+          '<div class="who"><strong>' + p.name + "</strong><span>" + p.code + "</span></div></div></td>" +
+          '<td class="muted" title="' + email + '" style="max-width:190px;overflow:hidden;text-overflow:ellipsis">' + email + "</td>" +
+          '<td><div style="font-size:12px">' + p.role + '</div><div class="muted" style="font-size:12px">' + p.dept + "</div></td>" +
+          "<td>" + p.loc + "</td><td>" + managers[i] + "</td><td>" + type + "</td>" +
+          "<td>" + (status ? badge(status[0], status[1]) : '<span class="muted" style="font-size:12px">Active</span>') + '</td><td><button class="btn btn-ghost btn-sm" type="button" aria-label="Open employee">' + ico("i-chevron") + "</button></td></tr>";
+      }).join("") + "</tbody></table></div>" +
+      '<div class="table-foot"><span>Page 1 of 6 · 62 employees</span><div class="pager"><button class="btn btn-outline btn-sm" type="button" disabled>Previous</button><button class="btn btn-outline btn-sm" type="button">Next</button></div></div>';
+  }
+  return body;
+}
+
+function employeesA() {
+  return (
+    '<main class="main">' + header() +
+      '<div class="content">' +
+        pageHead(
+          "Employees",
+          "The workforce record — who works where, in what role, since when.",
+          '<button class="btn btn-primary" type="button">' + ico("i-plus") + "New employee</button>"
+        ) +
+        '<section class="card block">' + bnum(2) +
+          '<div class="card-body" style="padding:12px 12px 4px">' +
+            '<div class="filter-bar">' +
+              '<div class="input-icon">' + ico("i-search") + '<input class="input" placeholder="Search name, email or code" /></div>' +
+              '<select class="select"><option>All departments</option></select>' +
+              '<select class="select"><option>All positions</option></select>' +
+              '<select class="select"><option>All locations</option></select>' +
+              '<select class="select"><option>All statuses</option></select>' +
+              '<select class="select"><option>All managers</option></select>' +
+              '<div class="filter-actions"><button class="btn btn-ghost btn-sm" type="button">Clear</button></div>' +
+            "</div>" +
+          "</div>" +
+          employeesTable() +
+        "</section>" +
+      "</div>" +
+    "</main>"
+  );
+}
+
+function employeesB() {
+  const people = [PEOPLE.amara, PEOPLE.daniel, PEOPLE.sofia, PEOPLE.marcus, PEOPLE.mai, PEOPLE.noah, PEOPLE.priya, PEOPLE.elena];
+  const cards = people.map(function (p, i) {
+    const status = i === 6 ? ["warning", "On leave"] : i === 7 ? ["muted", "Inactive"] : ["success", "Active"];
+    return (
+      '<a class="card" href="#" onclick="return false" style="display:block;text-decoration:none;color:inherit;padding:14px">' +
+        '<div style="display:flex;align-items:flex-start;gap:10px">' + avatar(p, "lg") +
+          '<div style="min-width:0;flex:1"><div style="font-size:13px;font-weight:600">' + p.name + '</div><div class="mono" style="font-size:12px;color:var(--muted-foreground);margin-top:1px">' + p.code + "</div></div>" +
+          badge(status[0], status[1]) +
+        "</div>" +
+        '<div style="margin-top:12px;font-size:12px;font-weight:500">' + p.role + '</div><div style="font-size:12px;color:var(--muted-foreground);margin-top:2px">' + p.dept + " · " + p.loc + "</div>" +
+        '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between"><span style="font-size:12px;color:var(--muted-foreground)">' + p.name.toLowerCase().replace(" ", ".") + '@workpulse.test</span>' + ico("i-chevron", "muted") + "</div>" +
+      "</a>"
+    );
+  }).join("");
+  let body;
+  if (state.dataState === "loading") body = '<div class="people-grid">' + Array.from({length:6}).map(function(){return '<div class="card" style="padding:14px"><div class="skeleton" style="height:36px;width:36px;border-radius:999px"></div><div class="skeleton" style="margin-top:10px;width:60%"></div><div class="skeleton" style="margin-top:6px;width:80%"></div></div>';}).join("") + "</div>";
+  else if (state.dataState === "empty") body = emptyState("No employees match these filters. Clear one filter or search by name, email or code.", "i-users");
+  else if (state.dataState === "error") body = errorState("The employee directory could not be loaded. Try again.");
+  else body = '<div class="people-grid">' + cards + "</div>";
+  return (
+    '<main class="main">' + header() +
+      '<div class="content">' +
+        pageHead(
+          "Employees",
+          "The workforce record — who works where, in what role, since when.",
+          '<button class="btn btn-primary" type="button">' + ico("i-plus") + "New employee</button>"
+        ) +
+        '<section class="card block">' + bnum(2) +
+          '<div class="card-body" style="padding:12px 12px 4px">' +
+            '<div class="filter-bar compact-bar">' +
+              '<div class="input-icon">' + ico("i-search") + '<input class="input" placeholder="Search name, email or code" /></div>' +
+              '<select class="select"><option>All departments</option></select>' +
+              '<select class="select"><option>All statuses</option></select>' +
+              '<select class="select"><option>All locations</option></select>' +
+              '<div class="filter-actions"><button class="btn btn-ghost btn-sm" type="button">Clear</button></div>' +
+            "</div>" +
+          "</div>" +
+          '<div class="card-body" style="padding:8px 16px 16px">' + body + "</div>" +
+          '<div class="table-foot"><span>Page 1 of 6 · 62 employees</span><div class="pager"><button class="btn btn-outline btn-sm" type="button" disabled>Previous</button><button class="btn btn-outline btn-sm" type="button">Next</button></div></div>' +
+        "</section>" +
+      "</div>" +
+    "</main>"
+  );
+}
+
+function commandCenter() {
+  const rows = [
+    [PEOPLE.amara, ["success", "On site", "i-check"], "—", "08:57"],
+    [PEOPLE.daniel, ["info", "Remote", ""], "—", "09:04"],
+    [PEOPLE.sofia, ["warning", "Late", ""], "22m", "09:22"],
+    [PEOPLE.marcus, ["success", "On site", "i-check"], "—", "08:45"],
+    [PEOPLE.mai, ["info", "Remote", ""], "—", "09:11"],
+    [PEOPLE.noah, ["danger", "Absent", ""], "—", "—"],
+    [PEOPLE.priya, ["muted", "On leave", ""], "—", "—"],
+  ];
+  let table;
+  if (state.dataState === "loading") table = skeletonTable(7);
+  else if (state.dataState === "empty") table = '<div style="padding:16px">' + emptyState("No presence rows in your scope yet.", "i-users") + "</div>";
+  else if (state.dataState === "error") table = '<div style="padding:16px">' + errorState("The live board could not be loaded. The last snapshot stays visible.") + "</div>";
+  else {
+    table = '<div class="table-scroll" style="max-height:380px;overflow-y:auto"><table class="table"><thead><tr><th>Employee</th><th>Status</th><th>Late</th><th>Since</th></tr></thead><tbody>' +
+      rows.map(function (r) {
+        return "<tr><td><div class=\"cell-person\">" + avatar(r[0]) + '<div class="who"><strong>' + r[0].name + "</strong><span>" + r[0].code + "</span></div></div></td>" +
+          "<td>" + badge(r[1][0], r[1][1], r[1][2]) + "</td><td class=\"tabular\">" + r[2] + "</td><td class=\"tabular\">" + r[3] + "</td></tr>";
+      }).join("") + "</tbody></table></div>";
+  }
+  return (
+    '<main class="main">' + header() +
+      '<div class="content">' +
+        pageHead(
+          "Command center",
+          "Watch presence arrive in real time — who is on site, who is remote, who is late, and every check-in and check-out in between.",
+          ''
+        ) +
+        '<div class="card block" style="display:flex;align-items:center;gap:9px;padding:10px 14px;border-color:rgba(21,122,83,.25);background:rgba(21,122,83,.04)">' + bnum(1) +
+          '<span class="live-inline"><span class="pulse"></span>Live</span>' +
+          '<span style="font-size:12px;color:var(--muted-foreground)">Check-ins and check-outs appear here within seconds.</span>' +
+          '<span class="mono tabular" style="margin-left:auto;font-size:12px;color:var(--muted-foreground)">Updated 10:29</span>' +
+        "</div>" +
+        '<section class="card block">' + bnum(2) +
+          '<div class="kpi-strip" style="grid-template-columns:repeat(6,1fr)">' +
+            '<div class="kpi"><div class="kpi-label">On site</div><div class="kpi-value tabular">34</div></div>' +
+            '<div class="kpi"><div class="kpi-label">Remote</div><div class="kpi-value tabular">12</div></div>' +
+            '<div class="kpi"><div class="kpi-label">Late</div><div class="kpi-value tabular warn">5</div></div>' +
+            '<div class="kpi"><div class="kpi-label">Absent</div><div class="kpi-value tabular bad">8</div></div>' +
+            '<div class="kpi"><div class="kpi-label">Checked out</div><div class="kpi-value tabular">0</div></div>' +
+            '<div class="kpi"><div class="kpi-label">On leave</div><div class="kpi-value tabular muted">3</div></div>' +
+          "</div>" +
+          '<div class="strip-note">Counts overlap: someone can be on site or remote and also late. These numbers do not add to a total.</div>' +
+        "</section>" +
+        '<div class="grid-split">' +
+          '<section class="card block">' + bnum(3) +
+            '<div class="card-head"><div><h2 class="card-title">Who is working now</h2><p class="card-desc">Today\'s presence in your scope. Rows update as check-ins happen.</p></div></div>' +
+            table +
+            '<div class="table-foot"><span>7 of 62 people shown</span><a class="link" href="#" onclick="return false">Open attendance ' + ico("i-arrow") + "</a></div>" +
+          "</section>" +
+          '<div style="display:flex;flex-direction:column;gap:18px">' +
+            '<section class="card block">' + bnum(4) +
+              '<div class="card-head"><div><h2 class="card-title">Live activity</h2><p class="card-desc">Check-ins and check-outs, newest first.</p></div></div>' +
+              '<div class="activity">' +
+                '<div class="activity-row"><span class="activity-time">09:22</span><span class="activity-dot warn"></span><span class="activity-copy"><strong>Sofia Reyes</strong> checked in late<span class="meta">On site · 22m past shift start</span></span></div>' +
+                '<div class="activity-row"><span class="activity-time">09:11</span><span class="activity-dot success"></span><span class="activity-copy"><strong>Le Thi Mai</strong> checked in<span class="meta">Remote</span></span></div>' +
+                '<div class="activity-row"><span class="activity-time">09:04</span><span class="activity-dot success"></span><span class="activity-copy"><strong>Daniel Park</strong> checked in<span class="meta">Remote</span></span></div>' +
+                '<div class="activity-row"><span class="activity-time">08:57</span><span class="activity-dot success"></span><span class="activity-copy"><strong>Amara Okafor</strong> checked in<span class="meta">On site</span></span></div>' +
+                '<div class="activity-row"><span class="activity-time">08:45</span><span class="activity-dot success"></span><span class="activity-copy"><strong>Marcus Chen</strong> checked in<span class="meta">On site</span></span></div>' +
+              "</div>" +
+            "</section>" +
+            '<section class="card block">' + bnum(5) +
+              '<div class="card-head"><div><h2 class="card-title">Board scope</h2></div></div>' +
+              '<div class="card-body" style="display:flex;flex-direction:column;gap:8px;font-size:12px">' +
+                '<div class="mini-row"><span class="muted">Scope</span><span>All employees · 62 people</span></div>' +
+                '<div class="mini-row"><span class="muted">Refresh</span><span>Snapshot every 60s</span></div>' +
+                '<div class="mini-row"><span class="muted">Connection</span><span class="live-inline" style="font-size:12px"><span class="pulse"></span>Live</span></div>' +
+              "</div>" +
+            "</section>" +
+          "</div>" +
+        "</div>" +
+      "</div>" +
+    "</main>"
+  );
+}
+
+function loginA() {
+  return (
+    '<div class="auth-stage"><div class="auth-chrome">' +
+      '<button class="icon-btn" type="button" aria-label="Language">' + ico("i-globe") + "</button>" +
+      '<button class="icon-btn" type="button" aria-label="Toggle theme">' + ico("i-sun") + "</button>" +
+    "</div>" +
+      '<div>' +
+        '<div class="auth-card">' +
+          '<svg class="auth-trace" viewBox="0 0 320 26" preserveAspectRatio="none" fill="none" aria-hidden="true"><path d="M0 14 H96 L104 14 110 8 118 21 124 4 132 24 138 10 143 14 H320" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+          '<div class="auth-body">' +
+            '<div class="auth-brand"><span class="brand-mark">' + ico("i-activity") + '</span><span class="name">WorkPulse</span></div>' +
+            '<h1 class="auth-title">Sign in</h1>' +
+            '<p class="auth-sub">Accounts are provisioned by an administrator — there is no self-registration.</p>' +
+            '<div class="auth-field"><label>Email</label><input class="input" type="email" placeholder="you@workpulse.test" value="manager@workpulse.test" /></div>' +
+            '<div class="auth-field"><label>Password</label><input class="input" type="password" value="workpulse-dev" /></div>' +
+            '<button class="btn btn-primary btn-block" type="button">Sign in</button>' +
+            '<p class="auth-note">Trouble signing in? Contact your administrator.</p>' +
+          "</div>" +
+        "</div>" +
+      "</div>" +
+      '<div class="auth-foot">WorkPulse · real-time workforce operations</div>' +
+    "</div>"
+  );
+}
+
+function emptyState(message, icon) {
+  return '<div class="empty">' + ico(icon || "i-inbox") + "<p>" + message + "</p></div>";
+}
+
+function errorState(message) {
+  return '<div class="alert">' + ico("i-alert") + '<div><strong>Could not load</strong><p>' + message + '</p><button class="btn btn-outline btn-sm" type="button">Try again</button></div></div>';
+}
+
+function skeletonApprovals() {
+  return Array.from({ length: 4 }).map(function () {
+    return '<div class="skeleton-row"><div class="skeleton-avatar"></div><div class="skeleton-lines"><div class="skeleton"></div><div class="skeleton"></div></div><div class="skeleton" style="width:58px;height:24px"></div></div>';
+  }).join("");
+}
+
+function skeletonActivity(n) {
+  return '<div class="activity">' + Array.from({ length: n }).map(function () {
+    return '<div class="activity-row"><div class="skeleton" style="width:34px;height:9px"></div><div class="skeleton" style="width:7px;height:7px;border-radius:999px"></div><div class="skeleton-lines"><div class="skeleton" style="width:55%"></div><div class="skeleton" style="width:35%"></div></div></div>';
+  }).join("") + "</div>";
+}
+
+function skeletonPresence(n) {
+  return '<div class="presence-list">' + Array.from({ length: n }).map(function () {
+    return '<div class="skeleton-row"><div class="skeleton-avatar"></div><div class="skeleton-lines"><div class="skeleton"></div><div class="skeleton"></div></div><div class="skeleton" style="width:54px;height:18px"></div></div>';
+  }).join("") + "</div>";
+}
+
+function skeletonTable(n) {
+  return '<div class="skeleton-table">' + Array.from({ length: n }).map(function () {
+    return '<div class="skeleton-row"><div class="skeleton-avatar"></div><div class="skeleton" style="width:16%"></div><div class="skeleton" style="width:20%"></div><div class="skeleton" style="width:12%"></div><div class="skeleton" style="width:16%"></div></div>';
+  }).join("") + "</div>";
+}
+
+function render() {
+  const stage = document.getElementById("stage-wrap");
+  const opts = OPTIONS[state.screen];
+  if (!opts.some(function (o) { return o.id === state.option; })) state.option = opts[0].id;
+
+  const classes = ["stage"];
+  if (state.width === "mobile") classes.push("mobile");
+  if (state.compact) classes.push("compact");
+  if (state.noRepeat) classes.push("no-repeat");
+  if (state.grayscale) classes.push("grayscale");
+  if (!state.numbers) classes.push("hide-numbers");
+
+  let inner = "";
+  if (state.screen === "login") {
+    inner = loginA().replace('class="auth-stage"', 'class="auth-stage' + (state.width === "mobile" ? " mobile" : "") + '"');
+  } else {
+    const active = state.screen === "employee" ? "dashboard" : state.screen;
+    let body;
+    if (state.screen === "dashboard") body = state.option === "A" ? dashboardA() : state.option === "B" ? dashboardB() : dashboardC();
+    else if (state.screen === "employee") body = employeeDashboard();
+    else if (state.screen === "attendance") body = state.option === "A" ? attendanceA() : attendanceB();
+    else if (state.screen === "employees") body = state.option === "A" ? employeesA() : employeesB();
+    else body = commandCenter();
+    inner = sidebar(active) + body;
+  }
+
+  const wrapperClass = state.screen === "login" ? "stage-wrap" : "stage-wrap";
+  stage.innerHTML = '<div class="' + classes.join(" ") + '" id="stage">' + inner + "</div>";
+
+  // option buttons
+  const optionBox = document.getElementById("options");
+  optionBox.innerHTML = opts.map(function (o) {
+    return '<button type="button" data-option="' + o.id + '" aria-pressed="' + (state.option === o.id) + '">' + o.label + "</button>";
+  }).join("");
+
+  // reason panel
+  const reason = REASONS[state.screen][state.option];
+  const screenNames = {
+    dashboard: "Dashboard — manager",
+    employee: "Dashboard — employee",
+    attendance: "Attendance",
+    employees: "Employees",
+    command: "Command center",
+    login: "Sign in",
+  };
+  document.getElementById("reason").innerHTML =
+    "<div><h2>Why this option</h2><div class=\"chosen\">" + screenNames[state.screen] + " · Option " + state.option + '</div><div class="pick">' + (state.option === "A" ? "Recommended" : "Alternative") + "</div></div>" +
+    '<div class="reason-col"><h3>Strong</h3><p>' + reason.strengths + "</p></div>" +
+    '<div class="reason-col"><h3>Weak</h3><p>' + reason.weaknesses + "</p></div>" +
+    '<div class="reason-col"><h3>Fits</h3><p>' + reason.fits + "</p></div>";
+}
+
+document.getElementById("screen").addEventListener("change", function (e) {
+  state.screen = e.target.value;
+  state.option = OPTIONS[state.screen][0].id;
+  render();
+});
+
+document.getElementById("options").addEventListener("click", function (e) {
+  const btn = e.target.closest("button[data-option]");
+  if (!btn) return;
+  state.option = btn.getAttribute("data-option");
+  render();
+});
+
+document.getElementById("width").addEventListener("click", function (e) {
+  const btn = e.target.closest("button[data-width]");
+  if (!btn) return;
+  state.width = btn.getAttribute("data-width");
+  Array.from(document.querySelectorAll("#width button")).forEach(function (b) {
+    b.setAttribute("aria-pressed", String(b === btn));
+  });
+  render();
+});
+
+document.getElementById("compact").addEventListener("click", function (e) {
+  state.compact = !state.compact;
+  e.currentTarget.setAttribute("aria-pressed", String(state.compact));
+  render();
+});
+
+document.getElementById("no-repeat").addEventListener("click", function (e) {
+  state.noRepeat = !state.noRepeat;
+  e.currentTarget.setAttribute("aria-pressed", String(state.noRepeat));
+  render();
+});
+
+document.getElementById("numbers").addEventListener("click", function (e) {
+  state.numbers = !state.numbers;
+  e.currentTarget.setAttribute("aria-pressed", String(state.numbers));
+  render();
+});
+
+document.getElementById("grayscale").addEventListener("click", function (e) {
+  state.grayscale = !state.grayscale;
+  e.currentTarget.setAttribute("aria-pressed", String(state.grayscale));
+  render();
+});
+
+document.getElementById("data-state").addEventListener("change", function (e) {
+  state.dataState = e.target.value;
+  render();
+});
+
+render();
+</script>
+</body>
+</html>

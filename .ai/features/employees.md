@@ -560,8 +560,10 @@ All HTTP via regenerated `@workpulse/api-client` hooks (no hand-written fetch):
 - Routes: `apps/web/app/(dashboard)/employees/page.tsx` (list),
   `app/(dashboard)/employees/[id]/page.tsx` (detail = profile + current
   employment + history + transfer/terminate actions, disabled for terminated);
-  nav entry for `/employees` in the dashboard shell. Pages compose features
-  only (rule 8).
+  nav entry for `/employees` in the dashboard shell, role-gated to the read
+  policy (manager direct reports, HR/Admin/Super Admin the tenant) so employee
+  and finance sessions never mount the list queries; the create action is
+  HR/Admin/Super Admin only. Pages compose features only (rule 8).
 - Web tests `apps/web/tests/employees/` (Vitest + Testing Library, mocked
   api-client + sonner): table loading/empty/error; create dialog happy path +
   **409 duplicate email → visible error state** (AC12); transfer dialog happy

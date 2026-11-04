@@ -37,6 +37,9 @@ import {
 
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 
+import type { EmployeeDirectory } from "@/features/realtime/utils";
+import { employeeCode, employeeDisplayName } from "@/features/realtime/utils";
+
 import { useAttendanceRecords } from "../hooks/use-attendance";
 import type { ListAttendanceRecordsParams } from "../types";
 import { formatClockTime, formatDate, formatDuration } from "./dates";
@@ -114,7 +117,14 @@ function FiltersRow({
   );
 }
 
-export function AttendanceRecordsTable() {
+export function AttendanceRecordsTable({
+  directory,
+  date,
+}: {
+  directory?: EmployeeDirectory;
+  /** Initial date range, e.g. the attendance board's selected day. */
+  date?: string;
+} = {}) {
   const t = useTranslations("attendance.records");
   const common = useTranslations("common.actions");
   const workModes = useTranslations("attendance.workModes");
@@ -123,6 +133,8 @@ export function AttendanceRecordsTable() {
   const [params, setParams] = useState<ListAttendanceRecordsParams>({
     page: 1,
     page_size: RECORDS_PAGE_SIZE,
+    from: date,
+    to: date,
   });
   // The employee-id filter box state — fed to the query through
   // useDebouncedValue so typing costs one list request on a 300 ms pause, not
@@ -139,6 +151,13 @@ export function AttendanceRecordsTable() {
   const records = listResponse && listResponse.status === 200 ? listResponse.data.items : [];
   const page = listResponse && listResponse.status === 200 ? listResponse.data.page : null;
 
+  function clearAll() {
+    setEmployeeIdInput("");
+    // Clear returns to the section's default scope (the board's day), not to
+    // every record ever written.
+    setParams({ page: 1, page_size: RECORDS_PAGE_SIZE, from: date, to: date });
+  }
+
   function change(next: Partial<ListAttendanceRecordsParams>) {
     // The employee-id input goes through the debounce; dates and selects
     // commit directly.
@@ -152,8 +171,16 @@ export function AttendanceRecordsTable() {
 
   return (
     <Card className="gap-0 overflow-hidden rounded-md border-border py-0 shadow-none">
-      <div className="border-b bg-muted/50 px-4 py-3 sm:px-5">
+      <div className="flex flex-wrap items-center gap-2 border-b bg-muted/50 px-4 py-3 sm:px-5">
         <FiltersRow params={{ ...params, employee_id: employeeIdInput }} onChange={change} />
+        <Button
+          variant="ghost"
+          size="sm"
+          className="ml-auto min-h-11 sm:min-h-7"
+          onClick={clearAll}
+        >
+          {common("clear")}
+        </Button>
       </div>
 
       {recordsQuery.isPending ? (
@@ -184,9 +211,7 @@ export function AttendanceRecordsTable() {
         </div>
       ) : (
         <>
-          <p className="px-4 py-2 text-xs text-muted-foreground sm:hidden">
-            {t("swipe")}
-          </p>
+          <p className="px-4 py-2 text-xs text-muted-foreground sm:hidden">{t("swipe")}</p>
           <Table
             aria-label={t("label")}
             containerLabel={t("containerLabel")}
@@ -207,8 +232,23 @@ export function AttendanceRecordsTable() {
               {records.map((record) => (
                 <TableRow key={record.id}>
                   <TableCell className="pl-3">{formatDate(record.workday, locale)}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {t("employeeShort", { id: record.employee_id.slice(-4) })}
+                  <TableCell>
+                    <div className="flex flex-col">
+                      <span className="font-medium">
+                        {directory
+                          ? employeeDisplayName(
+                              record.employee_id,
+                              directory,
+                              t("employeeShort", { id: record.employee_id.slice(-4) }),
+                            )
+                          : t("employeeShort", { id: record.employee_id.slice(-4) })}
+                      </span>
+                      {directory && employeeCode(record.employee_id, directory) ? (
+                        <span className="font-mono text-xs text-muted-foreground">
+                          {employeeCode(record.employee_id, directory)}
+                        </span>
+                      ) : null}
+                    </div>
                   </TableCell>
                   <TableCell>{workModes(record.work_mode)}</TableCell>
                   <TableCell className="text-sm tabular-nums">
@@ -226,12 +266,15 @@ export function AttendanceRecordsTable() {
                     )}
                   </TableCell>
                   <TableCell>
-                    <Badge
-                      variant={record.late ? "warning" : "muted"}
-                      data-status={record.late ? "late" : "on_time"}
-                    >
-                      {record.late ? t("late") : t("onTime")}
-                    </Badge>
+                    {record.late ? (
+                      <Badge variant="warning" data-status="late">
+                        {t("late")}
+                      </Badge>
+                    ) : (
+                      <span className="text-sm text-muted-foreground" data-status="on_time">
+                        {t("onTime")}
+                      </span>
+                    )}
                   </TableCell>
                   <TableCell className="pr-3 text-right text-sm tabular-nums">
                     {record.duration_minutes === null || record.duration_minutes === undefined ? (
@@ -249,29 +292,38 @@ export function AttendanceRecordsTable() {
             </TableBody>
           </Table>
 
-          {page && page.total_pages > 1 ? (
-            <div className="flex items-center justify-end gap-2 border-t px-4 py-3 text-sm">
-              <Button
-                variant="outline"
-                size="sm"
-                aria-label={t("previousAria")}
-                disabled={page.page <= 1}
-                onClick={() => change({ page: page.page - 1 })}
-              >
-                {t("previous")}
-              </Button>
-              <span className="text-muted-foreground">
-                {t("pageOf", { page: page.page, total: page.total_pages })}
+          {page ? (
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t bg-muted/50 px-4 py-3 text-sm">
+              <span className="text-muted-foreground tabular-nums">
+                {t("summary", { total: page.total_items })}
               </span>
-              <Button
-                variant="outline"
-                size="sm"
-                aria-label={t("nextAria")}
-                disabled={page.page >= page.total_pages}
-                onClick={() => change({ page: page.page + 1 })}
-              >
-                {t("next")}
-              </Button>
+              {page.total_pages > 1 ? (
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="min-h-11 sm:min-h-8"
+                    aria-label={t("previousAria")}
+                    disabled={page.page <= 1}
+                    onClick={() => change({ page: page.page - 1 })}
+                  >
+                    {t("previous")}
+                  </Button>
+                  <span className="text-muted-foreground">
+                    {t("pageOf", { page: page.page, total: page.total_pages })}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="min-h-11 sm:min-h-8"
+                    aria-label={t("nextAria")}
+                    disabled={page.page >= page.total_pages}
+                    onClick={() => change({ page: page.page + 1 })}
+                  >
+                    {t("next")}
+                  </Button>
+                </div>
+              ) : null}
             </div>
           ) : null}
         </>

@@ -3,6 +3,7 @@
   "detailMetadataTitle": "Nhân viên — WorkPulse",
   "title": "Nhân viên",
   "description": "Hồ sơ nhân sự — ai làm ở đâu, vai trò gì, từ khi nào.",
+  "checkingAccess": "Đang kiểm tra quyền truy cập…",
   "status": {
     "active": "Đang làm việc",
     "on_leave": "Đang nghỉ phép",
@@ -32,22 +33,27 @@
     "newEmployee": "Nhân viên mới",
     "loading": "Đang tải nhân viên…",
     "loadError": "Không thể tải nhân viên.",
-    "empty": "Không có nhân viên phù hợp. Hãy tạo hồ sơ nhân viên đầu tiên để xây dựng đội ngũ.",
+    "empty": "Chưa có nhân viên nào. Hãy tạo hồ sơ nhân viên đầu tiên để xây dựng đội ngũ.",
+    "emptyFiltered": "Không có nhân viên phù hợp với bộ lọc. Hãy xóa một bộ lọc hoặc tìm theo tên, email hoặc mã.",
+    "clearFilters": "Xóa bộ lọc",
     "swipe": "Vuốt ngang để xem mọi trường của nhân viên.",
     "label": "Nhân viên",
     "containerLabel": "Nhân viên. Cuộn ngang để đọc mọi cột.",
     "columns": {
-      "code": "Mã",
-      "name": "Tên",
       "email": "Email",
       "type": "Loại",
-      "status": "Trạng thái"
+      "status": "Trạng thái",
+      "employee": "Nhân viên",
+      "role": "Vai trò",
+      "location": "Địa điểm",
+      "manager": "Quản lý"
     },
     "previous": "Trước",
     "previousAria": "Trang trước",
     "next": "Tiếp",
     "nextAria": "Trang tiếp",
-    "pageOf": "Trang {page} / {total}"
+    "pageOf": "Trang {page} / {total}",
+    "showing": "Đang hiển thị {count} nhân viên"
   },
   "detail": {
     "tabs": {

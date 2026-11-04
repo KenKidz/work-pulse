@@ -3,6 +3,14 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Registered so the global scrollbar thumb can fade between the hidden and
+   revealed colors: scrollbar pseudo-elements themselves do not animate. */
+@property --scrollbar-thumb {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
+
 :root {
   color-scheme: light;
   --radius: 0.375rem;
@@ -175,13 +183,33 @@
     border-radius: 9999px;
   }
 
-  ::-webkit-scrollbar-thumb:hover,
-  ::-webkit-scrollbar-thumb:active {
-    background-color: var(--muted-foreground);
-  }
-
   ::-webkit-scrollbar-button {
     display: none;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    /* Reveal the thumb only while its scroller is hovered or focused. The
+       attribute comes from ScrollbarHover: Chromium does not repaint a thumb
+       when the scroller's own :hover flips. The registered property is what
+       fades it in and out; the 8px band stays reserved so content never
+       shifts as the thumb appears. */
+    ::-webkit-scrollbar-thumb {
+      background-color: var(--scrollbar-thumb);
+    }
+
+    * {
+      --scrollbar-thumb: transparent;
+      transition: --scrollbar-thumb 200ms ease-out;
+    }
+
+    [data-scrollbar-active] {
+      --scrollbar-thumb: var(--input);
+    }
+
+    [data-scrollbar-active]::-webkit-scrollbar-thumb:hover,
+    [data-scrollbar-active]::-webkit-scrollbar-thumb:active {
+      background-color: var(--muted-foreground);
+    }
   }
 }
 

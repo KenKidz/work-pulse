@@ -50,7 +50,12 @@ export function PayrollConfigForm({ canEdit }: { canEdit: boolean }) {
   const config = configQuery.data?.status === 200 ? configQuery.data.data : null;
 
   const form = useForm<PayrollConfigFormValues>({
-    resolver: zodResolver(payrollConfigFormSchema((key) => validation(key))),
+    resolver: zodResolver(
+      payrollConfigFormSchema(validation, {
+        standardMonthlyHours: t("standardHours"),
+        overtimeMultiplier: t("overtimeMultiplier"),
+      }),
+    ),
     defaultValues: {
       currency: "",
       standard_monthly_hours: 160,

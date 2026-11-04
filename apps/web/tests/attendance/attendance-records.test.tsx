@@ -61,6 +61,7 @@ describe("AttendanceRecordsTable", () => {
 
     expect(await screen.findByText("On site")).toBeInTheDocument();
     expect(screen.getByText("Late")).toBeInTheDocument();
+    expect(screen.getByText("1 record")).toBeInTheDocument();
     expect(screen.getByText("8h 33m")).toBeInTheDocument();
     expect(screen.getByText(/Employee …a001/i)).toBeInTheDocument();
     expect(
@@ -76,6 +77,18 @@ describe("AttendanceRecordsTable", () => {
     expect(screen.getByRole("textbox", { name: "Filter by employee id" })).toHaveClass(
       "w-full",
       "sm:w-64",
+    );
+  });
+
+  it("starts with the supplied day as its date range", () => {
+    renderWithClient(<AttendanceRecordsTable date="2026-09-28" />);
+
+    expect(useListAttendanceRecords).toHaveBeenCalledWith(
+      expect.objectContaining({
+        from: "2026-09-28",
+        to: "2026-09-28",
+        page_size: RECORDS_PAGE_SIZE,
+      }),
     );
   });
 

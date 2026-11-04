@@ -1,5 +1,83 @@
 {
   "title": "Bảng điều khiển",
-  "description": "Toàn cảnh lực lượng lao động — hồ sơ nhân sự, chấm công trực tiếp và tổ chức phía sau.",
-  "phaseNote": "Giai đoạn 1 dùng mô hình yêu cầu/phản hồi — hãy làm mới hoặc đổi ngày của bảng để cập nhật. Đẩy dữ liệu trực tiếp sẽ đến cùng tính năng thời gian thực ở Giai đoạn 2."
+  "managerDescription": "Những việc cần xử lý trong lực lượng lao động — {date}.",
+  "employeeDescription": "Ngày làm việc của bạn trong một cái nhìn — {date}.",
+  "snapshotNote": "Ảnh chụp mỗi 60 giây. Trung tâm chỉ huy là màn hình trực tiếp.",
+  "countsLoading": "Đang tải số liệu hôm nay…",
+  "countsErrorTitle": "Không tải được số liệu hôm nay",
+  "countsError": "Không tải được ảnh chụp lực lượng lao động. Hãy thử lại.",
+  "countsDeniedTitle": "Không có quyền xem ảnh chụp",
+  "countsDenied": "Vai trò của bạn không được xem ảnh chụp lực lượng lao động.",
+  "actions": {
+    "requestLeave": "Xin nghỉ phép",
+    "openAttendance": "Mở chấm công",
+    "commandCenter": "Trung tâm chỉ huy"
+  },
+  "noEmployeeTitle": "Chưa liên kết hồ sơ nhân viên",
+  "noEmployee": "Tài khoản của bạn chưa liên kết với hồ sơ nhân viên. Bạn không thể tự chấm công, xin nghỉ hoặc xem phiếu lương; hãy dùng các lối tắt bên dưới.",
+  "attendanceTitle": "Chấm công của bạn",
+  "attendanceDescription": "Chấm công vào hoặc ra cho hôm nay.",
+  "employeeSnapshotNote": "Chấm công ngày {date}. Dữ liệu cập nhật khi bạn tải lại trang chấm công.",
+  "attention": {
+    "title": "Cần xử lý",
+    "description": "Các yêu cầu đang chờ bạn quyết định.",
+    "leave": "Nghỉ phép",
+    "overtime": "Làm thêm giờ",
+    "leaveEmpty": "Không có yêu cầu nghỉ phép nào đang chờ trong phạm vi của bạn.",
+    "overtimeEmpty": "Không có yêu cầu làm thêm giờ nào đang chờ bạn.",
+    "showing": "Đang hiển thị {shown} / {total}",
+    "openLeave": "Mở hàng đợi nghỉ phép",
+    "openOvertime": "Mở hàng đợi làm thêm giờ",
+    "loading": "Đang tải yêu cầu…",
+    "error": "Không tải được các yêu cầu. Hãy thử lại.",
+    "denied": "Vai trò của bạn không được quyết định các yêu cầu này."
+  },
+  "myDay": {
+    "title": "Ngày của tôi",
+    "description": "{date} · thông tin ca nằm ở trang chấm công",
+    "loading": "Đang tải…",
+    "statusError": "Không tải được trạng thái chấm công.",
+    "checkedIn": "Đã vào ca lúc {time}",
+    "checkedInMeta": "{mode} · {late}",
+    "late": "Đi muộn",
+    "onTime": "Đúng giờ",
+    "openAttendance": "Mở chấm công",
+    "notCheckedIn": "Chưa vào ca",
+    "notCheckedInHint": "Biểu mẫu chấm công nằm ở trang chấm công.",
+    "checkIn": "Chấm công vào",
+    "balances": "Số ngày phép còn lại",
+    "balancesDescription": "Ngày còn lại theo loại phép.",
+    "allBalances": "Tất cả số dư",
+    "balancesError": "Không tải được số ngày phép.",
+    "noBalances": "Chưa có số dư phép.",
+    "balanceFallback": "Nghỉ phép",
+    "balanceValue": "{remaining} / {entitlement} ngày",
+    "payslip": "Phiếu lương mới nhất",
+    "payslipDescription": "Phiếu lương đã phát hành gần nhất.",
+    "viewPayslip": "Xem",
+    "payslipError": "Không tải được phiếu lương.",
+    "noPayslip": "Chưa có phiếu lương nào được phát hành.",
+    "net": "Thực nhận {amount}",
+    "checkedInOn": "Đã vào ca ngày {date} lúc {time}"
+  },
+  "quickActions": {
+    "title": "Lối tắt",
+    "description": "Các màn hình thường dùng cho vai trò của bạn."
+  },
+  "requests": {
+    "title": "Yêu cầu của tôi",
+    "description": "Nghỉ phép và làm thêm giờ, mới nhất trước.",
+    "loading": "Đang tải yêu cầu…",
+    "error": "Không tải được yêu cầu của bạn.",
+    "empty": "Chưa có yêu cầu nào. Bắt đầu bằng một yêu cầu nghỉ phép hoặc làm thêm giờ.",
+    "requestLeave": "Xin nghỉ phép",
+    "leave": "Nghỉ phép",
+    "overtime": "Làm thêm giờ",
+    "viewLeave": "Mở nghỉ phép",
+    "viewOvertime": "Mở làm thêm giờ"
+  },
+  "presence": {
+    "openBoard": "Mở bảng",
+    "showing": "Hiển thị {shown} / {total} người"
+  }
 }

@@ -14,10 +14,14 @@ import {
 } from "@/features/payroll/schema";
 
 const t = (key: string) => key;
+const configLabels = {
+  standardMonthlyHours: "standard monthly hours",
+  overtimeMultiplier: "overtime multiplier",
+};
 
 describe("payrollConfigFormSchema", () => {
   it("accepts a three-letter currency and positive numbers", () => {
-    const result = payrollConfigFormSchema(t).safeParse({
+    const result = payrollConfigFormSchema(t, configLabels).safeParse({
       currency: "USD",
       standard_monthly_hours: "160",
       overtime_multiplier: "1.5",
@@ -31,21 +35,21 @@ describe("payrollConfigFormSchema", () => {
 
   it("rejects a lowercase currency and zero values", () => {
     expect(
-      payrollConfigFormSchema(t).safeParse({
+      payrollConfigFormSchema(t, configLabels).safeParse({
         currency: "usd",
         standard_monthly_hours: 160,
         overtime_multiplier: 1.5,
       }).success,
     ).toBe(false);
     expect(
-      payrollConfigFormSchema(t).safeParse({
+      payrollConfigFormSchema(t, configLabels).safeParse({
         currency: "USD",
         standard_monthly_hours: 0,
         overtime_multiplier: 1.5,
       }).success,
     ).toBe(false);
     expect(
-      payrollConfigFormSchema(t).safeParse({
+      payrollConfigFormSchema(t, configLabels).safeParse({
         currency: "USD",
         standard_monthly_hours: 160,
         overtime_multiplier: 0,

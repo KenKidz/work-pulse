@@ -9,14 +9,19 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { useListShifts, useCreateShift, useUpdateShift } from "@workpulse/api-client";
+import {
+  useListShifts,
+  useCreateShift,
+  useUpdateShift,
+  useListLocations,
+} from "@workpulse/api-client";
 import { ApiError } from "@workpulse/api-client/mutator/custom-fetch";
 import { toast } from "sonner";
 
 import { ShiftsPanel } from "@/features/attendance/components/ShiftsPanel";
 import type { Shift } from "@/features/attendance/types";
 
-import { renderWithClient, shiftsState, wireMutation, wireQuery } from "./helpers";
+import { recordsState, renderWithClient, shiftsState, wireMutation, wireQuery } from "./helpers";
 
 vi.mock("sonner", () => ({
   toast: { success: vi.fn(), error: vi.fn() },
@@ -27,7 +32,11 @@ vi.mock("@workpulse/api-client", () => ({
   getListAttendanceRecordsQueryKey: () => ["/api/v1/attendance/records"],
   getGetCurrentEmployeeQueryKey: () => ["/api/v1/employees/me"],
   getListShiftsQueryKey: () => ["/api/v1/shifts"],
+  getListDepartmentsQueryKey: () => ["/api/v1/departments"],
+  getListPositionsQueryKey: () => ["/api/v1/positions"],
+  getListLocationsQueryKey: () => ["/api/v1/locations"],
   useListShifts: vi.fn(),
+  useListLocations: vi.fn(),
   useCreateShift: vi.fn(),
   useUpdateShift: vi.fn(),
 }));
@@ -49,6 +58,7 @@ const createShiftMutate = vi.fn<(variables: unknown) => Promise<unknown>>();
 beforeEach(() => {
   vi.clearAllMocks();
   wireQuery(useListShifts, shiftsState([DEFAULT_SHIFT]));
+  wireQuery(useListLocations, recordsState([]));
   wireMutation(useCreateShift, createShiftMutate);
   wireMutation(useUpdateShift, vi.fn());
 });

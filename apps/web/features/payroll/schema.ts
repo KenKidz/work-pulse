@@ -41,17 +41,20 @@ function isCalendarDate(value: string): boolean {
   );
 }
 
-export function payrollConfigFormSchema(t: PayrollValidation) {
+export type PayrollConfigLabels = {
+  standardMonthlyHours: string;
+  overtimeMultiplier: string;
+};
+
+export function payrollConfigFormSchema(t: PayrollValidation, labels: PayrollConfigLabels) {
   const currencyCode = z.string().regex(/^[A-Z]{3}$/, t("currencyInvalid"));
   const positiveNumber = (label: string) =>
-    z.coerce
-      .number({ message: t("numberRequired", { label }) })
-      .gt(0, t("positive", { label }));
+    z.coerce.number({ message: t("numberRequired", { label }) }).gt(0, t("positive", { label }));
 
   return z.object({
     currency: currencyCode,
-    standard_monthly_hours: positiveNumber("standard monthly hours"),
-    overtime_multiplier: positiveNumber("overtime multiplier"),
+    standard_monthly_hours: positiveNumber(labels.standardMonthlyHours),
+    overtime_multiplier: positiveNumber(labels.overtimeMultiplier),
   });
 }
 

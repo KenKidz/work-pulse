@@ -3,6 +3,7 @@
   "detailMetadataTitle": "Employee — WorkPulse",
   "title": "Employees",
   "description": "The workforce record — who works where, in what role, since when.",
+  "checkingAccess": "Checking access…",
   "status": {
     "active": "Active",
     "on_leave": "On leave",
@@ -32,22 +33,27 @@
     "newEmployee": "New employee",
     "loading": "Loading employees…",
     "loadError": "Could not load employees.",
-    "empty": "No employees match. Create the first employee record to build the workforce.",
+    "empty": "No employees yet. Create the first employee record to build the workforce.",
+    "emptyFiltered": "No employees match these filters. Clear a filter or search by name, email or code.",
+    "clearFilters": "Clear filters",
     "swipe": "Swipe sideways to see every employee field.",
     "label": "Employees",
     "containerLabel": "Employees. Scroll horizontally to read all columns.",
     "columns": {
-      "code": "Code",
-      "name": "Name",
       "email": "Email",
       "type": "Type",
-      "status": "Status"
+      "status": "Status",
+      "employee": "Employee",
+      "role": "Role",
+      "location": "Location",
+      "manager": "Manager"
     },
     "previous": "Previous",
     "previousAria": "Previous page",
     "next": "Next",
     "nextAria": "Next page",
-    "pageOf": "Page {page} of {total}"
+    "pageOf": "Page {page} of {total}",
+    "showing": "Showing {count, plural, one {# employee} other {# employees}}"
   },
   "detail": {
     "tabs": {

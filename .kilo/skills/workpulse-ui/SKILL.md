@@ -89,8 +89,12 @@ From `apps/web/app/globals.css`:
 - **Theme:** `.dark` class + `next-themes` + `components/theme-toggle.tsx`. Both
   themes are first-class; work is not done until checked in both.
 - **Scrollbars are global:** one thin 8px treatment in `globals.css` — a 4px
-  `--input` pill thumb (≈3:1 in both themes), transparent track,
-  `--muted-foreground` on hover. Never restyle scrollbars per component.
+  `--input` pill thumb (≈3:1 in both themes), transparent track, hidden at rest
+  and revealed while the scroller is hovered or focused (`ScrollbarHover` sets
+  `data-scrollbar-active`), fading through the registered `--scrollbar-thumb`
+  property (200ms ease-out; scrollbar pseudo-elements do not animate
+  themselves), `--muted-foreground` on thumb hover. The reserved 8px band means
+  no layout shift. Never restyle scrollbars per component.
 - **Restraint:** spend boldness in one place per surface, keep the rest quiet.
   Before finishing, remove one accessory.
 

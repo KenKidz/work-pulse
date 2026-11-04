@@ -157,7 +157,13 @@
   `h-…`/`size-…` fighting the `size` prop, and never a `rounded-*` override.
 - **Scrollbars:** the global thin treatment in `apps/web/app/globals.css`
   (8px band, 4px `--input` pill thumb, transparent track) is the only one —
-  never per-surface `::-webkit-scrollbar` or `scrollbar-*` overrides.
+  never per-surface `::-webkit-scrollbar` or `scrollbar-*` overrides. On
+  hover-capable pointers the thumb stays hidden at rest and
+  `components/scrollbar-hover.tsx` marks the scroller under the pointer or
+  holding focus with `data-scrollbar-active` to reveal it (Chromium does not
+  repaint a thumb from the scroller's own `:hover`). The reveal fades through
+  the registered `--scrollbar-thumb` property (200ms ease-out) because
+  scrollbar pseudo-elements do not animate their own background.
 
 - shadcn/ui: load the `shadcn` skill when adding, updating or debugging
   components in `components/ui/` or composing shadcn primitives.

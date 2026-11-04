@@ -11,14 +11,22 @@
  */
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CircleAlert, LogIn } from "lucide-react";
+import { CircleAlert, LogIn, LogOut } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { cn } from "cn";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Form,
   FormControl,
@@ -27,7 +35,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 
 import { useApiErrorTranslator } from "@/lib/api-errors";
 
@@ -39,7 +47,7 @@ import {
   useCheckOutAction,
 } from "../hooks/use-attendance";
 import { checkInFormSchema, type CheckInFormValues } from "../schema";
-import { formatClockTime } from "./dates";
+import { formatClockTime, formatDate } from "./dates";
 
 type CheckInPanelProps = {
   /** The actor's own open record for the visible day, or `null` when none. */
@@ -93,6 +101,11 @@ export function CheckInPanel({ openRecord }: CheckInPanelProps) {
       <CardHeader className="px-5 pt-5 pb-3">
         <CardTitle>{t("title")}</CardTitle>
         <CardDescription>{t("description")}</CardDescription>
+        <CardAction>
+          <Badge variant={openRecord ? "success" : "muted"} data-testid="attendance-status">
+            {openRecord ? t("statusCheckedIn") : t("statusNotCheckedIn")}
+          </Badge>
+        </CardAction>
       </CardHeader>
       <CardContent className="flex flex-col gap-4 px-5 pb-5">
         {openRecord ? (
@@ -114,16 +127,19 @@ export function CheckInPanel({ openRecord }: CheckInPanelProps) {
                 <p className="text-xs text-muted-foreground">
                   {t("since")}{" "}
                   <time dateTime={openRecord.checked_in_at}>
-                    {formatClockTime(openRecord.checked_in_at, locale)}
+                    {formatClockTime(openRecord.checked_in_at, locale)} ·{" "}
+                    {formatDate(openRecord.workday, locale)}
                   </time>
                 </p>
               </div>
             </div>
             <Button
               variant="outline"
+              className="min-h-11"
               onClick={() => void onCheckOut()}
               disabled={checkOut.isPending}
             >
+              <LogOut aria-hidden="true" />
               {checkOut.isPending ? t("checkingOut") : t("checkOut")}
             </Button>
           </div>
@@ -131,7 +147,7 @@ export function CheckInPanel({ openRecord }: CheckInPanelProps) {
           <Form {...form}>
             <form
               onSubmit={form.handleSubmit(onCheckIn)}
-              className="grid gap-4 sm:grid-cols-[12rem_minmax(0,1fr)_auto] sm:items-end"
+              className="grid gap-4 sm:grid-cols-[14rem_minmax(0,1fr)_auto] sm:items-end"
               noValidate
             >
               <FormField
@@ -144,9 +160,9 @@ export function CheckInPanel({ openRecord }: CheckInPanelProps) {
                       <div
                         role="radiogroup"
                         aria-label={t("workModeAria")}
-                        className="grid grid-cols-2 gap-1"
+                        className="grid grid-cols-2"
                       >
-                        {(["onsite", "remote"] as const).map((mode) => (
+                        {(["onsite", "remote"] as const).map((mode, index) => (
                           <button
                             key={mode}
                             type="button"
@@ -155,10 +171,11 @@ export function CheckInPanel({ openRecord }: CheckInPanelProps) {
                             data-testid={`work-mode-${mode}`}
                             onClick={() => field.onChange(mode)}
                             className={cn(
-                              "min-h-11 cursor-pointer rounded-sm border px-3 text-sm font-medium transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
+                              "min-h-11 cursor-pointer border border-input px-3 text-sm font-medium transition-colors outline-none focus-visible:z-10 focus-visible:ring-[3px] focus-visible:ring-ring/50",
+                              index === 0 ? "rounded-l-md" : "-ml-px rounded-r-md",
                               field.value === mode
-                                ? "border-primary bg-primary text-primary-foreground"
-                                : "border-input bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                                ? "border-primary bg-primary text-primary-foreground shadow-xs"
+                                : "bg-muted text-muted-foreground hover:bg-background/70 hover:text-foreground",
                             )}
                           >
                             {workModes(mode)}
@@ -178,11 +195,16 @@ export function CheckInPanel({ openRecord }: CheckInPanelProps) {
                   <FormItem className="gap-1.5">
                     <FormLabel>{t("note")}</FormLabel>
                     <FormControl>
-                      <Textarea
+                      <Input
                         {...field}
                         value={field.value ?? ""}
-                        rows={2}
+                        placeholder={t("notePlaceholder")}
                         className="min-h-11"
+                        // Clearing an optional note makes it absent, not a
+                        // failed min-length validation.
+                        onChange={(event) =>
+                          field.onChange(event.target.value === "" ? null : event.target.value)
+                        }
                       />
                     </FormControl>
                     <FormMessage />
@@ -191,10 +213,15 @@ export function CheckInPanel({ openRecord }: CheckInPanelProps) {
               />
 
               <Button type="submit" disabled={checkIn.isPending} className="min-h-11 sm:px-5">
+                <LogIn aria-hidden="true" />
                 {checkIn.isPending ? t("checkingIn") : t("checkIn")}
               </Button>
             </form>
           </Form>
+        )}
+
+        {openRecord ? null : (
+          <p className="text-xs leading-5 text-muted-foreground">{t("lateHint")}</p>
         )}
 
         {rootError ? (

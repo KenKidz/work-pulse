@@ -46,7 +46,9 @@ test.describe("shell navigation", () => {
       page.locator('[data-slot="sidebar"][data-state="collapsed"]').first(),
     ).toBeVisible();
     await expect(
-      page.getByRole("link", { name: "Employees", exact: true }),
+      page
+        .getByRole("navigation", { name: "Main" })
+        .getByRole("link", { name: "Employees", exact: true }),
     ).toBeAttached();
   });
 
@@ -71,18 +73,25 @@ test.describe("shell navigation", () => {
   test("hides role-gated destinations from an employee", async ({ page }) => {
     await uiLogin(page, WORKER_EMAIL);
 
+    // The directory is manager+ only: no nav entry, no palette entry, and a
+    // direct visit bounces back to the dashboard instead of surfacing a 403.
     await expect(
       page.getByRole("link", { name: "Employees", exact: true }),
-    ).toBeVisible();
+    ).toHaveCount(0);
     await expect(
       page.getByRole("link", { name: "Users", exact: true }),
     ).toHaveCount(0);
 
     await page.keyboard.press("Control+k");
     await expect(page.getByRole("dialog")).toBeVisible();
+    await expect(page.getByRole("option", { name: "Employees" })).toHaveCount(0);
     await expect(page.getByRole("option", { name: "Users" })).toHaveCount(0);
     await expect(
       page.getByRole("option", { name: "My payslips" }),
     ).toBeVisible();
+
+    await page.keyboard.press("Escape");
+    await page.goto("/employees");
+    await page.waitForURL(/\/dashboard$/);
   });
 });

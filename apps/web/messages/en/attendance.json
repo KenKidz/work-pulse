@@ -2,7 +2,7 @@
   "metadataTitle": "Attendance — WorkPulse",
   "title": "Attendance",
   "description": "Record your check-in and review attendance for the selected day.",
-  "boardDateHint": "Counts and activity use this date. Check-in time is recorded automatically.",
+  "boardDateHint": "Counts, activity and records use this date.",
   "date": "Date",
   "today": "Today",
   "loading": "Loading attendance for this date…",
@@ -11,12 +11,9 @@
   "deniedTitle": "Attendance board unavailable",
   "denied": "Managers, HR and admins can view workforce attendance.",
   "recordsTitle": "Attendance records",
-  "refreshTitle": "New activity",
-  "refreshBody": "This board does not update automatically. Refresh the page or choose another date to check again.",
+  "recordsDescription": "Records for the selected day. Widen the dates to audit a longer range.",
   "counts": {
     "ariaLabel": "Attendance counts",
-    "currentPresence": "Current presence",
-    "otherDayCounts": "Other day counts",
     "present": "On site",
     "remote": "Remote",
     "late": "Late",
@@ -35,10 +32,13 @@
     "title": "Recent activity",
     "description": "Check-ins and check-outs for this date, newest first.",
     "empty": "No attendance activity recorded on this date yet.",
+    "loading": "Loading activity…",
     "ariaLabel": "Attendance events",
     "checked_in": "checked in",
     "checked_out": "checked out",
-    "employeeShort": "Employee …{id}"
+    "employeeShort": "Employee …{id}",
+    "unavailable": "Activity unavailable.",
+    "openCommandCenter": "Open command center"
   },
   "checkIn": {
     "title": "Your attendance",
@@ -53,6 +53,10 @@
     "workMode": "Work mode",
     "workModeAria": "Work mode",
     "note": "Note (optional)",
+    "notePlaceholder": "Anything your manager should know",
+    "lateHint": "Late is measured against the shift assigned to your location, plus its grace period.",
+    "statusNotCheckedIn": "Not checked in",
+    "statusCheckedIn": "Checked in",
     "checkIn": "Check in",
     "checkingIn": "Checking in…"
   },
@@ -89,7 +93,8 @@
     "previousAria": "Previous page",
     "next": "Next",
     "nextAria": "Next page",
-    "pageOf": "Page {page} of {total}"
+    "pageOf": "Page {page} of {total}",
+    "summary": "{total, plural, one {# record} other {# records}}"
   },
   "shifts": {
     "title": "Shifts",
@@ -158,5 +163,9 @@
   "units": {
     "hourShort": "h",
     "minuteShort": "m"
-  }
+  },
+  "noEmployeeTitle": "No employee record linked",
+  "noEmployee": "This account can review attendance but cannot check in. Ask an administrator to link an employee record.",
+  "descriptionReadOnly": "Review attendance for the selected day.",
+  "selfDateHint": "Check-in status and records use this date."
 }

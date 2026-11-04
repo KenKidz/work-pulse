@@ -1,5 +1,83 @@
 {
   "title": "Dashboard",
-  "description": "Your workforce at a glance — people records, live attendance and the organization behind them.",
-  "phaseNote": "Phase 1 is request/response — refresh or change the board date to update. Live push arrives with realtime in Phase 2."
+  "managerDescription": "What needs attention across your workforce — {date}.",
+  "employeeDescription": "Your day at a glance — {date}.",
+  "snapshotNote": "Snapshot every 60 seconds. The Command center is the live wall.",
+  "countsLoading": "Loading today's numbers…",
+  "countsErrorTitle": "Could not load today's numbers",
+  "countsError": "The workforce snapshot could not be loaded. Try again.",
+  "countsDeniedTitle": "Snapshot unavailable",
+  "countsDenied": "Your role cannot read the workforce snapshot.",
+  "actions": {
+    "requestLeave": "Request leave",
+    "openAttendance": "Open attendance",
+    "commandCenter": "Command center"
+  },
+  "noEmployeeTitle": "No employee record linked",
+  "noEmployee": "Your account is not linked to an employee record. Self-service attendance, leave and payslips are unavailable; use the quick actions below.",
+  "attendanceTitle": "Your attendance",
+  "attendanceDescription": "Check in or out for today.",
+  "employeeSnapshotNote": "Attendance for {date}. Your records update when the attendance page reloads.",
+  "attention": {
+    "title": "Needs attention",
+    "description": "Requests waiting on you to decide.",
+    "leave": "Leave",
+    "overtime": "Overtime",
+    "leaveEmpty": "No pending leave requests in your scope.",
+    "overtimeEmpty": "No overtime claims waiting for you.",
+    "showing": "Showing {shown} of {total}",
+    "openLeave": "Open leave queue",
+    "openOvertime": "Open overtime queue",
+    "loading": "Loading requests…",
+    "error": "Requests could not be loaded. Try again.",
+    "denied": "Your role cannot decide these requests."
+  },
+  "myDay": {
+    "title": "My day",
+    "description": "{date} · shift details are on the attendance page",
+    "loading": "Loading…",
+    "statusError": "Could not load your attendance status.",
+    "checkedIn": "Checked in at {time}",
+    "checkedInMeta": "{mode} · {late}",
+    "late": "Late",
+    "onTime": "On time",
+    "openAttendance": "Open attendance",
+    "notCheckedIn": "Not checked in",
+    "notCheckedInHint": "Your check-in form is on the attendance page.",
+    "checkIn": "Check in",
+    "balances": "Leave balances",
+    "balancesDescription": "Remaining days by leave type.",
+    "allBalances": "All balances",
+    "balancesError": "Could not load your leave balances.",
+    "noBalances": "No balances yet.",
+    "balanceFallback": "Leave",
+    "balanceValue": "{remaining} of {entitlement} days",
+    "payslip": "Latest payslip",
+    "payslipDescription": "The most recently issued payslip.",
+    "viewPayslip": "View",
+    "payslipError": "Could not load your payslip.",
+    "noPayslip": "No payslip issued yet.",
+    "net": "Net {amount}",
+    "checkedInOn": "Checked in on {date} at {time}"
+  },
+  "quickActions": {
+    "title": "Quick actions",
+    "description": "Common workspaces for your role."
+  },
+  "requests": {
+    "title": "My requests",
+    "description": "Leave and overtime, newest first.",
+    "loading": "Loading your requests…",
+    "error": "Could not load your requests.",
+    "empty": "No requests yet. Start with a leave request or an overtime claim.",
+    "requestLeave": "Request leave",
+    "leave": "Leave",
+    "overtime": "Overtime",
+    "viewLeave": "View leave",
+    "viewOvertime": "View overtime"
+  },
+  "presence": {
+    "openBoard": "Open board",
+    "showing": "Showing {shown} of {total} people"
+  }
 }

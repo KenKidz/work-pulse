@@ -1,25 +1,46 @@
 "use client";
 
 /**
- * Recent-activity feed — check-in/out entries of the board date, newest first
- * (the API caps at 20). Wire values render through `boardActionLabel`; the
- * employee id is shown as a short code until a roster/name join exists on the
- * board contract. Client leaf.
+ * Recent-activity feed — check-in/out entries for the visible day, newest
+ * first. The board contract carries identifiers only, so names are joined
+ * client-side from the employee directory when the caller has one; otherwise
+ * the row falls back to the short id. Bounded on live surfaces so a check-in
+ * burst cannot grow the page. Client leaf.
  */
 
 import { Activity } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { cn } from "cn";
+import type { ReactNode } from "react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/empty-state";
+import type { EmployeeDirectory } from "@/features/realtime/utils";
+import { employeeDisplayName } from "@/features/realtime/utils";
 
 import type { BoardActivity } from "../types";
 import { formatClockTime } from "./dates";
 
-export function ActivityFeed({ activity }: { activity: BoardActivity[] }) {
+export function ActivityFeed({
+  activity,
+  directory,
+  limit,
+  action,
+}: {
+  activity: BoardActivity[];
+  /** When present, names replace the `Employee …id` fallback. */
+  directory?: EmployeeDirectory;
+  /** Cap the visible rows; the API already caps the payload at 20. */
+  limit?: number;
+  /** Optional footer action (the dashboard links to the command center). */
+  action?: ReactNode;
+}) {
   const t = useTranslations("attendance.activity");
   const locale = useLocale();
+  const entries = limit === undefined ? activity : activity.slice(0, limit);
+  // Uncapped feeds scroll inside the card instead of growing the page one
+  // check-in at a time (workpulse-ui §8); capped feeds are already short.
+  const bounded = limit === undefined;
 
   return (
     <Card data-testid="activity-feed" className="gap-0 rounded-md border-border py-0 shadow-none">
@@ -28,15 +49,28 @@ export function ActivityFeed({ activity }: { activity: BoardActivity[] }) {
         <CardDescription>{t("description")}</CardDescription>
       </CardHeader>
       <CardContent className="px-5 pb-5">
-        {activity.length === 0 ? (
+        {entries.length === 0 ? (
           <EmptyState icon={Activity} message={t("empty")} />
         ) : (
           <ol
             aria-label={t("ariaLabel")}
-            className="relative flex flex-col gap-1 before:absolute before:top-4 before:bottom-4 before:left-[5.25rem] before:w-px before:bg-border before:content-['']"
+            tabIndex={bounded ? 0 : undefined}
+            className={cn(
+              "relative flex flex-col gap-1 before:absolute before:top-4 before:bottom-4 before:left-[5.25rem] before:w-px before:bg-border before:content-['']",
+              bounded &&
+                "max-h-[min(60dvh,36rem)] overflow-y-auto overscroll-contain pr-1 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none",
+            )}
           >
-            {activity.map((entry) => {
+            {entries.map((entry) => {
               const checkedIn = entry.action === "checked_in";
+              const name =
+                directory === undefined
+                  ? t("employeeShort", { id: entry.employee_id.slice(-4) })
+                  : employeeDisplayName(
+                      entry.employee_id,
+                      directory,
+                      t("employeeShort", { id: entry.employee_id.slice(-4) }),
+                    );
               return (
                 <li
                   key={`${entry.employee_id}-${entry.action}-${entry.occurred_at}`}
@@ -57,7 +91,7 @@ export function ActivityFeed({ activity }: { activity: BoardActivity[] }) {
                     />
                   </span>
                   <span className="min-w-0 text-sm break-words">
-                    {employeeShort(entry.employee_id, t)} {t(entry.action)}
+                    <span className="font-medium">{name}</span> {t(entry.action)}
                   </span>
                 </li>
               );
@@ -65,14 +99,7 @@ export function ActivityFeed({ activity }: { activity: BoardActivity[] }) {
           </ol>
         )}
       </CardContent>
+      {action ? <div className="border-t border-border px-5 py-2.5">{action}</div> : null}
     </Card>
   );
-}
-
-/** `01900000-…a001` → `Employee …a001` — no name join on the board contract. */
-function employeeShort(
-  id: string,
-  t: (key: "employeeShort", values: { id: string }) => string,
-): string {
-  return t("employeeShort", { id: id.slice(-4) });
 }

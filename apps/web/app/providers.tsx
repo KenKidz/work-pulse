@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
 import { useState, type ReactNode } from "react";
 
+import { ScrollbarHover } from "@/components/scrollbar-hover";
 import { Toaster } from "@/components/ui/sonner";
 
 /**
@@ -29,6 +30,7 @@ export function Providers({ children }: { children: ReactNode }) {
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
       <QueryClientProvider client={queryClient}>
         {children}
+        <ScrollbarHover />
         <Toaster />
       </QueryClientProvider>
     </ThemeProvider>

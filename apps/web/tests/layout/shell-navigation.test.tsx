@@ -89,6 +89,7 @@ describe("the nav catalog", () => {
 
     expect(employeeKeys).toContain("myPayslips");
     expect(employeeKeys).toContain("myDocuments");
+    expect(employeeKeys).not.toContain("employees");
     expect(employeeKeys).not.toContain("users");
     expect(employeeKeys).not.toContain("commandCenter");
     expect(employeeKeys).not.toContain("payroll");
@@ -96,6 +97,9 @@ describe("the nav catalog", () => {
     expect(
       visibleNavGroups("admin").flatMap((group) => group.items.map((item) => item.key)),
     ).toContain("users");
+    expect(
+      visibleNavGroups("manager").flatMap((group) => group.items.map((item) => item.key)),
+    ).toContain("employees");
   });
 
   it("marks only the most specific item for a nested route", () => {
@@ -130,6 +134,7 @@ describe("AppSidebar", () => {
       </SidebarProvider>,
     );
 
+    expect(screen.queryByRole("link", { name: "Employees" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Users" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Command center" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "My payslips" })).toBeInTheDocument();

@@ -17,6 +17,7 @@ import {
   useListDepartments,
   useListPositions,
   useListLocations,
+  useGetCurrentEmployee,
 } from "@workpulse/api-client";
 import { toast } from "sonner";
 
@@ -24,12 +25,33 @@ import {
   EMPLOYEES_PAGE_SIZE,
   EmployeesTable,
 } from "@/features/employees/components/EmployeesTable";
+import { NewEmployeeButton } from "@/features/employees/components/NewEmployeeButton";
+import { useEmployeeDirectory } from "@/features/employees/hooks/use-employee-directory";
 import type { EmployeeSummary } from "@/features/employees/types";
 
 import { apiError, listState, wireMutation, wireQuery } from "./helpers";
 
 vi.mock("sonner", () => ({
   toast: { success: vi.fn(), error: vi.fn() },
+}));
+
+vi.mock("@/features/auth/components/AuthGate", () => ({
+  useAuth: () => ({
+    user: {
+      id: "01900000-0000-7000-8000-0000000000b1",
+      tenant_id: "01900000-0000-7000-8000-000000000001",
+      email: "manager@workpulse.test",
+      role: "manager",
+      employee_id: "01900000-0000-7000-8000-00000000a001",
+      active: true,
+      created_at: "2026-09-01T00:00:00Z",
+      updated_at: "2026-09-01T00:00:00Z",
+    },
+  }),
+}));
+
+vi.mock("@/features/employees/hooks/use-employee-directory", () => ({
+  useEmployeeDirectory: vi.fn(),
 }));
 
 vi.mock("@workpulse/api-client", () => ({
@@ -40,8 +62,10 @@ vi.mock("@workpulse/api-client", () => ({
   getListDepartmentsQueryKey: () => ["/api/v1/departments"],
   getListPositionsQueryKey: () => ["/api/v1/positions"],
   getListLocationsQueryKey: () => ["/api/v1/locations"],
+  getGetCurrentEmployeeQueryKey: () => ["/api/v1/employees/me"],
   // Hooks.
   useListEmployees: vi.fn(),
+  useGetCurrentEmployee: vi.fn(),
   useGetEmployee: vi.fn(),
   useCreateEmployee: vi.fn(),
   useUpdateEmployee: vi.fn(),
@@ -117,6 +141,7 @@ function renderTable() {
   render(
     <QueryClientProvider client={queryClient}>
       <EmployeesTable />
+      <NewEmployeeButton />
     </QueryClientProvider>,
   );
   return { invalidateSpy };
@@ -127,6 +152,20 @@ beforeEach(() => {
   wireMutation(useCreateEmployee, createEmployee);
   wireMutation(useUpdateEmployee, vi.fn());
   wireQuery(useListEmployees, listState([ALICE]));
+  wireQuery(useEmployeeDirectory, {
+    data: [ALICE],
+    isPending: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+  });
+  wireQuery(useGetCurrentEmployee, {
+    data: { status: 200, data: ALICE },
+    isPending: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+  });
   wireQuery(useListDepartments, listState([DEPARTMENT]));
   wireQuery(useListPositions, listState([POSITION]));
   wireQuery(useListLocations, listState([LOCATION]));
@@ -142,6 +181,31 @@ describe("EmployeesTable", () => {
     expect(screen.getByText("alice@example.com")).toBeInTheDocument();
     expect(screen.getByText("Full-time")).toBeInTheDocument();
     expect(screen.getByText("Active")).toBeInTheDocument();
+  });
+
+  it("resolves the manager column for a manager viewing direct reports", async () => {
+    const report = {
+      ...ALICE,
+      id: "01900000-0000-7000-8000-00000000a002",
+      employee_code: "EMP-00002",
+      first_name: "Bob",
+      last_name: "Brown",
+      email: "bob@example.com",
+      manager_id: ALICE.id,
+    };
+    wireQuery(useListEmployees, listState([report]));
+    wireQuery(useEmployeeDirectory, {
+      data: [ALICE, report],
+      isPending: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    renderTable();
+
+    expect(await screen.findByRole("link", { name: "Bob Brown" })).toBeInTheDocument();
+    expect(screen.getByText("Alice Adams")).toBeInTheDocument();
   });
 
   it("names and hints the horizontal scroll region", async () => {
@@ -168,7 +232,35 @@ describe("EmployeesTable", () => {
 
     renderTable();
 
-    expect(await screen.findByText(/No employees match/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/No employees yet. Create the first employee record/i),
+    ).toBeInTheDocument();
+  });
+
+  it("offers Clear filters when the empty result comes from active filters", async () => {
+    const user = userEvent.setup();
+    wireQuery(useListEmployees, listState([]));
+    renderTable();
+
+    await user.type(await screen.findByRole("textbox", { name: "Search employees" }), "nobody");
+    expect(await screen.findByText(/No employees match these filters/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Clear filters" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("textbox", { name: "Search employees" })).toHaveValue("");
+    });
+    await waitFor(() =>
+      expect(useListEmployees).toHaveBeenCalledWith(
+        expect.objectContaining({ q: undefined, page: 1 }),
+      ),
+    );
+  });
+
+  it("shows the result count in the table footer", async () => {
+    renderTable();
+
+    expect(await screen.findByText("Showing 1 employee")).toBeInTheDocument();
   });
 
   it("shows an error state with a retry action", async () => {

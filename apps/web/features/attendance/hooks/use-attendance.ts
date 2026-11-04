@@ -35,8 +35,8 @@ import {
 } from "@/lib/api-errors";
 import type { GetAttendanceBoardParams, ListAttendanceRecordsParams } from "../types";
 
-export function useAttendanceBoard(params?: GetAttendanceBoardParams) {
-  return useGetAttendanceBoard(params);
+export function useAttendanceBoard(params?: GetAttendanceBoardParams, enabled = true) {
+  return useGetAttendanceBoard(params, { query: { enabled } });
 }
 
 export function useAttendanceRecords(params?: ListAttendanceRecordsParams) {
@@ -47,8 +47,8 @@ export function useShifts() {
   return useListShifts();
 }
 
-export function useCurrentEmployee() {
-  return useGetCurrentEmployee();
+export function useCurrentEmployee(enabled = true) {
+  return useGetCurrentEmployee({ query: { enabled } });
 }
 
 type ErrorTranslator = (key: "generic") => string;

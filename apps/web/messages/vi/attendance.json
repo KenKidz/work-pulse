@@ -2,7 +2,7 @@
   "metadataTitle": "Chấm công — WorkPulse",
   "title": "Chấm công",
   "description": "Ghi nhận chấm công và xem dữ liệu chấm công của ngày đã chọn.",
-  "boardDateHint": "Số liệu và hoạt động dùng ngày này. Giờ chấm công được ghi tự động.",
+  "boardDateHint": "Số liệu, hoạt động và dữ liệu chấm công dùng ngày này.",
   "date": "Ngày",
   "today": "Hôm nay",
   "loading": "Đang tải chấm công cho ngày này…",
@@ -11,12 +11,9 @@
   "deniedTitle": "Bảng chấm công không khả dụng",
   "denied": "Quản lý, nhân sự và quản trị viên có thể xem chấm công của đội ngũ.",
   "recordsTitle": "Dữ liệu chấm công",
-  "refreshTitle": "Hoạt động mới",
-  "refreshBody": "Bảng này không tự cập nhật. Hãy làm mới trang hoặc chọn ngày khác để kiểm tra lại.",
+  "recordsDescription": "Dữ liệu của ngày đã chọn. Mở rộng khoảng ngày để kiểm tra lâu hơn.",
   "counts": {
     "ariaLabel": "Số liệu chấm công",
-    "currentPresence": "Hiện diện hiện tại",
-    "otherDayCounts": "Số liệu khác trong ngày",
     "present": "Tại văn phòng",
     "remote": "Từ xa",
     "late": "Đi muộn",
@@ -28,17 +25,20 @@
     "onLeaveHint": "Đang nghỉ phép tính số ngày nghỉ đã duyệt và không bị tính là vắng mặt."
   },
   "workModes": {
-    "onsite": "Tại văn phòng",
+    "onsite": "Văn phòng",
     "remote": "Từ xa"
   },
   "activity": {
     "title": "Hoạt động gần đây",
     "description": "Chấm công vào và ra trong ngày, mới nhất trước.",
     "empty": "Chưa ghi nhận hoạt động chấm công nào trong ngày này.",
+    "loading": "Đang tải hoạt động…",
     "ariaLabel": "Sự kiện chấm công",
     "checked_in": "đã vào ca",
     "checked_out": "đã ra ca",
-    "employeeShort": "Nhân viên …{id}"
+    "employeeShort": "Nhân viên …{id}",
+    "unavailable": "Hoạt động không khả dụng.",
+    "openCommandCenter": "Mở trung tâm điều hành"
   },
   "checkIn": {
     "title": "Chấm công của bạn",
@@ -53,6 +53,10 @@
     "workMode": "Hình thức làm việc",
     "workModeAria": "Hình thức làm việc",
     "note": "Ghi chú (tùy chọn)",
+    "notePlaceholder": "Thông tin quản lý cần biết",
+    "lateHint": "Đi muộn được tính theo ca gắn với địa điểm của bạn, cộng thời gian ân hạn.",
+    "statusNotCheckedIn": "Chưa vào ca",
+    "statusCheckedIn": "Đã vào ca",
     "checkIn": "Vào ca",
     "checkingIn": "Đang vào ca…"
   },
@@ -89,7 +93,8 @@
     "previousAria": "Trang trước",
     "next": "Tiếp",
     "nextAria": "Trang tiếp",
-    "pageOf": "Trang {page} / {total}"
+    "pageOf": "Trang {page} / {total}",
+    "summary": "{total} bản ghi"
   },
   "shifts": {
     "title": "Ca làm",
@@ -158,5 +163,9 @@
   "units": {
     "hourShort": "giờ",
     "minuteShort": "phút"
-  }
+  },
+  "noEmployeeTitle": "Chưa liên kết hồ sơ nhân viên",
+  "noEmployee": "Tài khoản này có thể xem chấm công nhưng không thể tự chấm công. Hãy nhờ quản trị viên liên kết hồ sơ nhân viên.",
+  "descriptionReadOnly": "Xem chấm công của ngày đã chọn.",
+  "selfDateHint": "Trạng thái chấm công và dữ liệu chấm công dùng ngày này."
 }

@@ -26,7 +26,7 @@
 
 import { expect, test, type Page } from '@playwright/test';
 
-import { WORKER_EMAIL, WORKER_EMPLOYEE_ID, closeOpenRecords, uiLogin } from './auth';
+import { WORKER_EMAIL, closeOpenRecords, uiLogin } from './auth';
 
 /** Today in the employee's location timezone — the API's workday definition. */
 function workdayISO(): string {
@@ -38,11 +38,11 @@ function workdayISO(): string {
   }).format(new Date());
 }
 
-/** The records table renders employee ids as `Employee …{last four}`. */
-function shortId(id: string): string {
-  return `Employee …${id.slice(-4)}`;
-}
-
+/**
+ * The employee attendance surface is self-service: the date control still
+ * exists so a prior open record can be reached, but the board counts and
+ * shifts panel stay hidden.
+ */
 async function openAttendance(page: Page, workday: string): Promise<void> {
   await page.goto('/attendance');
   await expect(page.getByRole('heading', { name: 'Attendance', exact: true })).toBeVisible();
@@ -79,7 +79,7 @@ test.describe.serial('attendance', () => {
     const recordRow = page
       .getByTestId('attendance-records')
       .getByRole('row')
-      .filter({ hasText: shortId(WORKER_EMPLOYEE_ID) });
+      .filter({ hasText: 'Wendy Worker' });
     await expect(recordRow.first()).toContainText('Open');
 
     // The stale tab submits its form: the API rejects the second check-in and

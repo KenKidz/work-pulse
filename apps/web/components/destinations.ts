@@ -18,6 +18,7 @@ import {
 
 import type { Role } from "@workpulse/api-client/index.schemas";
 
+import { EMPLOYEE_READ_ROLES } from "@/features/employees/roles";
 import { PERFORMANCE_NAV_ROLES } from "@/features/performance/roles";
 import { PAYROLL_VIEW_ROLES } from "@/features/payroll/roles";
 import { RECRUITMENT_NAV_ROLES } from "@/features/recruitment/roles";
@@ -30,6 +31,8 @@ export type Destination = {
   href: string;
   key: DestinationKey;
   icon: LucideIcon;
+  /** Restricted to these roles when present; everyone sees the rest. */
+  roles?: Role[];
 };
 
 /**
@@ -38,7 +41,7 @@ export type Destination = {
  * cannot drift between them.
  */
 export const DESTINATIONS: Destination[] = [
-  { href: "/employees", key: "employees", icon: Users },
+  { href: "/employees", key: "employees", icon: Users, roles: EMPLOYEE_READ_ROLES },
   { href: "/attendance", key: "attendance", icon: CalendarClock },
   { href: "/settings/organization", key: "organization", icon: Building2 },
 ];
@@ -105,7 +108,7 @@ export function activeNavHref(pathname: string, items: NavItem[]): string | null
  */
 export const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", key: "dashboard", icon: LayoutDashboard },
-  ...DESTINATIONS.map(({ href, key, icon }) => ({ href, key, icon })),
+  ...DESTINATIONS.map(({ href, key, icon, roles }) => ({ href, key, icon, roles })),
   { href: "/leave", key: "leave", icon: CalendarDays },
   { href: "/overtime", key: "overtime", icon: Timer },
   {

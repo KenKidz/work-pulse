@@ -14,6 +14,7 @@ import {
   useGetAttendanceBoard,
   useListAttendanceRecords,
   useGetCurrentEmployee,
+  useListLocations,
   useCheckIn,
   useCheckOut,
   useListShifts,
@@ -24,6 +25,8 @@ import { ApiError } from "@workpulse/api-client/mutator/custom-fetch";
 import { toast } from "sonner";
 
 import { AttendanceBoard } from "@/features/attendance/components/AttendanceBoard";
+import { RECORDS_PAGE_SIZE } from "@/features/attendance/components/AttendanceRecordsTable";
+import { useEmployeeDirectory } from "@/features/employees/hooks/use-employee-directory";
 
 import {
   boardState,
@@ -39,14 +42,42 @@ vi.mock("sonner", () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }));
 
+vi.mock("@/features/employees/hooks/use-employee-directory", () => ({
+  useEmployeeDirectory: vi.fn(),
+}));
+
+const authState = vi.hoisted(() => ({
+  user: {
+    id: "01900000-0000-7000-8000-0000000000b1",
+    tenant_id: "01900000-0000-7000-8000-000000000001",
+    email: "admin@workpulse.test",
+    role: "admin",
+    employee_id: "01900000-0000-7000-8000-00000000a001" as string | null,
+    active: true,
+    created_at: "2026-09-01T00:00:00Z",
+    updated_at: "2026-09-01T00:00:00Z",
+  },
+}));
+
+vi.mock("@/features/auth/components/AuthGate", () => ({
+  useAuth: () => authState,
+}));
+
 vi.mock("@workpulse/api-client", () => ({
   getGetAttendanceBoardQueryKey: () => ["/api/v1/attendance/board"],
+  getListEmployeesQueryKey: () => ["/api/v1/employees"],
+  getListDepartmentsQueryKey: () => ["/api/v1/departments"],
+  getListPositionsQueryKey: () => ["/api/v1/positions"],
+  getListLocationsQueryKey: () => ["/api/v1/locations"],
+  getGetEmployeeQueryKey: (id: string) => [`/api/v1/employees/${id}`],
+  getListEmploymentsQueryKey: (id: string) => [`/api/v1/employees/${id}/employments`],
   getListAttendanceRecordsQueryKey: () => ["/api/v1/attendance/records"],
   getListShiftsQueryKey: () => ["/api/v1/shifts"],
   getGetCurrentEmployeeQueryKey: () => ["/api/v1/employees/me"],
   useGetAttendanceBoard: vi.fn(),
   useListAttendanceRecords: vi.fn(),
   useGetCurrentEmployee: vi.fn(),
+  useListLocations: vi.fn(),
   useCheckIn: vi.fn(),
   useCheckOut: vi.fn(),
   useListShifts: vi.fn(),
@@ -121,6 +152,14 @@ function wireDefaults() {
   wireQuery(useGetAttendanceBoard, boardState(BOARD));
   wireQuery(useListAttendanceRecords, recordsState([]));
   wireQuery(useGetCurrentEmployee, meState(ME));
+  wireQuery(useEmployeeDirectory, {
+    data: [ME],
+    isPending: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+  });
+  wireQuery(useListLocations, recordsState([]));
   wireQuery(useListShifts, shiftsState([]));
   wireMutation(useCheckIn, checkInMutate);
   wireMutation(useCheckOut, vi.fn());
@@ -134,6 +173,7 @@ function renderBoard() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  authState.user.employee_id = "01900000-0000-7000-8000-00000000a001";
   vi.useFakeTimers({
     now: new Date("2026-09-28T11:00:00Z"),
     shouldAdvanceTime: true,
@@ -160,6 +200,12 @@ describe("AttendanceBoard", () => {
     const feed = screen.getByTestId("activity-feed");
     expect(feed).toHaveTextContent("checked in");
     expect(feed).toHaveTextContent("checked out");
+    // The uncapped feed is a bounded scroll region, so it must be reachable
+    // from the keyboard (the dashboard's capped feed is not scrollable).
+    expect(screen.getByRole("list", { name: "Attendance events" })).toHaveAttribute(
+      "tabindex",
+      "0",
+    );
   });
 
   it("documents the pinned copy: overlapping counts, absent over-count, on_leave semantics", async () => {
@@ -178,11 +224,43 @@ describe("AttendanceBoard", () => {
     renderBoard();
 
     await waitFor(() => {
-      expect(useGetAttendanceBoard).toHaveBeenCalledWith({ date: TODAY });
+      expect(useGetAttendanceBoard).toHaveBeenCalledWith(
+        { date: TODAY },
+        { query: { enabled: true } },
+      );
       expect(useListAttendanceRecords).toHaveBeenCalledWith(
         expect.objectContaining({ from: TODAY, to: TODAY }),
       );
     });
+  });
+
+  it("scopes the records table to the selected day", async () => {
+    renderBoard();
+
+    await waitFor(() =>
+      expect(useListAttendanceRecords).toHaveBeenCalledWith(
+        expect.objectContaining({
+          from: TODAY,
+          to: TODAY,
+          page_size: RECORDS_PAGE_SIZE,
+        }),
+      ),
+    );
+  });
+
+  it("keeps counts and activity for a read-only account without a check-in panel", async () => {
+    authState.user.employee_id = null;
+
+    renderBoard();
+
+    expect(await screen.findByTestId("activity-feed")).toBeInTheDocument();
+    expect(screen.getByTestId("count-present")).toHaveTextContent("3");
+    expect(screen.queryByTestId("check-in-panel")).not.toBeInTheDocument();
+    expect(screen.getByText("No employee record linked")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /open command center/i })).toHaveAttribute(
+      "href",
+      "/command-center",
+    );
   });
 
   it("shows a loading board state", () => {
@@ -218,6 +296,10 @@ describe("AttendanceBoard", () => {
     });
 
     renderBoard();
+    expect(await screen.findByTestId("attendance-status")).toHaveTextContent("Not checked in");
+    expect(screen.getByPlaceholderText("Anything your manager should know")).toBeInTheDocument();
+    expect(screen.getByText(/Late is measured against the shift/i)).toBeInTheDocument();
+
     await user.click(await screen.findByTestId("work-mode-remote"));
     await user.click(screen.getByRole("button", { name: /check in/i }));
 
@@ -227,7 +309,32 @@ describe("AttendanceBoard", () => {
       }),
     );
     await waitFor(() => expect(toast.success).toHaveBeenCalledWith("Checked in"));
-    await waitFor(() => expect(useGetAttendanceBoard).toHaveBeenCalledWith({ date: TODAY }));
+    await waitFor(() =>
+      expect(useGetAttendanceBoard).toHaveBeenCalledWith(
+        { date: TODAY },
+        { query: { enabled: true } },
+      ),
+    );
+  });
+
+  it("treats a cleared note as absent instead of a min-length error", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    checkInMutate.mockResolvedValue({
+      data: { data: { ...OPEN_RECORD, work_mode: "onsite" }, status: 201 },
+    });
+
+    renderBoard();
+    const note = await screen.findByPlaceholderText("Anything your manager should know");
+    await user.type(note, "   ");
+    await user.clear(note);
+    await user.click(screen.getByRole("button", { name: /check in/i }));
+
+    await waitFor(() =>
+      expect(checkInMutate).toHaveBeenCalledWith({
+        data: { work_mode: "onsite", check_in_note: null },
+      }),
+    );
+    expect(screen.queryByText(/Note must be at least/i)).not.toBeInTheDocument();
   });
 
   it("renders a 409 double check-in as the visible error state (AC12)", async () => {
@@ -251,6 +358,7 @@ describe("AttendanceBoard", () => {
 
     const open = await screen.findByTestId("open-record");
     expect(open).toHaveTextContent("You’re checked in remotely and late.");
+    expect(screen.getByTestId("attendance-status")).toHaveTextContent("Checked in");
 
     await waitFor(() =>
       expect(useListAttendanceRecords).toHaveBeenCalledWith(

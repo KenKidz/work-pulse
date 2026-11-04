@@ -10,7 +10,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CircleAlert, Clock, Pencil, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -46,6 +46,7 @@ import {
 } from "@/components/ui/table";
 
 import { useApiErrorTranslator } from "@/lib/api-errors";
+import { useLocations } from "@/features/organizations/hooks/use-locations";
 
 import {
   attendanceFieldErrors,
@@ -65,8 +66,18 @@ export function ShiftsPanel() {
   const [editing, setEditing] = useState<Shift | null>(null);
 
   const shiftsQuery = useShifts();
+  const locationsQuery = useLocations({ include_archived: true, page_size: 100 });
   const listResponse = shiftsQuery.data;
   const shifts: Shift[] = listResponse && listResponse.status === 200 ? listResponse.data : [];
+  const locationNames = useMemo(
+    () =>
+      new Map(
+        (locationsQuery.data?.status === 200 ? locationsQuery.data.data.items : []).map(
+          (location) => [location.id, location.name],
+        ),
+      ),
+    [locationsQuery.data],
+  );
 
   function openCreate() {
     setEditing(null);
@@ -80,18 +91,17 @@ export function ShiftsPanel() {
 
   return (
     <Card data-testid="shifts-panel" className="rounded-md border-border shadow-none">
-      <CardHeader>
-        <CardTitle>{t("shifts.title")}</CardTitle>
-        <CardDescription>{t("shifts.description")}</CardDescription>
+      <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
+        <div className="space-y-1">
+          <CardTitle>{t("shifts.title")}</CardTitle>
+          <CardDescription>{t("shifts.description")}</CardDescription>
+        </div>
+        <Button onClick={openCreate} className="min-h-11 shrink-0 sm:min-h-9">
+          <Plus />
+          {t("shifts.newShift")}
+        </Button>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        <div>
-          <Button onClick={openCreate} className="min-h-11">
-            <Plus />
-            {t("shifts.newShift")}
-          </Button>
-        </div>
-
         {shiftsQuery.isPending ? (
           <div className="flex items-center justify-center gap-2 rounded-lg border border-dashed px-6 py-10 text-sm text-muted-foreground">
             <Spinner className="size-4" />
@@ -144,7 +154,8 @@ export function ShiftsPanel() {
                     <TableCell>
                       {shift.location_id ? (
                         <span className="text-sm text-muted-foreground">
-                          {t("shifts.locationShort", { id: shift.location_id.slice(-4) })}
+                          {locationNames.get(shift.location_id) ??
+                            t("shifts.locationShort", { id: shift.location_id.slice(-4) })}
                         </span>
                       ) : (
                         <Badge variant="secondary">{t("shifts.defaultAll")}</Badge>
